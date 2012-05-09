@@ -1,0 +1,348 @@
+
+#include <cstdlib>
+#include <string>
+#include <vector>
+
+extern "C" {
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include <stdint.h>
+#include <err.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include <gelf.h>
+#include <libelf.h>
+}
+
+#include <BPatch.h>
+#include <BPatch_function.h>
+#include <BPatch_object.h>
+#include <BPatch_point.h>
+
+
+using namespace std;
+
+struct sdt_point {
+    string provider;
+    string name;
+    vector<pair<int, string> > args;
+    GElf_Addr pc_offset;
+    GElf_Addr sem_offset;
+};
+
+
+string
+resolve_path(const string& name)
+{
+  if (name.find('/') != string::npos)
+    return name;
+
+  char *env_path = getenv("PATH");
+  if (!env_path)
+    return name;
+
+  vector<string> paths;
+  char *ppath, path[strlen(env_path)];
+  strcpy(path, env_path);
+  ppath = strtok(path, ":");
+  while (ppath)
+    {
+      string fullpath = string(ppath) + "/" + name;
+      if (!access(fullpath.c_str(), X_OK))
+        return fullpath;
+      ppath = strtok(NULL, ":");
+    }
+  return name;
+}
+
+
+static vector<pair<int, string> >
+split_sdt_args(const string& args)
+{
+  vector<pair<int, string> > vargs;
+  size_t size_idx = 0;
+  size_t at_idx = args.find('@');
+  while (at_idx != string::npos)
+    {
+      size_t size_idx2 = string::npos;
+      size_t at_idx2 = args.find('@', at_idx + 1);
+      if (at_idx2 != string::npos)
+        {
+          size_idx2 = args.rfind(' ', at_idx2);
+          if (size_idx2 == string::npos || size_idx2 <= size_idx)
+            size_idx2 = at_idx2 = string::npos;
+          else
+            ++size_idx2;
+        }
+
+      string size_str = args.substr(size_idx, at_idx - size_idx);
+      int size = atoi(size_str.c_str());
+      string arg = args.substr(at_idx + 1, size_idx2 - at_idx - 2);
+      vargs.push_back(make_pair(size, arg));
+
+      size_idx = size_idx2;
+      at_idx = at_idx2;
+    }
+  return vargs;
+}
+
+
+static vector<sdt_point>
+find_sdt(const string& file)
+{
+  int fd = -1;
+  size_t shstrndx;
+  GElf_Off sdt_file_offset = 0;
+  Elf* elf = NULL;
+  Elf_Scn* scn = NULL;
+  vector<sdt_point> points;
+
+  fd = open(file.c_str(), O_RDONLY);
+  if (fd < 0)
+    {
+      warn("can't open %s", file.c_str());
+      goto ret;
+    }
+
+  elf = elf_begin(fd, ELF_C_READ_MMAP, NULL);
+  if (!elf)
+    {
+      warn("can't read elf %s", file.c_str());
+      goto ret_fd;
+    }
+
+  elf_getshdrstrndx (elf, &shstrndx);
+
+  scn = NULL;
+  while ((scn = elf_nextscn(elf, scn)))
+    {
+      GElf_Shdr shdr;
+      if (gelf_getshdr (scn, &shdr) == NULL)
+	continue;
+      if (shdr.sh_type != SHT_PROGBITS)
+	continue;
+      if (!(shdr.sh_flags & SHF_ALLOC))
+	continue;
+      if (strcmp(".stapsdt.base", elf_strptr(elf, shstrndx, shdr.sh_name)))
+        continue;
+      sdt_file_offset = shdr.sh_offset;
+      warnx("SDT file offset = %#lx", sdt_file_offset);
+    }
+
+  scn = NULL;
+  while ((scn = elf_nextscn(elf, scn)))
+    {
+      GElf_Shdr shdr;
+      if (gelf_getshdr (scn, &shdr) == NULL)
+	continue;
+      if (shdr.sh_type != SHT_NOTE)
+	continue;
+      if (shdr.sh_flags & SHF_ALLOC)
+	continue;
+
+      Elf_Data *data = elf_getdata (scn, NULL);
+      size_t next;
+      GElf_Nhdr nhdr;
+      size_t name_off;
+      size_t desc_off;
+      for (size_t offset = 0;
+	   (next = gelf_getnote (data, offset, &nhdr, &name_off, &desc_off)) > 0;
+	   offset = next)
+	{
+	  char* cdata = ((char*)data->d_buf);
+	  if (strcmp(cdata + name_off, "stapsdt") || nhdr.n_type != 3)
+	    continue;
+
+	  union {
+	      Elf64_Addr a64[3];
+	      Elf32_Addr a32[3];
+	  } buf;
+	  Elf_Data dst =
+	    {
+	      &buf, ELF_T_ADDR, EV_CURRENT,
+	      gelf_fsize (elf, ELF_T_ADDR, 3, EV_CURRENT), 0, 0
+	    };
+	  assert (dst.d_size <= sizeof buf);
+
+	  if (nhdr.n_descsz < dst.d_size + 3)
+	    continue;
+
+	  Elf_Data src =
+	    {
+	      cdata + desc_off, ELF_T_ADDR, EV_CURRENT,
+	      dst.d_size, 0, 0
+	    };
+
+	  if (gelf_xlatetom (elf, &dst, &src,
+			     elf_getident (elf, NULL)[EI_DATA]) == NULL)
+	    warnx ("gelf_xlatetom: %s", elf_errmsg (-1));
+
+	  sdt_point p;
+
+	  const char* provider = cdata + desc_off + dst.d_size;
+	  p.provider = provider;
+
+	  const char* name = provider + p.provider.size() + 1;
+	  p.name = name;
+
+	  const char* args = name + p.name.size() + 1;
+	  if (args < cdata + desc_off + nhdr.n_descsz)
+	    p.args = split_sdt_args(args);
+
+
+          GElf_Addr base_ref;
+	  if (gelf_getclass (elf) == ELFCLASS32)
+            {
+              p.pc_offset = buf.a32[0];
+              base_ref = buf.a32[1];
+              p.sem_offset = buf.a32[2];
+            }
+	  else
+            {
+              p.pc_offset = buf.a64[0];
+              base_ref = buf.a64[1];
+              p.sem_offset = buf.a64[2];
+            }
+
+          // Convert to its relative position in the file
+          p.pc_offset += sdt_file_offset - base_ref;
+          if (p.sem_offset)
+            p.sem_offset += sdt_file_offset - base_ref;
+
+          stringstream joined_args;
+          for (size_t i = 0; i < p.args.size(); ++i)
+            {
+              if (i > 0)
+                joined_args << ", ";
+              joined_args << p.args[i].first << "@\"" << p.args[i].second << "\"";
+            }
+	  warnx("SDT offset:%#lx semaphore:%#lx %s:%s(%s)",
+		p.pc_offset, p.sem_offset,
+                p.provider.c_str(), p.name.c_str(),
+		joined_args.str().c_str());
+
+	  points.push_back(p);
+	}
+    }
+
+  elf_end(elf);
+ret_fd:
+  close(fd);
+ret:
+  return points;
+}
+
+
+static void
+instrument_sdt(BPatch_process* process,
+               BPatch_object* object,
+               sdt_point& p)
+{
+  Dyninst::Address address = object->offsetToAddr(p.pc_offset);
+  if (address == BPatch_object::E_OUT_OF_BOUNDS)
+    {
+      warnx("couldn't convert %s:%s at %#lx to an address",
+            p.provider.c_str(), p.name.c_str(), p.pc_offset);
+      return;
+    }
+
+  vector<BPatch_point*> points;
+  object->findPoints(address, points);
+  if (points.empty())
+    {
+      warnx("couldn't find %s:%s at %#lx -> %#lx",
+            p.provider.c_str(), p.name.c_str(), p.pc_offset, address);
+      return;
+    }
+
+  ostringstream format;
+  format << "SDT %s:%s";
+  BPatch_Vector<BPatch_register> regs;
+  process->getRegisters(regs);
+  for (size_t i = 0; i < regs.size(); ++i)
+    if (regs[i].name()[2] == 'x')
+      format << "  " << regs[i].name() << ":%#lx";
+  format << "\n";
+
+  vector<BPatch_snippet *> printfArgs;
+  printfArgs.push_back(new BPatch_constExpr(format.str().c_str()));
+  printfArgs.push_back(new BPatch_constExpr(p.provider.c_str()));
+  printfArgs.push_back(new BPatch_constExpr(p.name.c_str()));
+  for (size_t i = 0; i < regs.size(); ++i)
+    if (regs[i].name()[2] == 'x')
+      printfArgs.push_back(new BPatch_registerExpr(regs[i]));
+
+  vector<BPatch_function *> printfFuncs;
+  process->getImage()->findFunction("printf", printfFuncs);
+  BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
+
+  warnx("inserting %s:%s at %#lx -> %#lx [%zu]",
+        p.provider.c_str(), p.name.c_str(), p.pc_offset, address, points.size());
+  process->insertSnippet(printfCall, points);
+
+  if (p.sem_offset)
+    {
+      // XXX convert offset to address, and increment the semaphore!
+    }
+}
+
+
+static void
+instrument_sdt_points(BPatch_process* process,
+                      BPatch_object* object,
+                      vector<sdt_point>& points)
+{
+  process->beginInsertionSet();
+  for (size_t i = 0; i < points.size(); ++i)
+    instrument_sdt(process, object, points[i]);
+  process->finalizeInsertionSet(false);
+}
+
+
+int
+main(int argc, const char* argv[])
+{
+  if (argc < 2)
+    errx(1, "usage: %s PROGRAM [ARGS..]", argv[0]);
+
+  warnx("got args:");
+  for (int i = 1; i < argc; ++i)
+    warnx("  [%i] %s", i - 1, argv[i]);
+
+  BPatch patch;
+
+  warnx("creating the process");
+  string fullpath = resolve_path(argv[1]);
+  BPatch_process *app = patch.processCreate(fullpath.c_str(), &argv[1]);
+  BPatch_image *image = app->getImage();
+
+  warnx("scanning the process for sdt with BPatch_object");
+  vector<BPatch_object *> objects;
+  image->getObjects(objects);
+  for (size_t i = 0; i < objects.size(); ++i)
+    {
+      BPatch_object* obj = objects[i];
+      string file = obj->pathName();
+      warnx("    found mapped object %s", file.c_str());
+
+      vector<sdt_point> sdt_points = find_sdt(file);
+      if (sdt_points.empty())
+        continue;
+
+      warnx("inserting sdt instrumentation in %s", file.c_str());
+      instrument_sdt_points(app, obj, sdt_points);
+    }
+
+  warnx("**** running the process");
+  app->continueExecution();
+  while (!app->isTerminated()) {
+    patch.waitForStatusChange();
+  }
+
+  warnx("done!");
+  return 0;
+}
+
+/* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */

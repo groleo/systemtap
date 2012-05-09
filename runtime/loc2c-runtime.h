@@ -9,6 +9,7 @@
  * later version.
  */
 
+#ifndef STAPDYN
 #ifdef STAPCONF_LINUX_UACCESS_H
 #include <linux/uaccess.h>
 #else
@@ -17,6 +18,7 @@
 #include <linux/types.h>
 #define intptr_t long
 #define uintptr_t unsigned long
+#endif
 
 
 /* These three macro definitions are generic, just shorthands

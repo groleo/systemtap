@@ -820,7 +820,11 @@ passes_0_4 (systemtap_session &s)
   rc = compile_pass (s);
   if (! rc && s.last_pass == 4)
     {
+#ifdef STAPDYN
+      cout << ((s.hash_path == "") ? (s.module_name + string(".so")) : s.hash_path);
+#else
       cout << ((s.hash_path == "") ? (s.module_name + string(".ko")) : s.hash_path);
+#endif
       cout << endl;
     }
 
@@ -828,7 +832,11 @@ passes_0_4 (systemtap_session &s)
   gettimeofday (&tv_after, NULL);
 
   if (s.verbose) clog << "Pass 4: compiled C into \""
+#ifdef STAPDYN
+                      << s.module_name << ".so"
+#else
                       << s.module_name << ".ko"
+#endif
                       << "\" "
                       << TIMESPRINT
                       << endl;
@@ -843,8 +851,10 @@ passes_0_4 (systemtap_session &s)
       // Update cache. Cache cleaning is kicked off at the beginning of this function.
       if (s.use_script_cache)
         add_script_to_cache(s);
+#ifndef STAPDYN
       if (s.use_cache)
         add_stapconf_to_cache(s);
+#endif
 
       // We may need to save the module in $CWD if the cache was
       // inaccessible for some reason.
@@ -854,8 +864,13 @@ passes_0_4 (systemtap_session &s)
       // Copy module to the current directory.
       if (s.save_module && !pending_interrupts)
         {
+#ifdef STAPDYN
+	  string module_src_path = s.tmpdir + "/" + s.module_name + ".so";
+	  string module_dest_path = s.module_name + ".so";
+#else
 	  string module_src_path = s.tmpdir + "/" + s.module_name + ".ko";
 	  string module_dest_path = s.module_name + ".ko";
+#endif
 	  copy_file(module_src_path, module_dest_path, s.verbose > 1);
 	}
     }

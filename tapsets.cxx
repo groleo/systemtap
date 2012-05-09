@@ -109,6 +109,7 @@ common_probe_entryfn_prologue (translator_output* o, string statestr,
   o->newline() << "local_irq_save (flags);";
   o->newline() << "#endif";
 
+#ifndef STAPDYN
   // Check for enough free enough stack space
   o->newline() << "if (unlikely ((((unsigned long) (& c)) & (THREAD_SIZE-1))"; // free space
   o->newline(1) << "< (MINSTACKSPACE + sizeof (struct thread_info)))) {"; // needed space
@@ -120,6 +121,7 @@ common_probe_entryfn_prologue (translator_output* o, string statestr,
   o->newline() << "#endif";
   o->newline() << "goto probe_epilogue;";
   o->newline(-1) << "}";
+#endif
 
   o->newline() << "if (atomic_read (&session_state) != " << statestr << ")";
   o->newline(1) << "goto probe_epilogue;";
@@ -4181,11 +4183,17 @@ dwarf_derived_probe::dwarf_derived_probe(const string& funcname,
       // by the incoming section value (".absolute" vs. ".dynamic").
       // XXX Assert invariants here too?
 
+#ifdef STAPDYN
+      if (section == ".absolute" && addr == dwfl_addr &&
+          addr >= q.dw.module_start && addr < q.dw.module_end)
+        this->addr = addr - q.dw.module_start;
+#else
       // inode-uprobes needs an offset rather than an absolute VM address.
       if (kernel_supports_inode_uprobes(q.dw.sess) &&
           section == ".absolute" && addr == dwfl_addr &&
           addr >= q.dw.module_start && addr < q.dw.module_end)
         this->addr = addr - q.dw.module_start;
+#endif
     }
   else
     {
@@ -7102,6 +7110,11 @@ private:
   void emit_module_inode_init (systemtap_session& s);
   void emit_module_inode_exit (systemtap_session& s);
 
+  // Using the dyninst backend (via stapdyn)
+  void emit_module_dyninst_decls (systemtap_session& s);
+  void emit_module_dyninst_init (systemtap_session& s);
+  void emit_module_dyninst_exit (systemtap_session& s);
+
 public:
   void emit_module_decls (systemtap_session& s);
   void emit_module_init (systemtap_session& s);
@@ -7115,7 +7128,9 @@ uprobe_derived_probe::join_group (systemtap_session& s)
   if (! s.uprobe_derived_probes)
     s.uprobe_derived_probes = new uprobe_derived_probe_group ();
   s.uprobe_derived_probes->enroll (this);
+#ifndef STAPDYN
   enable_task_finder(s);
+#endif
 
   // Ask buildrun.cxx to build extra module if needed, and
   // signal staprun to load that module.  If we're using the builtin
@@ -7143,9 +7158,11 @@ uprobe_derived_probe::saveargs(int nargs)
 void
 uprobe_derived_probe::emit_privilege_assertion (translator_output* o)
 {
+#ifndef STAPDYN
   // These probes are allowed for unprivileged users, but only in the
   // context of processes which they own.
   emit_process_owner_assertion (o);
+#endif
 }
 
 
@@ -7598,32 +7615,130 @@ uprobe_derived_probe_group::emit_module_inode_exit (systemtap_session& s)
 
 
 void
+uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
+{
+  if (probes.empty()) return;
+  s.op->newline() << "/* ---- dyninst uprobes ---- */";
+  emit_module_maxuprobes (s);
+  s.op->newline() << "#include \"uprobes-dyninst.c\"";
+
+  // Discover and declare targets for dyninst to use
+  s.op->newline() << "const struct stapdu_target "
+                  << "stap_dyninst_uprobe_targets[] "
+                  << "__attribute__ ((section (\".stap_dyninst\"))) "
+                  << "= {";
+  s.op->indent(1);
+  for (unsigned i=0; i<probes.size(); i++)
+    {
+      uprobe_derived_probe *p = probes[i];
+      s.op->newline() << "{";
+      // XXX pid/procname filtering?
+      s.op->line() << " .filename=" << lex_cast_qstring(p->module) << ",";
+      s.op->line() << " .offset=(loff_t)0x" << hex << p->addr << dec << "ULL,";
+      if (p->sdt_semaphore_addr)
+        s.op->line() << " .sdt_sem_offset=(loff_t)0x"
+                     << hex << p->sdt_semaphore_addr << dec << "ULL,";
+      s.op->line() << " },";
+    }
+  s.op->newline(-1) << "};";
+  s.op->assert_0_indent();
+
+  // Declare the actual probes for the runtime to use
+  s.op->newline() << "static struct stapdu_consumer "
+                  << "stap_dyninst_uprobe_consumers[] = {";
+  s.op->indent(1);
+  for (unsigned i=0; i<probes.size(); i++)
+    {
+      uprobe_derived_probe *p = probes[i];
+      s.op->newline() << "{";
+      s.op->line() << " .probe=" << common_probe_init (p) << ",";
+      s.op->line() << " },";
+    }
+  s.op->newline(-1) << "};";
+  s.op->assert_0_indent();
+
+  // Write the probe handler.
+  // NB: not static, so dyninst can find it
+  s.op->newline() << "int enter_dyninst_uprobe "
+                  << "(uint64_t index, struct pt_regs *regs) {";
+  s.op->newline(1) << "struct stapdu_consumer *sup = "
+                   << "&stap_dyninst_uprobe_consumers[index];";
+  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sup->probe",
+                                 "_STP_PROBE_HANDLER_UPROBE");
+  s.op->newline() << "c->uregs = regs;";
+  s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
+  // XXX: once we have regs, check how dyninst sets the IP
+  // XXX: the way that dyninst rewrites stuff is probably going to be
+  // ...  very confusing to our backtracer (at least if we stay in process)
+  s.op->newline() << "(*sup->probe->ph) (c);";
+  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  s.op->newline() << "return 0;";
+  s.op->newline(-1) << "}";
+  s.op->assert_0_indent();
+}
+
+
+void
+uprobe_derived_probe_group::emit_module_dyninst_init (systemtap_session& s)
+{
+  if (probes.empty()) return;
+
+  /* stapdyn handles the dirty work via dyninst */
+  s.op->newline() << "/* ---- dyninst uprobes ---- */";
+  s.op->newline() << "/* this section left intentionally blank */";
+}
+
+
+void
+uprobe_derived_probe_group::emit_module_dyninst_exit (systemtap_session& s)
+{
+  if (probes.empty()) return;
+
+  /* stapdyn handles the dirty work via dyninst */
+  s.op->newline() << "/* ---- dyninst uprobes ---- */";
+  s.op->newline() << "/* this section left intentionally blank */";
+}
+
+
+void
 uprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
 {
+#ifdef STAPDYN
+  emit_module_dyninst_decls (s);
+#else
   if (kernel_supports_inode_uprobes (s))
     emit_module_inode_decls (s);
   else
     emit_module_utrace_decls (s);
+#endif
 }
 
 
 void
 uprobe_derived_probe_group::emit_module_init (systemtap_session& s)
 {
+#ifdef STAPDYN
+  emit_module_dyninst_init (s);
+#else
   if (kernel_supports_inode_uprobes (s))
     emit_module_inode_init (s);
   else
     emit_module_utrace_init (s);
+#endif
 }
 
 
 void
 uprobe_derived_probe_group::emit_module_exit (systemtap_session& s)
 {
+#ifdef STAPDYN
+  emit_module_dyninst_exit (s);
+#else
   if (kernel_supports_inode_uprobes (s))
     emit_module_inode_exit (s);
   else
     emit_module_utrace_exit (s);
+#endif
 }
 
 

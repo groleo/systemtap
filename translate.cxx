@@ -1510,6 +1510,7 @@ c_unparser::emit_module_init ()
   o->newline() << "int i=0, j=0;"; // for derived_probe_group use
   o->newline() << "const char *probe_point = \"\";";
 
+#ifndef STAPDYN
   // Compare actual and targeted kernel releases/machines.  Sometimes
   // one may install the incorrect debuginfo or -devel RPM, and try to
   // run a probe compiled for a different version.  Catch this early,
@@ -1584,6 +1585,7 @@ c_unparser::emit_module_init ()
   o->newline(-1) << "}";
 
   o->newline() << "if (rc) goto out;";
+#endif
 
   // initialize gettimeofday (if needed)
   o->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";
@@ -1787,8 +1789,10 @@ c_unparser::emit_module_exit ()
   // NB: systemtap_module_exit is assumed to be called from ordinary
   // user context, say during module unload.  Among other things, this
   // means we can sleep a while.
+#ifndef STAPDYN
   o->newline() << "hold_start = jiffies;";
   o->newline() << "hold_index = -1;";
+#endif
   o->newline() << "do {";
   o->newline(1) << "int i;";
   o->newline() << "holdon = 0;";
@@ -1797,14 +1801,17 @@ c_unparser::emit_module_exit ()
                 << "atomic_read (& contexts[i]->busy)) {";
   o->newline(1) << "holdon = 1;";
 
+#ifndef STAPDYN
   // just in case things are really stuck, let's print some diagnostics
   o->newline() << "if (time_after(jiffies, hold_start + HZ) "; // > 1 second
   o->line() << "&& (i > hold_index)) {"; // not already printed
   o->newline(1) << "hold_index = i;";
   o->newline() << "printk(KERN_ERR \"%s context[%d] stuck: %s\\n\", THIS_MODULE->name, i, contexts[i]->probe_point);";
   o->newline(-1) << "}";
+#endif
   o->newline(-1) << "}";
 
+#ifndef STAPDYN
   // Just in case things are really really stuck, a handler probably
   // suffered a fault, and the kernel probably killed a task/thread
   // already.  We can't be quite sure in what state everything is in,
@@ -1829,6 +1836,9 @@ c_unparser::emit_module_exit ()
 
   // NB: we run at least one of these during the shutdown sequence:
   o->newline () << "yield ();"; // aka schedule() and then some
+#else
+  o->indent(-1);
+#endif
   o->newline(-1) << "} while (holdon);";
 
   // cargo cult epilogue
@@ -6051,7 +6061,7 @@ dump_unwindsym_cxt (Dwfl_Module *m,
    */
   if (c->build_id_len > 0
       && (modname != "kernel" || (c->build_id_vaddr > base + c->stext_offset))) {
-    c->output << ".build_id_bits = \"" ;
+    c->output << ".build_id_bits = (unsigned char *)\"" ;
     for (int j=0; j<c->build_id_len;j++)
       c->output << "\\x" << hex
                 << (unsigned short) *(c->build_id_bits+j) << dec;

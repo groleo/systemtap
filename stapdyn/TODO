@@ -1,0 +1,60 @@
+=== TODO items for SystemTap+Dyninst ====
+
+* Integrate with the rest of SystemTap build.
+- Add configury, --with-dyninst or similar.
+- Add stapdyn/* to Makefiles.
+
+* Select dyninst code path at runtime.
+- Kill the hard-coded STAPDYN, and use a command-line option and
+  systemtap_session member to select different code paths.
+
+* Reorganize the SystemTap runtime to better support different targets.
+- Leave the runtime/ base for generic shared code.
+- Move kernel-specific stuff to runtime/linux/ or runtime/kernel/.
+- Move dyninst-specific stuff to runtime/dyninst/
+- Select sub-runtimes with e.g. #ifdef __KERNEL__
+
+* Restrict the set of available probe types.
+- Currently the "bad" types will just lead to pass-4 errors.  We're operating
+  without privilege, so there's no security concern, only broken code.
+- The useful set will probably be similar/identical to --unprivileged.
+
+* Investigate backtracing support
+- Dyninst's instrumentation will likely wreak havoc on our code.
+- Does Dyninst runtime provide any support on mutatee side?
+
+* Kill (or reduce use of) the stapdyn_big_dumb_lock.
+- A lot of stuff should be per-thread, especially CONTEXT, print buffers.
+- For threaded stats and pmaps, how can one collect across all?
+
+* Use a real stapio (lite?) transport layer.
+- Make a Dyninst one-time-call to open a mutator<->mutatee socket.
+- Send data to mutator, rather than dumping on mutatee stdio.
+- Will allow for other two-way commands, maybe removing the need for
+  stuff like stp_dummy_init/exit.
+
+* Refactor tapset/.
+- Use a scheme like what is proposed for runtime/ ?
+- Nearly-similar embedded-c can use #ifdef __KERNEL__ alternations.
+
+* Translator generalization, reducing kernel-isms.
+- Generated code should take a more general flavor, that can be implemented on
+  either kernel or dyninst runtime interfaces, rather than kernel-flavored code
+  that the dyninst runtime has to emulate.
+
+* Support multiple target processes. (follow-fork mode)
+- Need to track fork/exec, and insert probe module in each.
+- Need to share globals, and solve per-thread access (e.g. collecting pmaps).
+
+* Manipulate SDT semaphores.
+- Need BPatch_object::offsetToAddr to be fixed.
+
+* Add return probes.
+- Not sure how, maybe Dyninst function wrapping?
+
+* Pass pt_regs to process probes.
+- Need to build the struct from BPatch_registers.
+- Will require Mike Lam's patch for "special" registers.
+- Dyninst may not support modification, so read-only for now.
+
+* Enumerate more TODO tasks.

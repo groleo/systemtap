@@ -1,0 +1,34 @@
+=== SystemTap pure userspace backend, using Dyninst ===
+
+** This is still a work in progress, quite experimental! **
+
+The goal of stapdyn is to create a backend of SystemTap that can operate
+entirely in userspace.  Users should be able to run scripts on their own
+processes without any special privilege on the system.
+
+The set of available probes is of course limited from what a traditional
+kernel-mode SystemTap can access.  So far there is the plain begin/end/error,
+and the process probes that would usually use uprobes.  More may be possible,
+like timers are highly likely.
+
+Because Dyninst operates on top of ptrace, the usual systemwide mode of
+operation is not really feasible, even on just one's own processes.  Instead,
+stapdyn will operate more like other ptracers (gdb, strace), where target apps
+are launched directly, or attached to specific PIDs.
+
+This code currently requires running with the dyninst.git master branch,
+especially for the BPatch_object and findPoints interfaces.  These are quite
+new, and may still need to work out bugs.  Consider following the Dyninst-API
+mailing list for further developments.
+  https://lists.cs.wisc.edu/mailman/options/dyninst-api/
+
+For some more background on this project, see the presentations:
+
+- PD Week 2012: Scripted Introspection with Dyninst [Josh Stone]
+  http://www.dyninst.org/meetings/2012/monday
+
+- LF Collab Summit 2012: SystemTap Sans Kernel [Josh Stone]
+  https://events.linuxfoundation.org/events/collaboration-summit/slides-and-video
+
+
+See also the TODO file for some of the work left to be done.

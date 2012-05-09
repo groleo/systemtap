@@ -289,7 +289,11 @@ find_script_hash (systemtap_session& s, const string& script)
   // We're using the following so that the module can be used straight
   // from the cache if desired.  This ends up looking like this:
   //    ~/.stap_cache/A/B/stap_ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF_XXX.ko
+#ifdef STAPDYN
+  s.hash_path = hashdir + "/" + s.module_name + ".so";
+#else
   s.hash_path = hashdir + "/" + s.module_name + ".ko";
+#endif
 
   // Update C source name with new module_name.
   s.translated_source = string(s.tmpdir) + "/" + s.module_name + "_src.c";
