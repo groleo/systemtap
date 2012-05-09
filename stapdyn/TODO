@@ -3,6 +3,8 @@
 * Integrate with the rest of SystemTap build.
 - Add configury, --with-dyninst or similar.
 - Add stapdyn/* to Makefiles.
+(These are partially there, but should be made more general
+ and reviewed for good autoconf style.)
 
 * Select dyninst code path at runtime.
 - Kill the hard-coded STAPDYN, and use a command-line option and

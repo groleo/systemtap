@@ -22,6 +22,11 @@ new, and may still need to work out bugs.  Consider following the Dyninst-API
 mailing list for further developments.
   https://lists.cs.wisc.edu/mailman/options/dyninst-api/
 
+Note that Dyninst requires the environment variable DYNINSTAPI_RT_LIB pointing
+to your build of libdyninstAPI_RT.so.  You may also need LD_LIBRARY_PATH to
+include the other libraries if they're not installed in the system paths.
+
+
 For some more background on this project, see the presentations:
 
 - PD Week 2012: Scripted Introspection with Dyninst [Josh Stone]

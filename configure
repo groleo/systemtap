@@ -612,6 +612,10 @@ STAP_PREFIX
 LOCALEDIR
 ENABLE_NLS
 support_section_question
+HAVE_DYNINST_FALSE
+HAVE_DYNINST_TRUE
+DYNINST_LDFLAGS
+DYNINST_CXXFLAGS
 CXXCPP
 DATE
 stap_LIBS
@@ -801,6 +805,7 @@ enable_server
 with_avahi
 with_rpm
 with_elfutils
+with_dyninst
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1487,6 +1492,8 @@ Optional Packages:
   --with-rpm              query rpm database for missing debuginfos
   --with-elfutils=DIRECTORY
                           find elfutils source code in DIRECTORY
+  --with-dyninst=DIRECTORY
+                          find dyninst headers/libraries in DIRECTORY
 
 Some influential environment variables:
   CC          C compiler command
@@ -10088,6 +10095,66 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+# Check for Dyninst headers and libraries
+#
+# XXX For now, require explicit enabling with a PATH.
+# ... Later this can search a distro-installed default too.
+
+# Check whether --with-dyninst was given.
+if test "${with_dyninst+set}" = set; then :
+  withval=$with_dyninst;
+case "$with_dyninst" in
+yes) as_fn_error $? "--with-dyninst requires an argument" "$LINENO" 5 ;;
+''|no) ;;
+*)  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+    old_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS -I$with_dyninst/include"
+    for ac_header in BPatch_object.h
+do :
+  ac_fn_cxx_check_header_mongrel "$LINENO" "BPatch_object.h" "ac_cv_header_BPatch_object_h" "$ac_includes_default"
+if test "x$ac_cv_header_BPatch_object_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_BPATCH_OBJECT_H 1
+_ACEOF
+
+        DYNINST_CXXFLAGS="-I$with_dyninst/include"
+        DYNINST_LDFLAGS="-L$with_dyninst/x86_64-unknown-linux2.4/lib/" # XXX arch specific!
+
+
+        have_dyninst=yes
+
+else
+  as_fn_error $? "Dyninst does not appear to be usable" "$LINENO" 5
+fi
+
+done
+
+    CPPFLAGS="$old_CPPFLAGS"
+    ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+    ;;
+esac
+fi
+
+ if test "${have_dyninst}" = "yes"; then
+  HAVE_DYNINST_TRUE=
+  HAVE_DYNINST_FALSE='#'
+else
+  HAVE_DYNINST_TRUE='#'
+  HAVE_DYNINST_FALSE=
+fi
+
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for assembler .section \"?\" flags support" >&5
 $as_echo_n "checking for assembler .section \"?\" flags support... " >&6; }
 if ${stap_cv_sectionq+:} false; then :
@@ -10326,6 +10393,7 @@ DEFS=-DHAVE_CONFIG_H
 
 ac_libobjs=
 ac_ltlibobjs=
+U=
 for ac_i in : $LIBOBJS; do test "x$ac_i" = x: && continue
   # 1. Remove the extension, and $U if already installed.
   ac_script='s/\$U\././;s/\.o$//;s/\.obj$//'
@@ -10414,6 +10482,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${BUILD_ELFUTILS_TRUE}" && test -z "${BUILD_ELFUTILS_FALSE}"; then
   as_fn_error $? "conditional \"BUILD_ELFUTILS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_DYNINST_TRUE}" && test -z "${HAVE_DYNINST_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_DYNINST\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
