@@ -55,4 +55,10 @@
 - Will require Mike Lam's patch for "special" registers.
 - Dyninst may not support modification, so read-only for now.
 
+* Reconcile stapdyn with the systemtap client/server model.
+
+* Reconcile stapdyn with --remote operation.
+- Needs to check that the remote has stapdyn at all.
+- Probably needs a new stapio command akin to 'run', e.g. 'dyn'.
+
 * Enumerate more TODO tasks.
