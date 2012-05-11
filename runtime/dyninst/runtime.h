@@ -13,6 +13,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sched.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -251,6 +252,7 @@ extern int __get_user_bad(void) __attribute__((noreturn));
 #define put_cpu() 0
 #define for_each_possible_cpu(cpu) for ((cpu) = 0; (cpu) < NR_CPUS; ++(cpu))
 #define stp_for_each_cpu(cpu) for_each_possible_cpu((cpu))
+#define yield() sched_yield()
 
 #define access_ok(type, addr, size) 1
 

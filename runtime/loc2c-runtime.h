@@ -9,7 +9,7 @@
  * later version.
  */
 
-#ifndef STAPDYN
+#ifdef __KERNEL__
 #ifdef STAPCONF_LINUX_UACCESS_H
 #include <linux/uaccess.h>
 #else

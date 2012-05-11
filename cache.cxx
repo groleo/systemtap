@@ -75,11 +75,7 @@ add_script_to_cache(systemtap_session& s)
   // We don't want to risk having the brand new contents being erased again.
   clean_cache(s);
 
-#ifdef STAPDYN
-  string module_src_path = s.tmpdir + "/" + s.module_name + ".so";
-#else
-  string module_src_path = s.tmpdir + "/" + s.module_name + ".ko";
-#endif
+  string module_src_path = s.tmpdir + "/" + s.module_filename();
   PROBE2(stap, cache__add__module, module_src_path.c_str(), s.hash_path.c_str());
   if (!copy_file(module_src_path, s.hash_path, verbose))
     {
@@ -91,13 +87,8 @@ add_script_to_cache(systemtap_session& s)
     copy_file(module_src_path + ".sgn", s.hash_path + ".sgn", verbose);
 
   string c_dest_path = s.hash_path;
-#ifdef STAPDYN
-  if (endswith(c_dest_path, ".so"))
+  if (endswith(c_dest_path, ".ko") || endswith(c_dest_path, ".so"))
     c_dest_path.resize(c_dest_path.size() - 3);
-#else
-  if (endswith(c_dest_path, ".ko"))
-    c_dest_path.resize(c_dest_path.size() - 3);
-#endif
   c_dest_path += ".c";
 
   PROBE2(stap, cache__add__source, s.translated_source.c_str(), c_dest_path.c_str());
@@ -152,21 +143,12 @@ get_script_from_cache(systemtap_session& s)
   if (s.poison_cache)
     return false;
 
-#ifdef STAPDYN
-  string module_dest_path = s.tmpdir + "/" + s.module_name + ".so";
-#else
-  string module_dest_path = s.tmpdir + "/" + s.module_name + ".ko";
-#endif
+  string module_dest_path = s.tmpdir + "/" + s.module_filename();
   string c_src_path = s.hash_path;
   int fd_module, fd_c;
 
-#ifdef STAPDYN
-  if (endswith(c_src_path, ".so"))
+  if (endswith(c_src_path, ".ko") || endswith(c_src_path, ".so"))
     c_src_path.resize(c_src_path.size() - 3);
-#else
-  if (endswith(c_src_path, ".ko"))
-    c_src_path.resize(c_src_path.size() - 3);
-#endif
   c_src_path += ".c";
 
   // See if module exists

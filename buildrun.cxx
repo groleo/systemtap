@@ -192,11 +192,10 @@ void output_either_exportconf(systemtap_session& s, ofstream& o,
 }
 
 
-#ifdef STAPDYN
 static int
 compile_dyninst (systemtap_session& s)
 {
-  const string module = s.tmpdir + "/" + s.module_name + ".so";
+  const string module = s.tmpdir + "/" + s.module_filename();
 
   vector<string> cmd;
   cmd.push_back("gcc");
@@ -206,7 +205,6 @@ compile_dyninst (systemtap_session& s)
   cmd.push_back("-Wno-unused");
   cmd.push_back("-Wno-strict-aliasing");
   cmd.push_back("-O2");
-  cmd.push_back("-DSTAPDYN=1");
   cmd.push_back("-I" + s.runtime_path + "/dyninst");
   cmd.push_back(s.translated_source);
   cmd.push_back("-pthread");
@@ -221,15 +219,13 @@ compile_dyninst (systemtap_session& s)
     s.set_try_server ();
   return rc;
 }
-#endif
 
 
 int
 compile_pass (systemtap_session& s)
 {
-#ifdef STAPDYN
-  return compile_dyninst (s);
-#endif
+  if (s.is_usermode())
+    return compile_dyninst (s);
 
   int rc = uprobes_pass (s);
   if (rc)
@@ -470,9 +466,9 @@ compile_pass (systemtap_session& s)
 static bool
 kernel_built_uprobes (systemtap_session& s)
 {
-#ifdef STAPDYN
-  return true; // sort of, via dyninst
-#endif
+  if (s.is_usermode())
+    return true; // sort of, via dyninst
+
   // see also tapsets.cxx:kernel_supports_inode_uprobes()
   return ((s.kernel_config["CONFIG_ARCH_SUPPORTS_UPROBES"] == "y" && s.kernel_config["CONFIG_UPROBES"] == "y") ||
           (s.kernel_exports.find("unregister_uprobe") != s.kernel_exports.end()));
@@ -609,7 +605,6 @@ uprobes_pass (systemtap_session& s)
   return rc;
 }
 
-#if STAPDYN
 static
 vector<string>
 make_dyninst_run_command (systemtap_session& s, const string& remotedir,
@@ -625,19 +620,18 @@ make_dyninst_run_command (systemtap_session& s, const string& remotedir,
     }
 
   cmd.push_back((remotedir.empty() ? s.tmpdir : remotedir)
-		+ "/" + s.module_name + ".so");
+		+ "/" + s.module_filename());
 
   return cmd;
 }
-#endif
 
 vector<string>
 make_run_command (systemtap_session& s, const string& remotedir,
                   const string& version)
 {
-#if STAPDYN
-  return make_dyninst_run_command(s, remotedir, version);
-#endif
+  if (s.is_usermode())
+    return make_dyninst_run_command(s, remotedir, version);
+
   // for now, just spawn staprun
   vector<string> staprun_cmd;
   staprun_cmd.push_back(getenv("SYSTEMTAP_STAPRUN") ?: BINDIR "/staprun");
@@ -699,7 +693,7 @@ make_run_command (systemtap_session& s, const string& remotedir,
     }
 
   staprun_cmd.push_back((remotedir.empty() ? s.tmpdir : remotedir)
-                        + "/" + s.module_name + ".ko");
+                        + "/" + s.module_filename());
 
   // add module arguments
   staprun_cmd.insert(staprun_cmd.end(),

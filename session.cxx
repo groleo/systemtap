@@ -57,6 +57,7 @@ bool systemtap_session::NSPR_Initialized = false;
 systemtap_session::systemtap_session ():
   // NB: pointer members must be manually initialized!
   // NB: don't forget the copy constructor too!
+  runtime_mode(kernel_runtime),
   base_hash(0),
   pattern_root(new match_node),
   user_file (0),
@@ -226,6 +227,7 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   // NB: pointer members must be manually initialized!
   // NB: this needs to consider everything that the base ctor does,
   //     plus copying any wanted implicit fields (strings, vectors, etc.)
+  runtime_mode(other.runtime_mode),
   base_hash(0),
   pattern_root(new match_node),
   user_file (other.user_file),
@@ -353,6 +355,14 @@ systemtap_session::~systemtap_session ()
 {
   delete_map(subsessions);
   delete pattern_root;
+}
+
+const string
+systemtap_session::module_filename() const
+{
+  if (is_usermode())
+    return module_name + ".so";
+  return module_name + ".ko";
 }
 
 #if HAVE_NSS
@@ -496,6 +506,8 @@ systemtap_session::usage (int exitcode)
 #ifdef HAVE_LIBSQLITE3
     "   -q         generate information on tapset coverage\n"
 #endif /* HAVE_LIBSQLITE3 */
+    "   --runtime=MODE\n"
+    "              set the pass-5 runtime mode, instead of kernel\n"
     "   --privilege=PRIVILEGE_LEVEL\n"
     "              check the script for constructs not allowed at the given privilege level\n"
     "   --unprivileged\n"
@@ -686,7 +698,7 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 	  {
 	    // If the module name ends with '.ko', chop it off since
 	    // modutils doesn't like modules named 'foo.ko.ko'.
-	    if (endswith(module_name, ".ko"))
+	    if (endswith(module_name, ".ko") || endswith(module_name, ".so"))
 	      {
 		module_name.erase(module_name.size() - 3);
 		cerr << _F("Truncating module name to '%s'", module_name.c_str()) << endl;
@@ -1229,6 +1241,19 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 
 	      break;
 	  }
+
+	case LONG_OPT_RUNTIME:
+          if (optarg == string("kernel"))
+            runtime_mode = kernel_runtime;
+          else if (optarg == string("dyninst"))
+            runtime_mode = dyninst_runtime;
+          else
+            {
+              cerr << _F("ERROR: %s is an invalid argument for --runtime", optarg) << endl;
+              return 1;
+            }
+
+          break;
 
 	case '?':
 	  // Invalid/unrecognized option given or argument required, but

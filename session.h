@@ -153,6 +153,7 @@ public:
   bool runtime_specified;
   std::string data_path;
   std::string module_name;
+  const std::string module_filename() const;
   std::string stapconf_name;
   std::string output_file;
   std::string size_option;
@@ -190,6 +191,9 @@ public:
   bool dump_probe_types;
   int download_dbinfo;
   bool suppress_handler_errors;
+
+  enum { kernel_runtime, dyninst_runtime } runtime_mode;
+  bool is_usermode() const { return runtime_mode == dyninst_runtime; }
 
   // NB: It is very important for all of the above (and below) fields
   // to be cleared in the systemtap_session ctor (session.cxx).

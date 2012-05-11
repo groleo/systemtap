@@ -54,6 +54,7 @@ enum {
   LONG_OPT_RLIMIT_FSIZE,
   LONG_OPT_SYSROOT,
   LONG_OPT_SYSENV,
+  LONG_OPT_RUNTIME,
 };
 
 // NB: when adding new options, consider very carefully whether they

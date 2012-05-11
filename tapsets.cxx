@@ -109,8 +109,8 @@ common_probe_entryfn_prologue (translator_output* o, string statestr,
   o->newline() << "local_irq_save (flags);";
   o->newline() << "#endif";
 
-#ifndef STAPDYN
   // Check for enough free enough stack space
+  o->newline() << "#ifdef __KERNEL__"; // XXX needed in dyninst mode?
   o->newline() << "if (unlikely ((((unsigned long) (& c)) & (THREAD_SIZE-1))"; // free space
   o->newline(1) << "< (MINSTACKSPACE + sizeof (struct thread_info)))) {"; // needed space
   // XXX: may need porting to platforms where task_struct is not at bottom of kernel stack
@@ -121,7 +121,7 @@ common_probe_entryfn_prologue (translator_output* o, string statestr,
   o->newline() << "#endif";
   o->newline() << "goto probe_epilogue;";
   o->newline(-1) << "}";
-#endif
+  o->newline() << "#endif // __KERNEL__";
 
   o->newline() << "if (atomic_read (&session_state) != " << statestr << ")";
   o->newline(1) << "goto probe_epilogue;";
@@ -4183,17 +4183,12 @@ dwarf_derived_probe::dwarf_derived_probe(const string& funcname,
       // by the incoming section value (".absolute" vs. ".dynamic").
       // XXX Assert invariants here too?
 
-#ifdef STAPDYN
-      if (section == ".absolute" && addr == dwfl_addr &&
-          addr >= q.dw.module_start && addr < q.dw.module_end)
-        this->addr = addr - q.dw.module_start;
-#else
       // inode-uprobes needs an offset rather than an absolute VM address.
-      if (kernel_supports_inode_uprobes(q.dw.sess) &&
+      // ditto for userspace runtimes (dyninst)
+      if ((kernel_supports_inode_uprobes(q.dw.sess) || q.dw.sess.is_usermode()) &&
           section == ".absolute" && addr == dwfl_addr &&
           addr >= q.dw.module_start && addr < q.dw.module_end)
         this->addr = addr - q.dw.module_start;
-#endif
     }
   else
     {
@@ -7128,9 +7123,8 @@ uprobe_derived_probe::join_group (systemtap_session& s)
   if (! s.uprobe_derived_probes)
     s.uprobe_derived_probes = new uprobe_derived_probe_group ();
   s.uprobe_derived_probes->enroll (this);
-#ifndef STAPDYN
-  enable_task_finder(s);
-#endif
+  if (!s.is_usermode())
+    enable_task_finder(s);
 
   // Ask buildrun.cxx to build extra module if needed, and
   // signal staprun to load that module.  If we're using the builtin
@@ -7158,11 +7152,9 @@ uprobe_derived_probe::saveargs(int nargs)
 void
 uprobe_derived_probe::emit_privilege_assertion (translator_output* o)
 {
-#ifndef STAPDYN
   // These probes are allowed for unprivileged users, but only in the
   // context of processes which they own.
   emit_process_owner_assertion (o);
-#endif
 }
 
 
@@ -7703,42 +7695,36 @@ uprobe_derived_probe_group::emit_module_dyninst_exit (systemtap_session& s)
 void
 uprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
 {
-#ifdef STAPDYN
-  emit_module_dyninst_decls (s);
-#else
-  if (kernel_supports_inode_uprobes (s))
+  if (s.is_usermode())
+    emit_module_dyninst_decls (s);
+  else if (kernel_supports_inode_uprobes (s))
     emit_module_inode_decls (s);
   else
     emit_module_utrace_decls (s);
-#endif
 }
 
 
 void
 uprobe_derived_probe_group::emit_module_init (systemtap_session& s)
 {
-#ifdef STAPDYN
-  emit_module_dyninst_init (s);
-#else
-  if (kernel_supports_inode_uprobes (s))
+  if (s.is_usermode())
+    emit_module_dyninst_init (s);
+  else if (kernel_supports_inode_uprobes (s))
     emit_module_inode_init (s);
   else
     emit_module_utrace_init (s);
-#endif
 }
 
 
 void
 uprobe_derived_probe_group::emit_module_exit (systemtap_session& s)
 {
-#ifdef STAPDYN
-  emit_module_dyninst_exit (s);
-#else
-  if (kernel_supports_inode_uprobes (s))
+  if (s.is_usermode())
+    emit_module_dyninst_exit (s);
+  else if (kernel_supports_inode_uprobes (s))
     emit_module_inode_exit (s);
   else
     emit_module_utrace_exit (s);
-#endif
 }
 
 

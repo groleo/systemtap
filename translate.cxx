@@ -1510,7 +1510,11 @@ c_unparser::emit_module_init ()
   o->newline() << "int i=0, j=0;"; // for derived_probe_group use
   o->newline() << "const char *probe_point = \"\";";
 
-#ifndef STAPDYN
+  // NB: This block of initialization only makes sense in kernel
+  o->newline() << "#ifdef __KERNEL__";
+  // XXX Plus, most of this code is completely static, so it probably should
+  // move into the runtime, where kernel/dyninst is more easily separated.
+
   // Compare actual and targeted kernel releases/machines.  Sometimes
   // one may install the incorrect debuginfo or -devel RPM, and try to
   // run a probe compiled for a different version.  Catch this early,
@@ -1585,7 +1589,8 @@ c_unparser::emit_module_init ()
   o->newline(-1) << "}";
 
   o->newline() << "if (rc) goto out;";
-#endif
+
+  o->newline() << "#endif // __KERNEL__";
 
   // initialize gettimeofday (if needed)
   o->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";
@@ -1789,10 +1794,11 @@ c_unparser::emit_module_exit ()
   // NB: systemtap_module_exit is assumed to be called from ordinary
   // user context, say during module unload.  Among other things, this
   // means we can sleep a while.
-#ifndef STAPDYN
+  // XXX for now, only limit kernel holds, not dyninst
+  o->newline() << "#ifdef __KERNEL__";
   o->newline() << "hold_start = jiffies;";
   o->newline() << "hold_index = -1;";
-#endif
+  o->newline() << "#endif // __KERNEL__";
   o->newline() << "do {";
   o->newline(1) << "int i;";
   o->newline() << "holdon = 0;";
@@ -1801,17 +1807,17 @@ c_unparser::emit_module_exit ()
                 << "atomic_read (& contexts[i]->busy)) {";
   o->newline(1) << "holdon = 1;";
 
-#ifndef STAPDYN
   // just in case things are really stuck, let's print some diagnostics
+  o->newline() << "#ifdef __KERNEL__";
   o->newline() << "if (time_after(jiffies, hold_start + HZ) "; // > 1 second
   o->line() << "&& (i > hold_index)) {"; // not already printed
   o->newline(1) << "hold_index = i;";
   o->newline() << "printk(KERN_ERR \"%s context[%d] stuck: %s\\n\", THIS_MODULE->name, i, contexts[i]->probe_point);";
   o->newline(-1) << "}";
-#endif
+  o->newline() << "#endif // __KERNEL__";
   o->newline(-1) << "}";
+  o->indent(-1);
 
-#ifndef STAPDYN
   // Just in case things are really really stuck, a handler probably
   // suffered a fault, and the kernel probably killed a task/thread
   // already.  We can't be quite sure in what state everything is in,
@@ -1825,7 +1831,8 @@ c_unparser::emit_module_exit ()
   // unloaded).  This is sometimes stinky, so the alternative
   // (default) is to change from a livelock to a livelock that sleeps
   // awhile.
-  o->newline(-1) << "#ifdef STAP_OVERRIDE_STUCK_CONTEXT";
+  o->newline() << "#ifdef __KERNEL__";
+  o->newline() << "#ifdef STAP_OVERRIDE_STUCK_CONTEXT";
   o->newline() << "if (time_after(jiffies, hold_start + HZ*10)) { "; // > 10 seconds
   o->newline(1) << "printk(KERN_ERR \"%s overriding stuck context to allow module shutdown.\", THIS_MODULE->name);";
   o->newline() << "holdon = 0;"; // allow loop to exit
@@ -1833,12 +1840,10 @@ c_unparser::emit_module_exit ()
   o->newline() << "#else";
   o->newline() << "msleep (250);"; // at least stop sucking down the staprun cpu
   o->newline() << "#endif";
+  o->newline() << "#endif // __KERNEL__";
 
   // NB: we run at least one of these during the shutdown sequence:
   o->newline () << "yield ();"; // aka schedule() and then some
-#else
-  o->indent(-1);
-#endif
   o->newline(-1) << "} while (holdon);";
 
   // cargo cult epilogue
@@ -2118,7 +2123,9 @@ c_unparser::emit_probe (derived_probe* v)
       o->newline() << "(void) l;"; // make sure "l" is marked used
 
       // Emit runtime safety net for unprivileged mode.
-      v->emit_privilege_assertion (o);
+      // NB: In usermode, the system restricts our privilege for us.
+      if (!session->is_usermode())
+        v->emit_privilege_assertion (o);
 
       // emit probe local initialization block
       v->emit_probe_local_init(o);

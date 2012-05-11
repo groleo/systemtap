@@ -6,10 +6,6 @@
 (These are partially there, but should be made more general
  and reviewed for good autoconf style.)
 
-* Select dyninst code path at runtime.
-- Kill the hard-coded STAPDYN, and use a command-line option and
-  systemtap_session member to select different code paths.
-
 * Reorganize the SystemTap runtime to better support different targets.
 - Leave the runtime/ base for generic shared code.
 - Move kernel-specific stuff to runtime/linux/ or runtime/kernel/.
