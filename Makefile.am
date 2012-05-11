@@ -251,6 +251,10 @@ $(EXAMPLE_SOURCE_DIR)/index.html: $(EXAMPLE_META_FILES) $(EXAMPLE_INDEX_GEN)
 
 install-data-local:
 	(cd $(srcdir)/runtime; for f in *.[ch]; do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/$$f; done)
+if HAVE_DYNINST
+	(cd $(srcdir)/runtime/dyninst; find . \( -name '*.[ch]' \) -print \
+		| while read f; do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/dyninst/$$f; done)
+endif
 	(cd $(srcdir)/runtime/unwind; find . \( -name '*.[ch]' \) -print \
 		| while read f; do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/unwind/$$f; done)
 	(cd $(srcdir)/runtime/transport; for f in *.[ch]; \
