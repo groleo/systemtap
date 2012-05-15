@@ -94,7 +94,11 @@ find_sdt(const string& file)
 {
   int fd = -1;
   size_t shstrndx;
-  GElf_Off sdt_file_offset = 0;
+  GElf_Addr sdt_base_addr = 0;
+  GElf_Off sdt_base_offset = 0;
+  GElf_Addr sdt_probes_addr = 0;
+  GElf_Off sdt_probes_offset = 0;
+  GElf_Off sdt_probes_virt_offset = 0;
   Elf* elf = NULL;
   Elf_Scn* scn = NULL;
   vector<sdt_point> points;
@@ -125,11 +129,27 @@ find_sdt(const string& file)
 	continue;
       if (!(shdr.sh_flags & SHF_ALLOC))
 	continue;
-      if (strcmp(".stapsdt.base", elf_strptr(elf, shstrndx, shdr.sh_name)))
-        continue;
-      sdt_file_offset = shdr.sh_offset;
-      warnx("SDT file offset = %#lx", sdt_file_offset);
+
+      const char* sh_name = elf_strptr(elf, shstrndx, shdr.sh_name);
+      if (sh_name && !strcmp(".stapsdt.base", sh_name))
+        {
+          sdt_base_addr = shdr.sh_addr;
+          sdt_base_offset = shdr.sh_offset;
+          warnx("SDT base addr:%#lx offset:%#lx", sdt_base_addr, sdt_base_offset);
+        }
+      if (sh_name && !strcmp(".probes", sh_name))
+        {
+          sdt_probes_addr = shdr.sh_addr;
+          sdt_probes_offset = shdr.sh_offset;
+          warnx("SDT probes addr:%#lx offset:%#lx", sdt_probes_addr, sdt_probes_offset);
+        }
     }
+
+  // Data is usually loaded in a separate segment from text, with padding
+  // between, so this computes the extra padding to subtract from semaphores.
+  if (sdt_probes_offset)
+    sdt_probes_virt_offset = (sdt_probes_addr - sdt_probes_offset) -
+      (sdt_base_addr - sdt_base_offset);
 
   scn = NULL;
   while ((scn = elf_nextscn(elf, scn)))
@@ -207,9 +227,9 @@ find_sdt(const string& file)
             }
 
           // Convert to its relative position in the file
-          p.pc_offset += sdt_file_offset - base_ref;
+          p.pc_offset += sdt_base_offset - base_ref;
           if (p.sem_offset)
-            p.sem_offset += sdt_file_offset - base_ref;
+            p.sem_offset += sdt_base_offset - base_ref - sdt_probes_virt_offset;
 
           stringstream joined_args;
           for (size_t i = 0; i < p.args.size(); ++i)
@@ -240,6 +260,8 @@ instrument_sdt(BPatch_process* process,
                BPatch_object* object,
                sdt_point& p)
 {
+  BPatch_image* image = process->getImage();
+
   Dyninst::Address address = object->fileOffsetToAddr(p.pc_offset);
   if (address == BPatch_object::E_OUT_OF_BOUNDS)
     {
@@ -275,7 +297,7 @@ instrument_sdt(BPatch_process* process,
       printfArgs.push_back(new BPatch_registerExpr(regs[i]));
 
   vector<BPatch_function *> printfFuncs;
-  process->getImage()->findFunction("printf", printfFuncs);
+  image->findFunction("printf", printfFuncs);
   BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
 
   warnx("inserting %s:%s at %#lx -> %#lx [%zu]",
@@ -284,7 +306,24 @@ instrument_sdt(BPatch_process* process,
 
   if (p.sem_offset)
     {
-      // XXX convert offset to address, and increment the semaphore!
+      Dyninst::Address sem_address = object->fileOffsetToAddr(p.sem_offset);
+      if (sem_address == BPatch_object::E_OUT_OF_BOUNDS)
+        warnx("couldn't convert %s:%s semaphore %#lx to an address",
+              p.provider.c_str(), p.name.c_str(), p.sem_offset);
+      else
+        {
+          warnx("incrementing semaphore for %s:%s at %#lx -> %#lx",
+                p.provider.c_str(), p.name.c_str(), p.sem_offset, sem_address);
+
+          BPatch_type *sem_type = image->findType("unsigned short");
+          BPatch_variableExpr *semaphore =
+            process->createVariable(sem_address, sem_type);
+
+          BPatch_arithExpr addOne(BPatch_assign, *semaphore,
+                                  BPatch_arithExpr(BPatch_plus, *semaphore,
+                                                   BPatch_constExpr(1)));
+          process->oneTimeCode(addOne);
+        }
     }
 }
 
