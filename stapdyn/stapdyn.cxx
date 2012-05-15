@@ -98,7 +98,7 @@ instrument_uprobes(BPatch_process *app, Elf_Data* data)
           continue;
         }
 
-      Dyninst::Address address = object->offsetToAddr(target->offset);
+      Dyninst::Address address = object->fileOffsetToAddr(target->offset);
       if (address == BPatch_object::E_OUT_OF_BOUNDS)
         {
           clog << "couldn't convert 0x" << hex << target->offset << dec

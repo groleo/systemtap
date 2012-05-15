@@ -240,7 +240,7 @@ instrument_sdt(BPatch_process* process,
                BPatch_object* object,
                sdt_point& p)
 {
-  Dyninst::Address address = object->offsetToAddr(p.pc_offset);
+  Dyninst::Address address = object->fileOffsetToAddr(p.pc_offset);
   if (address == BPatch_object::E_OUT_OF_BOUNDS)
     {
       warnx("couldn't convert %s:%s at %#lx to an address",
