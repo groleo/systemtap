@@ -1,7 +1,7 @@
 dnl configure.ac --- autoconf input file for systemtap runtime tools
 dnl Process this file with autoconf to produce a configure script.
 
-dnl This line must match ../../configure.ac exactly.
+dnl This line must match ../configure.ac exactly.
 AC_INIT([systemtap], 1.8, systemtap@sourceware.org, systemtap)
 
 AC_PREREQ(2.63)

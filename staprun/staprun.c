@@ -22,7 +22,7 @@
 #define _XOPEN_SOURCE
 #define _BSD_SOURCE
 #include "staprun.h"
-#include "../../privilege.h"
+#include "../privilege.h"
 #include <string.h>
 #include <sys/uio.h>
 #include <glob.h>

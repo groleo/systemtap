@@ -38,7 +38,7 @@
 
 /* Include config.h to pick up dependency for --prefix usage. */
 #include "config.h"
-#include "../../privilege.h"
+#include "../privilege.h"
 
 /* define gettext options if NLS is set */
 #if ENABLE_NLS
@@ -51,7 +51,7 @@
         ( (count) == 1 ? (string) : (string_plural) )
 #endif
 /* NB: _F and _NF not available for staprun, since autosprintf() is defined
-   in c++ in ../../util.cxx, in a memory-leak-free way. */
+   in c++ in ../util.cxx, in a memory-leak-free way. */
 #if 0
 #define _F(format, ...) autosprintf(_(format), __VA_ARGS__)
 #define _NF(format, format_plural, count, ...) \
@@ -120,7 +120,7 @@ extern char *__name__;
 /* We define this so we are compatible with old transport, but we
  * don't have to use it. */
 #define STP_TRANSPORT_VERSION 1
-#include "../transport/transport_msgs.h"
+#include "../runtime/transport/transport_msgs.h"
 
 #define RELAYFS_MAGIC	0xF0B4A981
 #define DEBUGFS_MAGIC	0x64626720

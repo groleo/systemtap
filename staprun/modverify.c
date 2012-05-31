@@ -34,7 +34,7 @@
 #include <sys/types.h>
 #include <errno.h>
 
-#include "../../nsscommon.h"
+#include "../nsscommon.h"
 #include "modverify.h"
 
 // Called by some of the functions in nsscommon.cxx.

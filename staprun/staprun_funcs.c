@@ -29,7 +29,7 @@
 #include <math.h>
 
 #include "modverify.h"
-#include "../../privilege.h"
+#include "../privilege.h"
 
 typedef int (*check_module_path_func)(const char *module_path, int module_fd);
 

@@ -16,9 +16,9 @@ run-stap
 run-staprun
 stamp-h1
 stap
-staprun
+staprun/staprun
 testresults
-stapio
+staprun/stapio
 stap_merge
 CVS
 .checkstyle

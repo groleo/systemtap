@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT([systemtap], 1.8, systemtap@sourceware.org, systemtap)
 dnl                  ^^^ see also NEWS, systemtap.spec, testsuite/configure.ac,
-dnl                      runtime/staprun/configure.ac
+dnl                      staprun/configure.ac
 
 AC_PREREQ(2.59)
 AM_INIT_AUTOMAKE([no-dist foreign])
@@ -536,7 +536,7 @@ AC_CONFIG_FILES([Makefile doc/Makefile \
 doc/beginners/Makefile doc/SystemTap_Tapset_Reference/Makefile \
 stappaths.7 \
 initscript/systemtap initscript/stap-server ])
-AC_CONFIG_SUBDIRS(testsuite runtime/staprun)
+AC_CONFIG_SUBDIRS(testsuite staprun)
 if test $enable_translator == "yes"; then
 	AC_CONFIG_FILES([run-stap], [chmod +x run-stap])
 fi
