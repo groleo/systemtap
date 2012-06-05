@@ -42,7 +42,7 @@
 // child process, wait for completion, then cleanup and exit normally.
 
 
-#include "config.h"
+#include "../config.h"
 
 #include <ctype.h>
 #include <errno.h>

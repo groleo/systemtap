@@ -34,25 +34,31 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
+build_triplet = @build@
+host_triplet = @host@
 bin_PROGRAMS = staprun$(EXEEXT) stap-merge$(EXEEXT) stapsh$(EXEEXT)
 pkglibexec_PROGRAMS = stapio$(EXEEXT)
-@HAVE_NSS_TRUE@am__append_1 = modverify.c ../nsscommon.cxx
-@HAVE_NSS_TRUE@am__append_2 = $(nss_CFLAGS)
-@HAVE_NSS_TRUE@am__append_3 = $(nss_CFLAGS)
-@HAVE_NSS_TRUE@am__append_4 = $(nss_LIBS)
-subdir = .
+@BUILD_ELFUTILS_TRUE@am__append_1 = -I../include-elfutils
+@BUILD_ELFUTILS_TRUE@am__append_2 = -L../lib-elfutils -Wl,-rpath-link,lib-elfutils \
+@BUILD_ELFUTILS_TRUE@		-Wl,--enable-new-dtags,-rpath,$(pkglibdir)
+
+@HAVE_NSS_TRUE@am__append_3 = modverify.c ../nsscommon.cxx
+@HAVE_NSS_TRUE@am__append_4 = $(nss_CFLAGS)
+@HAVE_NSS_TRUE@am__append_5 = $(nss_CFLAGS)
+@HAVE_NSS_TRUE@am__append_6 = $(nss_LIBS)
+subdir = staprun
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/configure $(am__configure_deps) \
-	$(srcdir)/config.in $(srcdir)/run-staprun.in \
-	$(srcdir)/../depcomp
+	$(srcdir)/run-staprun.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/gettext.m4 \
+	$(top_srcdir)/m4/iconv.m4 $(top_srcdir)/m4/lib-ld.m4 \
+	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
+	$(top_srcdir)/m4/nls.m4 $(top_srcdir)/m4/po.m4 \
+	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
-am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
- configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
-CONFIG_HEADER = config.h
+CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES = run-staprun
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkglibexecdir)" \
@@ -78,15 +84,15 @@ staprun_OBJECTS = $(am_staprun_OBJECTS)
 am__DEPENDENCIES_1 =
 @HAVE_NSS_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 staprun_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2)
-staprun_LINK = $(CXXLD) $(staprun_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+staprun_LINK = $(CXXLD) $(staprun_CXXFLAGS) $(CXXFLAGS) \
+	$(staprun_LDFLAGS) $(LDFLAGS) -o $@
 am_stapsh_OBJECTS = stapsh-stapsh.$(OBJEXT)
 stapsh_OBJECTS = $(am_stapsh_OBJECTS)
 stapsh_DEPENDENCIES =
 stapsh_LINK = $(CCLD) $(stapsh_CFLAGS) $(CFLAGS) $(stapsh_LDFLAGS) \
 	$(LDFLAGS) -o $@
-DEFAULT_INCLUDES = -I.@am__isrc@
-depcomp = $(SHELL) $(top_srcdir)/../depcomp
+DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
+depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -166,30 +172,45 @@ CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
+CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATE = @DATE@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
+ENABLE_NLS = @ENABLE_NLS@
 EXEEXT = @EXEEXT@
+GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
+GMSGFMT = @GMSGFMT@
+GMSGFMT_015 = @GMSGFMT_015@
 GREP = @GREP@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+INTLLIBS = @INTLLIBS@
 LDFLAGS = @LDFLAGS@
+LIBICONV = @LIBICONV@
+LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
+LN_S = @LN_S@
 LOCALEDIR = @LOCALEDIR@
+LTLIBICONV = @LTLIBICONV@
+LTLIBINTL = @LTLIBINTL@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
+MSGFMT = @MSGFMT@
+MSGFMT_015 = @MSGFMT_015@
+MSGMERGE = @MSGMERGE@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -205,10 +226,18 @@ PIELDFLAGS = @PIELDFLAGS@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+POSUB = @POSUB@
+PUBLICAN_BRAND = @PUBLICAN_BRAND@
+RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+STAP_PREFIX = @STAP_PREFIX@
 STRIP = @STRIP@
+USE_NLS = @USE_NLS@
 VERSION = @VERSION@
+XGETTEXT = @XGETTEXT@
+XGETTEXT_015 = @XGETTEXT_015@
+XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -220,15 +249,32 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+avahi_CFLAGS = @avahi_CFLAGS@
+avahi_LIBS = @avahi_LIBS@
 bindir = @bindir@
+build = @build@
 build_alias = @build_alias@
+build_cpu = @build_cpu@
+build_os = @build_os@
+build_vendor = @build_vendor@
 builddir = @builddir@
 datadir = @datadir@
 datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
+elfutils_abs_srcdir = @elfutils_abs_srcdir@
 exec_prefix = @exec_prefix@
+have_dvips = @have_dvips@
+have_latex = @have_latex@
+have_latex2html = @have_latex2html@
+have_ps2pdf = @have_ps2pdf@
+have_publican = @have_publican@
+have_xmlto = @have_xmlto@
+host = @host@
 host_alias = @host_alias@
+host_cpu = @host_cpu@
+host_os = @host_os@
+host_vendor = @host_vendor@
 htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
@@ -248,8 +294,13 @@ program_transform_name = @program_transform_name@
 psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
+sqlite3_LIBS = @sqlite3_LIBS@
 srcdir = @srcdir@
+stap_LIBS = @stap_LIBS@
+staplog_CPPFLAGS = @staplog_CPPFLAGS@
 staprun_LIBS = @staprun_LIBS@
+subdirs = @subdirs@
+support_section_question = @support_section_question@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
@@ -265,10 +316,12 @@ AM_CPPFLAGS = -D_GNU_SOURCE -I$(srcdir)/../includes \
 	-DPKGLIBDIR='"$(pkglibexecdir)"' -DLOCALEDIR='"$(localedir)"'
 AM_LDFLAGS = @PIELDFLAGS@
 staprun_SOURCES = staprun.c staprun_funcs.c ctl.c common.c \
-	../privilege.cxx ../util.cxx $(am__append_1)
-staprun_CFLAGS = $(AM_CFLAGS) -DSINGLE_THREADED $(am__append_2)
-staprun_CXXFLAGS = $(AM_CXXFLAGS) -DSINGLE_THREADED $(am__append_3)
-staprun_LDADD = $(staprun_LIBS) $(am__append_4)
+	../privilege.cxx ../util.cxx $(am__append_3)
+staprun_CFLAGS = $(AM_CFLAGS) -DSINGLE_THREADED $(am__append_4)
+staprun_CXXFLAGS = $(AM_CXXFLAGS) -DSINGLE_THREADED $(am__append_5)
+staprun_CPPFLAGS = $(AM_CPPFLAGS) $(am__append_1)
+staprun_LDADD = $(staprun_LIBS) $(am__append_6)
+staprun_LDFLAGS = $(AM_LDFLAGS) $(am__append_2)
 stapio_SOURCES = stapio.c mainloop.c common.c ctl.c relay.c relay_old.c
 stapio_LDADD = -lpthread
 man_MANS = staprun.8
@@ -291,63 +344,44 @@ stapsh_LDADD =
 # which may cause false GIT_FOO readings.
 BUILT_SOURCES = git_version.stamp
 CLEANFILES = git_version.h
-GIT_VERSION_CMD = $(SHELL) $(top_srcdir)/../git_version.sh
-all: $(BUILT_SOURCES) config.h
+GIT_VERSION_CMD = $(SHELL) $(top_srcdir)/git_version.sh
+all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .cxx .o .obj
-am--refresh: Makefile
-	@:
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
-	      echo ' cd $(srcdir) && $(AUTOMAKE) --foreign'; \
-	      $(am__cd) $(srcdir) && $(AUTOMAKE) --foreign \
-		&& exit 0; \
+	      ( cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh ) \
+	        && { if test -f $@; then exit 0; else break; fi; }; \
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign staprun/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign Makefile
+	  $(AUTOMAKE) --foreign staprun/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
-	    echo ' $(SHELL) ./config.status'; \
-	    $(SHELL) ./config.status;; \
+	    cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh;; \
 	  *) \
-	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe)'; \
-	    cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe);; \
+	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)'; \
+	    cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe);; \
 	esac;
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
-	$(SHELL) ./config.status --recheck
+	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 
 $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
-	$(am__cd) $(srcdir) && $(AUTOCONF)
+	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
-	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
+	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-
-config.h: stamp-h1
-	@if test ! -f $@; then rm -f stamp-h1; else :; fi
-	@if test ! -f $@; then $(MAKE) $(AM_MAKEFLAGS) stamp-h1; else :; fi
-
-stamp-h1: $(srcdir)/config.in $(top_builddir)/config.status
-	@rm -f stamp-h1
-	cd $(top_builddir) && $(SHELL) ./config.status config.h
-$(srcdir)/config.in: @MAINTAINER_MODE_TRUE@ $(am__configure_deps) 
-	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
-	rm -f stamp-h1
-	touch $@
-
-distclean-hdr:
-	-rm -f config.h stamp-h1
 run-staprun: $(top_builddir)/config.status $(srcdir)/run-staprun.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -487,74 +521,74 @@ stap_merge-stap_merge.obj: stap_merge.c
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stap_merge_CFLAGS) $(CFLAGS) -c -o stap_merge-stap_merge.obj `if test -f 'stap_merge.c'; then $(CYGPATH_W) 'stap_merge.c'; else $(CYGPATH_W) '$(srcdir)/stap_merge.c'; fi`
 
 staprun-staprun.o: staprun.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-staprun.o -MD -MP -MF $(DEPDIR)/staprun-staprun.Tpo -c -o staprun-staprun.o `test -f 'staprun.c' || echo '$(srcdir)/'`staprun.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-staprun.o -MD -MP -MF $(DEPDIR)/staprun-staprun.Tpo -c -o staprun-staprun.o `test -f 'staprun.c' || echo '$(srcdir)/'`staprun.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-staprun.Tpo $(DEPDIR)/staprun-staprun.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='staprun.c' object='staprun-staprun.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-staprun.o `test -f 'staprun.c' || echo '$(srcdir)/'`staprun.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-staprun.o `test -f 'staprun.c' || echo '$(srcdir)/'`staprun.c
 
 staprun-staprun.obj: staprun.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-staprun.obj -MD -MP -MF $(DEPDIR)/staprun-staprun.Tpo -c -o staprun-staprun.obj `if test -f 'staprun.c'; then $(CYGPATH_W) 'staprun.c'; else $(CYGPATH_W) '$(srcdir)/staprun.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-staprun.obj -MD -MP -MF $(DEPDIR)/staprun-staprun.Tpo -c -o staprun-staprun.obj `if test -f 'staprun.c'; then $(CYGPATH_W) 'staprun.c'; else $(CYGPATH_W) '$(srcdir)/staprun.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-staprun.Tpo $(DEPDIR)/staprun-staprun.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='staprun.c' object='staprun-staprun.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-staprun.obj `if test -f 'staprun.c'; then $(CYGPATH_W) 'staprun.c'; else $(CYGPATH_W) '$(srcdir)/staprun.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-staprun.obj `if test -f 'staprun.c'; then $(CYGPATH_W) 'staprun.c'; else $(CYGPATH_W) '$(srcdir)/staprun.c'; fi`
 
 staprun-staprun_funcs.o: staprun_funcs.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-staprun_funcs.o -MD -MP -MF $(DEPDIR)/staprun-staprun_funcs.Tpo -c -o staprun-staprun_funcs.o `test -f 'staprun_funcs.c' || echo '$(srcdir)/'`staprun_funcs.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-staprun_funcs.o -MD -MP -MF $(DEPDIR)/staprun-staprun_funcs.Tpo -c -o staprun-staprun_funcs.o `test -f 'staprun_funcs.c' || echo '$(srcdir)/'`staprun_funcs.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-staprun_funcs.Tpo $(DEPDIR)/staprun-staprun_funcs.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='staprun_funcs.c' object='staprun-staprun_funcs.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-staprun_funcs.o `test -f 'staprun_funcs.c' || echo '$(srcdir)/'`staprun_funcs.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-staprun_funcs.o `test -f 'staprun_funcs.c' || echo '$(srcdir)/'`staprun_funcs.c
 
 staprun-staprun_funcs.obj: staprun_funcs.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-staprun_funcs.obj -MD -MP -MF $(DEPDIR)/staprun-staprun_funcs.Tpo -c -o staprun-staprun_funcs.obj `if test -f 'staprun_funcs.c'; then $(CYGPATH_W) 'staprun_funcs.c'; else $(CYGPATH_W) '$(srcdir)/staprun_funcs.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-staprun_funcs.obj -MD -MP -MF $(DEPDIR)/staprun-staprun_funcs.Tpo -c -o staprun-staprun_funcs.obj `if test -f 'staprun_funcs.c'; then $(CYGPATH_W) 'staprun_funcs.c'; else $(CYGPATH_W) '$(srcdir)/staprun_funcs.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-staprun_funcs.Tpo $(DEPDIR)/staprun-staprun_funcs.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='staprun_funcs.c' object='staprun-staprun_funcs.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-staprun_funcs.obj `if test -f 'staprun_funcs.c'; then $(CYGPATH_W) 'staprun_funcs.c'; else $(CYGPATH_W) '$(srcdir)/staprun_funcs.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-staprun_funcs.obj `if test -f 'staprun_funcs.c'; then $(CYGPATH_W) 'staprun_funcs.c'; else $(CYGPATH_W) '$(srcdir)/staprun_funcs.c'; fi`
 
 staprun-ctl.o: ctl.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-ctl.o -MD -MP -MF $(DEPDIR)/staprun-ctl.Tpo -c -o staprun-ctl.o `test -f 'ctl.c' || echo '$(srcdir)/'`ctl.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-ctl.o -MD -MP -MF $(DEPDIR)/staprun-ctl.Tpo -c -o staprun-ctl.o `test -f 'ctl.c' || echo '$(srcdir)/'`ctl.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-ctl.Tpo $(DEPDIR)/staprun-ctl.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='ctl.c' object='staprun-ctl.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-ctl.o `test -f 'ctl.c' || echo '$(srcdir)/'`ctl.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-ctl.o `test -f 'ctl.c' || echo '$(srcdir)/'`ctl.c
 
 staprun-ctl.obj: ctl.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-ctl.obj -MD -MP -MF $(DEPDIR)/staprun-ctl.Tpo -c -o staprun-ctl.obj `if test -f 'ctl.c'; then $(CYGPATH_W) 'ctl.c'; else $(CYGPATH_W) '$(srcdir)/ctl.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-ctl.obj -MD -MP -MF $(DEPDIR)/staprun-ctl.Tpo -c -o staprun-ctl.obj `if test -f 'ctl.c'; then $(CYGPATH_W) 'ctl.c'; else $(CYGPATH_W) '$(srcdir)/ctl.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-ctl.Tpo $(DEPDIR)/staprun-ctl.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='ctl.c' object='staprun-ctl.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-ctl.obj `if test -f 'ctl.c'; then $(CYGPATH_W) 'ctl.c'; else $(CYGPATH_W) '$(srcdir)/ctl.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-ctl.obj `if test -f 'ctl.c'; then $(CYGPATH_W) 'ctl.c'; else $(CYGPATH_W) '$(srcdir)/ctl.c'; fi`
 
 staprun-common.o: common.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-common.o -MD -MP -MF $(DEPDIR)/staprun-common.Tpo -c -o staprun-common.o `test -f 'common.c' || echo '$(srcdir)/'`common.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-common.o -MD -MP -MF $(DEPDIR)/staprun-common.Tpo -c -o staprun-common.o `test -f 'common.c' || echo '$(srcdir)/'`common.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-common.Tpo $(DEPDIR)/staprun-common.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='common.c' object='staprun-common.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-common.o `test -f 'common.c' || echo '$(srcdir)/'`common.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-common.o `test -f 'common.c' || echo '$(srcdir)/'`common.c
 
 staprun-common.obj: common.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-common.obj -MD -MP -MF $(DEPDIR)/staprun-common.Tpo -c -o staprun-common.obj `if test -f 'common.c'; then $(CYGPATH_W) 'common.c'; else $(CYGPATH_W) '$(srcdir)/common.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-common.obj -MD -MP -MF $(DEPDIR)/staprun-common.Tpo -c -o staprun-common.obj `if test -f 'common.c'; then $(CYGPATH_W) 'common.c'; else $(CYGPATH_W) '$(srcdir)/common.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-common.Tpo $(DEPDIR)/staprun-common.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='common.c' object='staprun-common.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-common.obj `if test -f 'common.c'; then $(CYGPATH_W) 'common.c'; else $(CYGPATH_W) '$(srcdir)/common.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-common.obj `if test -f 'common.c'; then $(CYGPATH_W) 'common.c'; else $(CYGPATH_W) '$(srcdir)/common.c'; fi`
 
 staprun-modverify.o: modverify.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-modverify.o -MD -MP -MF $(DEPDIR)/staprun-modverify.Tpo -c -o staprun-modverify.o `test -f 'modverify.c' || echo '$(srcdir)/'`modverify.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-modverify.o -MD -MP -MF $(DEPDIR)/staprun-modverify.Tpo -c -o staprun-modverify.o `test -f 'modverify.c' || echo '$(srcdir)/'`modverify.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-modverify.Tpo $(DEPDIR)/staprun-modverify.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='modverify.c' object='staprun-modverify.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-modverify.o `test -f 'modverify.c' || echo '$(srcdir)/'`modverify.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-modverify.o `test -f 'modverify.c' || echo '$(srcdir)/'`modverify.c
 
 staprun-modverify.obj: modverify.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-modverify.obj -MD -MP -MF $(DEPDIR)/staprun-modverify.Tpo -c -o staprun-modverify.obj `if test -f 'modverify.c'; then $(CYGPATH_W) 'modverify.c'; else $(CYGPATH_W) '$(srcdir)/modverify.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -MT staprun-modverify.obj -MD -MP -MF $(DEPDIR)/staprun-modverify.Tpo -c -o staprun-modverify.obj `if test -f 'modverify.c'; then $(CYGPATH_W) 'modverify.c'; else $(CYGPATH_W) '$(srcdir)/modverify.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-modverify.Tpo $(DEPDIR)/staprun-modverify.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='modverify.c' object='staprun-modverify.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-modverify.obj `if test -f 'modverify.c'; then $(CYGPATH_W) 'modverify.c'; else $(CYGPATH_W) '$(srcdir)/modverify.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CFLAGS) $(CFLAGS) -c -o staprun-modverify.obj `if test -f 'modverify.c'; then $(CYGPATH_W) 'modverify.c'; else $(CYGPATH_W) '$(srcdir)/modverify.c'; fi`
 
 stapsh-stapsh.o: stapsh.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapsh_CFLAGS) $(CFLAGS) -MT stapsh-stapsh.o -MD -MP -MF $(DEPDIR)/stapsh-stapsh.Tpo -c -o stapsh-stapsh.o `test -f 'stapsh.c' || echo '$(srcdir)/'`stapsh.c
@@ -585,46 +619,46 @@ stapsh-stapsh.obj: stapsh.c
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 staprun-privilege.o: ../privilege.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-privilege.o -MD -MP -MF $(DEPDIR)/staprun-privilege.Tpo -c -o staprun-privilege.o `test -f '../privilege.cxx' || echo '$(srcdir)/'`../privilege.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-privilege.o -MD -MP -MF $(DEPDIR)/staprun-privilege.Tpo -c -o staprun-privilege.o `test -f '../privilege.cxx' || echo '$(srcdir)/'`../privilege.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-privilege.Tpo $(DEPDIR)/staprun-privilege.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../privilege.cxx' object='staprun-privilege.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-privilege.o `test -f '../privilege.cxx' || echo '$(srcdir)/'`../privilege.cxx
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-privilege.o `test -f '../privilege.cxx' || echo '$(srcdir)/'`../privilege.cxx
 
 staprun-privilege.obj: ../privilege.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-privilege.obj -MD -MP -MF $(DEPDIR)/staprun-privilege.Tpo -c -o staprun-privilege.obj `if test -f '../privilege.cxx'; then $(CYGPATH_W) '../privilege.cxx'; else $(CYGPATH_W) '$(srcdir)/../privilege.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-privilege.obj -MD -MP -MF $(DEPDIR)/staprun-privilege.Tpo -c -o staprun-privilege.obj `if test -f '../privilege.cxx'; then $(CYGPATH_W) '../privilege.cxx'; else $(CYGPATH_W) '$(srcdir)/../privilege.cxx'; fi`
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-privilege.Tpo $(DEPDIR)/staprun-privilege.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../privilege.cxx' object='staprun-privilege.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-privilege.obj `if test -f '../privilege.cxx'; then $(CYGPATH_W) '../privilege.cxx'; else $(CYGPATH_W) '$(srcdir)/../privilege.cxx'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-privilege.obj `if test -f '../privilege.cxx'; then $(CYGPATH_W) '../privilege.cxx'; else $(CYGPATH_W) '$(srcdir)/../privilege.cxx'; fi`
 
 staprun-util.o: ../util.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-util.o -MD -MP -MF $(DEPDIR)/staprun-util.Tpo -c -o staprun-util.o `test -f '../util.cxx' || echo '$(srcdir)/'`../util.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-util.o -MD -MP -MF $(DEPDIR)/staprun-util.Tpo -c -o staprun-util.o `test -f '../util.cxx' || echo '$(srcdir)/'`../util.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-util.Tpo $(DEPDIR)/staprun-util.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../util.cxx' object='staprun-util.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-util.o `test -f '../util.cxx' || echo '$(srcdir)/'`../util.cxx
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-util.o `test -f '../util.cxx' || echo '$(srcdir)/'`../util.cxx
 
 staprun-util.obj: ../util.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-util.obj -MD -MP -MF $(DEPDIR)/staprun-util.Tpo -c -o staprun-util.obj `if test -f '../util.cxx'; then $(CYGPATH_W) '../util.cxx'; else $(CYGPATH_W) '$(srcdir)/../util.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-util.obj -MD -MP -MF $(DEPDIR)/staprun-util.Tpo -c -o staprun-util.obj `if test -f '../util.cxx'; then $(CYGPATH_W) '../util.cxx'; else $(CYGPATH_W) '$(srcdir)/../util.cxx'; fi`
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-util.Tpo $(DEPDIR)/staprun-util.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../util.cxx' object='staprun-util.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-util.obj `if test -f '../util.cxx'; then $(CYGPATH_W) '../util.cxx'; else $(CYGPATH_W) '$(srcdir)/../util.cxx'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-util.obj `if test -f '../util.cxx'; then $(CYGPATH_W) '../util.cxx'; else $(CYGPATH_W) '$(srcdir)/../util.cxx'; fi`
 
 staprun-nsscommon.o: ../nsscommon.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-nsscommon.o -MD -MP -MF $(DEPDIR)/staprun-nsscommon.Tpo -c -o staprun-nsscommon.o `test -f '../nsscommon.cxx' || echo '$(srcdir)/'`../nsscommon.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-nsscommon.o -MD -MP -MF $(DEPDIR)/staprun-nsscommon.Tpo -c -o staprun-nsscommon.o `test -f '../nsscommon.cxx' || echo '$(srcdir)/'`../nsscommon.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-nsscommon.Tpo $(DEPDIR)/staprun-nsscommon.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../nsscommon.cxx' object='staprun-nsscommon.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-nsscommon.o `test -f '../nsscommon.cxx' || echo '$(srcdir)/'`../nsscommon.cxx
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-nsscommon.o `test -f '../nsscommon.cxx' || echo '$(srcdir)/'`../nsscommon.cxx
 
 staprun-nsscommon.obj: ../nsscommon.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-nsscommon.obj -MD -MP -MF $(DEPDIR)/staprun-nsscommon.Tpo -c -o staprun-nsscommon.obj `if test -f '../nsscommon.cxx'; then $(CYGPATH_W) '../nsscommon.cxx'; else $(CYGPATH_W) '$(srcdir)/../nsscommon.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -MT staprun-nsscommon.obj -MD -MP -MF $(DEPDIR)/staprun-nsscommon.Tpo -c -o staprun-nsscommon.obj `if test -f '../nsscommon.cxx'; then $(CYGPATH_W) '../nsscommon.cxx'; else $(CYGPATH_W) '$(srcdir)/../nsscommon.cxx'; fi`
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/staprun-nsscommon.Tpo $(DEPDIR)/staprun-nsscommon.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../nsscommon.cxx' object='staprun-nsscommon.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-nsscommon.obj `if test -f '../nsscommon.cxx'; then $(CYGPATH_W) '../nsscommon.cxx'; else $(CYGPATH_W) '$(srcdir)/../nsscommon.cxx'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(staprun_CPPFLAGS) $(CPPFLAGS) $(staprun_CXXFLAGS) $(CXXFLAGS) -c -o staprun-nsscommon.obj `if test -f '../nsscommon.cxx'; then $(CYGPATH_W) '../nsscommon.cxx'; else $(CYGPATH_W) '$(srcdir)/../nsscommon.cxx'; fi`
 install-man8: $(man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man8dir)" || $(MKDIR_P) "$(DESTDIR)$(man8dir)"
@@ -672,11 +706,11 @@ ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	mkid -fID $$unique
 tags: TAGS
 
-TAGS:  $(HEADERS) $(SOURCES) config.in $(TAGS_DEPENDENCIES) \
+TAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) \
 		$(TAGS_FILES) $(LISP)
 	set x; \
 	here=`pwd`; \
-	list='$(SOURCES) $(HEADERS) config.in $(LISP) $(TAGS_FILES)'; \
+	list='$(SOURCES) $(HEADERS)  $(LISP) $(TAGS_FILES)'; \
 	unique=`for i in $$list; do \
 	    if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
 	  done | \
@@ -694,9 +728,9 @@ TAGS:  $(HEADERS) $(SOURCES) config.in $(TAGS_DEPENDENCIES) \
 	  fi; \
 	fi
 ctags: CTAGS
-CTAGS:  $(HEADERS) $(SOURCES) config.in $(TAGS_DEPENDENCIES) \
+CTAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) \
 		$(TAGS_FILES) $(LISP)
-	list='$(SOURCES) $(HEADERS) config.in $(LISP) $(TAGS_FILES)'; \
+	list='$(SOURCES) $(HEADERS)  $(LISP) $(TAGS_FILES)'; \
 	unique=`for i in $$list; do \
 	    if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
 	  done | \
@@ -716,7 +750,7 @@ distclean-tags:
 check-am: all-am
 check: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) check-am
-all-am: Makefile $(PROGRAMS) $(MANS) config.h
+all-am: Makefile $(PROGRAMS) $(MANS)
 installdirs:
 	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkglibexecdir)" "$(DESTDIR)$(man8dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
@@ -760,11 +794,10 @@ clean-am: clean-binPROGRAMS clean-generic clean-pkglibexecPROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
-	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
-	distclean-hdr distclean-tags
+	distclean-tags
 
 dvi: dvi-am
 
@@ -808,8 +841,6 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf $(top_srcdir)/autom4te.cache
 	-rm -rf ./$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
@@ -833,19 +864,19 @@ uninstall-man: uninstall-man8
 
 .MAKE: all check install install-am install-exec-am install-strip
 
-.PHONY: CTAGS GTAGS all all-am am--refresh check check-am clean \
-	clean-binPROGRAMS clean-generic clean-pkglibexecPROGRAMS ctags \
-	distclean distclean-compile distclean-generic distclean-hdr \
-	distclean-tags dvi dvi-am html html-am info info-am install \
-	install-am install-binPROGRAMS install-data install-data-am \
-	install-dvi install-dvi-am install-exec install-exec-am \
-	install-exec-hook install-html install-html-am install-info \
-	install-info-am install-man install-man8 install-pdf \
-	install-pdf-am install-pkglibexecPROGRAMS install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic pdf pdf-am \
-	ps ps-am tags uninstall uninstall-am uninstall-binPROGRAMS \
+.PHONY: CTAGS GTAGS all all-am check check-am clean clean-binPROGRAMS \
+	clean-generic clean-pkglibexecPROGRAMS ctags distclean \
+	distclean-compile distclean-generic distclean-tags dvi dvi-am \
+	html html-am info info-am install install-am \
+	install-binPROGRAMS install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-exec-hook \
+	install-html install-html-am install-info install-info-am \
+	install-man install-man8 install-pdf install-pdf-am \
+	install-pkglibexecPROGRAMS install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
+	tags uninstall uninstall-am uninstall-binPROGRAMS \
 	uninstall-man uninstall-man8 uninstall-pkglibexecPROGRAMS
 
 git_version.stamp:
@@ -855,7 +886,7 @@ git_version.stamp:
 			cp "$(srcdir)/git_version.h" "git_version.h"; \
 		fi; \
 	fi
-	$(GIT_VERSION_CMD) -k -s $(top_srcdir)/.. -o git_version.h
+	$(GIT_VERSION_CMD) -k -s $(top_srcdir) -o git_version.h
 	@if test -s "$(srcdir)/git_version.h"; then \
 		if cmp "$(srcdir)/git_version.h" "git_version.h"; then :; \
 		else \

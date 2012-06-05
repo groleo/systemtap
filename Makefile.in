@@ -416,6 +416,7 @@ sqlite3_LIBS = @sqlite3_LIBS@
 srcdir = @srcdir@
 stap_LIBS = @stap_LIBS@
 staplog_CPPFLAGS = @staplog_CPPFLAGS@
+staprun_LIBS = @staprun_LIBS@
 subdirs = @subdirs@
 support_section_question = @support_section_question@
 sysconfdir = @sysconfdir@
@@ -474,7 +475,7 @@ GIT_VERSION_CMD = $(SHELL) $(top_srcdir)/git_version.sh
 PHONIES = $(am__append_17) $(am__append_23) runcheck update-po \
 	dist-gzip rpm srpm uprobes install-uprobes
 @BUILD_TRANSLATOR_TRUE@stap_CFLAGS = $(AM_CFLAGS) @PIECFLAGS@ \
-@BUILD_TRANSLATOR_TRUE@	-D_FILE_OFFSET_BITS=64 $(am__append_13)
+@BUILD_TRANSLATOR_TRUE@	$(am__append_13)
 @BUILD_TRANSLATOR_TRUE@stap_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ \
 @BUILD_TRANSLATOR_TRUE@	$(am__append_9) $(am__append_14)
 @BUILD_TRANSLATOR_TRUE@stap_CPPFLAGS = $(AM_CPPFLAGS) -DSTAP_SDT_V2 \

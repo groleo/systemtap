@@ -17,7 +17,14 @@ pkglibexec_PROGRAMS = stapio
 staprun_SOURCES = staprun.c staprun_funcs.c ctl.c common.c ../privilege.cxx ../util.cxx
 staprun_CFLAGS = $(AM_CFLAGS) -DSINGLE_THREADED
 staprun_CXXFLAGS = $(AM_CXXFLAGS) -DSINGLE_THREADED
+staprun_CPPFLAGS = $(AM_CPPFLAGS)
 staprun_LDADD = $(staprun_LIBS)
+staprun_LDFLAGS =  $(AM_LDFLAGS)
+if BUILD_ELFUTILS
+staprun_CPPFLAGS += -I../include-elfutils
+staprun_LDFLAGS += -L../lib-elfutils -Wl,-rpath-link,lib-elfutils \
+		-Wl,--enable-new-dtags,-rpath,$(pkglibdir)
+endif
 
 if HAVE_NSS
 staprun_SOURCES += modverify.c ../nsscommon.cxx
@@ -54,7 +61,7 @@ CLEANFILES =
 # which may cause false GIT_FOO readings.
 BUILT_SOURCES += git_version.stamp
 CLEANFILES += git_version.h
-GIT_VERSION_CMD = $(SHELL) $(top_srcdir)/../git_version.sh
+GIT_VERSION_CMD = $(SHELL) $(top_srcdir)/git_version.sh
 git_version.stamp:
 	@if test -f "$(srcdir)/git_version.h"; then \
 		if test -f "git_version.h"; then :; \
@@ -62,7 +69,7 @@ git_version.stamp:
 			cp "$(srcdir)/git_version.h" "git_version.h"; \
 		fi; \
 	fi
-	$(GIT_VERSION_CMD) -k -s $(top_srcdir)/.. -o git_version.h
+	$(GIT_VERSION_CMD) -k -s $(top_srcdir) -o git_version.h
 	@if test -s "$(srcdir)/git_version.h"; then \
 		if cmp "$(srcdir)/git_version.h" "git_version.h"; then :; \
 		else \

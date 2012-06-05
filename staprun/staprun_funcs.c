@@ -10,7 +10,7 @@
  * Copyright (C) 2007-2012 Red Hat Inc.
  */
 
-#include "config.h"
+#include "../config.h"
 #include "staprun.h"
 
 #include <sys/mount.h>

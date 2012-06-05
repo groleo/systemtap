@@ -614,6 +614,7 @@ ENABLE_NLS
 support_section_question
 CXXCPP
 DATE
+staprun_LIBS
 stap_LIBS
 elfutils_abs_srcdir
 BUILD_ELFUTILS_FALSE
@@ -783,6 +784,7 @@ enable_option_checking
 enable_maintainer_mode
 enable_silent_rules
 enable_dependency_tracking
+enable_largefile
 enable_nls
 with_gnu_ld
 enable_rpath
@@ -825,7 +827,7 @@ nss_LIBS
 avahi_CFLAGS
 avahi_LIBS
 CXXCPP'
-ac_subdirs_all='testsuite staprun'
+ac_subdirs_all='testsuite'
 
 # Initialize some variables set by options.
 ac_init_help=
@@ -1451,6 +1453,7 @@ Optional Features:
   --disable-silent-rules         verbose build output (undo: `make V=0')
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
+  --disable-largefile     omit support for large files
   --disable-nls           do not use Native Language Support
   --disable-rpath         do not hardcode runtime library paths
   --enable-prologues      make -P prologue-searching default
@@ -6610,6 +6613,204 @@ fi
 
 
 
+# Check whether --enable-largefile was given.
+if test "${enable_largefile+set}" = set; then :
+  enableval=$enable_largefile;
+fi
+
+if test "$enable_largefile" != no; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for special C compiler options needed for large files" >&5
+$as_echo_n "checking for special C compiler options needed for large files... " >&6; }
+if ${ac_cv_sys_largefile_CC+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_cv_sys_largefile_CC=no
+     if test "$GCC" != yes; then
+       ac_save_CC=$CC
+       while :; do
+	 # IRIX 6.2 and later do not support large files by default,
+	 # so use the C compiler's -n32 option if that helps.
+	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+	 if ac_fn_c_try_compile "$LINENO"; then :
+  break
+fi
+rm -f core conftest.err conftest.$ac_objext
+	 CC="$CC -n32"
+	 if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_sys_largefile_CC=' -n32'; break
+fi
+rm -f core conftest.err conftest.$ac_objext
+	 break
+       done
+       CC=$ac_save_CC
+       rm -f conftest.$ac_ext
+    fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sys_largefile_CC" >&5
+$as_echo "$ac_cv_sys_largefile_CC" >&6; }
+  if test "$ac_cv_sys_largefile_CC" != no; then
+    CC=$CC$ac_cv_sys_largefile_CC
+  fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for _FILE_OFFSET_BITS value needed for large files" >&5
+$as_echo_n "checking for _FILE_OFFSET_BITS value needed for large files... " >&6; }
+if ${ac_cv_sys_file_offset_bits+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  while :; do
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_sys_file_offset_bits=no; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#define _FILE_OFFSET_BITS 64
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_sys_file_offset_bits=64; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  ac_cv_sys_file_offset_bits=unknown
+  break
+done
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sys_file_offset_bits" >&5
+$as_echo "$ac_cv_sys_file_offset_bits" >&6; }
+case $ac_cv_sys_file_offset_bits in #(
+  no | unknown) ;;
+  *)
+cat >>confdefs.h <<_ACEOF
+#define _FILE_OFFSET_BITS $ac_cv_sys_file_offset_bits
+_ACEOF
+;;
+esac
+rm -rf conftest*
+  if test $ac_cv_sys_file_offset_bits = unknown; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for _LARGE_FILES value needed for large files" >&5
+$as_echo_n "checking for _LARGE_FILES value needed for large files... " >&6; }
+if ${ac_cv_sys_large_files+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  while :; do
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_sys_large_files=no; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#define _LARGE_FILES 1
+#include <sys/types.h>
+ /* Check that off_t can represent 2**63 - 1 correctly.
+    We can't simply define LARGE_OFF_T to be 9223372036854775807,
+    since some C++ compilers masquerading as C compilers
+    incorrectly reject 9223372036854775807.  */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+		       && LARGE_OFF_T % 2147483647 == 1)
+		      ? 1 : -1];
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_sys_large_files=1; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  ac_cv_sys_large_files=unknown
+  break
+done
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sys_large_files" >&5
+$as_echo "$ac_cv_sys_large_files" >&6; }
+case $ac_cv_sys_large_files in #(
+  no | unknown) ;;
+  *)
+cat >>confdefs.h <<_ACEOF
+#define _LARGE_FILES $ac_cv_sys_large_files
+_ACEOF
+;;
+esac
+rm -rf conftest*
+  fi
+fi
+
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether NLS is requested" >&5
 $as_echo_n "checking whether NLS is requested... " >&6; }
@@ -8733,12 +8934,15 @@ fi
 
 if test "x$enable_pie" == xyes; then :
 
+   PIECFLAGS='-fPIE'
+   PIECXXFLAGS='-fPIE'
+   PIELDFLAGS='-pie -Wl,-z,relro -Wl,-z,now'
    save_CFLAGS="$CFLAGS"
    save_CXXFLAGS="$CXXFLAGS"
    save_LDFLAGS="$LDFLAGS"
-   CFLAGS="$CFLAGS -fPIE"
-   CXXFLAGS="$CXXFLAGS -fPIE"
-   LDFLAGS="$LDFLAGS -pie -Wl,-z,relro -Wl,-z,now"
+   CFLAGS="$CFLAGS $PIECFLAGS"
+   CXXFLAGS="$CXXFLAGS $PIECXXFLAGS"
+   LDFLAGS="$LDFLAGS $PIELDFLAGS"
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 void main () {}
@@ -8747,28 +8951,22 @@ if ac_fn_c_try_link "$LINENO"; then :
 
        { $as_echo "$as_me:${as_lineno-$LINENO}: Compiling with gcc pie et al." >&5
 $as_echo "$as_me: Compiling with gcc pie et al." >&6;}
-          # LDFLAGS is special since it may be passed down to bundled-elfutils,
-          # and interfere with the .so's built therein
-          PIELDFLAGS="$LDFLAGS"
-          LDFLAGS="$save_LDFLAGS"
-          PIECFLAGS="$CFLAGS"
-          CFLAGS="$save_CFLAGS"
-          PIECXXFLAGS="$CXXFLAGS"
-          CXXFLAGS="$save_CXXFLAGS"
 
 else
 
        { $as_echo "$as_me:${as_lineno-$LINENO}: Compiler does not support -pie et al." >&5
 $as_echo "$as_me: Compiler does not support -pie et al." >&6;}
        PIECFLAGS=""
-       CFLAGS="$save_CFLAGS"
        PIECXXFLAGS=""
-       CXXFLAGS="$save_CXXFLAGS"
        PIELDFLAGS=""
-       LDFLAGS="$save_LDFLAGS"
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+   CFLAGS="$save_CFLAGS"
+   CXXFLAGS="$save_CXXFLAGS"
+   LDFLAGS="$save_LDFLAGS"
+
 fi
 
 
@@ -9923,6 +10121,77 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: stap will link $stap_LIBS" >&5
 $as_echo "$as_me: stap will link $stap_LIBS" >&6;}
 
+# staprun has more modest libelf needs
+if test $build_elfutils = no; then
+  for ac_header in libelf.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "libelf.h" "ac_cv_header_libelf_h" "$ac_includes_default"
+if test "x$ac_cv_header_libelf_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBELF_H 1
+_ACEOF
+
+fi
+
+done
+
+
+  save_LIBS="$LIBS"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for elf_getshdrstrndx in -lelf" >&5
+$as_echo_n "checking for elf_getshdrstrndx in -lelf... " >&6; }
+if ${ac_cv_lib_elf_elf_getshdrstrndx+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lelf  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char elf_getshdrstrndx ();
+int
+main ()
+{
+return elf_getshdrstrndx ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_elf_elf_getshdrstrndx=yes
+else
+  ac_cv_lib_elf_elf_getshdrstrndx=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_elf_elf_getshdrstrndx" >&5
+$as_echo "$ac_cv_lib_elf_elf_getshdrstrndx" >&6; }
+if test "x$ac_cv_lib_elf_elf_getshdrstrndx" = xyes; then :
+
+
+$as_echo "#define HAVE_ELF_GETSHDRSTRNDX 1" >>confdefs.h
+
+    staprun_LIBS="$staprun_LIBS -lelf"
+
+fi
+
+  LIBS="$save_LIBS"
+else
+  # We built our own and staprun_LDFLAGS points at the install.
+  staprun_LIBS="$staprun_LIBS -lelf"
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: staprun will link $staprun_LIBS" >&5
+$as_echo "$as_me: staprun will link $staprun_LIBS" >&6;}
+
 
 date=`date +%Y-%m-%d`
 
@@ -10249,13 +10518,17 @@ ac_config_files="$ac_config_files Makefile doc/Makefile doc/beginners/Makefile d
 
 
 
-subdirs="$subdirs testsuite staprun"
+subdirs="$subdirs testsuite"
 
 if test $enable_translator == "yes"; then
 	ac_config_files="$ac_config_files run-stap"
 
 fi
 ac_config_files="$ac_config_files dtrace"
+
+ac_config_files="$ac_config_files staprun/Makefile"
+
+ac_config_files="$ac_config_files staprun/run-staprun"
 
 
 # Setup "shadow" directory doc/beginners that has everything setup for
@@ -11077,6 +11350,8 @@ do
     "initscript/stap-server") CONFIG_FILES="$CONFIG_FILES initscript/stap-server" ;;
     "run-stap") CONFIG_FILES="$CONFIG_FILES run-stap" ;;
     "dtrace") CONFIG_FILES="$CONFIG_FILES dtrace" ;;
+    "staprun/Makefile") CONFIG_FILES="$CONFIG_FILES staprun/Makefile" ;;
+    "staprun/run-staprun") CONFIG_FILES="$CONFIG_FILES staprun/run-staprun" ;;
     "doc/beginners/publican.cfg") CONFIG_FILES="$CONFIG_FILES doc/beginners/publican.cfg:doc/SystemTap_Beginners_Guide/publican.cfg.in" ;;
     "doc/beginners") CONFIG_COMMANDS="$CONFIG_COMMANDS doc/beginners" ;;
 
@@ -11884,6 +12159,7 @@ $as_echo X"$file" |
     done ;;
     "run-stap":F) chmod +x run-stap ;;
     "dtrace":F) chmod +x dtrace ;;
+    "staprun/run-staprun":F) chmod +x staprun/run-staprun ;;
     "doc/beginners":C) rm -f $ac_abs_top_builddir/doc/beginners/en-US $ac_abs_top_builddir/doc/beginners/build/en-US/testsuite && mkdir -p $ac_abs_top_builddir/doc/beginners/build/en-US && ln -s $ac_abs_top_srcdir/doc/SystemTap_Beginners_Guide/en-US $ac_abs_top_builddir/doc/beginners/en-US && ln -s $ac_abs_top_srcdir/testsuite $ac_abs_top_builddir/doc/beginners/build/en-US/testsuite ;;
 
   esac

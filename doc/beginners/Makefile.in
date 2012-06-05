@@ -201,6 +201,7 @@ sqlite3_LIBS = @sqlite3_LIBS@
 srcdir = @srcdir@
 stap_LIBS = @stap_LIBS@
 staplog_CPPFLAGS = @staplog_CPPFLAGS@
+staprun_LIBS = @staprun_LIBS@
 subdirs = @subdirs@
 support_section_question = @support_section_question@
 sysconfdir = @sysconfdir@

@@ -37,7 +37,7 @@
 #include <locale.h>
 
 /* Include config.h to pick up dependency for --prefix usage. */
-#include "config.h"
+#include "../config.h"
 #include "../privilege.h"
 
 /* define gettext options if NLS is set */
