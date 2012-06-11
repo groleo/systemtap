@@ -258,6 +258,20 @@ if test "x${have_xmlto}" == "xyes" -a "$enable_refdocs" != "no" -a "${building_d
 fi
 AM_CONDITIONAL([BUILD_REFDOCS], [test "$building_refdocs" == "yes"])
 
+AC_CHECK_PROG(have_fop, fop, yes, no)
+if test "x${have_fop}" == "xyes"; then
+   # Due to rhbz505364 / 830266, we must actually test-run fop, not just
+   # hope that it works.
+   AC_MSG_CHECKING([to see if xmlto --with-fop actually works])
+   if xmlto --with-fop pdf ${srcdir}/doc/SystemTap_Tapset_Reference/dummy-tapsets.xml >/dev/null 2>&1; then
+      AC_MSG_RESULT([yes])
+   else
+      AC_MSG_RESULT([it's dead, Jim])
+      have_fop="broken"
+   fi
+fi
+AM_CONDITIONAL([HAVE_FOP], [test "$have_fop" == "yes"])
+
 dnl There is a strange bug in older versions of xmlto when generating pdf.
 dnl https://bugzilla.redhat.com/show_bug.cgi?id=526273
 dnl So make sure to have a chapter title starting with L plus an refentry.

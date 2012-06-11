@@ -4120,9 +4120,8 @@ check_process_probe_kernel_support(systemtap_session& s)
 
   // We don't have utrace.  For process probes that aren't
   // uprobes-based, we just need the task_finder.  The task_finder
-  // needs CONFIG_TRACEPOINTS and specific tracepoints (and perhaps
-  // some CONFIG_FTRACE support).  There are specific autoconf tests
-  // for its needs.
+  // needs CONFIG_TRACEPOINTS and specific tracepoints.  There is a
+  // specific autoconf test for its needs.
   //
   // We'll just require CONFIG_TRACEPOINTS here as a quick-and-dirty
   // approximation.
@@ -6466,7 +6465,7 @@ dwarf_builder::build(systemtap_session & sess,
             throw semantic_error (_F("glob %s error (%s)", module_name.c_str(), lex_cast(rc).c_str() ));
           for (unsigned i = 0; i < the_blob.gl_pathc; ++i)
             {
-              if (pending_interrupts) return;
+              assert_no_interrupts();
 
               const char* globbed = the_blob.gl_pathv[i];
               struct stat st;
@@ -9544,7 +9543,7 @@ tracepoint_builder::init_dw(systemtap_session& s)
           Dwarf_Addr bias;
           while ((cudie = dwfl_nextcu (dwfl, cudie, &bias)) != NULL)
             {
-              if (pending_interrupts) break;
+              assert_no_interrupts();
               Dwarf_Attribute attr;
               const char* name = dwarf_formstring (dwarf_attr (cudie, DW_AT_comp_dir, &attr));
               if (name) 

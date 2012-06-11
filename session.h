@@ -20,6 +20,7 @@
 #include <sstream>
 #include <map>
 #include <set>
+#include <stdexcept>
 
 extern "C" {
 #include <signal.h>
@@ -109,6 +110,11 @@ private:
 public:
   systemtap_session ();
   ~systemtap_session ();
+
+  // To reset the tmp_dir
+  void create_tmp_dir();
+  void remove_tmp_dir();
+  void reset_tmp_dir();
 
   // NB: It is very important for all of the above (and below) fields
   // to be cleared in the systemtap_session ctor (session.cxx).
@@ -352,6 +358,16 @@ public:
 
 // global counter of SIGINT/SIGTERM's received
 extern int pending_interrupts;
+
+// Interrupt exception subclass for catching
+// interrupts (i.e. ctrl-c).
+struct interrupt_exception: public std::runtime_error
+{
+  interrupt_exception ():
+    runtime_error (_("interrupt received")){}
+};
+
+void assert_no_interrupts();
 
 #endif // SESSION_H
 

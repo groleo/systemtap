@@ -37,8 +37,7 @@ static int
 run_make_cmd(systemtap_session& s, vector<string>& make_cmd,
              bool null_out=false, bool null_err=false)
 {
-  if (pending_interrupts)
-    return -1;
+  assert_no_interrupts();
 
   // PR14168: we used to unsetenv values here; instead do it via
   // env(1) in make_any_make_cmd().
@@ -312,7 +311,6 @@ compile_pass (systemtap_session& s)
   output_autoconf(s, o, "autoconf-module-sect-attrs.c", "STAPCONF_MODULE_SECT_ATTRS", NULL);
 
   output_autoconf(s, o, "autoconf-utrace-via-tracepoints.c", "STAPCONF_UTRACE_VIA_TRACEPOINTS", NULL);
-  output_autoconf(s, o, "autoconf-utrace-via-ftrace.c", "STAPCONF_UTRACE_VIA_FTRACE", NULL);
   output_autoconf(s, o, "autoconf-vm-area-pte.c", "STAPCONF_VM_AREA_PTE", NULL);
   output_autoconf(s, o, "autoconf-relay-umode_t.c", "STAPCONF_RELAY_UMODE_T", NULL);
   output_autoconf(s, o, "autoconf-fs_supers-hlist.c", "STAPCONF_FS_SUPERS_HLIST", NULL);

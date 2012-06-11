@@ -21,6 +21,13 @@ endif
 if XMLTO_STRINGPARAM
 XMLTOMANPARAMS=--stringparam man.authors.section.enabled=0 --stringparam man.copyright.section.enabled=0
 XMLTOHTMLPARAMS=--stringparam use.id.as.filename=1
+XMLTOPDFPARAMS=--stringparam refentry.generate.name=0 --stringparam refentry.generate.title=1
+endif
+
+if HAVE_FOP
+XMLTOPDF_FOP=--with-fop
+else
+XMLTOPDF_FOP=
 endif
 
 if BUILD_REFDOCS
@@ -49,7 +56,7 @@ stamp-htmldocs: tapsets.xml
 
 # bump up the allocated space so "xmlto pdf" works
 tapsets.pdf: tapsets.xml
-	env pool_size=3000000 hash_extra=3000000 xmlto $(XMLTOPDFPARAMS) pdf tapsets.xml >/dev/null 2>&1
+	env pool_size=6000000 hash_extra=6000000 xmlto $(XMLTOPDF_FOP) $(XMLTOPDFPARAMS) pdf tapsets.xml >/dev/null 2>&1
 
 stamp-mandocs: tapsets.xml
 	xmlto $(XMLTOMANPARAMS) man -o man3 tapsets.xml >/dev/null 2>&1
