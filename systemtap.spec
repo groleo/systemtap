@@ -10,7 +10,7 @@
 %{!?publican_brand: %global publican_brand fedora}
 
 Name: systemtap
-Version: 1.8
+Version: 2.0
 Release: 1%{?dist}
 # for version, see also configure.ac
 
