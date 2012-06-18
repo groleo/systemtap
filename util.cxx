@@ -1028,7 +1028,7 @@ std::string autosprintf(const char* format, ...)
   va_start (args, format);
   int rc = vasprintf (&str, format, args);
   if (rc < 0)
-    return _F("autosprintf/vasprintf error %s", lex_cast(rc).c_str());
+    return _F("autosprintf/vasprintf error %d", rc);
   string s = str;
   va_end (args);
   free (str);
