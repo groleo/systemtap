@@ -21,7 +21,7 @@
  * sfunction panic - trigger a panic
  * @msg: message to pass to kernel's panic() function
  *
- * Description: this function triggers an immediate panic of the running
+ * Description: This function triggers an immediate panic of the running
  * kernel with a user-specified panic message.
  * It requires guru mode.
  */
