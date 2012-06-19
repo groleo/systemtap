@@ -141,7 +141,7 @@ output_autoconf(systemtap_session& s, ofstream& o, const char *autoconf_c,
   o << "\t";
   if (s.verbose < 4)
     o << "@";
-  o << "if $(CHECK_BUILD) $(SYSTEMTAP_RUNTIME)/" << autoconf_c;
+  o << "if $(CHECK_BUILD) $(SYSTEMTAP_RUNTIME)/linux/" << autoconf_c;
   if (s.verbose < 5)
     o << " > /dev/null 2>&1";
   o << "; then ";
@@ -464,7 +464,7 @@ make_uprobes (systemtap_session& s)
   omf.close();
 
   // create a simple #include-chained source file
-  string runtimesourcefile(s.runtime_path + "/uprobes/uprobes.c");
+  string runtimesourcefile(s.runtime_path + "/linux/uprobes/uprobes.c");
   string sourcefile(dir + "/uprobes.c");
   ofstream osrc(sourcefile.c_str());
   osrc << "#include \"" << runtimesourcefile << "\"" << endl;

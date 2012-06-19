@@ -184,7 +184,7 @@ itrace_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "int single_step;";
   s.op->newline(-1) << "};";
   s.op->newline() << "static void enter_itrace_probe(struct stap_itrace_probe *p, struct pt_regs *regs, void *data);";
-  s.op->newline() << "#include \"itrace.c\"";
+  s.op->newline() << "#include \"linux/itrace.c\"";
 
   // output routine to call itrace probe
   s.op->newline() << "static void enter_itrace_probe(struct stap_itrace_probe *p, struct pt_regs *regs, void *data) {";

@@ -11,7 +11,7 @@
 
 %{
 /* caller_addr() might be user caller, so needs at least uprobes structs. */
-#include "uprobes-inc.h"
+#include "linux/uprobes-inc.h"
 %}
 
 /**

@@ -85,7 +85,7 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
   if (probes.empty()) return;
 
   s.op->newline() << "/* ---- perf probes ---- */";
-  s.op->newline() << "#include \"perf.c\"";
+  s.op->newline() << "#include \"linux/perf.c\"";
   s.op->newline();
 
   /* declarations */

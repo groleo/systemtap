@@ -4647,7 +4647,7 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "#endif";
 
   // Forward decls
-  s.op->newline() << "#include \"kprobes-common.h\"";
+  s.op->newline() << "#include \"linux/kprobes-common.h\"";
 
   // Forward declare the master entry functions
   s.op->newline() << "static int enter_kprobe_probe (struct kprobe *inst,";
@@ -7207,7 +7207,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline() << "#if defined(CONFIG_UPROBES) || defined(CONFIG_UPROBES_MODULE)";
   s.op->newline() << "#include <linux/uprobes.h>";
   s.op->newline() << "#else";
-  s.op->newline() << "#include \"uprobes/uprobes.h\"";
+  s.op->newline() << "#include \"linux/uprobes/uprobes.h\"";
   s.op->newline() << "#endif";
   s.op->newline() << "#ifndef UPROBES_API_VERSION";
   s.op->newline() << "#define UPROBES_API_VERSION 1";
@@ -7216,7 +7216,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   emit_module_maxuprobes (s);
 
   // Forward decls
-  s.op->newline() << "#include \"uprobes-common.h\"";
+  s.op->newline() << "#include \"linux/uprobes-common.h\"";
 
   // In .bss, the shared pool of uprobe/uretprobe structs.  These are
   // too big to embed in the initialized .data stap_uprobe_spec array.
@@ -7363,7 +7363,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline(-1) << "}";
 
   s.op->newline();
-  s.op->newline() << "#include \"uprobes-common.c\"";
+  s.op->newline() << "#include \"linux/uprobes-common.c\"";
   s.op->newline();
 }
 
@@ -7482,7 +7482,7 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
   if (probes.empty()) return;
   s.op->newline() << "/* ---- inode uprobes ---- */";
   emit_module_maxuprobes (s);
-  s.op->newline() << "#include \"uprobes-inode.c\"";
+  s.op->newline() << "#include \"linux/uprobes-inode.c\"";
 
   // Write the probe handler.
   s.op->newline() << "static int enter_inode_uprobe "
