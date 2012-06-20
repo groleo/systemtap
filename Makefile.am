@@ -184,7 +184,7 @@ stap_serverd_SOURCES = stap-serverd.cxx cscommon.cxx util.cxx privilege.cxx nssc
 stap_serverd_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ $(nss_CFLAGS)
 stap_serverd_CFLAGS = $(AM_CFLAGS) @PIECFLAGS@ $(nss_CFLAGS)
 stap_serverd_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@
-stap_serverd_LDADD = $(nss_LIBS)
+stap_serverd_LDADD = $(nss_LIBS) -lpthread
 if HAVE_AVAHI
 stap_serverd_CFLAGS += $(avahi_CFLAGS)
 stap_serverd_CXXFLAGS += $(avahi_CFLAGS)
