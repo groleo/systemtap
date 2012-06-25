@@ -1514,7 +1514,7 @@ c_unparser::emit_global_init (vardecl *v)
 void
 c_unparser::emit_functionsig (functiondecl* v)
 {
-  o->newline() << "static void function_" << v->name
+  o->newline() << "static void " << c_funcname(v->name)
 	       << " (struct context * __restrict__ c);";
 }
 
@@ -2246,7 +2246,7 @@ c_unparser::emit_lock_decls(const varuse_collecting_visitor& vut)
 	}
 
       o->newline() << "{";
-      o->newline(1) << ".lock = &global.s_" + v->name + "_lock,";
+      o->newline(1) << ".lock = &global." + c_globalname(v->name) + "_lock,";
       o->newline() << ".write_p = " << (write_p ? 1 : 0) << ",";
       o->newline() << "#ifdef STP_TIMING";
       o->newline() << ".skipped = &global." << c_globalname (v->name) << "_lock_skip_count,";
@@ -2455,6 +2455,8 @@ c_unparser::c_localname (const string& e)
 string
 c_unparser::c_globalname (const string& e)
 {
+  // XXX uncomment to test custom mangling:
+  // return "s_" + e + "_" + lex_cast(do_hash(e.c_str()));
   return "s_" + e;
 }
 
@@ -2462,6 +2464,8 @@ c_unparser::c_globalname (const string& e)
 string
 c_unparser::c_funcname (const string& e)
 {
+  // XXX uncomment to test custom mangling:
+  // return "function_" + e + "_" + lex_cast(do_hash(e.c_str()));
   return "function_" + e;
 }
 

@@ -1041,7 +1041,7 @@ Users are cautioned to set probes judiciously.
 This 
 .IR prototype
 family of probe points interfaces to the kernel "perf event"
-infrasture for controlling hardware performance counters.
+infrastructure for controlling hardware performance counters.
 The events being attached to are described by the "type",
 "config" fields of the 
 .IR perf_event_attr
@@ -1111,7 +1111,7 @@ kernel.statement("bio_init@fs/bio.c+3")
 refers to the statement at line bio_init+3 within "fs/bio.c".
 .TP
 kernel.data("pid_max").write
-refers to a hardware preakpoint of type "write" set on pid_max
+refers to a hardware breakpoint of type "write" set on pid_max
 .TP
 syscall.*.return
 refers to the group of probe aliases with any name in the third position
