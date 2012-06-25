@@ -48,12 +48,12 @@ probe kernel.function("_unlock_kernel")!,
       kernel.function("unlock_kernel")
 {
   # under biglock
-  if (waiting >= $1) {
+  if (waiting >= $1 && holder == task_current()) {
     printf("%-25s: waiting(%d), holder: %s(%d) %dus\n",
            ctime(gettimeofday_s()),
            waiting,
-           task_execname(holder),
-           task_pid(holder),
-           gettimeofday_us() - holder_time);
+	   execname(),
+	   pid(),
+	   (holder_time != 0) ? gettimeofday_us() - holder_time : 0);
   }
 }
