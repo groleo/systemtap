@@ -25,8 +25,21 @@ static void _stp_text_str(char *out, char *in, int len, int quoted, int user);
 #else /* __get_user_inatomic */
 #define __stp_get_user(x, ptr) __get_user(x, ptr)
 #endif /* __get_user_inatomic */
-#else /* defined(__powerpc__) */
+#elif defined(__ia64__)
+#define __stp_get_user(x, ptr)						\
+  ({									\
+     int __res;								\
+     if (in_atomic() || irqs_disabled()) {				\
+       pagefault_disable();						\
+       __res = __get_user(x, ptr);					\
+       pagefault_enable();						\
+     }									\
+     else								\
+       __res = __get_user(x, ptr);					\
+     __res;								\
+  })
+#else /* !defined(__powerpc__) && !defined(__ia64) */
 #define __stp_get_user(x, ptr) __get_user(x, ptr)
-#endif /* defined(__powerpc__) */
+#endif /* !defined(__powerpc__) && !defined(__ia64) */
 
 #endif /* _STRING_H_ */
