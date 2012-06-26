@@ -21,16 +21,16 @@
 
 # how many tasks waiting on big lock
 global waiting = 0
-# who is holding big lock
-global holder = 0
+
+# when the current holder first obtained the lock
 global holder_time
 
 probe begin { printf("stap ready\n"); }
 
 probe end { printf("stap exiting\n"); }
 
-probe kernel.function("_lock_kernel")!,
-      kernel.function("lock_kernel")
+probe kernel.function("_lock_kernel").call!,
+      kernel.function("lock_kernel").call
 {
   ++waiting;
 }
@@ -40,7 +40,6 @@ probe kernel.function("_lock_kernel").return!,
 {
   # under biglock
   holder_time = gettimeofday_us();
-  holder = task_current();
   --waiting;
 }
 
@@ -48,12 +47,13 @@ probe kernel.function("_unlock_kernel")!,
       kernel.function("unlock_kernel")
 {
   # under biglock
-  if (waiting >= $1 && holder == task_current()) {
+  if (waiting >= $1) {
     printf("%-25s: waiting(%d), holder: %s(%d) %dus\n",
            ctime(gettimeofday_s()),
            waiting,
 	   execname(),
 	   pid(),
-	   (holder_time != 0) ? gettimeofday_us() - holder_time : 0);
+	   (holder_time != 0) ? gettimeofday_us() - holder_time : -1);
   }
+  holder_time = 0
 }
