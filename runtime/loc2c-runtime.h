@@ -600,16 +600,30 @@ extern void __store_deref_bad(void);
      intptr_t _v=0;							\
      if (lookup_bad_addr((unsigned long)addr, size))			\
        _bad = 1;                                                        \
-     else                                                               \
-       switch (size){							\
-       case 1: __get_user_size(_v, addr, 1, _bad); break; 		\
-       case 2: __get_user_size(_v, addr, 2, _bad); break;  		\
-       case 4: __get_user_size(_v, addr, 4, _bad); break;  		\
-       case 8: __get_user_size(_v, addr, 8, _bad); break;  		\
-       default: __get_user_unknown(); break;				\
+     else {								\
+       if (in_atomic() || irqs_disabled()) {				\
+	 pagefault_disable();						\
+	 switch (size) {						\
+	 case 1: __get_user_size(_v, addr, 1, _bad); break; 		\
+	 case 2: __get_user_size(_v, addr, 2, _bad); break;  		\
+	 case 4: __get_user_size(_v, addr, 4, _bad); break;  		\
+	 case 8: __get_user_size(_v, addr, 8, _bad); break;  		\
+	 default: __get_user_unknown(); break;				\
+	 }								\
+	 pagefault_enable();						\
        }								\
-    if (_bad)  								\
-	DEREF_FAULT(addr);						\
+       else {								\
+	 switch (size) {						\
+	 case 1: __get_user_size(_v, addr, 1, _bad); break; 		\
+	 case 2: __get_user_size(_v, addr, 2, _bad); break;  		\
+	 case 4: __get_user_size(_v, addr, 4, _bad); break;  		\
+	 case 8: __get_user_size(_v, addr, 8, _bad); break;  		\
+	 default: __get_user_unknown(); break;				\
+	 }								\
+       }								\
+     }									\
+     if (_bad) 								\
+       DEREF_FAULT(addr);						\
      _v;								\
    })
 

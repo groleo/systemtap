@@ -1,8 +1,9 @@
 dnl configure.ac --- autoconf input file for systemtap
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([systemtap], 1.8, systemtap@sourceware.org, systemtap)
+AC_INIT([systemtap], 2.0, systemtap@sourceware.org, systemtap)
 dnl                  ^^^ see also NEWS, systemtap.spec, testsuite/configure.ac
+dnl                      doc/SystemTap_Beginners_Guide/en-US/Book_Info.xml
 
 AC_PREREQ(2.63)
 dnl We don't maintain a ChangeLog, which makes us non-GNU -> foreign.
@@ -535,7 +536,7 @@ if test $build_elfutils = yes -a $enable_translator = yes; then
 				--exec-prefix="$exec_prefix" \
 				--prefix="$prefix" \
 				${need_maintainer_option} \
-				CFLAGS="${CFLAGS/-Wall/} $gnu89_inline_flag" \
+				CFLAGS="${CFLAGS/-Wall/} $gnu89_inline_flag -fexceptions" \
 				LDFLAGS="$LDFLAGS $elfutils_rpath" &&
    if test -f ${elfutils_srcdir}/config/version.h.in; then
         echo Found elfutils/version.h header...

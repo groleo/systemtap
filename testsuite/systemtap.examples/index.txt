@@ -555,6 +555,18 @@ keywords: network device traffic
   # stap netdev.stp -c "sleep 0.2"
 
 
+network/netfilter_drop.stp - System-Wide Network Packet Dropping Tool
+keywords: network drop packets
+
+  The script drops the specified number of packets of the specified
+  protocol. Valid protocols are TCP, UDP, or ALL. If ALL is specified,
+  all incoming packets are dropped. The number of packets to drop can
+  be specified with a positive integer. A value of 0 indicates that
+  packets should be dropped until the user manually exits.
+
+  # stap -g netfilter_drop.stp TCP 1 -c "sleep 2"
+
+
 network/netfilter_summary.stp - System-Wide Count of Network Packets by IPs
 keywords: network traffic
 
@@ -798,6 +810,16 @@ keywords: process
   /proc/$$/limits on recent kernels.
 
   # stap -g plimit.stp $$
+
+
+process/psig.stp - Print Process File Descriptors
+keywords: process signal
+
+  Run psig.stp to produce a human-readable summary of the signal
+  handling configuration of a given process.  Specify the process-id as
+  -x PID for fastest performance.
+
+  # stap -DMAXACTION=10000 -g psig.stp -x $$
 
 
 process/pstrace_exec.stp - Print trace of process ancestors for matching exec commands

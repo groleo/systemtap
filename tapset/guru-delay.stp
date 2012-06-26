@@ -29,11 +29,11 @@
  */
 function mdelay(ms:long) %{
   /* guru */
-  mdelay(THIS->ms);
+  mdelay(STAP_ARG_ms);
 %}
 
 /**
- * sfunction mdelay - microsecond delay
+ * sfunction udelay - microsecond delay
  * @us: Number of microseconds to delay.
  *
  * Description: This function inserts a multi-microsecond busy-delay into a probe handler.
@@ -41,5 +41,5 @@ function mdelay(ms:long) %{
  */
 function udelay(us:long) %{
   /* guru */
-  udelay(THIS->us);
+  udelay(STAP_ARG_us);
 %}
