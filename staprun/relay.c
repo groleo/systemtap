@@ -153,7 +153,7 @@ static void *reader_thread(void *data)
 #endif
 	}
 
-        if (reader_timeout_ms) {
+        if (reader_timeout_ms && timeout) {
                 timeout->tv_sec = reader_timeout_ms / 1000;
                 timeout->tv_nsec = (reader_timeout_ms - timeout->tv_sec * 1000) * 1000000;
         }

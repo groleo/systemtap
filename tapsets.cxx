@@ -1874,6 +1874,7 @@ validate_module_elf (Dwfl_Module *mod, const char *name,  base_query *q)
   GElf_Ehdr ehdr_mem;
   GElf_Ehdr* em = gelf_getehdr (elf, &ehdr_mem);
   if (em == 0) { dwfl_assert ("dwfl_getehdr", dwfl_errno()); }
+  assert(em);
   int elf_machine = em->e_machine;
   const char* debug_filename = "";
   const char* main_filename = "";
@@ -5974,6 +5975,7 @@ sdt_query::handle_probe_entry()
   GElf_Ehdr ehdr_mem;
   GElf_Ehdr* em = gelf_getehdr (elf, &ehdr_mem);
   if (em == 0) { dwfl_assert ("dwfl_getehdr", dwfl_errno()); }
+  assert(em);
   int elf_machine = em->e_machine;
   sdt_uprobe_var_expanding_visitor svv (sess, elf_machine, module_val,
 					provider_name, probe_name,
@@ -6647,6 +6649,7 @@ dwarf_builder::build(systemtap_session & sess,
   string dummy_mark_name; // NB: PR10245: dummy value, need not substitute - => __
   if (get_param(parameters, TOK_MARK, dummy_mark_name))
     {
+      assert(dw);
       sdt_query sdtq(base, location, *dw, filled_parameters, finished_results, user_lib);
       dw->iterate_over_modules(&query_module, &sdtq);
       return;
