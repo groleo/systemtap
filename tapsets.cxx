@@ -9584,7 +9584,10 @@ tracepoint_builder::init_dw(systemtap_session& s)
       if (s.verbose > 3)
         clog << _("Checking tracepoint glob ") << glob_str << endl;
 
-      glob(glob_str.c_str(), 0, NULL, &trace_glob);
+      int r = glob(glob_str.c_str(), 0, NULL, &trace_glob);
+      if (r == GLOB_NOSPACE || r == GLOB_ABORTED)
+        throw runtime_error("Error globbing tracepoint");
+
       for (unsigned i = 0; i < trace_glob.gl_pathc; ++i)
         {
           string header(trace_glob.gl_pathv[i]);
