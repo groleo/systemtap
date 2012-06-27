@@ -2314,7 +2314,6 @@ mapvar::value_typename(exp_type e)
     default:
       throw semantic_error(_("array type is neither string nor long"));
     }
-  return "";
 }
 
 string
@@ -2329,7 +2328,6 @@ mapvar::key_typename(exp_type e)
     default:
       throw semantic_error(_("array key is neither string nor long"));
     }
-  return "";
 }
 
 string
@@ -2344,7 +2342,6 @@ mapvar::shortname(exp_type e)
     default:
       throw semantic_error(_("array type is neither string nor long"));
     }
-  return "";
 }
 
 
