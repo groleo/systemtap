@@ -3772,7 +3772,8 @@ dwarf_var_expanding_visitor::getscopes(target_symbol *e)
 
   if (scopes.empty())
     {
-      scopes = q.dw.getscopes(scope_die);
+      if(scope_die != NULL)
+        scopes = q.dw.getscopes(scope_die);
       if (scopes.empty())
         //throw semantic_error (_F("unable to find any scopes containing %d", addr), e->tok);
         //                        ((scope_die == NULL) ? "" : (string (" in ") + (dwarf_diename(scope_die) ?: "<unknown>") + "(" + (dwarf_diename(q.dw.cu) ?: "<unknown>") ")" ))
@@ -6130,6 +6131,7 @@ sdt_query::setup_note_probe_entry (int type, const char *data, size_t len)
   const char * provider = data + dst.d_size;
   provider_name = provider;
   const char *name = (const char*)memchr (provider, '\0', data + len - provider);
+  assert(name);
   probe_name = ++name;
 
   // Did we find a matching probe?
