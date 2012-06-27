@@ -5402,10 +5402,10 @@ static void get_unwind_data (Dwfl_Module *m,
   elf = dwfl_module_getelf(m, &bias);
   ehdr = gelf_getehdr(elf, &ehdr_mem);
   scn = NULL;
+  bool eh_frame_seen = false;
+  bool eh_frame_hdr_seen = false;
   while ((scn = elf_nextscn(elf, scn)))
     {
-      bool eh_frame_seen = false;
-      bool eh_frame_hdr_seen = false;
       shdr = gelf_getshdr(scn, &shdr_mem);
       const char* scn_name = elf_strptr(elf, ehdr->e_shstrndx, shdr->sh_name);
       if (!eh_frame_seen
