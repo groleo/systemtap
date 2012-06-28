@@ -1,0 +1,18 @@
+/*
+ * alias_suffixes02.stp
+ *
+ * Check whether alias suffixes are only invoked on ordinary matching failure
+ */
+
+probe begin(1) {
+      println("systemtap starting probe")
+}
+probe first.second = begin(2) {
+      println("systemtap test failure")
+}
+probe third = first { }
+probe third.second = end {
+      println("systemtap ending probe")
+      println("systemtap test success")
+}
+probe third.second { }

@@ -1,0 +1,13 @@
+/*
+ * alias_suffixes02.stp
+ *
+ * Check whether alias suffixes and multiply defined aliases interact correctly
+ */
+
+probe first.second = begin { println("systemtap starting probe") }
+probe first.second = end {
+      println("systemtap ending probe")
+      println("systemtap test success")
+}
+probe third = first { }
+probe third.second { }

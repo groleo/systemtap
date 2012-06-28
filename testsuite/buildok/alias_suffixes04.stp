@@ -1,0 +1,8 @@
+#! stap -p4
+
+# this defines three distinct derived probes from one suffixed probe
+
+probe a = syscall.open.return { print ("1 ") }
+probe a += syscall.open.return { print ("2 ") }
+probe a = syscall.close.return { print ("3 ") }
+probe a.maxactive(10) { printf ("%s\n", pp()) }

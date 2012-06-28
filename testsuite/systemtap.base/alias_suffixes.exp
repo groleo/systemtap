@@ -1,0 +1,5 @@
+set file $srcdir/$subdir/alias_suffixes
+foreach ix {01 02 03 04 05} {
+    set test "alias suffixes $ix"
+    stap_run "$file$ix.stp" no_load $all_pass_string
+}

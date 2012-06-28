@@ -1,0 +1,11 @@
+#! stap -p2
+
+# fails with a "probe point mismatch" error
+
+probe a.q.b = begin { }
+
+probe a.q.e = end { }
+
+probe b = a.q { }
+
+probe b.d { print("Hello, World!\n") end() }

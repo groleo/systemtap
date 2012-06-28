@@ -1,0 +1,7 @@
+#! stap -p4
+
+# probes will all expand to syscall.open.return.maxactive(10)
+
+probe syscall.open.return.maxact*(10) { print("a") }
+probe syscall.open.return.maxact**(10) { print("b") }
+probe syscall.open.return.*(10) { print("c") }

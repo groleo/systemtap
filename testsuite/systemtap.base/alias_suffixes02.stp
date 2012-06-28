@@ -1,0 +1,19 @@
+/*
+ * alias_suffixes02.stp
+ *
+ * Check whether alias suffixes and wildcards interact correctly
+ */
+
+/* 1 -- if an expansion includes ordinary matches, suffixes are not included */
+probe first.icecream = begin(3) { println("systemtap test failure") }
+probe third.second = begin(1) { print("systemtap starting ") }
+probe third.secret = begin(2) { println("probe") }
+probe third = first { }
+probe third.*ec* { }
+
+/* 2 -- if an expansion has no ordinary matches, suffixes are included */
+probe fourth.icecream = end(1) { println("systemtap test failure") }
+probe fourth.sectarian = end(2) { println("systemtap ending probe") }
+probe fourth.second = end(3) { println("systemtap test success") }
+probe fifth = fourth { }
+probe fifth.*se* { }
