@@ -191,6 +191,12 @@ keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-inde
 </li><li><a name="network/netdev.stp"></a><a href="#network/netdev.stp">&para;</a> <a href="network/netdev.stp">network/netdev.stp</a> - Trace Activity on Network Devices<br>
 keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#DEVICE">DEVICE</a> <a href="keyword-index.html#TRAFFIC">TRAFFIC</a> <br>
 <p>The netdev.stp script traces configuration and transmit/receive activity on network devices.<p><font size="-2"><pre># stap netdev.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a name="network/netfilter_drop.stp"></a><a href="#network/netfilter_drop.stp">&para;</a> <a href="network/netfilter_drop.stp">network/netfilter_drop.stp</a> - System-Wide Network Packet Dropping Tool<br>
+keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#DROP">DROP</a> <a href="keyword-index.html#PACKETS">PACKETS</a> <br>
+<p>The script drops the specified number of packets of the specified protocol. Valid protocols are TCP, UDP, or ALL. If ALL is specified, all incoming packets are dropped. The number of packets to drop can be specified with a positive integer. A value of 0 indicates that packets should be dropped until the user manually exits.<p><font size="-2"><pre># stap -g netfilter_drop.stp TCP 1 -c &quot;sleep 2&quot;</pre></font></p>
+</li><li><a name="network/netfilter_summary.stp"></a><a href="#network/netfilter_summary.stp">&para;</a> <a href="network/netfilter_summary.stp">network/netfilter_summary.stp</a> - System-Wide Count of Network Packets by IPs<br>
+keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#TRAFFIC">TRAFFIC</a> <br>
+<p>The script watches all IPv4 network traffic on the system. On exit the script prints a list showing the number of packets sent along source IP address / destination IP address pair encountered, and the total number of bytes sent among the pair. The list is ordered from greatest to least number of packets seen among the source/destination pairs.<p><font size="-2"><pre># stap netfilter_summary.stp -c &quot;sleep 0.4&quot;</pre></font></p>
 </li><li><a name="network/nettop.stp"></a><a href="#network/nettop.stp">&para;</a> <a href="network/nettop.stp">network/nettop.stp</a> - Periodic Listing of Processes Using Network Interfaces<br>
 keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#TRAFFIC">TRAFFIC</a> <br>
 <p>Every five seconds the nettop.stp script prints out a list of processed (PID and command) with the number of packets sent/received and the amount of data sent/received by the process during that interval.<p><font size="-2"><pre># stap nettop.stp -c &quot;sleep 0.2&quot;</pre></font></p>
@@ -254,6 +260,9 @@ keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-inde
 </li><li><a name="process/plimit.stp"></a><a href="#process/plimit.stp">&para;</a> <a href="process/plimit.stp">process/plimit.stp</a> - Print Resource Limits of Process<br>
 keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <br>
 <p>The script prints a variety of resource limits for a given pid, like /proc/$$/limits on recent kernels.<p><font size="-2"><pre># stap -g plimit.stp $$</pre></font></p>
+</li><li><a name="process/psig.stp"></a><a href="#process/psig.stp">&para;</a> <a href="process/psig.stp">process/psig.stp</a> - Print Process File Descriptors<br>
+keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-index.html#SIGNAL">SIGNAL</a> <br>
+<p>Run psig.stp to produce a human-readable summary of the signal handling configuration of a given process.  Specify the process-id as -x PID for fastest performance.<p><font size="-2"><pre># stap -DMAXACTION=10000 -g psig.stp -x $$</pre></font></p>
 </li><li><a name="process/pstrace_exec.stp"></a><a href="#process/pstrace_exec.stp">&para;</a> <a href="process/pstrace_exec.stp">process/pstrace_exec.stp</a> - Print trace of process ancestors for matching exec commands<br>
 keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-index.html#BACKTRACE">BACKTRACE</a> <br>
 <p>The pstrace_exec.stp script watches each exec operation. If the exec contains a substring that matches the script&#39;s command-line argument, it prints out that process and all of its ancestors.<p><font size="-2"><pre># stap pstrace_exec.stp -c &quot;sleep 0.2&quot; bash</pre></font></p>

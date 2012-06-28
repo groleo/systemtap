@@ -18,21 +18,16 @@ proc utrace_p {} {
     if {! [catch {exec grep -q utrace_attach $path} dummy]} {
 	return 1
 
-    # (2) Tracepoint-based utrace.  Check for either:
-    # (2a) the set of 5 tracepoints we need (see
-    # runtime/autoconf-utrace-via-ftrace.c)
-    # (2b) the 4 tracepoints and the ftrace function we need (see
-    # runtime/autoconf-utrace-via-ftrace.c)
-    #
-    # Since 4 tracepoints are shared between the 2 methods, that makes
-    # things a bit easier.
+    # (2) Tracepoint-based utrace.  Check for the set of 5 tracepoints
+    # we need and task_work_add() (see
+    # runtime/autoconf-utrace-via-tracepoints.c for details).
     } elseif {! [catch {exec grep -q tracepoint_sched_process_fork $path} dummy]
 	      && ! [catch {exec grep -q tracepoint_sched_process_exit $path} dummy]
 	      && ! [catch {exec grep -q tracepoint_sys_enter $path} dummy]
 	      && ! [catch {exec grep -q tracepoint_sys_exit $path} dummy]
 
-	      && (! [catch {exec grep -q tracepoint_sched_process_exec $path} dummy]
-		  || ! [catch {exec grep -q ftrace_set_filter $path} dummy])} {
+	      && ! [catch {exec grep -q tracepoint_sched_process_exec $path} dummy]
+	      && ! [catch {exec grep -q task_work_add $path} dummy]} {
         return 1
     }
     return 0
@@ -53,9 +48,13 @@ proc uprobes_p {} {
 	}
 	return 1
     }
+
     # inode-uprobes or (unlikely compiled-in classical uprobes?)
+    #
+    # Note we're looking for " uprobe_register" to avoid finding
+    # 'kallsyms_uprobe_register' from a loaded systemtap module.
     if {! [catch {exec grep -q register_uprobe $path} dummy]
-	|| ! [catch {exec grep -q uprobe_register $path} dummy]} {
+	|| ! [catch {exec grep -q " uprobe_register" $path} dummy]} {
 	return 1
     }
     return 0
@@ -93,11 +92,7 @@ proc setup_systemtap_environment {} {
 
     # need an absolute SRCDIR for the top-level src/ tree
     # XXX: or, we could change nearby uses of ${SRCDIR}/testsuite to ${SRCDIR}
-    if {[string index $srcdir 0] != "/"} then {
-        set env(SRCDIR) [exec pwd]/$srcdir/..
-    } else {
-        set env(SRCDIR) $srcdir/..
-    }
+    set env(SRCDIR) [fullpath $srcdir/..]
 
     # Use a local systemtap directory and cache.  Add user name so
     # make check and sudo make check don't clobber each other.
@@ -143,7 +138,7 @@ proc setup_systemtap_environment {} {
 # Set up the environment so that tests will be performed using the systemtap
 # client and server.
 proc setup_server { args } {
-    global srcdir env installed_stap logfile use_server
+    global srcdir env installed_stap logfile use_server avahi_ok_p
 
     # Start the server
     if {! [start_server $args]} then {
@@ -158,8 +153,11 @@ proc setup_server { args } {
     set res [catch { exec grep "^ host" stap-list-servers.out } looksee]
     verbose -log "grep for servers returned: res==$res\n$looksee"
 
+    set avahi_ok_p 1
     if {$res != 0} then {
 	verbose -log "Unable to automatically find the systemtap server -- check firewall settings for mDNS"
+	set avahi_ok_p 0
+
 	# Try to discover the port the server is listening on from the server
 	# log.
 	set res [catch { exec /bin/cat $logfile | awk "/^Systemtap Compile Server on port .* ready/ {print \$6}" } server_port]
@@ -245,6 +243,15 @@ proc normalize_arch { arch } {
     if {$arch == "armv7l"} then {return "arm"}
     if {$arch == "armv7lh"} then {return "arm"}
     return $arch
+}
+
+proc fullpath { path } {
+    if {[string index $path 0] != "/"} then {
+        # relative paths are anchored to the current directory
+        return [pwd]/$path
+    } else {
+        return $path
+    }
 }
 
 proc get_system_info {} {

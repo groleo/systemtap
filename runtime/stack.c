@@ -36,7 +36,7 @@
 #include "sym.c"
 #include "regs.h"
 
-#include "uprobes-inc.h"
+#include "linux/uprobes-inc.h"
 
 #if defined(STAPCONF_KERNEL_STACKTRACE) || defined(STAPCONF_KERNEL_STACKTRACE_NO_BP)
 #include <linux/stacktrace.h>

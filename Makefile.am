@@ -17,7 +17,7 @@ AM_CPPFLAGS = -DBINDIR='"$(bindir)"' \
 AM_CFLAGS = -D_GNU_SOURCE -fexceptions -Wall -Werror -Wunused -Wformat=2 -W
 AM_CXXFLAGS = -Wall -Werror
 
-man_MANS = stapprobes.3stap stapfuncs.3stap stapvars.3stap stapex.3stap \
+man_MANS = stapprobes.3stap stapvars.3stap stapex.3stap \
 dtrace.1 stap-merge.1\
 stappaths.7
 
@@ -102,7 +102,7 @@ cscope:
 
 PHONIES =
 if BUILD_TRANSLATOR
-stap_CFLAGS = $(AM_CFLAGS) @PIECFLAGS@ -D_FILE_OFFSET_BITS=64
+stap_CFLAGS = $(AM_CFLAGS) @PIECFLAGS@
 stap_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@
 stap_CPPFLAGS = $(AM_CPPFLAGS) -DSTAP_SDT_V2
 stap_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@
@@ -184,7 +184,7 @@ stap_serverd_SOURCES = stap-serverd.cxx cscommon.cxx util.cxx privilege.cxx nssc
 stap_serverd_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ $(nss_CFLAGS)
 stap_serverd_CFLAGS = $(AM_CFLAGS) @PIECFLAGS@ $(nss_CFLAGS)
 stap_serverd_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@
-stap_serverd_LDADD = $(nss_LIBS)
+stap_serverd_LDADD = $(nss_LIBS) -lpthread
 if HAVE_AVAHI
 stap_serverd_CFLAGS += $(avahi_CFLAGS)
 stap_serverd_CXXFLAGS += $(avahi_CFLAGS)
@@ -259,10 +259,12 @@ endif
 		| while read f; do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/unwind/$$f; done)
 	(cd $(srcdir)/runtime/transport; for f in *.[ch]; \
 		do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/transport/$$f; done)
-	(cd $(srcdir)/runtime/uprobes; for f in Makefile *.[ch]; \
-		do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/uprobes/$$f; done)
-	(cd $(srcdir)/runtime/uprobes2; for f in *.[ch]; \
-		do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/uprobes2/$$f; done)
+	(cd $(srcdir)/runtime/linux; for f in *.[ch]; \
+		do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/linux/$$f; done)
+	(cd $(srcdir)/runtime/linux/uprobes; for f in Makefile *.[ch]; \
+		do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/linux/uprobes/$$f; done)
+	(cd $(srcdir)/runtime/linux/uprobes2; for f in *.[ch]; \
+		do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/linux/uprobes2/$$f; done)
 	(cd $(srcdir)/tapset; find . \( -name '*.stp' -o -name README \) -print \
 		| while read f; do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/tapset/$$f; done)
 	(cd $(srcdir)/testsuite/systemtap.examples; find . -type f -print \
@@ -276,7 +278,6 @@ if BUILD_SERVER
 	test -e $(DESTDIR)$(localstatedir)/run/stap-server || mkdir -p $(DESTDIR)$(localstatedir)/run/stap-server
 	test -e $(DESTDIR)$(localstatedir)/log || mkdir -p $(DESTDIR)$(localstatedir)/log
 endif
-	(cd $(srcdir)/man; for f in *.3*; do $(INSTALL_DATA) -D $$f "$(DESTDIR)$(man3dir)/$$f" || exit $$?; done)
 
 
 TEST_COV_DIR = coverage
@@ -327,9 +328,9 @@ if BUILD_SERVER
 endif
 	(cd $(srcdir)/man; for f in *.3*; do rm -rf "$(DESTDIR)$(man3dir)/$$f"; done)
 
-SUBDIRS = . runtime/staprun doc po
+SUBDIRS = . staprun doc po
 DIST_SUBDIRS = testsuite $(SUBDIRS)
-EXTRA_DIST = m4/ChangeLog  man/tapset*.3stap
+EXTRA_DIST = m4/ChangeLog
 
 check-local:
 	SRCDIR=`cd $(srcdir); pwd`; \
@@ -365,11 +366,11 @@ testsuite/dtrace: dtrace
 
 PHONIES += update-po
 update-po:
-	(cd $(srcdir); ls -1d *.c *.cxx *.h runtime/staprun/*.c runtime/staprun/*.h dtrace.in) \
+	(cd $(srcdir); ls -1d *.c *.cxx *.h staprun/*.c staprun/*.h dtrace.in) \
 	| grep -v loc2c-test.c \
 	| grep -v config.h \
 	| grep -v git_version.h \
-	| grep -v runtime/staprun/config.h \
+	| grep -v staprun/config.h \
 	| sort > $(srcdir)/po/POTFILES.in
 	$(MAKE) -C po update-po
 

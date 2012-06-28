@@ -1,6 +1,19 @@
-* What's new in version 1.8
+* What's new in version 2.0
+
+
+* What's new in version 1.8, 2012-06-17
+
+- staprun accepts a -T timeout option to allow less frequent wake-ups
+  to poll for low-throughput output from scripts.
+
+- When invoked by systemtap, the kbuild $PATH environment is sanitized
+  (prefixed with /usr/bin:/bin:) in an attempt to exclude compilers
+  other than the one the kernel was presumed built with.
 
 - Printf formats can now use "%#c" to escape non-printing characters.
+
+- Pretty-printed bitfields use integers and chars use escaped formatting
+  for printing.
 
 - The systemtap compile-server and client now support IPv6 networks.
   - IPv6 addresses may now be specified on the --use-server option and will
@@ -35,7 +48,7 @@
   in the source file "some/src/file.c". The @var syntax combines with all
   normal features of DWARF target variables like @defined(), @entry(),
   [N] array indexing, field access through ->, taking the address with
-  the & prefix and swallow or deep pretty printing with a $ or $$ suffix.
+  the & prefix and shallow or deep pretty printing with a $ or $$ suffix.
 
 - Stap now has resource limit options:
     --rlimit-as=NUM
@@ -60,6 +73,44 @@
 - The following tapset functions are deprecated in release 1.8 and will be
   removed in release 1.9:
       daddr_to_string()
+
+- SystemTap now mangles local variables to avoid collisions with C
+  headers included by tapsets. This required a change in how
+  embedded-C functions access local parameters and the return value slot.
+
+  Instead of THIS->foo in an embedded-C function, please use the newly
+  defined macro STAP_ARG_foo (substitute the actual name of the
+  argument for 'foo'); instead of THIS->__retvalue, use the newly
+  defined STAP_RETVALUE. All of the tapsets and test cases have been
+  adapted to use this new notation.
+
+  If you need to run code which uses the old THIS-> notation, run stap
+  with the --compatible=1.7 option.
+
+- There is updated support for user-space probing against kernels >=
+  3.5, which have no utrace but do have the newer inode-uprobes work
+  by Srikar Dronamraju and colleagues.  For kernels < 3.5, the
+  following 3 sets of kernel patches would need to be backported to
+  your kernel to use this preliminary user-space probing support:
+
+  - inode-uprobes patches:
+    - 2b144498350860b6ee9dc57ff27a93ad488de5dc
+    - 7b2d81d48a2d8e37efb6ce7b4d5ef58822b30d89
+    - a5f4374a9610fd7286c2164d4e680436727eff71
+    - 04a3d984d32e47983770d314cdb4e4d8f38fccb7
+    - 96379f60075c75b261328aa7830ef8aa158247ac
+    - 3ff54efdfaace9e9b2b7c1959a865be6b91de96c
+    - 35aa621b5ab9d08767f7bc8d209b696df281d715
+    - 900771a483ef28915a48066d7895d8252315607a
+    - e3343e6a2819ff5d0dfc4bb5c9fb7f9a4d04da73
+  - exec tracepoint kernel patch:
+    - 4ff16c25e2cc48cbe6956e356c38a25ac063a64d
+  - task_work_add kernel patches:
+    - e73f8959af0439d114847eab5a8a5ce48f1217c4
+    - 4d1d61a6b203d957777d73fcebf19d90b038b5b2
+    - 413cd3d9abeaef590e5ce00564f7a443165db238
+    - dea649b8ac1861107c5d91e1a71121434fc64193
+    - f23ca335462e3c84f13270b9e65f83936068ec2c
 
 * What's new in version 1.7, 2012-02-01
 

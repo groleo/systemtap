@@ -29,6 +29,9 @@
    */
 #undef HAVE_DCGETTEXT
 
+/* Define to 1 if libelf has elf_getshdrstrndx */
+#undef HAVE_ELF_GETSHDRSTRNDX
+
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
 
@@ -40,6 +43,9 @@
 
 /* Define to 1 if you have the `dw' library (-ldw). */
 #undef HAVE_LIBDW
+
+/* Define to 1 if you have the <libelf.h> header file. */
+#undef HAVE_LIBELF_H
 
 /* have librpm */
 #undef HAVE_LIBRPM
@@ -140,6 +146,12 @@
 
 /* Version number of package */
 #undef VERSION
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
 
 /* Define to 1 if on MINIX. */
 #undef _MINIX

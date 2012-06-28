@@ -208,6 +208,20 @@ keywords: nfs disk
   # stap nfsd_unlink.stp -c "sleep 0.2"
 
 
+= DROP =
+
+network/netfilter_drop.stp - System-Wide Network Packet Dropping Tool
+keywords: network drop packets
+
+  The script drops the specified number of packets of the specified
+  protocol. Valid protocols are TCP, UDP, or ALL. If ALL is specified,
+  all incoming packets are dropped. The number of packets to drop can
+  be specified with a positive integer. A value of 0 indicates that
+  packets should be dropped until the user manually exits.
+
+  # stap -g netfilter_drop.stp TCP 1 -c "sleep 2"
+
+
 = FILE =
 
 io/iotime.stp - Trace Time Spent in Read and Write for Files 
@@ -891,6 +905,31 @@ keywords: network device traffic
   # stap netdev.stp -c "sleep 0.2"
 
 
+network/netfilter_drop.stp - System-Wide Network Packet Dropping Tool
+keywords: network drop packets
+
+  The script drops the specified number of packets of the specified
+  protocol. Valid protocols are TCP, UDP, or ALL. If ALL is specified,
+  all incoming packets are dropped. The number of packets to drop can
+  be specified with a positive integer. A value of 0 indicates that
+  packets should be dropped until the user manually exits.
+
+  # stap -g netfilter_drop.stp TCP 1 -c "sleep 2"
+
+
+network/netfilter_summary.stp - System-Wide Count of Network Packets by IPs
+keywords: network traffic
+
+  The script watches all IPv4 network traffic on the system. On exit
+  the script prints a list showing the number of packets sent along
+  source IP address / destination IP address pair encountered, and the
+  total number of bytes sent among the pair. The list is ordered from
+  greatest to least number of packets seen among the source/destination
+  pairs.
+
+  # stap netfilter_summary.stp -c "sleep 0.4"
+
+
 network/nettop.stp - Periodic Listing of Processes Using Network Interfaces
 keywords: network traffic
 
@@ -1035,6 +1074,20 @@ keywords: memory numa
   # stap numa_faults.stp -c "sleep 0.2"
 
 
+= PACKETS =
+
+network/netfilter_drop.stp - System-Wide Network Packet Dropping Tool
+keywords: network drop packets
+
+  The script drops the specified number of packets of the specified
+  protocol. Valid protocols are TCP, UDP, or ALL. If ALL is specified,
+  all incoming packets are dropped. The number of packets to drop can
+  be specified with a positive integer. A value of 0 indicates that
+  packets should be dropped until the user manually exits.
+
+  # stap -g netfilter_drop.stp TCP 1 -c "sleep 2"
+
+
 = PROCESS =
 
 general/eventcount.stp - Count Specified Events
@@ -1122,6 +1175,16 @@ keywords: process
   /proc/$$/limits on recent kernels.
 
   # stap -g plimit.stp $$
+
+
+process/psig.stp - Print Process File Descriptors
+keywords: process signal
+
+  Run psig.stp to produce a human-readable summary of the signal
+  handling configuration of a given process.  Specify the process-id as
+  -x PID for fastest performance.
+
+  # stap -DMAXACTION=10000 -g psig.stp -x $$
 
 
 process/pstrace_exec.stp - Print trace of process ancestors for matching exec commands
@@ -1506,6 +1569,18 @@ keywords: process security
   Processes may be added or removed from the blocked list.
 
   # stap -g noptrace.stp -c 'strace ls || true'
+
+
+= SIGNAL =
+
+process/psig.stp - Print Process File Descriptors
+keywords: process signal
+
+  Run psig.stp to produce a human-readable summary of the signal
+  handling configuration of a given process.  Specify the process-id as
+  -x PID for fastest performance.
+
+  # stap -DMAXACTION=10000 -g psig.stp -x $$
 
 
 = SIGNALS =
@@ -1974,6 +2049,19 @@ keywords: network device traffic
   activity on network devices.
 
   # stap netdev.stp -c "sleep 0.2"
+
+
+network/netfilter_summary.stp - System-Wide Count of Network Packets by IPs
+keywords: network traffic
+
+  The script watches all IPv4 network traffic on the system. On exit
+  the script prints a list showing the number of packets sent along
+  source IP address / destination IP address pair encountered, and the
+  total number of bytes sent among the pair. The list is ordered from
+  greatest to least number of packets seen among the source/destination
+  pairs.
+
+  # stap netfilter_summary.stp -c "sleep 0.4"
 
 
 network/nettop.stp - Periodic Listing of Processes Using Network Interfaces

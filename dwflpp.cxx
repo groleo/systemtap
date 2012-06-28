@@ -333,7 +333,7 @@ dwflpp::setup_kernel(const string& name, systemtap_session & s, bool debuginfo_n
       ptrdiff_t off = 0;
       do
         {
-          if (pending_interrupts) return;
+          assert_no_interrupts();
           off = dwfl_getmodules (dwfl, &add_module_build_id_to_hash, &s, off);
         }
       while (off > 0);
@@ -422,7 +422,7 @@ dwflpp::iterate_over_cus (int (*callback)(Dwarf_Die * die, void * arg),
       Dwarf_Off noff;
       while (dwarf_nextcu (dw, off, &noff, &cuhl, NULL, NULL, NULL) == 0)
         {
-          if (pending_interrupts) return;
+          assert_no_interrupts();
           Dwarf_Die die_mem;
           Dwarf_Die *die;
           die = dwarf_offdie (dw, off + cuhl, &die_mem);
@@ -441,7 +441,7 @@ dwflpp::iterate_over_cus (int (*callback)(Dwarf_Die * die, void * arg),
       while (dwarf_next_unit (dw, off, &noff, &cuhl, NULL, NULL, NULL, NULL,
 			      &type_signature, NULL) == 0)
 	{
-          if (pending_interrupts) return;
+          assert_no_interrupts();
           Dwarf_Die die_mem;
           Dwarf_Die *die;
           die = dwarf_offdie_types (dw, off + cuhl, &die_mem);
@@ -454,7 +454,8 @@ dwflpp::iterate_over_cus (int (*callback)(Dwarf_Die * die, void * arg),
   for (vector<Dwarf_Die>::iterator i = v->begin(); i != v->end(); ++i)
     {
       int rc = (*callback)(&*i, data);
-      if (rc != DWARF_CB_OK || pending_interrupts)
+      assert_no_interrupts();
+      if (rc != DWARF_CB_OK)
         break;
     }
 }
@@ -564,7 +565,8 @@ dwflpp::iterate_over_inline_instances (int (* callback)(Dwarf_Die * die, void * 
   for (vector<Dwarf_Die>::iterator i = v->begin(); i != v->end(); ++i)
     {
       int rc = (*callback)(&*i, data);
-      if (rc != DWARF_CB_OK || pending_interrupts)
+      assert_no_interrupts();
+      if (rc != DWARF_CB_OK)
         break;
     }
 }
@@ -1535,7 +1537,7 @@ dwflpp::iterate_over_srcfile_lines (char const * srcfile,
       pair<set<int>::iterator,bool> line_probed;
       int ret = 0;
 
-      if (pending_interrupts) break;
+      assert_no_interrupts();
 
       nsrcs = 0;
       ret = dwarf_getsrc_file (module_dwarf, srcfile, l, 0,
@@ -1615,7 +1617,7 @@ dwflpp::iterate_over_srcfile_lines (char const * srcfile,
 
       for (size_t i = 0; i < nsrcs; ++i)
         {
-          if (pending_interrupts) return;
+          assert_no_interrupts();
           if (srcsp [i]) // skip over mismatched lines
             callback (dwarf_line_t(srcsp[i]), data);
         }
@@ -2552,7 +2554,7 @@ dwflpp::translate_components(struct obstack *pool,
             }
           else if (c.type == target_symbol::comp_expression_array_index)
             {
-              string index = "THIS->index" + lex_cast(i);
+              string index = "STAP_ARG_index" + lex_cast(i);
               if (pool)
                 c_translate_array (pool, 1, 0 /* PR9768 */, typedie, tail,
                                    index.c_str(), 0);
@@ -2683,7 +2685,7 @@ dwflpp::translate_final_fetch_or_store (struct obstack *pool,
       if (dwarf_hasattr_integrate (vardie, DW_AT_bit_offset))
         throw semantic_error (_("cannot take address of bit-field"), e->tok);
 
-      c_translate_addressof (pool, 1, 0, vardie, typedie, tail, "THIS->__retvalue");
+      c_translate_addressof (pool, 1, 0, vardie, typedie, tail, "STAP_RETVALUE");
       ty = pe_long;
       return;
     }
@@ -2736,10 +2738,10 @@ dwflpp::translate_final_fetch_or_store (struct obstack *pool,
       ty = pe_long;
       if (lvalue)
         c_translate_store (pool, 1, 0 /* PR9768 */, vardie, typedie, tail,
-                           "THIS->value");
+                           "STAP_ARG_value");
       else
         c_translate_fetch (pool, 1, 0 /* PR9768 */, vardie, typedie, tail,
-                           "THIS->__retvalue");
+                           "STAP_RETVALUE");
       break;
 
     case DW_TAG_array_type:
@@ -2757,7 +2759,7 @@ dwflpp::translate_final_fetch_or_store (struct obstack *pool,
               throw semantic_error (_("cannot write to reference"), e->tok);
             assert (typetag == DW_TAG_pointer_type);
             c_translate_pointer_store (pool, 1, 0 /* PR9768 */, typedie, tail,
-                                       "THIS->value");
+                                       "STAP_ARG_value");
           }
         else
           {
@@ -2774,7 +2776,7 @@ dwflpp::translate_final_fetch_or_store (struct obstack *pool,
             else
               c_translate_pointer (pool, 1, 0 /* PR9768 */, typedie, tail);
             c_translate_addressof (pool, 1, 0 /* PR9768 */, NULL, NULL, tail,
-                                   "THIS->__retvalue");
+                                   "STAP_RETVALUE");
           }
       break;
     }
@@ -3059,7 +3061,7 @@ dwflpp::literal_stmt_for_pointer (Dwarf_Die *start_typedie,
   obstack_init (&pool);
   struct location *head = c_translate_argument (&pool, &loc2c_error, this,
                                                 &loc2c_emit_address,
-                                                1, "THIS->pointer");
+                                                1, "STAP_ARG_pointer");
   struct location *tail = head;
 
   /* Translate the ->bar->baz[NN] parts. */
@@ -3067,9 +3069,9 @@ dwflpp::literal_stmt_for_pointer (Dwarf_Die *start_typedie,
   unsigned first = 0;
   Dwarf_Die typedie = *start_typedie, vardie = typedie;
 
-  /* As a special case when typedie is not an array or pointer, we can allow
-   * array indexing on THIS->pointer instead (since we do know the pointee type
-   * and can determine its size).  PR11556. */
+  /* As a special case when typedie is not an array or pointer, we can
+   * allow array indexing on STAP_ARG_pointer instead (since we do
+   * know the pointee type and can determine its size).  PR11556. */
   const target_symbol::component* c =
     e->components.empty() ? NULL : &e->components[0];
   if (c && (c->type == target_symbol::comp_literal_array_index ||
@@ -3083,7 +3085,7 @@ dwflpp::literal_stmt_for_pointer (Dwarf_Die *start_typedie,
           if (c->type == target_symbol::comp_literal_array_index)
             c_translate_array_pointer (&pool, 1, &typedie, &tail, NULL, c->num_index);
           else
-            c_translate_array_pointer (&pool, 1, &typedie, &tail, "THIS->index0", 0);
+            c_translate_array_pointer (&pool, 1, &typedie, &tail, "STAP_ARG_index0", 0);
           ++first;
         }
     }
@@ -3093,9 +3095,9 @@ dwflpp::literal_stmt_for_pointer (Dwarf_Die *start_typedie,
   translate_components (&pool, &tail, 0, e, &vardie, &typedie, first);
 
   /* Translate the assignment part, either
-     x = (THIS->pointer)->bar->baz[NN]
+     x = (STAP_ARG_pointer)->bar->baz[NN]
      or
-     (THIS->pointer)->bar->baz[NN] = x
+     (STAP_ARG_pointer)->bar->baz[NN] = x
   */
 
   string prelude, postlude;

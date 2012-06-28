@@ -228,7 +228,7 @@ the line.
 Systemtap provides a variety of such contextual data, ready for
 formatting.  They usually appear as function calls within the handler,
 like you already saw in Figure~\ref{fig:strace-open}.  {\bf See the
-\verb+stapfuncs+ man page for those functions and more defined in the
+\verb+function::*+ man pages for those functions and more defined in the
 tapset library}, but here's a sampling:
 
 \begin{tabular}{rl}
@@ -954,9 +954,8 @@ Embedded C can be the body of a script function.  Instead enclosing
 the function body statements in \verb+{+ and \verb+}+, use \verb+%{+
 and \verb+%}+.  Any enclosed C code is literally transcribed into the
 kernel module: it is up to you to make it safe and correct.  In order
-to take parameters and return a value, a pointer macro \verb+THIS+ is
-available.  Function parameters and a place for the return value are
-available as fields of that pointer.  The familiar data-gathering
+to take parameters and return a value, macros \verb+STAP_ARG_*+ and
+\verb+STAP_RETVALUE+ are made available.  The familiar data-gathering
 functions \verb+pid()+, \verb+execname()+, and their neighbours are
 all embedded C functions.  Figure~\ref{fig:embedded-C} contains
 another example.
@@ -1001,8 +1000,8 @@ function task_execname_by_pid:string (pid:long) %{
   struct list_head *_p, *_n;
   list_for_each_safe(_p, _n, &current->tasks) {
     p = list_entry(_p, struct task_struct, tasks);
-    if (p->pid == (int)THIS->pid) 
-      snprintf(THIS->__retvalue, MAXSTRINGLEN, "%s", p->comm);
+    if (p->pid == (int)STAP_ARG_pid) 
+      snprintf(STAP_RETVALUE, MAXSTRINGLEN, "%s", p->comm);
   }
 %}
 
@@ -1079,9 +1078,11 @@ There are \verb+man+ pages:
 \begin{tabular}{rl}
 \verb+stap+ & systemtap program usage, language summary \\
 \verb+stappaths+ & your systemtap installation paths \\
-\verb+stapfuncs+ & functions provided by tapsets \\
-\verb+stapprobes+ & probes / probe aliases provided by tapsets \\
-\verb+stapex+ & some example scripts \\
+\verb+stapprobes+ & probes / probe aliases provided by built-in tapsets \\
+\verb+stapex+ & a few basic example scripts \\
+\verb+tapset::*+ & summaries of the probes and functions in each tapset \\
+\verb+probe::*+ & detailed descriptions of each probe \\
+\verb+function::*+ & detailed descriptions of each function
 \end{tabular}
 
 There is much more documentation and sample scripts included.  You

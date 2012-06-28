@@ -1,11 +1,12 @@
 dnl configure.ac --- autoconf input file for systemtap
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([systemtap], 1.8, systemtap@sourceware.org, systemtap)
-dnl                  ^^^ see also NEWS, systemtap.spec, testsuite/configure.ac,
-dnl                      runtime/staprun/configure.ac
+AC_INIT([systemtap], 2.0, systemtap@sourceware.org, systemtap)
+dnl                  ^^^ see also NEWS, systemtap.spec, testsuite/configure.ac
+dnl                      doc/SystemTap_Beginners_Guide/en-US/Book_Info.xml
 
-AC_PREREQ(2.59)
+AC_PREREQ(2.63)
+dnl We don't maintain a ChangeLog, which makes us non-GNU -> foreign.
 AM_INIT_AUTOMAKE([no-dist foreign])
 AM_MAINTAINER_MODE
 
@@ -27,6 +28,7 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_SUBST(CFLAGS)
 AC_SUBST(CXXFLAGS)
+AC_SYS_LARGEFILE
 AM_GNU_GETTEXT(external)
 AM_GNU_GETTEXT_VERSION(0.17)
 AC_CHECK_FUNCS(ppoll)
@@ -111,30 +113,27 @@ dnl fi
 AC_ARG_ENABLE([pie],
   [AS_HELP_STRING([--enable-pie], [enable position-independent-executable])])
 AS_IF([test "x$enable_pie" == xyes],[
+   PIECFLAGS='-fPIE'
+   PIECXXFLAGS='-fPIE'
+   PIELDFLAGS='-pie -Wl,-z,relro -Wl,-z,now'
    save_CFLAGS="$CFLAGS"
    save_CXXFLAGS="$CXXFLAGS"
    save_LDFLAGS="$LDFLAGS"
-   CFLAGS="$CFLAGS -fPIE"
-   CXXFLAGS="$CXXFLAGS -fPIE"
-   LDFLAGS="$LDFLAGS -pie -Wl,-z,relro -Wl,-z,now"
+   CFLAGS="$CFLAGS $PIECFLAGS"
+   CXXFLAGS="$CXXFLAGS $PIECXXFLAGS"
+   LDFLAGS="$LDFLAGS $PIELDFLAGS"
    AC_LINK_IFELSE([AC_LANG_SOURCE([void main () {}])], [
        AC_MSG_NOTICE([Compiling with gcc pie et al.])
-          # LDFLAGS is special since it may be passed down to bundled-elfutils,
-          # and interfere with the .so's built therein
-          PIELDFLAGS="$LDFLAGS"
-          LDFLAGS="$save_LDFLAGS"
-          PIECFLAGS="$CFLAGS"
-          CFLAGS="$save_CFLAGS"
-          PIECXXFLAGS="$CXXFLAGS"
-          CXXFLAGS="$save_CXXFLAGS"
-       ],[
+   ], [
        AC_MSG_NOTICE([Compiler does not support -pie et al.])
        PIECFLAGS=""
-       CFLAGS="$save_CFLAGS"
        PIECXXFLAGS=""
-       CXXFLAGS="$save_CXXFLAGS"
        PIELDFLAGS=""
-       LDFLAGS="$save_LDFLAGS"])])
+   ])
+   CFLAGS="$save_CFLAGS"
+   CXXFLAGS="$save_CXXFLAGS"
+   LDFLAGS="$save_LDFLAGS"
+])
 AC_SUBST(PIELDFLAGS)
 AC_SUBST(PIECFLAGS)
 AC_SUBST(PIECXXFLAGS)
@@ -259,6 +258,20 @@ if test "x${have_xmlto}" == "xyes" -a "$enable_refdocs" != "no" -a "${building_d
    building_refdocs="yes"
 fi
 AM_CONDITIONAL([BUILD_REFDOCS], [test "$building_refdocs" == "yes"])
+
+AC_CHECK_PROG(have_fop, fop, yes, no)
+if test "x${have_fop}" == "xyes"; then
+   # Due to rhbz505364 / 830266, we must actually test-run fop, not just
+   # hope that it works.
+   AC_MSG_CHECKING([to see if xmlto --with-fop actually works])
+   if xmlto --with-fop pdf ${srcdir}/doc/SystemTap_Tapset_Reference/dummy-tapsets.xml >/dev/null 2>&1; then
+      AC_MSG_RESULT([yes])
+   else
+      AC_MSG_RESULT([it's dead, Jim])
+      have_fop="broken"
+   fi
+fi
+AM_CONDITIONAL([HAVE_FOP], [test "$have_fop" == "yes"])
 
 dnl There is a strange bug in older versions of xmlto when generating pdf.
 dnl https://bugzilla.redhat.com/show_bug.cgi?id=526273
@@ -425,6 +438,25 @@ fi
 AC_SUBST(stap_LIBS)
 AC_MSG_NOTICE([stap will link $stap_LIBS])
 
+# staprun has more modest libelf needs
+if test $build_elfutils = no; then
+  AC_CHECK_HEADERS([libelf.h])
+
+  save_LIBS="$LIBS"
+  dnl this will only succeed with elfutils 0.142+
+  AC_CHECK_LIB(elf,elf_getshdrstrndx,[
+    AC_DEFINE([HAVE_ELF_GETSHDRSTRNDX],[1],[Define to 1 if libelf has elf_getshdrstrndx])
+    staprun_LIBS="$staprun_LIBS -lelf"
+  ])
+  LIBS="$save_LIBS"
+else
+  # We built our own and staprun_LDFLAGS points at the install.
+  staprun_LIBS="$staprun_LIBS -lelf"
+fi
+
+AC_SUBST(staprun_LIBS)
+AC_MSG_NOTICE([staprun will link $staprun_LIBS])
+
 
 dnl Plop in the build (configure) date
 date=`date +%Y-%m-%d`
@@ -533,7 +565,7 @@ if test $build_elfutils = yes -a $enable_translator = yes; then
 				--exec-prefix="$exec_prefix" \
 				--prefix="$prefix" \
 				${need_maintainer_option} \
-				CFLAGS="${CFLAGS/-Wall/} $gnu89_inline_flag" \
+				CFLAGS="${CFLAGS/-Wall/} $gnu89_inline_flag -fexceptions" \
 				LDFLAGS="$LDFLAGS $elfutils_rpath" &&
    if test -f ${elfutils_srcdir}/config/version.h.in; then
         echo Found elfutils/version.h header...
@@ -565,11 +597,13 @@ AC_CONFIG_FILES([Makefile doc/Makefile \
 doc/beginners/Makefile doc/SystemTap_Tapset_Reference/Makefile \
 stappaths.7 \
 initscript/systemtap initscript/stap-server ])
-AC_CONFIG_SUBDIRS(testsuite runtime/staprun)
+AC_CONFIG_SUBDIRS(testsuite)
 if test $enable_translator == "yes"; then
 	AC_CONFIG_FILES([run-stap], [chmod +x run-stap])
 fi
 AC_CONFIG_FILES([dtrace], [chmod +x dtrace])
+AC_CONFIG_FILES(staprun/Makefile)
+AC_CONFIG_FILES([staprun/run-staprun], [chmod +x staprun/run-staprun])
 
 # Setup "shadow" directory doc/beginners that has everything setup for
 # publican in one directory (through directory links if necessary).

@@ -1876,6 +1876,7 @@ validate_module_elf (Dwfl_Module *mod, const char *name,  base_query *q)
   GElf_Ehdr ehdr_mem;
   GElf_Ehdr* em = gelf_getehdr (elf, &ehdr_mem);
   if (em == 0) { dwfl_assert ("dwfl_getehdr", dwfl_errno()); }
+  assert(em);
   int elf_machine = em->e_machine;
   const char* debug_filename = "";
   const char* main_filename = "";
@@ -1924,7 +1925,7 @@ validate_module_elf (Dwfl_Module *mod, const char *name,  base_query *q)
       throw semantic_error(msg.str ());
     }
 
-  if (q->sess.verbose>2)
+  if (q->sess.verbose>1)
     clog << _F("focused on module '%s' = [%#" PRIx64 "-%#" PRIx64 ", bias %#" PRIx64 
                " file %s ELF machine %s|%s (code %d)\n",
                q->dw.module_name.c_str(), q->dw.module_start, q->dw.module_end,
@@ -3773,7 +3774,8 @@ dwarf_var_expanding_visitor::getscopes(target_symbol *e)
 
   if (scopes.empty())
     {
-      scopes = q.dw.getscopes(scope_die);
+      if(scope_die != NULL)
+        scopes = q.dw.getscopes(scope_die);
       if (scopes.empty())
         //throw semantic_error (_F("unable to find any scopes containing %d", addr), e->tok);
         //                        ((scope_die == NULL) ? "" : (string (" in ") + (dwarf_diename(scope_die) ?: "<unknown>") + "(" + (dwarf_diename(q.dw.cu) ?: "<unknown>") ")" ))
@@ -4122,9 +4124,8 @@ check_process_probe_kernel_support(systemtap_session& s)
 
   // We don't have utrace.  For process probes that aren't
   // uprobes-based, we just need the task_finder.  The task_finder
-  // needs CONFIG_TRACEPOINTS and specific tracepoints (and perhaps
-  // some CONFIG_FTRACE support).  There are specific autoconf tests
-  // for its needs.
+  // needs CONFIG_TRACEPOINTS and specific tracepoints.  There is a
+  // specific autoconf test for its needs.
   //
   // We'll just require CONFIG_TRACEPOINTS here as a quick-and-dirty
   // approximation.
@@ -4651,7 +4652,7 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "#endif";
 
   // Forward decls
-  s.op->newline() << "#include \"kprobes-common.h\"";
+  s.op->newline() << "#include \"linux/kprobes-common.h\"";
 
   // Forward declare the master entry functions
   s.op->newline() << "static int enter_kprobe_probe (struct kprobe *inst,";
@@ -5978,6 +5979,7 @@ sdt_query::handle_probe_entry()
   GElf_Ehdr ehdr_mem;
   GElf_Ehdr* em = gelf_getehdr (elf, &ehdr_mem);
   if (em == 0) { dwfl_assert ("dwfl_getehdr", dwfl_errno()); }
+  assert(em);
   int elf_machine = em->e_machine;
   sdt_uprobe_var_expanding_visitor svv (sess, elf_machine, module_val,
 					provider_name, probe_name,
@@ -6132,6 +6134,7 @@ sdt_query::setup_note_probe_entry (int type, const char *data, size_t len)
   const char * provider = data + dst.d_size;
   provider_name = provider;
   const char *name = (const char*)memchr (provider, '\0', data + len - provider);
+  assert(name);
   probe_name = ++name;
 
   // Did we find a matching probe?
@@ -6469,7 +6472,7 @@ dwarf_builder::build(systemtap_session & sess,
             throw semantic_error (_F("glob %s error (%s)", module_name.c_str(), lex_cast(rc).c_str() ));
           for (unsigned i = 0; i < the_blob.gl_pathc; ++i)
             {
-              if (pending_interrupts) return;
+              assert_no_interrupts();
 
               const char* globbed = the_blob.gl_pathv[i];
               struct stat st;
@@ -6651,6 +6654,7 @@ dwarf_builder::build(systemtap_session & sess,
   string dummy_mark_name; // NB: PR10245: dummy value, need not substitute - => __
   if (get_param(parameters, TOK_MARK, dummy_mark_name))
     {
+      assert(dw);
       sdt_query sdtq(base, location, *dw, filled_parameters, finished_results, user_lib);
       dw->iterate_over_modules(&query_module, &sdtq);
       return;
@@ -7217,7 +7221,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline() << "#if defined(CONFIG_UPROBES) || defined(CONFIG_UPROBES_MODULE)";
   s.op->newline() << "#include <linux/uprobes.h>";
   s.op->newline() << "#else";
-  s.op->newline() << "#include \"uprobes/uprobes.h\"";
+  s.op->newline() << "#include \"linux/uprobes/uprobes.h\"";
   s.op->newline() << "#endif";
   s.op->newline() << "#ifndef UPROBES_API_VERSION";
   s.op->newline() << "#define UPROBES_API_VERSION 1";
@@ -7226,7 +7230,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   emit_module_maxuprobes (s);
 
   // Forward decls
-  s.op->newline() << "#include \"uprobes-common.h\"";
+  s.op->newline() << "#include \"linux/uprobes-common.h\"";
 
   // In .bss, the shared pool of uprobe/uretprobe structs.  These are
   // too big to embed in the initialized .data stap_uprobe_spec array.
@@ -7373,7 +7377,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline(-1) << "}";
 
   s.op->newline();
-  s.op->newline() << "#include \"uprobes-common.c\"";
+  s.op->newline() << "#include \"linux/uprobes-common.c\"";
   s.op->newline();
 }
 
@@ -7492,7 +7496,7 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
   if (probes.empty()) return;
   s.op->newline() << "/* ---- inode uprobes ---- */";
   emit_module_maxuprobes (s);
-  s.op->newline() << "#include \"uprobes-inode.c\"";
+  s.op->newline() << "#include \"linux/uprobes-inode.c\"";
 
   // Write the probe handler.
   s.op->newline() << "static int enter_inode_uprobe "
@@ -9255,7 +9259,7 @@ tracepoint_derived_probe_group::emit_module_decls (systemtap_session& s)
       for (unsigned j = 0; j < used_args.size(); ++j)
         {
           s.op->newline() << "c->probe_locals." << p->name
-                          << ".__tracepoint_arg_" << used_args[j]->name
+                          << "." + s.up->c_localname("__tracepoint_arg_" + used_args[j]->name)
                           << " = __tracepoint_arg_" << used_args[j]->name << ";";
         }
       s.op->newline() << "(*probe->ph) (c);";
@@ -9645,7 +9649,7 @@ tracepoint_builder::init_dw(systemtap_session& s)
           Dwarf_Addr bias;
           while ((cudie = dwfl_nextcu (dwfl, cudie, &bias)) != NULL)
             {
-              if (pending_interrupts) break;
+              assert_no_interrupts();
               Dwarf_Attribute attr;
               const char* name = dwarf_formstring (dwarf_attr (cudie, DW_AT_comp_dir, &attr));
               if (name) 
@@ -9686,7 +9690,10 @@ tracepoint_builder::init_dw(systemtap_session& s)
       if (s.verbose > 3)
         clog << _("Checking tracepoint glob ") << glob_str << endl;
 
-      glob(glob_str.c_str(), 0, NULL, &trace_glob);
+      int r = glob(glob_str.c_str(), 0, NULL, &trace_glob);
+      if (r == GLOB_NOSPACE || r == GLOB_ABORTED)
+        throw runtime_error("Error globbing tracepoint");
+
       for (unsigned i = 0; i < trace_glob.gl_pathc; ++i)
         {
           string header(trace_glob.gl_pathv[i]);

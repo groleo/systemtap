@@ -9,9 +9,9 @@ See the INSTALL file for generic build instructions.
 
 Prerequisites:
 
-- linux kernel with kprobes (mainline 2.6.11+ or backport)
+- linux kernel
 - kernel module build environment (kernel-devel rpm)
-- kernel debugging information (kernel-debuginfo rpm)
+- optionally, debugging information for kernel/user-space being instrumented
 - C compiler (same as what kernel was compiled with)
 - elfutils with libdwfl for debugging information parsing
 - root privileges
@@ -115,6 +115,8 @@ Building a kernel.org kernel:
 
 - Consider applying the utrace kernel patches, if you wish to probe
   user-space applications.  http://sourceware.org/systemtap/wiki/utrace
+  Or if your kernel is near 3.5, apply the uprobes and related patches
+  (see NEWS).  Or if your kernel is >= 3.5, enjoy the built-in uprobes.
 
 - Build the kernel using your normal procedures.  Enable
   CONFIG_DEBUG_INFO, CONFIG_KPROBES, CONFIG_RELAY, CONFIG_DEBUG_FS,

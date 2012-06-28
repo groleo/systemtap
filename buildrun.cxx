@@ -37,21 +37,10 @@ static int
 run_make_cmd(systemtap_session& s, vector<string>& make_cmd,
              bool null_out=false, bool null_err=false)
 {
-  if (pending_interrupts)
-    return -1;
+  assert_no_interrupts();
 
-  // Before running make, fix up the environment a bit.  PATH should
-  // already be overridden.  Clean out a few variables that
-  // s.kernel_build_tree/Makefile uses.
-  int rc = unsetenv("ARCH") || unsetenv("KBUILD_EXTMOD")
-      || unsetenv("CROSS_COMPILE") || unsetenv("KBUILD_IMAGE")
-      || unsetenv("KCONFIG_CONFIG") || unsetenv("INSTALL_PATH");
-  if (rc)
-    {
-      const char* e = strerror (errno);
-      cerr << "unsetenv failed: " << e << endl;
-      s.set_try_server ();
-    }
+  // PR14168: we used to unsetenv values here; instead do it via
+  // env(1) in make_any_make_cmd().
 
   // Disable ccache to avoid saving files that will never be reused.
   // (ccache is useless to us, because our compiler commands always
@@ -82,7 +71,7 @@ run_make_cmd(systemtap_session& s, vector<string>& make_cmd,
       null_out = true;
     }
 
-  rc = stap_system (s.verbose, make_cmd, null_out, null_err);
+  int rc = stap_system (s.verbose, "kbuild", make_cmd, null_out, null_err);
   if (rc != 0)
     s.set_try_server ();
   return rc;
@@ -92,6 +81,18 @@ static vector<string>
 make_any_make_cmd(systemtap_session& s, const string& dir, const string& target)
 {
   vector<string> make_cmd;
+
+  // PR14168: sanitize environment variables for kbuild invocation
+  make_cmd.push_back("env");
+  make_cmd.push_back("-uARCH");
+  make_cmd.push_back("-uKBUILD_EXTMOD");
+  make_cmd.push_back("-uCROSS_COMPILE");
+  make_cmd.push_back("-uKBUILD_IMAGE");
+  make_cmd.push_back("-uKCONFIG_CONFIG");
+  make_cmd.push_back("-uINSTALL_PATH");
+  string newpath = string("PATH=/usr/bin:/bin:") + (getenv("PATH") ?: "");
+  make_cmd.push_back(newpath.c_str());
+
   make_cmd.push_back("make");
   make_cmd.push_back("-C");
   make_cmd.push_back(s.kernel_build_tree);
@@ -140,7 +141,7 @@ output_autoconf(systemtap_session& s, ofstream& o, const char *autoconf_c,
   o << "\t";
   if (s.verbose < 4)
     o << "@";
-  o << "if $(CHECK_BUILD) $(SYSTEMTAP_RUNTIME)/" << autoconf_c;
+  o << "if $(CHECK_BUILD) $(SYSTEMTAP_RUNTIME)/linux/" << autoconf_c;
   if (s.verbose < 5)
     o << " > /dev/null 2>&1";
   o << "; then ";
@@ -342,7 +343,6 @@ compile_pass (systemtap_session& s)
   output_autoconf(s, o, "autoconf-module-sect-attrs.c", "STAPCONF_MODULE_SECT_ATTRS", NULL);
 
   output_autoconf(s, o, "autoconf-utrace-via-tracepoints.c", "STAPCONF_UTRACE_VIA_TRACEPOINTS", NULL);
-  output_autoconf(s, o, "autoconf-utrace-via-ftrace.c", "STAPCONF_UTRACE_VIA_FTRACE", NULL);
   output_autoconf(s, o, "autoconf-vm-area-pte.c", "STAPCONF_VM_AREA_PTE", NULL);
   output_autoconf(s, o, "autoconf-relay-umode_t.c", "STAPCONF_RELAY_UMODE_T", NULL);
   output_autoconf(s, o, "autoconf-fs_supers-hlist.c", "STAPCONF_FS_SUPERS_HLIST", NULL);
@@ -499,7 +499,7 @@ make_uprobes (systemtap_session& s)
   omf.close();
 
   // create a simple #include-chained source file
-  string runtimesourcefile(s.runtime_path + "/uprobes/uprobes.c");
+  string runtimesourcefile(s.runtime_path + "/linux/uprobes/uprobes.c");
   string sourcefile(dir + "/uprobes.c");
   ofstream osrc(sourcefile.c_str());
   osrc << "#include \"" << runtimesourcefile << "\"" << endl;
@@ -582,11 +582,12 @@ uprobes_pass (systemtap_session& s)
   if (!s.need_uprobes || kernel_built_uprobes(s))
     return 0;
 
-  if (s.kernel_config["CONFIG_UTRACE"] != string("y")) {
-    clog << _("user-space facilities not available without kernel CONFIG_UTRACE") << endl;
-    s.set_try_server ();
-    return 1;
-  }
+  if (s.kernel_config["CONFIG_UTRACE"] != string("y"))
+    {
+      clog << _("user-space facilities not available without kernel CONFIG_UTRACE or CONFIG_TRACEPOINTS/CONFIG_ARCH_SUPPORTS_UPROBES/CONFIG_UPROBES") << endl;
+      s.set_try_server ();
+      return 1;
+    }
 
   /*
    * We need to use the version of uprobes that comes with SystemTap.  Try to

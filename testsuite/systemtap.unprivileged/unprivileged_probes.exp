@@ -199,10 +199,10 @@ set restricted_probe_types [list \
   "procfs(string).umask(number).read.maxsize(number)" \
   "procfs(string).umask(number).write" \
   "timer.profile" \
-  "netfilter.hook(string)" \
   "netfilter.hook(string).pf(string)" \
-  "netfilter.hook(string).priority(string)" \
+  "netfilter.pf(string).hook(string)" \
   "netfilter.hook(string).pf(string).priority(string)" \
+  "netfilter.pf(string).hook(string).priority(string)" \
 ]
 
 # Add arguments to a probe type template.

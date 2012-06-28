@@ -492,6 +492,7 @@ void cmd_staplog(void)
 		dirname = module;
 
 	setup_global_data(module);
+	assert(dirname);
 	output_cpu_logs(dirname);
 	return;
 }

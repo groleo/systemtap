@@ -10,6 +10,7 @@ extern "C" {
 #include <libelf.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <wordexp.h>
 }
 

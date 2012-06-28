@@ -10,7 +10,7 @@
 %{!?publican_brand: %global publican_brand fedora}
 
 Name: systemtap
-Version: 1.8
+Version: 2.0
 Release: 1%{?dist}
 # for version, see also configure.ac
 
@@ -46,7 +46,8 @@ Source: ftp://sourceware.org/pub/%{name}/releases/%{name}-%{version}.tar.gz
 # Build*
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: gcc-c++
-BuildRequires: gettext
+BuildRequires: gettext-devel
+BuildRequires: nss-devel avahi-devel pkgconfig
 %if %{with_sqlite}
 BuildRequires: sqlite-devel
 %endif
@@ -60,7 +61,6 @@ BuildRequires: crash-devel zlib-devel
 %if %{with_rpm}
 BuildRequires: rpm-devel glibc-headers
 %endif
-BuildRequires: nss-devel avahi-devel pkgconfig
 %if %{with_bundled_elfutils}
 Source1: elfutils-%{elfutils_version}.tar.gz
 Patch1: elfutils-portability.patch
@@ -80,7 +80,6 @@ BuildRequires: publican
 BuildRequires: /usr/share/publican/Common_Content/%{publican_brand}/defaults.cfg
 %endif
 %endif
-BuildRequires: gettext-devel
 
 # Install requirements
 Requires: systemtap-client = %{version}-%{release}
@@ -207,8 +206,15 @@ License: GPLv2+
 URL: http://sourceware.org/systemtap/
 Requires: systemtap = %{version}-%{release}
 Requires: systemtap-sdt-devel = %{version}-%{release}
+Requires: systemtap-server = %{version}-%{release}
 Requires: dejagnu which prelink elfutils grep nc
 Requires: gcc gcc-c++ make glibc-devel
+# testsuite/systemtap.server/client.exp needs avahi
+Requires: avahi
+%if %{with_crash}
+# testsuite/systemtap.base/crash.exp needs crash
+Requires: crash
+%endif
 %if %{_arch} == x86_64
 Requires: glibc-devel(%{__isa_name}-32)
 %endif
@@ -564,6 +570,9 @@ exit 0
 # ------------------------------------------------------------------------
 
 %changelog
+* Sun Jun 17 2012 Frank Ch. Eigler <fche@redhat.com> - 1.8-1
+- Upstream release.
+
 * Wed Feb 01 2012 Frank Ch. Eigler <fche@redhat.com> - 1.7-1
 - Upstream release.
 

@@ -11,7 +11,7 @@
 
 %{
 /* caller_addr() might be user caller, so needs at least uprobes structs. */
-#include "uprobes-inc.h"
+#include "linux/uprobes-inc.h"
 %}
 
 /**
@@ -34,11 +34,11 @@ function caller:string() {
  */
 function caller_addr:long () %{ /* pure */
         if (CONTEXT->probe_type == _STP_PROBE_HANDLER_KRETPROBE)
-		THIS->__retvalue = (int64_t)(long)_stp_ret_addr_r(CONTEXT->ips.krp.pi);
+		STAP_RETVALUE = (int64_t)(long)_stp_ret_addr_r(CONTEXT->ips.krp.pi);
 #ifdef STAPCONF_UPROBE_GET_PC
 	else if (CONTEXT->probe_type == _STP_PROBE_HANDLER_URETPROBE)
-		THIS->__retvalue = (int64_t)(long)_stp_ret_addr_r(CONTEXT->ips.ri);
+		STAP_RETVALUE = (int64_t)(long)_stp_ret_addr_r(CONTEXT->ips.ri);
 #endif
         else
-		THIS->__retvalue = 0;
+		STAP_RETVALUE = 0;
 %}

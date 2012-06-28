@@ -59,8 +59,8 @@ get_home_directory(void)
   if (pwd)
     return pwd->pw_dir;
 
-  throw runtime_error(_("Unable to determine home directory"));
-  return NULL;
+  cerr << _("Unable to determine home directory") << endl;
+  return "/";
 }
 
 
@@ -283,12 +283,24 @@ getmemusage ()
   ostringstream oss;
   ifstream statm("/proc/self/statm");
   statm >> pages;
-  long kb1 = pages * sz / 1024;
+  long kb1 = pages * sz / 1024; // total program size; vmsize
   statm >> pages;
-  long kb2 = pages * sz / 1024;
+  long kb2 = pages * sz / 1024; // resident set size; vmrss
   statm >> pages;
-  long kb3 = pages * sz / 1024;
-  oss << _F("using %ldvirt/%ldres/%ldshr kb, ", kb1, kb2, kb3);
+  long kb3 = pages * sz / 1024; // shared pages
+  statm >> pages;
+  long kb4 = pages * sz / 1024; // text
+  statm >> pages;
+  (void) kb4;
+  long kb5 = pages * sz / 1024; // library
+  statm >> pages;
+  (void) kb5;
+  long kb6 = pages * sz / 1024; // data+stack
+  statm >> pages;
+  long kb7 = pages * sz / 1024; // dirty
+  (void) kb7;
+
+  oss << _F("using %ldvirt/%ldres/%ldshr/%lddata kb, ", kb1, kb2, kb3, kb6);
   return oss.str();
 }
 
@@ -785,7 +797,8 @@ localization_variables()
 // Runs a command with a saved PID, so we can kill it from the signal handler,
 // and wait for it to finish.
 int
-stap_system(int verbose, const vector<string>& args,
+stap_system(int verbose, const string& description,
+            const vector<string>& args,
             bool null_out, bool null_err)
 {
   int ret = 0;
@@ -804,7 +817,7 @@ stap_system(int verbose, const vector<string>& args,
         ret = stap_waitpid(verbose, pid);
         if(ret)
           // XXX PR13274 needs-session to use print_warning()
-          clog << _F("WARNING: %s exited with status: %d", args.front().c_str(), ret) << endl;
+          clog << _F("WARNING: %s exited with status: %d", description.c_str(), ret) << endl;
       }
     }
 
@@ -1015,7 +1028,10 @@ std::string autosprintf(const char* format, ...)
   va_start (args, format);
   int rc = vasprintf (&str, format, args);
   if (rc < 0)
-    throw runtime_error (_F("autosprintf/vasprintf error %s", lex_cast(rc).c_str()));
+    {
+      va_end(args);
+      return _F("autosprintf/vasprintf error %d", rc);
+    }
   string s = str;
   va_end (args);
   free (str);

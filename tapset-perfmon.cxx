@@ -85,7 +85,7 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
   if (probes.empty()) return;
 
   s.op->newline() << "/* ---- perf probes ---- */";
-  s.op->newline() << "#include \"perf.c\"";
+  s.op->newline() << "#include \"linux/perf.c\"";
   s.op->newline();
 
   /* declarations */
@@ -175,8 +175,8 @@ perf_derived_probe_group::emit_module_init (systemtap_session& s)
   s.op->newline() << "for (j=0; j<i; j++) {";
   s.op->newline(1) << "_stp_perf_del(& stap_perf_probes [j]);";
   s.op->newline(-1) << "}"; // for unwind loop
-  s.op->newline(-1) << "}"; // if-error
   s.op->newline() << "break;";
+  s.op->newline(-1) << "}"; // if-error
   s.op->newline(-1) << "}"; // for loop
 }
 

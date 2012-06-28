@@ -39,7 +39,7 @@
          	</ul>
 
 <h2>Examples by Keyword</h2>
-<p><tt><a href="#AUDIT">AUDIT</a> <a href="#AUTOFS">AUTOFS</a> <a href="#BACKTRACE">BACKTRACE</a> <a href="#CALLGRAPH">CALLGRAPH</a> <a href="#CPU">CPU</a> <a href="#DEVICE">DEVICE</a> <a href="#DISK">DISK</a> <a href="#FILE">FILE</a> <a href="#FILESYSTEM">FILESYSTEM</a> <a href="#FORMAT">FORMAT</a> <a href="#FUNCTION">FUNCTION</a> <a href="#FUTEX">FUTEX</a> <a href="#INTERRUPT">INTERRUPT</a> <a href="#IO">IO</a> <a href="#KVM">KVM</a> <a href="#LIMITS">LIMITS</a> <a href="#LOCKING">LOCKING</a> <a href="#MEMORY">MEMORY</a> <a href="#MONITORING">MONITORING</a> <a href="#NANOSLEEP">NANOSLEEP</a> <a href="#NETWORK">NETWORK</a> <a href="#NFS">NFS</a> <a href="#NUMA">NUMA</a> <a href="#PROCESS">PROCESS</a> <a href="#PROFILING">PROFILING</a> <a href="#QEMU">QEMU</a> <a href="#SCHEDULER">SCHEDULER</a> <a href="#SCSI">SCSI</a> <a href="#SECURITY">SECURITY</a> <a href="#SIGNALS">SIGNALS</a> <a href="#SIMPLE">SIMPLE</a> <a href="#SLAB">SLAB</a> <a href="#SOCKET">SOCKET</a> <a href="#STATISTICS">STATISTICS</a> <a href="#SYSCALL">SYSCALL</a> <a href="#TCP">TCP</a> <a href="#THREAD">THREAD</a> <a href="#TIME">TIME</a> <a href="#TRACE">TRACE</a> <a href="#TRACEPOINT">TRACEPOINT</a> <a href="#TRAFFIC">TRAFFIC</a> <a href="#TTY">TTY</a> <a href="#UTILIZATION">UTILIZATION</a> <a href="#VIRTUALIZATION">VIRTUALIZATION</a> <a href="#WATCHDOG">WATCHDOG</a> <a href="#WATCHPOINT">WATCHPOINT</a> </tt></p>
+<p><tt><a href="#AUDIT">AUDIT</a> <a href="#AUTOFS">AUTOFS</a> <a href="#BACKTRACE">BACKTRACE</a> <a href="#CALLGRAPH">CALLGRAPH</a> <a href="#CPU">CPU</a> <a href="#DEVICE">DEVICE</a> <a href="#DISK">DISK</a> <a href="#DROP">DROP</a> <a href="#FILE">FILE</a> <a href="#FILESYSTEM">FILESYSTEM</a> <a href="#FORMAT">FORMAT</a> <a href="#FUNCTION">FUNCTION</a> <a href="#FUTEX">FUTEX</a> <a href="#INTERRUPT">INTERRUPT</a> <a href="#IO">IO</a> <a href="#KVM">KVM</a> <a href="#LIMITS">LIMITS</a> <a href="#LOCKING">LOCKING</a> <a href="#MEMORY">MEMORY</a> <a href="#MONITORING">MONITORING</a> <a href="#NANOSLEEP">NANOSLEEP</a> <a href="#NETWORK">NETWORK</a> <a href="#NFS">NFS</a> <a href="#NUMA">NUMA</a> <a href="#PACKETS">PACKETS</a> <a href="#PROCESS">PROCESS</a> <a href="#PROFILING">PROFILING</a> <a href="#QEMU">QEMU</a> <a href="#SCHEDULER">SCHEDULER</a> <a href="#SCSI">SCSI</a> <a href="#SECURITY">SECURITY</a> <a href="#SIGNAL">SIGNAL</a> <a href="#SIGNALS">SIGNALS</a> <a href="#SIMPLE">SIMPLE</a> <a href="#SLAB">SLAB</a> <a href="#SOCKET">SOCKET</a> <a href="#STATISTICS">STATISTICS</a> <a href="#SYSCALL">SYSCALL</a> <a href="#TCP">TCP</a> <a href="#THREAD">THREAD</a> <a href="#TIME">TIME</a> <a href="#TRACE">TRACE</a> <a href="#TRACEPOINT">TRACEPOINT</a> <a href="#TRAFFIC">TRAFFIC</a> <a href="#TTY">TTY</a> <a href="#UTILIZATION">UTILIZATION</a> <a href="#VIRTUALIZATION">VIRTUALIZATION</a> <a href="#WATCHDOG">WATCHDOG</a> <a href="#WATCHPOINT">WATCHPOINT</a> </tt></p>
 <h3><a name="AUDIT"><a href="#AUDIT">&para;</a> AUDIT</a></h3>
 <ul>
 <li><a href="process/auditbt.stp">process/auditbt.stp</a> - Generate backtraces for kernel audit events<br>
@@ -118,6 +118,12 @@ keywords: <a href="keyword-index.html#IO">IO</a> <a href="keyword-index.html#MON
 </li><li><a href="network/nfsd_unlink.stp">network/nfsd_unlink.stp</a> - Find Which Client Is Removing NFS Files on Server<br>
 keywords: <a href="keyword-index.html#NFS">NFS</a> <a href="keyword-index.html#DISK">DISK</a> <br>
 <p>The nfsd_unlink.stp script lists the ip address and file name each time time a file is being removed or unlinked by the nfsd. This script is run on the nfs server.<p><font size="-2"><pre># stap nfsd_unlink.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li></ul>
+<h3><a name="DROP"><a href="#DROP">&para;</a> DROP</a></h3>
+<ul>
+<li><a href="network/netfilter_drop.stp">network/netfilter_drop.stp</a> - System-Wide Network Packet Dropping Tool<br>
+keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#DROP">DROP</a> <a href="keyword-index.html#PACKETS">PACKETS</a> <br>
+<p>The script drops the specified number of packets of the specified protocol. Valid protocols are TCP, UDP, or ALL. If ALL is specified, all incoming packets are dropped. The number of packets to drop can be specified with a positive integer. A value of 0 indicates that packets should be dropped until the user manually exits.<p><font size="-2"><pre># stap -g netfilter_drop.stp TCP 1 -c &quot;sleep 2&quot;</pre></font></p>
 </li></ul>
 <h3><a name="FILE"><a href="#FILE">&para;</a> FILE</a></h3>
 <ul>
@@ -333,6 +339,12 @@ keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-inde
 </li><li><a href="network/netdev.stp">network/netdev.stp</a> - Trace Activity on Network Devices<br>
 keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#DEVICE">DEVICE</a> <a href="keyword-index.html#TRAFFIC">TRAFFIC</a> <br>
 <p>The netdev.stp script traces configuration and transmit/receive activity on network devices.<p><font size="-2"><pre># stap netdev.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a href="network/netfilter_drop.stp">network/netfilter_drop.stp</a> - System-Wide Network Packet Dropping Tool<br>
+keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#DROP">DROP</a> <a href="keyword-index.html#PACKETS">PACKETS</a> <br>
+<p>The script drops the specified number of packets of the specified protocol. Valid protocols are TCP, UDP, or ALL. If ALL is specified, all incoming packets are dropped. The number of packets to drop can be specified with a positive integer. A value of 0 indicates that packets should be dropped until the user manually exits.<p><font size="-2"><pre># stap -g netfilter_drop.stp TCP 1 -c &quot;sleep 2&quot;</pre></font></p>
+</li><li><a href="network/netfilter_summary.stp">network/netfilter_summary.stp</a> - System-Wide Count of Network Packets by IPs<br>
+keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#TRAFFIC">TRAFFIC</a> <br>
+<p>The script watches all IPv4 network traffic on the system. On exit the script prints a list showing the number of packets sent along source IP address / destination IP address pair encountered, and the total number of bytes sent among the pair. The list is ordered from greatest to least number of packets seen among the source/destination pairs.<p><font size="-2"><pre># stap netfilter_summary.stp -c &quot;sleep 0.4&quot;</pre></font></p>
 </li><li><a href="network/nettop.stp">network/nettop.stp</a> - Periodic Listing of Processes Using Network Interfaces<br>
 keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#TRAFFIC">TRAFFIC</a> <br>
 <p>Every five seconds the nettop.stp script prints out a list of processed (PID and command) with the number of packets sent/received and the amount of data sent/received by the process during that interval.<p><font size="-2"><pre># stap nettop.stp -c &quot;sleep 0.2&quot;</pre></font></p>
@@ -379,6 +391,12 @@ keywords: <a href="keyword-index.html#NFS">NFS</a> <a href="keyword-index.html#S
 keywords: <a href="keyword-index.html#MEMORY">MEMORY</a> <a href="keyword-index.html#NUMA">NUMA</a> <br>
 <p>The numa_faults.stp script tracks the read and write pages faults for each process. When the script exits it prints out the total read and write pages faults for each process. The script also provide a break down of page faults per node for each process. This script is useful for determining whether the program has good locality (page faults limited to a single node) on a NUMA computer.<p><font size="-2"><pre># stap numa_faults.stp -c &quot;sleep 0.2&quot;</pre></font></p>
 </li></ul>
+<h3><a name="PACKETS"><a href="#PACKETS">&para;</a> PACKETS</a></h3>
+<ul>
+<li><a href="network/netfilter_drop.stp">network/netfilter_drop.stp</a> - System-Wide Network Packet Dropping Tool<br>
+keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#DROP">DROP</a> <a href="keyword-index.html#PACKETS">PACKETS</a> <br>
+<p>The script drops the specified number of packets of the specified protocol. Valid protocols are TCP, UDP, or ALL. If ALL is specified, all incoming packets are dropped. The number of packets to drop can be specified with a positive integer. A value of 0 indicates that packets should be dropped until the user manually exits.<p><font size="-2"><pre># stap -g netfilter_drop.stp TCP 1 -c &quot;sleep 2&quot;</pre></font></p>
+</li></ul>
 <h3><a name="PROCESS"><a href="#PROCESS">&para;</a> PROCESS</a></h3>
 <ul>
 <li><a href="general/eventcount.stp">general/eventcount.stp</a> - Count Specified Events<br>
@@ -405,6 +423,9 @@ keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-inde
 </li><li><a href="process/plimit.stp">process/plimit.stp</a> - Print Resource Limits of Process<br>
 keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <br>
 <p>The script prints a variety of resource limits for a given pid, like /proc/$$/limits on recent kernels.<p><font size="-2"><pre># stap -g plimit.stp $$</pre></font></p>
+</li><li><a href="process/psig.stp">process/psig.stp</a> - Print Process File Descriptors<br>
+keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-index.html#SIGNAL">SIGNAL</a> <br>
+<p>Run psig.stp to produce a human-readable summary of the signal handling configuration of a given process.  Specify the process-id as -x PID for fastest performance.<p><font size="-2"><pre># stap -DMAXACTION=10000 -g psig.stp -x $$</pre></font></p>
 </li><li><a href="process/pstrace_exec.stp">process/pstrace_exec.stp</a> - Print trace of process ancestors for matching exec commands<br>
 keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-index.html#BACKTRACE">BACKTRACE</a> <br>
 <p>The pstrace_exec.stp script watches each exec operation. If the exec contains a substring that matches the script&#39;s command-line argument, it prints out that process and all of its ancestors.<p><font size="-2"><pre># stap pstrace_exec.stp -c &quot;sleep 0.2&quot; bash</pre></font></p>
@@ -513,6 +534,12 @@ keywords: <a href="keyword-index.html#MONITORING">MONITORING</a> <a href="keywor
 </li><li><a href="process/noptrace.stp">process/noptrace.stp</a> - Disable ptrace from Hierarchies of Processes<br>
 keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-index.html#SECURITY">SECURITY</a> <br>
 <p>Blocks ptrace(2) attempts from processes identified by stap -c/-x, as also specifiable from /proc/systemtap/stap_XXX/ control files.  Processes may be added or removed from the blocked list.<p><font size="-2"><pre># stap -g noptrace.stp -c &#39;strace ls || true&#39;</pre></font></p>
+</li></ul>
+<h3><a name="SIGNAL"><a href="#SIGNAL">&para;</a> SIGNAL</a></h3>
+<ul>
+<li><a href="process/psig.stp">process/psig.stp</a> - Print Process File Descriptors<br>
+keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-index.html#SIGNAL">SIGNAL</a> <br>
+<p>Run psig.stp to produce a human-readable summary of the signal handling configuration of a given process.  Specify the process-id as -x PID for fastest performance.<p><font size="-2"><pre># stap -DMAXACTION=10000 -g psig.stp -x $$</pre></font></p>
 </li></ul>
 <h3><a name="SIGNALS"><a href="#SIGNALS">&para;</a> SIGNALS</a></h3>
 <ul>
@@ -668,6 +695,9 @@ keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-inde
 <li><a href="network/netdev.stp">network/netdev.stp</a> - Trace Activity on Network Devices<br>
 keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#DEVICE">DEVICE</a> <a href="keyword-index.html#TRAFFIC">TRAFFIC</a> <br>
 <p>The netdev.stp script traces configuration and transmit/receive activity on network devices.<p><font size="-2"><pre># stap netdev.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a href="network/netfilter_summary.stp">network/netfilter_summary.stp</a> - System-Wide Count of Network Packets by IPs<br>
+keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#TRAFFIC">TRAFFIC</a> <br>
+<p>The script watches all IPv4 network traffic on the system. On exit the script prints a list showing the number of packets sent along source IP address / destination IP address pair encountered, and the total number of bytes sent among the pair. The list is ordered from greatest to least number of packets seen among the source/destination pairs.<p><font size="-2"><pre># stap netfilter_summary.stp -c &quot;sleep 0.4&quot;</pre></font></p>
 </li><li><a href="network/nettop.stp">network/nettop.stp</a> - Periodic Listing of Processes Using Network Interfaces<br>
 keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-index.html#TRAFFIC">TRAFFIC</a> <br>
 <p>Every five seconds the nettop.stp script prints out a list of processed (PID and command) with the number of packets sent/received and the amount of data sent/received by the process during that interval.<p><font size="-2"><pre># stap nettop.stp -c &quot;sleep 0.2&quot;</pre></font></p>
