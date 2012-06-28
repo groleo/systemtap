@@ -109,16 +109,16 @@ printscript(systemtap_session& s, ostream& o)
           }
 
           stringstream tmps;
-          const probe_alias *a = second->get_alias();
+          // XXX PR14297 make this more accurate wrt complex wildcard expansions
+          const probe_point *a = second->get_alias_loc();
           if (a)
             {
-              assert (a->alias_names.size() >= 1);
-              a->alias_names[0]->print(tmps); // XXX: [0] is arbitrary; perhaps print all
+              a->print(tmps);
             }
           else
             {
               assert (second->locations.size() >= 1);
-              second->locations[0]->print(tmps); // XXX: [0] is less arbitrary here, but still ...
+              second->locations[0]->print(tmps); // XXX: choosing only one location is less arbitrary here than in get_alias_loc(), but still ...
             }
           string pp = tmps.str();
 

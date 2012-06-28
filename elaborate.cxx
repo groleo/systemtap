@@ -152,9 +152,11 @@ derived_probe::sole_location () const
 probe_point*
 derived_probe::script_location () const
 {
+  // XXX PR14297 make this more accurate wrt complex wildcard expansions
   const probe* p = almost_basest();
-  const probe_alias *a = p->get_alias();
-  const vector<probe_point*>& locs = a ? a->alias_names : p->locations;
+  probe_point *a = p->get_alias_loc();
+  if (a) return a;
+  const vector<probe_point*>& locs = p->locations;
   if (locs.size() == 0 || locs.size() > 1)
     throw semantic_error (ngettext("derived_probe with no locations",
                                    "derived_probe with too many locations",
@@ -211,6 +213,24 @@ derived_probe::print_dupe_stamp_unprivileged_process_owner(ostream& o)
 
 // ------------------------------------------------------------------------
 // Members of derived_probe_builder
+
+void
+derived_probe_builder::build_with_suffix(systemtap_session & sess,
+                                         probe * use,
+                                         probe_point * location,
+                                         std::map<std::string, literal *>
+                                           const & parameters,
+                                         std::vector<derived_probe *>
+                                           & finished_results,
+                                         std::vector<probe_point::component *>
+                                           const & suffix) {
+  // XXX perhaps build the probe if suffix is empty?
+  // if (suffix.empty()) {
+  //   build (sess, use, location, parameters, finished_results);
+  //   return;
+  // }
+  throw semantic_error (_("invalid suffix for probe"));
+}
 
 bool
 derived_probe_builder::get_param (std::map<std::string, literal*> const & params,
@@ -413,8 +433,8 @@ match_node::find_and_build (systemtap_session& s,
           for (sub_map_iterator_t i = sub.begin(); i != sub.end(); i++)
             alternatives += string(" ") + i->first.str();
 
-          throw semantic_error (_F("probe point truncated at position %s (follow: %s)",
-                                   lex_cast(pos).c_str(), alternatives.c_str()),
+          throw semantic_error (_F("probe point truncated (follow: %s)",
+                                   alternatives.c_str()),
                                    loc->components.back()->tok);
         }
 
@@ -490,6 +510,17 @@ match_node::find_and_build (systemtap_session& s,
           delete expanded_comp_post;
         }
 
+      // Try suffix expansion only if no matches found:
+      if (num_results == results.size())
+        try
+          {
+            this->try_suffix_expansion (s, p, loc, pos, results);
+          }
+        catch (const recursive_expansion_error &e)
+          {
+            s.print_error(e); return; // Suppress probe mismatch msg.
+          }
+
       if (! loc->optional && num_results == results.size())
         {
           // We didn't find any wildcard matches (since the size of
@@ -498,8 +529,8 @@ match_node::find_and_build (systemtap_session& s,
           for (sub_map_iterator_t i = sub.begin(); i != sub.end(); i++)
             alternatives += string(" ") + i->first.str();
 
-          throw semantic_error(_F("probe point mismatch at position %s (alternatives: %s)",
-                                  lex_cast(pos).c_str(), alternatives.c_str()), comp->tok);
+          throw semantic_error(_F("probe point mismatch (alternatives: %s)",
+                                  alternatives.c_str()), comp->tok);
         }
     }
   else if (isglob(loc->components[pos]->functor)) // wildcard?
@@ -555,6 +586,18 @@ match_node::find_and_build (systemtap_session& s,
 		}
 	    }
 	}
+
+      // Try suffix expansion only if no matches found:
+      if (num_results == results.size())
+        try
+          {
+            this->try_suffix_expansion (s, p, loc, pos, results);
+          }
+        catch (const recursive_expansion_error &e)
+          {
+            s.print_error(e); return; // Suppress probe mismatch msg.
+          }
+
       if (! loc->optional && num_results == results.size())
         {
 	  // We didn't find any wildcard matches (since the size of
@@ -563,30 +606,104 @@ match_node::find_and_build (systemtap_session& s,
           for (sub_map_iterator_t i = sub.begin(); i != sub.end(); i++)
             alternatives += string(" ") + i->first.str();
 
-          throw semantic_error(_F("probe point mismatch at position %s %s didn't find any wildcard matches",
-                                  lex_cast(pos).c_str(),
+          throw semantic_error(_F("probe point mismatch %s didn't find any wildcard matches",
                                   (alternatives == "" ? "" : _(" (alternatives: ") +
-                                  alternatives + ")").c_str()), loc->components[pos]->tok);
+                                   alternatives + ")").c_str()), loc->components[pos]->tok);
 	}
     }
   else
     {
       match_key match (* loc->components[pos]);
       sub_map_iterator_t i = sub.find (match);
-      if (i == sub.end()) // no match
+
+      if (i != sub.end()) // match found
         {
+          match_node* subnode = i->second;
+          // recurse
+          subnode->find_and_build (s, p, loc, pos+1, results);
+          return;
+        }
+
+      unsigned int num_results = results.size();
+
+      try
+        {
+          this->try_suffix_expansion (s, p, loc, pos, results);
+        }
+      catch (const recursive_expansion_error &e)
+        {
+          s.print_error(e); return; // Suppress probe mismatch msg.
+        }
+      
+      // XXX: how to correctly report alternatives + position numbers
+      // for alias suffixes?  file a separate PR to address the issue
+      if (! loc->optional && num_results == results.size())
+        {
+          // We didn't find any alias suffixes (since the size of the
+          // result vector didn't change).  Throw an error.
           string alternatives;
           for (sub_map_iterator_t i = sub.begin(); i != sub.end(); i++)
             alternatives += string(" ") + i->first.str();
 
-          throw semantic_error(_F("probe point mismatch at position %s %s", lex_cast(pos).c_str(),
+          throw semantic_error(_F("probe point mismatch %s",
                                   (alternatives == "" ? "" : (_(" (alternatives:") + alternatives +
-                                  ")").c_str())), loc->components[pos]->tok);
+                                  ")").c_str())),
+                               loc->components[pos]->tok);
         }
+    }
+}
 
-      match_node* subnode = i->second;
-      // recurse
-      subnode->find_and_build (s, p, loc, pos+1, results);
+
+void
+match_node::try_suffix_expansion (systemtap_session& s,
+                                  probe *p, probe_point *loc, unsigned pos,
+                                  vector<derived_probe *>& results)
+{
+  // PR12210: match alias suffixes. If the components thus far
+  // have been matched, but there is an additional unknown
+  // suffix, we have a potential alias suffix on our hands. We
+  // need to expand the preceding components as probe aliases,
+  // reattach the suffix, and re-run derive_probes() on the
+  // resulting expansion. This is done by the routine
+  // build_with_suffix().
+
+  if (strverscmp(s.compatible.c_str(), "2.0") >= 0)
+    {
+      // XXX: technically, param_map isn't used here.  So don't
+      // bother actually assembling it unless some
+      // derived_probe_builder appears that actually takes
+      // suffixes *and* consults parameters (currently no such
+      // builders exist).
+      map<string, literal *> param_map;
+      // for (unsigned i=0; i<pos; i++)
+      //   param_map[loc->components[i]->functor] = loc->components[i]->arg;
+      // maybe 0
+      
+      vector<probe_point::component *> suffix (loc->components.begin()+pos,
+                                               loc->components.end());
+      
+      // Multiple derived_probe_builders may be bound at a
+      // match_node due to the possibility of multiply defined
+      // aliases.
+      for (unsigned k=0; k < ends.size(); k++)
+        {
+          derived_probe_builder *b = ends[k];
+          try 
+            {
+              b->build_with_suffix (s, p, loc, param_map, results, suffix);
+            } 
+          catch (const recursive_expansion_error &e)
+            {
+              // Re-throw:
+              throw semantic_error(e);
+            }
+          catch (const semantic_error &e)
+            {
+              // Adjust source coordinate and re-throw:
+              if (! loc->optional)
+                throw semantic_error(e.what(), loc->components[pos]->tok);
+            }
+        }
     }
 }
 
@@ -640,8 +757,8 @@ match_node::dump (systemtap_session &s, const string &name)
 
 struct alias_derived_probe: public derived_probe
 {
-  alias_derived_probe (probe* base, probe_point *l, const probe_alias *a):
-    derived_probe (base, l), alias(a) {}
+  alias_derived_probe (probe* base, probe_point *l, const probe_alias *a,
+                       const vector<probe_point::component *> *suffix = 0);
 
   void upchuck () { throw semantic_error (_("inappropriate"), this->tok); }
 
@@ -652,10 +769,29 @@ struct alias_derived_probe: public derived_probe
   void join_group (systemtap_session&) { upchuck (); }
 
   virtual const probe_alias *get_alias () const { return alias; }
+  virtual probe_point *get_alias_loc () const { return alias_loc; }
 
 private:
   const probe_alias *alias; // Used to check for recursion
+  probe_point *alias_loc; // Hack to recover full probe name
 };
+
+
+alias_derived_probe::alias_derived_probe(probe *base, probe_point *l,
+                                         const probe_alias *a,
+                                         const vector<probe_point::component *>
+                                           *suffix):
+  derived_probe (base, l), alias(a)
+{
+  // XXX pretty nasty -- this was cribbed from printscript() in main.cxx
+  assert (alias->alias_names.size() >= 1);
+  alias_loc = new probe_point(*alias->alias_names[0]); // XXX: [0] is arbitrary; it would make just as much sense to collect all of the names
+  if (suffix) {
+    alias_loc->components.insert(alias_loc->components.end(),
+                                 suffix->begin(), suffix->end());
+  }
+}
+
 
 probe*
 probe::create_alias(probe_point* l, probe_point* a)
@@ -675,32 +811,54 @@ void
 alias_expansion_builder::build(systemtap_session & sess,
 			       probe * use,
 			       probe_point * location,
-			       std::map<std::string, literal *> const &,
+			       std::map<std::string, literal *>
+                                 const & parameters,
 			       vector<derived_probe *> & finished_results)
+{
+  vector<probe_point::component *> empty_suffix;
+  build_with_suffix (sess, use, location, parameters,
+                     finished_results, empty_suffix);
+}
+
+void
+alias_expansion_builder::build_with_suffix(systemtap_session & sess,
+                                           probe * use,
+                                           probe_point * location,
+                                           std::map<std::string, literal *>
+                                             const &,
+                                           vector<derived_probe *>
+                                             & finished_results,
+                                           vector<probe_point::component *>
+                                             const & suffix)
 {
   // Don't build the alias expansion if infinite recursion is detected.
   if (checkForRecursiveExpansion (use)) {
     stringstream msg;
     msg << _F("Recursive loop in alias expansion of %s at %s",
               lex_cast(*location).c_str(), lex_cast(location->components.front()->tok->location).c_str());
-    // semantic_errors thrown here are ignored.
-    sess.print_error (semantic_error (msg.str()));
-    return;
+    // semantic_errors thrown here might be ignored, so we need a special class:
+    throw recursive_expansion_error (msg.str());
+    // XXX The point of throwing this custom error is to suppress a
+    // cascade of "probe mismatch" messages that appear in addition to
+    // the error. The current approach suppresses most of the error
+    // cascade, but leaves one spurious error; in any case, the way
+    // this particular error is reported could be improved.
   }
 
   // We're going to build a new probe and wrap it up in an
   // alias_expansion_probe so that the expansion loop recognizes it as
   // such and re-expands its expansion.
 
-  alias_derived_probe * n = new alias_derived_probe (use, location /* soon overwritten */, this->alias);
+  alias_derived_probe * n = new alias_derived_probe (use, location /* soon overwritten */, this->alias, &suffix);
   n->body = new block();
 
-  // The new probe gets a deep copy of the location list of
-  // the alias (with incoming condition joined)
+  // The new probe gets a deep copy of the location list of the alias
+  // (with incoming condition joined) plus the suffix (if any),
   n->locations.clear();
   for (unsigned i=0; i<alias->locations.size(); i++)
     {
       probe_point *pp = new probe_point(*alias->locations[i]);
+      pp->components.insert(pp->components.end(), suffix.begin(), suffix.end());
       pp->condition = add_condition (pp->condition, location->condition);
       n->locations.push_back(pp);
     }
@@ -722,7 +880,9 @@ alias_expansion_builder::build(systemtap_session & sess,
     n->body = new block (alias->body, use->body);
 
   unsigned old_num_results = finished_results.size();
-  derive_probes (sess, n, finished_results, location->optional);
+  // If expanding for an alias suffix, be sure to pass on any errors
+  // to the caller instead of printing them in derive_probes():
+  derive_probes (sess, n, finished_results, location->optional, !suffix.empty());
 
   // Check whether we resolved something. If so, put the
   // whole library into the queue if not already there.
@@ -783,7 +943,8 @@ recursion_guard
 void
 derive_probes (systemtap_session& s,
                probe *p, vector<derived_probe*>& dps,
-               bool optional)
+               bool optional,
+               bool rethrow_errors)
 {
   for (unsigned i = 0; i < p->locations.size(); ++i)
     {
@@ -839,8 +1000,19 @@ derive_probes (systemtap_session& s,
         }
       catch (const semantic_error& e)
         {
-	  //only output in listing if -vv is supplied
-          if (!s.listing_mode || (s.listing_mode && s.verbose > 1))
+          // The rethrow_errors parameter lets the caller decide an
+          // alternative to printing the error. This is necessary when
+          // calling derive_probes() recursively during expansion of
+          // an alias with suffix -- any message printed here would
+          // point to the alias declaration and not the invalid suffix
+          // usage, so the caller needs to catch the error themselves
+          // and print a more appropriate message.
+          if (rethrow_errors)
+            {
+              throw semantic_error(e);
+            }
+	  // Only output in listing if -vv is supplied:
+          else if (!s.listing_mode || (s.listing_mode && s.verbose > 1))
             {
               // XXX: prefer not to print_error at every nest/unroll level
               semantic_error* er = new semantic_error (_("while resolving probe point"),
