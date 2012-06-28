@@ -479,6 +479,50 @@ probe syscall.read {
 \end{verbatim}
 \end{vindent}
 
+\subsubsection{Alias suffixes}
+
+It is possible to include a suffix with a probe alias invocation. If
+only the initial part of a probe point matches an alias, the remainder
+is treated as a suffix and attached to the underlying probe point when
+the alias is expanded. For example:
+
+\begin{vindent}
+\begin{verbatim}
+probe syscall.read.return.maxactive(10) {
+    printf("returning from reading fd=%d\n", fildes)
+}
+\end{verbatim}
+\end{vindent}
+
+Here, the probe point expands to
+\verb+kernel.function("sys_read").return.maxactive(10)+, as might be
+expected.
+
+When expanding wildcards, SystemTap generally avoids including alias
+suffixes. The exception is when a wildcard element is encountered that
+does not have any ordinary expansions. Consider the following example:
+
+\begin{vindent}
+\begin{verbatim}
+probe unrelated { ... }
+
+probe myprobe = syscall.read { ... }
+
+probe myprobe.test = unrelated { ... }
+
+probe myprobe.* { ... }
+
+probe myprobe.ret* { ... }
+\end{verbatim}
+\end{vindent}
+
+Here, \verb+return+ would be a valid suffix for \verb+myprobe+. The
+wildcard \verb+myprobe.*+ matches the ordinary alias
+\verb+myprobe.test+, and hence the suffix expansion
+\verb+myprobe.return+ is not included. Conversely, \verb+myprobe.ret*+
+does not match any ordinary aliases, so the suffix
+\verb+myprobe.return+ is included as an expansion.
+
 \subsection{Variables\label{sub:Variables}}
 \index{variables}
 Identifiers for variables and functions are alphanumeric sequences, and may
