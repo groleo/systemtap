@@ -1,0 +1,7 @@
+#! stap -p4
+
+# additional layer of indirection for alias suffixes
+
+probe a = syscall.open.return { }
+
+probe a.maxactive(10) { printf ("%s %s\n", pn(), pp()) }

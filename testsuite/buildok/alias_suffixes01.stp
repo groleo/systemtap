@@ -1,0 +1,7 @@
+#! stap -p4
+
+probe a.d = begin { }
+
+probe b = a { }
+
+probe b.d { print("Hello, World!\n") exit() }

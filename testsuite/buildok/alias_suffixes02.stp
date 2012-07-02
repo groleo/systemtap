@@ -1,0 +1,3 @@
+#! stap -p4
+
+probe syscall.open.return.maxactive(10) { printf("%s\n", pp()) }

@@ -1,0 +1,10 @@
+#! stap -p2
+
+# Test detection of indefinite recursion when suffixes are involved.
+
+# a.b.c --> q.c --> r.c.c -> a.b.c.c -> ... -> a.b.c.c.c.c.c....
+probe r = a.b { }
+probe q.c = r.c.c { }
+probe a.b = q { }
+probe a.b.c { print("what?") }
+

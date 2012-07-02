@@ -1,0 +1,11 @@
+#! stap -p2
+
+# fails with an "invalid suffix for probe" error
+
+probe a = kernel.function("open").return { }
+probe a = begin { }
+
+probe b = a { }
+probe c = b { }
+probe c.maxactive(10) { printf("%s\n", pn()) }
+

@@ -1,0 +1,17 @@
+/*
+ * alias_suffixes05.stp
+ *
+ * Another test for correct behaviour of alias suffixes and wildcards
+ */
+
+global k
+
+probe begin { if (k != 1) println("systemtap starting probe") }
+probe a.return = end {
+      println("systemtap ending probe")
+}
+probe unrelated = never { k = 2 }
+probe myprobe = a { k = 3 }
+probe myprobe.test = unrelated { k = 4 }
+probe myprobe.* { println("systemtap test failure") }
+probe myprobe.ret* { println("systemtap test success") }

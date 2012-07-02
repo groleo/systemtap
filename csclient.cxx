@@ -1888,8 +1888,7 @@ revoke_server_trust (
     } // Loop over servers
 
  cleanup:
-  if (certs)
-    CERT_DestroyCertList (certs);
+  assert(!certs);
   if (tmpArena)
     PORT_FreeArena (tmpArena, PR_FALSE);
 

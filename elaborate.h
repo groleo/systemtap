@@ -24,6 +24,18 @@ extern "C" {
 }
 
 #include "privilege.h"
+
+struct recursive_expansion_error : public semantic_error
+{
+  ~recursive_expansion_error () throw () {}
+  recursive_expansion_error (const std::string& msg, const token* t1=0):
+    semantic_error (msg, t1) {}
+
+  recursive_expansion_error (const std::string& msg, const token* t1,
+                             const token* t2):
+    semantic_error (msg, t1, t2) {}
+};
+
 // ------------------------------------------------------------------------
 
 struct derived_probe;
@@ -233,6 +245,15 @@ struct derived_probe_builder
 		     probe_point* location,
 		     literal_map_t const & parameters,
 		     std::vector<derived_probe*> & finished_results) = 0;
+  virtual void build_with_suffix(systemtap_session & sess,
+                                 probe * use,
+                                 probe_point * location,
+                                 std::map<std::string, literal *>
+                                   const & parameters,
+                                 std::vector<derived_probe *>
+                                   & finished_results,
+                                 std::vector<probe_point::component *>
+                                   const & suffix);
   virtual ~derived_probe_builder() {}
   virtual void build_no_more (systemtap_session &) {}
   virtual bool is_alias () const { return false; }
@@ -278,6 +299,9 @@ match_node
   void find_and_build (systemtap_session& s,
                        probe* p, probe_point *loc, unsigned pos,
                        std::vector<derived_probe *>& results);
+  void try_suffix_expansion (systemtap_session& s,
+                             probe *p, probe_point *loc, unsigned pos,
+                             std::vector<derived_probe *>& results);
   void build_no_more (systemtap_session &s);
   void dump (systemtap_session &s, const std::string &name = "");
 
@@ -309,6 +333,15 @@ alias_expansion_builder
 		     probe_point * location,
 		     std::map<std::string, literal *> const &,
 		     std::vector<derived_probe *> & finished_results);
+  virtual void build_with_suffix(systemtap_session & sess,
+                                 probe * use,
+                                 probe_point * location,
+                                 std::map<std::string, literal *>
+                                   const &,
+                                 std::vector<derived_probe *>
+                                   & finished_results,
+                                 std::vector<probe_point::component *>
+                                   const & suffix);
   virtual bool is_alias () const { return true; }
 
   bool checkForRecursiveExpansion (probe *use);
@@ -321,7 +354,7 @@ alias_expansion_builder
 int semantic_pass (systemtap_session& s);
 void derive_probes (systemtap_session& s,
                     probe *p, std::vector<derived_probe*>& dps,
-                    bool optional = false);
+                    bool optional = false, bool rethrow_errors = false);
 
 // A helper we use here and in translate, for pulling symbols out of lvalue
 // expressions.

@@ -545,7 +545,6 @@ int send_relocation_modules ()
   if (r == GLOB_NOSPACE || r == GLOB_ABORTED)
     return r;
 
-  r = 0;
   for (i=0; i<globbuf.gl_pathc; i++)
     {
       char *module_section_file;
@@ -617,12 +616,10 @@ int send_relocation_modules ()
              condition where a probe may be just starting up at the
              same time that a probeworthy module is being unloaded. */
         }
-      if (r != 0)
-	break;
     }
 
   globfree (& globbuf);
-  return r;
+  return 0;
 }
 
 

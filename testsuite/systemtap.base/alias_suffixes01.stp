@@ -1,0 +1,13 @@
+/*
+ * alias_suffixes01.stp
+ *
+ * Check basic alias suffix functionality
+ */
+
+probe begin { println("systemtap starting probe") }
+probe first.second = end {
+      println("systemtap ending probe")
+      print("systemtap test ") 
+}
+probe third = first { }
+probe third.second { println("success") }

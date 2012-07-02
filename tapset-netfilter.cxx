@@ -466,7 +466,9 @@ netfilter_builder::build(systemtap_session & sess,
   if(!get_param(parameters, TOK_HOOK, hook))
     throw semantic_error (_("missing hooknum"));
 
-  get_param(parameters, TOK_PF, pf);
+  if(!get_param(parameters, TOK_PF, pf))
+    throw semantic_error (_("missing protocol family"));
+
   get_param(parameters, TOK_PRIORITY, priority);
 
   finished_results.push_back(new netfilter_derived_probe(sess, base, location, hook, pf, priority));

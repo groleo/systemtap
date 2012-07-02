@@ -1,0 +1,7 @@
+#! stap -p4
+
+# the begin probe alias should be ignored
+
+probe a = syscall.open.return { print ("a") }
+probe a = begin ? { print ("b") }
+probe a.maxactive(10) { }

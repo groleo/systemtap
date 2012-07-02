@@ -32,7 +32,23 @@ identifier may be parametrized by a string or number literal, with a
 syntax like a function call.  A component may include a "*" character,
 to expand to a set of matching probe points.  It may also include "**"
 to match multiple sequential components at once.  Probe aliases likewise
-expand to other probe points.  Each and every resulting probe point is
+expand to other probe points.
+.PP
+Probe aliases can be given on their own,
+or with a suffix. The suffix attaches to the underlying probe point
+that the alias is expanded to. For example,
+.SAMPLE
+syscall.read.return.maxactive(10)
+.ESAMPLE
+expands to
+.SAMPLE
+kernel.function("sys_read").return.maxactive(10)
+.ESAMPLE
+with the component
+.IR maxactive(10)
+being recognized as a suffix.
+.PP
+Each and every probe point resulting from expansion is
 normally resolved to some low-level system instrumentation facility
 (e.g., a kprobe address, marker, or a timer configuration), otherwise
 the elaboration phase will fail.
@@ -66,6 +82,7 @@ kernel.function("foo").return
 process("/bin/vi").statement(0x2222)
 end
 syscall.*
+syscall.*.return.maxactive(10)
 sys**open
 kernel.function("no_such_function") ?
 module("awol").function("no_such_function") !

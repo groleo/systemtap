@@ -1874,6 +1874,7 @@ validate_module_elf (Dwfl_Module *mod, const char *name,  base_query *q)
   GElf_Ehdr ehdr_mem;
   GElf_Ehdr* em = gelf_getehdr (elf, &ehdr_mem);
   if (em == 0) { dwfl_assert ("dwfl_getehdr", dwfl_errno()); }
+  assert(em);
   int elf_machine = em->e_machine;
   const char* debug_filename = "";
   const char* main_filename = "";
@@ -3771,7 +3772,8 @@ dwarf_var_expanding_visitor::getscopes(target_symbol *e)
 
   if (scopes.empty())
     {
-      scopes = q.dw.getscopes(scope_die);
+      if(scope_die != NULL)
+        scopes = q.dw.getscopes(scope_die);
       if (scopes.empty())
         //throw semantic_error (_F("unable to find any scopes containing %d", addr), e->tok);
         //                        ((scope_die == NULL) ? "" : (string (" in ") + (dwarf_diename(scope_die) ?: "<unknown>") + "(" + (dwarf_diename(q.dw.cu) ?: "<unknown>") ")" ))
@@ -5974,6 +5976,7 @@ sdt_query::handle_probe_entry()
   GElf_Ehdr ehdr_mem;
   GElf_Ehdr* em = gelf_getehdr (elf, &ehdr_mem);
   if (em == 0) { dwfl_assert ("dwfl_getehdr", dwfl_errno()); }
+  assert(em);
   int elf_machine = em->e_machine;
   sdt_uprobe_var_expanding_visitor svv (sess, elf_machine, module_val,
 					provider_name, probe_name,
@@ -6128,6 +6131,7 @@ sdt_query::setup_note_probe_entry (int type, const char *data, size_t len)
   const char * provider = data + dst.d_size;
   provider_name = provider;
   const char *name = (const char*)memchr (provider, '\0', data + len - provider);
+  assert(name);
   probe_name = ++name;
 
   // Did we find a matching probe?
@@ -6647,6 +6651,7 @@ dwarf_builder::build(systemtap_session & sess,
   string dummy_mark_name; // NB: PR10245: dummy value, need not substitute - => __
   if (get_param(parameters, TOK_MARK, dummy_mark_name))
     {
+      assert(dw);
       sdt_query sdtq(base, location, *dw, filled_parameters, finished_results, user_lib);
       dw->iterate_over_modules(&query_module, &sdtq);
       return;
@@ -9584,7 +9589,10 @@ tracepoint_builder::init_dw(systemtap_session& s)
       if (s.verbose > 3)
         clog << _("Checking tracepoint glob ") << glob_str << endl;
 
-      glob(glob_str.c_str(), 0, NULL, &trace_glob);
+      int r = glob(glob_str.c_str(), 0, NULL, &trace_glob);
+      if (r == GLOB_NOSPACE || r == GLOB_ABORTED)
+        throw runtime_error("Error globbing tracepoint");
+
       for (unsigned i = 0; i < trace_glob.gl_pathc; ++i)
         {
           string header(trace_glob.gl_pathv[i]);

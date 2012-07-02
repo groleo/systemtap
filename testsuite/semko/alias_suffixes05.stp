@@ -1,0 +1,5 @@
+#! stap -p2
+
+# fails with a wildcard mismatch error
+
+probe syscall.open.return.maxactive(1).* { }

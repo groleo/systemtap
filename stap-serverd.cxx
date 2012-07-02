@@ -522,8 +522,16 @@ static void
 avahi_publish_service (CERTCertificate *cert)
 {
   cert_serial_number = get_cert_serial_number (cert);
-
-  string buf = "Systemtap Compile Server, pid=" + lex_cast (getpid ());
+  string buf;
+  try
+    {
+      buf = "Systemtap Compile Server, pid=" + lex_cast (getpid ());
+    }
+  catch (const runtime_error &e)
+    {
+      server_error(_F("Failed to cast pid '%d' to a string: %s", getpid(), e.what()));
+      return;
+    }
   avahi_service_name = avahi_strdup (buf.c_str ());
 
   // Allocate main loop object.
