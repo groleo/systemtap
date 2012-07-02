@@ -560,8 +560,15 @@ probe nd_syscall.pselect7 = kprobe.function("sys_pselect7") ?
 	// argstr = sprintf("%d, %p, %p, %p, %s, %p, %d", $n, $inp, $outp, $exp,
 	//			_struct_timespec_u($tsp, 1), $sigmask, $sigsetsize)
 	asmlinkage()
-	argstr = sprintf("%d, %p, %p, %p, %s, %p, %d", int_arg(1) , pointer_arg(2), pointer_arg(3), pointer_arg(4),
-				_struct_timespec_u(pointer_arg(5), 1), pointer_arg(6), ulong_arg(7))
+	argstr = sprintf("%d, %p, %p, %p, %s, %p, %d", int_arg(1),
+			 pointer_arg(2), pointer_arg(3), pointer_arg(4),
+			 _struct_timespec_u(pointer_arg(5), 1),
+			 pointer_arg(6),
+%( arch != "s390" %?
+			 ulong_arg(7))
+%:
+			 -1)
+%)
 }
 probe nd_syscall.pselect7.return = kprobe.function("sys_pselect7").return ?
 {
@@ -582,8 +589,15 @@ probe
 	//argstr = sprintf("%d, %p, %p, %p, %s, %p, %d", $n, $inp, $outp, $exp,
 	//			_struct_compat_timespec_u($tsp, 1), $sigmask, $sigsetsize)
 	asmlinkage()
-	argstr = sprintf("%d, %p, %p, %p, %s, %p, %d", int_arg(1) , pointer_arg(2), pointer_arg(3), pointer_arg(4),
-				_struct_timespec_u(pointer_arg(5), 1), pointer_arg(6), ulong_arg(7))
+	argstr = sprintf("%d, %p, %p, %p, %s, %p, %d", int_arg(1),
+			 pointer_arg(2), pointer_arg(3), pointer_arg(4),
+			 _struct_timespec_u(pointer_arg(5), 1),
+			 pointer_arg(6),
+%( arch != "s390" %?
+			 ulong_arg(7))
+%:
+			 -1)
+%)
 }
 probe nd_syscall.compat_pselect7.return = kprobe.function("compat_sys_pselect7").return ?
 {
