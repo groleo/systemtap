@@ -54,7 +54,7 @@ expect {
     set bid_check_passed 0
   }
 }
-catch close
+catch {close}; catch {wait}
 
 if {$bid_check_passed == 0} {
   untested "Build IDs do not exist on this system"
@@ -70,7 +70,7 @@ if {$bid_check_passed == 0} {
 # stop using it in this test case.  Instead we hope and pray and beseech the
 # almighty spaghetti monster that uprobes stay loaded after the following ditty:
 spawn stap -m bid $bid_stp $bid_exepath -c /bin/true
-wait
+catch {close}; catch {wait}
 
 set ok 0
 spawn staprun [pwd]/bid.ko -c $bid_exepath
@@ -107,7 +107,7 @@ error_handler [expr $ok==1] "nonshared build id !ok ($ok)"
 set ok 0
 # system "stap -m bid -p4 -DSTP_NO_BUILDID_CHECK $bid_stp $bid_exepath"
 spawn stap -m bid -p4 -DSTP_NO_BUILDID_CHECK $bid_stp $bid_exepath
-wait
+catch {close}; catch {wait}
 spawn staprun [pwd]/bid.ko -c $bid_exepath
 expect {
     -timeout 180
@@ -134,7 +134,7 @@ set res [target_compile $bid_srcpath "$bid_exepath" executable $bid_flags]
 if { [error_handler [expr {$res==""}] "$bid_exepath -DONLY_MAIN"] } { return }
 
 spawn stap -m bid -p4 $bid_stp libbid.so
-wait
+catch {close}; catch {wait}
 
 set ok 0
 spawn staprun [pwd]/bid.ko -c $bid_exepath
