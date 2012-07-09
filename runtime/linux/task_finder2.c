@@ -9,7 +9,6 @@
 #ifndef STAPCONF_TASK_UID
 #include <linux/cred.h>
 #endif
-#include <linux/task_work.h>
 #include "syscall.h"
 #include "task_finder_map.c"
 
@@ -170,7 +169,7 @@ static void __stp_tf_cancel_task_work(void)
 	list_for_each_entry(node, &__stp_tf_task_work_list, list) {
 	    // Remove the item from the list, cancel it, then free it.
 	    list_del(&node->list);
-	    task_work_cancel(node->task, node->work.func);
+	    stp_task_work_cancel(node->task, node->work.func);
 	    _stp_kfree(node);
 	}
 	spin_unlock_irqrestore(&__stp_tf_task_work_list_lock, flags);
@@ -1210,8 +1209,11 @@ __stp_tf_quiesce_worker(struct task_work *work)
 
 	might_sleep();
 	__stp_tf_free_task_work(work);
-	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING)
+	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING) {
+		/* Remember that this task_work_func is finished. */
+		stp_task_work_func_done();
 		return;
+	}
 
 	__stp_tf_handler_start();
 
@@ -1227,6 +1229,9 @@ __stp_tf_quiesce_worker(struct task_work *work)
 	}
 
 	__stp_tf_handler_end();
+
+	/* Remember that this task_work_func is finished. */
+	stp_task_work_func_done();
 	return;
 }
 
@@ -1288,12 +1293,13 @@ __stp_utrace_task_finder_target_quiesce(u32 action,
 			return UTRACE_RESUME;
 		}
 		init_task_work(work, &__stp_tf_quiesce_worker, tgt);
-		rc = task_work_add(tsk, work, true);
-		/* task_work_add() returns -ESRCH if the task has
+
+		rc = stp_task_work_add(tsk, work);
+		/* stp_task_work_add() returns -ESRCH if the task has
 		 * already passed exit_task_work(). Just ignore this
 		 * error. */
 		if (rc != 0 && rc != -ESRCH) {
-			printk(KERN_ERR "%s:%d - task_work_add() returned %d\n",
+			printk(KERN_ERR "%s:%d - stp_task_work_add() returned %d\n",
 			       __FUNCTION__, __LINE__, rc);
 		}
 	}
@@ -1397,13 +1403,19 @@ __stp_tf_mmap_worker(struct task_work *work)
 
 	might_sleep();
 	__stp_tf_free_task_work(work);
-	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING)
+	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING) {
+		/* Remember that this task_work_func is finished. */
+		stp_task_work_func_done();
 		return;
+	}
 
 	// See if we can find saved syscall info.
 	entry = __stp_tf_get_map_entry(current);
-	if (entry == NULL)
+	if (entry == NULL) {
+		/* Remember that this task_work_func is finished. */
+		stp_task_work_func_done();
 		return;
+	}
 
 	__stp_tf_handler_start();
 
@@ -1426,6 +1438,9 @@ __stp_tf_mmap_worker(struct task_work *work)
 	__stp_tf_remove_map_entry(entry);
 
 	__stp_tf_handler_end();
+
+	/* Remember that this task_work_func is finished. */
+	stp_task_work_func_done();
 	return;
 }
 
@@ -1492,12 +1507,12 @@ __stp_utrace_task_finder_target_syscall_exit(u32 action,
 			return UTRACE_RESUME;
 		}
 		init_task_work(work, &__stp_tf_mmap_worker, tgt);
-		rc = task_work_add(tsk, work, true);
-		/* task_work_add() returns -ESRCH if the task has
+		rc = stp_task_work_add(tsk, work);
+		/* stp_task_work_add() returns -ESRCH if the task has
 		 * already passed exit_task_work(). Just ignore this
 		 * error. */
 		if (rc != 0 && rc != -ESRCH) {
-			printk(KERN_ERR "%s:%d - task_work_add() returned %d\n",
+			printk(KERN_ERR "%s:%d - stp_task_work_add() returned %d\n",
 			       __FUNCTION__, __LINE__, rc);
 		}
 	}

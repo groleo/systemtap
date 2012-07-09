@@ -25,7 +25,7 @@
 #include <linux/spinlock.h>
 #include <trace/events/sched.h>
 #include <trace/events/syscalls.h>
-#include <linux/task_work.h>
+#include "stp_task_work.c"
 
 /*
  * Per-thread structure private to utrace implementation.
@@ -105,38 +105,13 @@ static void utrace_report_exec(void *cb_data __attribute__ ((unused)),
 #define __UTRACE_REGISTERED	1
 static atomic_t utrace_state = ATOMIC_INIT(__UTRACE_UNREGISTERED);
 
-#if !defined(STAPCONF_TASK_WORK_ADD_EXPORTED)
-typedef int (*task_work_add_fn)(struct task_struct *task,
-				  struct task_work *twork, bool notify);
-#define task_work_add (* (task_work_add_fn)kallsyms_task_work_add)
-typedef struct task_work *(*task_work_cancel_fn)(struct task_struct *,
-						 task_work_func_t);
-#define task_work_cancel (* (task_work_cancel_fn)kallsyms_task_work_cancel)
-#endif
-
 int utrace_init(void)
 {
 	int i;
 	int rc = -1;
 
-#if !defined(STAPCONF_TASK_WORK_ADD_EXPORTED)
-	/* The task_work_add()/task_work_cancel() functions aren't
-	 * exported. Look up those function addresses. */
-        kallsyms_task_work_add = (void *)kallsyms_lookup_name ("task_work_add");
-        if (kallsyms_task_work_add == NULL) {
-		printk(KERN_ERR "%s can't resolve task_work_add!",
-		       THIS_MODULE->name);
-		rc = -ENOENT;
+	if (unlikely(stp_task_work_init() != 0))
 		goto error;
-        }
-        kallsyms_task_work_cancel = (void *)kallsyms_lookup_name ("task_work_cancel");
-        if (kallsyms_task_work_cancel == NULL) {
-		printk(KERN_ERR "%s can't resolve task_work_cancel!",
-		       THIS_MODULE->name);
-		rc = -ENOENT;
-		goto error;
-        }
-#endif
 
 	/* initialize the list heads */
 	for (i = 0; i < TASK_UTRACE_TABLE_SIZE; i++) {
@@ -205,6 +180,8 @@ int utrace_exit(void)
 		kmem_cache_destroy(utrace_cachep);
 	if (utrace_engine_cachep)
 		kmem_cache_destroy(utrace_engine_cachep);
+
+	stp_task_work_exit();
 	return 0;
 }
 
@@ -239,7 +216,7 @@ static void utrace_cleanup(struct utrace *utrace)
 	}
 
 	if (utrace->task_work_added) {
-		if (task_work_cancel(utrace->task, &utrace_resume) == NULL)
+		if (stp_task_work_cancel(utrace->task, &utrace_resume) == NULL)
 			printk(KERN_ERR "%s:%d - task_work_cancel() failed? task %p, %d, %s\n",
 			       __FUNCTION__, __LINE__, utrace->task,
 			       utrace->task->tgid,
@@ -379,7 +356,7 @@ static void utrace_free(struct utrace *utrace)
 #endif
 
 	if (utrace->task_work_added) {
-		if (task_work_cancel(utrace->task, &utrace_resume) == NULL)
+		if (stp_task_work_cancel(utrace->task, &utrace_resume) == NULL)
 			printk(KERN_ERR "%s:%d - task_work_cancel() failed? task %p, %d, %s\n",
 			       __FUNCTION__, __LINE__, utrace->task,
 			       utrace->task->tgid,
@@ -898,11 +875,11 @@ static bool utrace_do_stop(struct task_struct *target, struct utrace *utrace)
 	} else if (utrace->resume > UTRACE_REPORT) {
 		utrace->resume = UTRACE_REPORT;
 		if (! utrace->task_work_added) {
-			int rc = task_work_add(target, &utrace->work, true);
+			int rc = stp_task_work_add(target, &utrace->work);
 			if (rc == 0) {
 				utrace->task_work_added = 1;
 			}
-			/* task_work_add() returns -ESRCH if the task
+			/* stp_task_work_add() returns -ESRCH if the task
 			 * has already passed exit_task_work(). Just
 			 * ignore this error. */
 			else if (rc != -ESRCH) {
@@ -1041,16 +1018,16 @@ relock:
 		 */
 		utrace->resume = action;
 		if (! utrace->task_work_added) {
-			int rc = task_work_add(task, &utrace->work, true);
+			int rc = stp_task_work_add(task, &utrace->work);
 			if (rc == 0) {
 				utrace->task_work_added = 1;
 			}
-			/* task_work_add() returns -ESRCH if the task
+			/* stp_task_work_add() returns -ESRCH if the task
 			 * has already passed exit_task_work(). Just
 			 * ignore this error. */
 			else if (rc != -ESRCH) {
 				printk(KERN_ERR
-				       "%s:%d - task_work_add() returned %d\n",
+				       "%s:%d - stp_task_work_add() returned %d\n",
 				       __FUNCTION__, __LINE__, rc);
 			}
 		}
@@ -1397,18 +1374,17 @@ int utrace_control(struct task_struct *target,
 		if (action < utrace->resume) {
 			utrace->resume = action;
 			if (! utrace->task_work_added) {
-				ret = task_work_add(target, &utrace->work,
-						    true);
+				ret = stp_task_work_add(target, &utrace->work);
 				if (ret == 0) {
 					utrace->task_work_added = 1;
 				}
-				/* task_work_add() returns -ESRCH if
+				/* stp_task_work_add() returns -ESRCH if
 				 * the task has already passed
 				 * exit_task_work(). Just ignore this
 				 * error. */
 				else if (ret != -ESRCH) {
 					printk(KERN_ERR
-					       "%s:%d - task_work_add() returned %d\n",
+					       "%s:%d - stp_task_work_add() returned %d\n",
 					       __FUNCTION__, __LINE__, ret);
 				}
 			}
@@ -1560,11 +1536,11 @@ static void finish_report(struct task_struct *task, struct utrace *utrace,
 		spin_lock(&utrace->lock);
 		utrace->resume = resume;
 		if (! utrace->task_work_added) {
-			int rc = task_work_add(task, &utrace->work, true);
+			int rc = stp_task_work_add(task, &utrace->work);
 			if (rc == 0) {
 				utrace->task_work_added = 1;
 			}
-			/* task_work_add() returns -ESRCH if the task
+			/* stp_task_work_add() returns -ESRCH if the task
 			 * has already passed exit_task_work(). Just
 			 * ignore this error. */
 			else if (rc != -ESRCH) {
@@ -2132,6 +2108,9 @@ void utrace_resume(struct task_work *work)
 		 * call.  (The arch might use TIF_NOTIFY_RESUME for other
 		 * purposes as well as calling us.)
 		 */
+
+		/* Remember that this task_work_func is finished. */
+		stp_task_work_func_done();
 		return;
 	case UTRACE_REPORT:
 		if (unlikely(!(utrace->utrace_flags & UTRACE_EVENT(QUIESCE))))
@@ -2160,6 +2139,9 @@ void utrace_resume(struct task_work *work)
 	 * effect now (i.e. step or interrupt).
 	 */
 	finish_resume_report(task, utrace, &report);
+	
+	/* Remember that this task_work_func is finished. */
+	stp_task_work_func_done();
 }
 
 #endif	/* _STP_UTRACE_C */
