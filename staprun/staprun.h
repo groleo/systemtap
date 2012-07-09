@@ -28,7 +28,6 @@
 #include <sys/poll.h>
 #include <pthread.h>
 #include <sys/socket.h>
-#include <linux/types.h>
 #include <linux/limits.h>
 #include <sys/wait.h>
 #include <sys/statfs.h>
