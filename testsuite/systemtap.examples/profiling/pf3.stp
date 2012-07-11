@@ -1,8 +1,11 @@
 #! /usr/bin/env stap
 
-global profile[20000], pcount
+global profile%[20000], pcount
 probe timer.profile {
   pcount <<< 1
+  # NB: we resolve to a function name here (rather than recording only
+  # the PC), because during a later pc->name lookup, the process context
+  # may be different.
   fn = user_mode() ?
       ("u:".umodname(uaddr()).":".usymname(uaddr()))  :
       ("k:".modname(addr()).":".symname(addr()));

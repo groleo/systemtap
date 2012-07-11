@@ -1,6 +1,6 @@
 #! /usr/bin/env stap
 
-global profile, pcount
+global profile%, pcount
 probe timer.profile {
   pcount <<< 1
   fn = user_mode() ? "<user>" : symname(addr())
