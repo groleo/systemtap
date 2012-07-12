@@ -3308,6 +3308,7 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
   // (4) Provide the '_dwarf_tvar_{name}_{num}_tmp' variable to
   // our parent so it can be used as a substitute for the target
   // symbol.
+  delete ai_tvar_base;
   return tmpsym;
 }
 
@@ -6129,23 +6130,24 @@ sdt_query::setup_note_probe_entry (int type, const char *data, size_t len)
 
   probe_type = uprobe3_type;
   const char * provider = data + dst.d_size;
-  provider_name = provider;
+
   const char *name = (const char*)memchr (provider, '\0', data + len - provider);
-  assert(name);
-  probe_name = ++name;
+  if(name++ == NULL)
+    return;
+
+  const char *args = (const char*)memchr (name, '\0', data + len - name);
+  if (args++ == NULL || memchr (args, '\0', data + len - name) != data + len - 1)
+    return;
+
+  provider_name = provider;
+  probe_name = name;
+  arg_string = args;
 
   // Did we find a matching probe?
   if (! (dw.function_name_matches_pattern (probe_name, pp_mark)
 	 && ((pp_provider == "")
 	     || dw.function_name_matches_pattern (provider_name, pp_provider))))
     return;
-
-  const char *args = (const char*)memchr (name, '\0', data + len - name);
-  if (args++ == NULL ||
-      memchr (args, '\0', data + len - name) != data + len - 1)
-    if (name == NULL)
-      return;
-  arg_string = args;
 
   arg_count = 0;
   for (unsigned i = 0; i < arg_string.length(); i++)
