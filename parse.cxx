@@ -37,8 +37,8 @@ using namespace std;
 class lexer
 {
 public:
-  bool ate_comment; // the most recent token followed a comment
-  token* scan (bool wildcard=false);
+  bool ate_whitespace; // the most recent token followed whitespace
+  token* scan ();
   lexer (istream&, const string&, systemtap_session&);
   void set_current_file (stapfile* f);
 
@@ -88,13 +88,13 @@ private:
 
   // preprocessing subordinate
   vector<pair<const token*, pp_state_t> > pp_state;
-  const token* scan_pp (bool wildcard=false);
+  const token* scan_pp ();
   const token* skip_pp ();
 
   // scanning state
   const token* last ();
-  const token* next (bool wildcard=false);
-  const token* peek (bool wildcard=false);
+  const token* next ();
+  const token* peek ();
 
   const token* systemtap_v_seen;
   const token* last_t; // the last value returned by peek() or next()
@@ -499,7 +499,7 @@ bool eval_pp_conditional (systemtap_session& s,
 
 // Only tokens corresponding to the TRUE statement must be expanded
 const token*
-parser::scan_pp (bool wildcard)
+parser::scan_pp ()
 {
   while (true)
     {
@@ -511,7 +511,7 @@ parser::scan_pp (bool wildcard)
       if (pp == PP_SKIP_THEN || pp == PP_SKIP_ELSE)
         t = skip_pp ();
       else
-        t = input.scan (wildcard);
+        t = input.scan ();
 
       if (t == 0) // EOF
         {
@@ -564,9 +564,9 @@ parser::scan_pp (bool wildcard)
       const token *n = NULL;
       do {
         const token *l, *op, *r;
-        l = input.scan (false);
-        op = input.scan (false);
-        r = input.scan (false);
+        l = input.scan ();
+        op = input.scan ();
+        r = input.scan ();
         if (l == 0 || op == 0 || r == 0)
           throw parse_error (_("incomplete condition after '%('"), t);
         // NB: consider generalizing to consume all tokens until %?, and
@@ -645,10 +645,10 @@ parser::skip_pp ()
 
 
 const token*
-parser::next (bool wildcard)
+parser::next ()
 {
   if (! next_t)
-    next_t = scan_pp (wildcard);
+    next_t = scan_pp ();
   if (! next_t)
     throw parse_error (_("unexpected end-of-file"));
 
@@ -660,10 +660,10 @@ parser::next (bool wildcard)
 
 
 const token*
-parser::peek (bool wildcard)
+parser::peek ()
 {
   if (! next_t)
-    next_t = scan_pp (wildcard);
+    next_t = scan_pp ();
 
   // don't advance by zeroing next_t
   last_t = next_t;
@@ -788,7 +788,7 @@ parser::peek_kw (std::string const & kw)
 
 
 lexer::lexer (istream& input, const string& in, systemtap_session& s):
-  ate_comment(false), input_name (in), input_pointer (0), input_end (0),
+  ate_whitespace(false), input_name (in), input_pointer (0), input_end (0),
   cursor_suspend_count(0), cursor_suspend_line (1), cursor_suspend_column (1),
   cursor_line (1), cursor_column (1),
   session(s), current_file (0)
@@ -900,9 +900,9 @@ lexer::input_put (const string& chars, const token* t)
 
 
 token*
-lexer::scan (bool wildcard)
+lexer::scan ()
 {
-  ate_comment = false; // reset for each new token
+  ate_whitespace = false; // reset for each new token
   token* n = new token;
   n->location.file = current_file;
 
@@ -920,7 +920,10 @@ skip:
     }
 
   if (isspace (c))
-    goto skip;
+    {
+      ate_whitespace = true;
+      goto skip;
+    }
 
   int c2 = input_peek ();
 
@@ -967,13 +970,11 @@ skip:
       goto skip;
     }
 
-  else if (isalpha (c) || c == '$' || c == '@' || c == '_' ||
-	   (wildcard && c == '*'))
+  else if (isalpha (c) || c == '$' || c == '@' || c == '_')
     {
       n->type = tok_identifier;
       n->content = (char) c;
-      while (isalnum (c2) || c2 == '_' || c2 == '$' ||
-	     (wildcard && c2 == '*'))
+      while (isalnum (c2) || c2 == '_' || c2 == '$')
 	{
           input_get ();
           n->content.push_back (c2);
@@ -1062,7 +1063,7 @@ skip:
           unsigned this_line = cursor_line;
           do { c = input_get (); }
           while (c >= 0 && cursor_line == this_line);
-          ate_comment = true;
+          ate_whitespace = true;
           goto skip;
         }
       else if ((c == '/' && c2 == '/')) // C++ comment
@@ -1070,7 +1071,7 @@ skip:
           unsigned this_line = cursor_line;
           do { c = input_get (); }
           while (c >= 0 && cursor_line == this_line);
-          ate_comment = true;
+          ate_whitespace = true;
           goto skip;
         }
       else if (c == '/' && c2 == '*') // C comment
@@ -1085,7 +1086,7 @@ skip:
               c = c2;
               c2 = input_get ();
             }
-          ate_comment = true;
+          ate_whitespace = true;
           goto skip;
 	}
       else if (c == '%' && c2 == '{') // embedded code
@@ -1624,12 +1625,41 @@ parser::parse_probe_point ()
 
   while (1)
     {
-      const token* t = next (true); // wildcard scanning here
+      const token* t = next ();
       if (! (t->type == tok_identifier
 	     // we must allow ".return" and ".function", which are keywords
-	     || t->type == tok_keyword))
+	     || t->type == tok_keyword
+             // we must allow "*", due to being an operator
+             || (t->type == tok_operator && t->content == "*")))
         throw parse_error (_("expected identifier or '*'"));
 
+      // loop which reconstitutes an identifier with wildcards
+      string content = t->content;
+      while (1)
+        {
+          const token* u = peek();
+          // ensure pieces of the identifier are adjacent:
+          if (input.ate_whitespace)
+            break;
+          // ensure pieces of the identifier are valid:
+          if (! (u->type == tok_identifier
+                 // we must allow arbitrary keywords with a wildcard
+                 || u->type == tok_keyword
+                 // we must allow "*", due to being an operator
+                 || (u->type == tok_operator && u->content == "*")))
+            break;
+
+          // append u to t
+          content = content + u->content;
+          
+          // consume u
+          next ();
+        }
+      token* new_t = new token;
+      new_t->location = t->location;
+      new_t->type = t->type;
+      new_t->content = content;
+      delete t; t = new_t;
 
       probe_point::component* c = new probe_point::component;
       c->functor = t->content;
@@ -1713,9 +1743,8 @@ parser::parse_literal ()
 
       // PR11208: check if the next token is also a string literal; auto-concatenate it
       // This is complicated to the extent that we need to skip intermediate whitespace.
-      // XXX: but not comments
       const token *n = peek();
-      while (n != NULL && n->type == tok_string && !input.ate_comment)
+      while (n != NULL && n->type == tok_string)
         {
           ls->value.append(next()->content); // consume and append the token
           n = peek();
