@@ -220,7 +220,7 @@ Requires: avahi
 # testsuite/systemtap.base/crash.exp needs crash
 Requires: crash
 %endif
-%if %{_arch} == x86_64
+%ifarch x86_64
 Requires: glibc-devel(%{__isa_name}-32)
 %endif
 
@@ -585,6 +585,9 @@ exit 0
 # ------------------------------------------------------------------------
 
 %changelog
+* Fri Jul 13 2012 Peter Robinson <pbrobinson@fedoraproject.org>
+- Fix ifarch statement
+
 * Sun Jun 17 2012 Frank Ch. Eigler <fche@redhat.com> - 1.8-1
 - Upstream release.
 
