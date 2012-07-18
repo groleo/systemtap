@@ -5099,6 +5099,17 @@ static void sdt_v3_tokenize(const string& str, vector<string>& tokens)
   string::size_type pos;
   string::size_type lastPos = str.find_first_not_of(" ", 0);
   string::size_type nextAt = str.find("@", lastPos);
+
+  if (nextAt == string::npos)
+    {
+      // PR13934: Assembly probes are not forced to use the N@OP form.
+      // In this case, N is inferred to be the native word size.  Since we
+      // don't have a nice delimiter, just split it on spaces.  SDT-asm authors
+      // then must not put any spaces in arguments, to avoid ambiguity.
+      tokenize(str, tokens, " ");
+      return;
+    }
+
   while (lastPos != string::npos)
    {
      pos = nextAt + 1;
@@ -6149,11 +6160,12 @@ sdt_query::setup_note_probe_entry (int type, const char *data, size_t len)
 	     || dw.function_name_matches_pattern (provider_name, pp_provider))))
     return;
 
-  arg_count = 0;
-  for (unsigned i = 0; i < arg_string.length(); i++)
-    if (arg_string[i] == '@')
-      arg_count += 1;
-  
+  // PR13934: Assembly probes are not forced to use the N@OP form.
+  // If we have '@' then great, else count based on space-delimiters.
+  arg_count = count(arg_string.begin(), arg_string.end(), '@');
+  if (!arg_count && !arg_string.empty())
+    arg_count = 1 + count(arg_string.begin(), arg_string.end(), ' ');
+
   GElf_Addr base_ref;
   if (gelf_getclass (elf) == ELFCLASS32)
     {
