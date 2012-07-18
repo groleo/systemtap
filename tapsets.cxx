@@ -5410,9 +5410,9 @@ sdt_uprobe_var_expanding_visitor::visit_target_symbol_arg (target_symbol *e)
 	  // 1) uprobe1_type $argN or $FOO (we don't know the arg_count)
 	  // 2) uprobe2_type $FOO (no probe args)
 	  // both of which get resolved later.
+	  // Throw it now, and it might be resolved by DWARF later.
 	  need_debug_info = true;
-	  provide(e);
-	  return;
+	  throw semantic_error(_("target-symbol requires debuginfo"), e->tok);
 	}
 
       assert (arg_tokens.size() >= argno);
@@ -5760,8 +5760,7 @@ sdt_uprobe_var_expanding_visitor::visit_target_symbol_arg (target_symbol *e)
         }
       assert (argexpr == 0);
       need_debug_info = true;
-      provide (e);
-      return;
+      throw semantic_error(_("SDT asm not understood, requires debuginfo"), e->tok);
 
     matched:
       assert (argexpr != 0);
@@ -5996,8 +5995,6 @@ sdt_query::handle_probe_entry()
   svv.replace (new_base->body);
   need_debug_info = svv.need_debug_info;
 
-  unsigned i = results.size();
-
   // XXX: why not derive_probes() in the uprobes case too?
   literal_map_t params;
   for (unsigned i = 0; i < new_location->components.size(); ++i)
@@ -6006,13 +6003,19 @@ sdt_query::handle_probe_entry()
       params[c->functor] = c->arg;
    }
 
+  unsigned prior_results_size = results.size();
   dwarf_query q(new_base, new_location, dw, params, results, "", "");
   q.has_mark = true; // enables mid-statement probing
 
-  // V2 probes need dwarf info in case of a variable reference
+  // V1 probes always need dwarf info
+  // V2+ probes need dwarf info in case of a variable reference
   if (have_debuginfo_uprobe(need_debug_info))
     dw.iterate_over_modules(&query_module, &q);
-  else if (have_debuginfoless_uprobe())
+
+  // For V2+ probes, if variable references weren't used or failed (PR14369),
+  // then try with the more direct approach.  Unresolved $vars might still
+  // cause their own error, but this gives them a chance to be optimized out.
+  if (have_debuginfoless_uprobe() && results.size() == prior_results_size)
     {
       string section;
       Dwarf_Addr reloc_addr = q.statement_num_val + bias;
@@ -6033,7 +6036,7 @@ sdt_query::handle_probe_entry()
       results.push_back (p);
     }
   sess.unwindsym_modules.insert (dw.module_name);
-  record_semaphore(results, i);
+  record_semaphore(results, prior_results_size);
 }
 
 

@@ -202,3 +202,9 @@ probe process(@1).mark("memory") ?
 { if ($arg1 == 7 && $arg2 == 7 && $arg3 == 7) {printf ("PASS: %s\n", $$name)}
   else {printf ("FAIL: %s ((%d|%d|%d) != 7)\n", $$name, $arg1, $arg2, $arg3)}
 }
+
+# PR14369: make sure a bad $var doesn't prevent the probes from being found at all
+probe process(@1).mark("*")
+{ if (! @defined($no_such_var)) {printf ("PASS: %s @defined\n", $$name)}
+  else {printf ("FAIL: %s @defined\n")} # shouldn't get here, failure is actually in translation
+}

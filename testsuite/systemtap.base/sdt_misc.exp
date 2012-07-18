@@ -460,7 +460,9 @@ if {$ok == 1} {
 # 8. Test V3 asm support
 
 if {[regexp "^(x86_64|i.86)$" $::tcl_platform(machine)]} {
-set res [target_compile $srcdir/$subdir/sdt_asm.S sdt_asm.x executable [sdt_includes]]
+set asm_flags [sdt_includes]
+set asm_flags "$asm_flags additional_flags=-g" ; # avoid WARNING for @defined($no_such_var)
+set res [target_compile $srcdir/$subdir/sdt_asm.S sdt_asm.x executable $asm_flags]
 if { $res != "" } {
     verbose "target_compile failed: $res" 2
     fail "$test compiling sdt_asm.S"
