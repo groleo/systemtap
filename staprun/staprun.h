@@ -10,6 +10,11 @@
  * Copyright (C) 2005-2008 Red Hat Inc.
  */
 #define _FILE_OFFSET_BITS 64
+
+/* kernel-headers and glibc like to stomp on each other.  We include this early
+ * so we can ensure glibc's own definitions will win.  rhbz 837641 & 840902 */
+#include <linux/types.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
