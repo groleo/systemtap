@@ -10,8 +10,6 @@ if {! [installtest_p]} { untested $test; return }
 set bad_kprobes {
     kernel.statement(-1).absolute
     kprobe.statement(-1).absolute
-    kprobe.function("no_such_function")
-    kprobe.function("no_such_function").return
 }
 
 foreach bk $bad_kprobes {
