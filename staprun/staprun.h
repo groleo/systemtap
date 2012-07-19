@@ -13,7 +13,7 @@
 
 /* kernel-headers and glibc like to stomp on each other.  We include this early
  * so we can ensure glibc's own definitions will win.  rhbz 837641 & 840902 */
-#include <linux/types.h>
+#include <linux/posix_types.h>
 
 #include <stdio.h>
 #include <stdlib.h>
