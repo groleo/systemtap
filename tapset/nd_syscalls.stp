@@ -776,9 +776,27 @@ probe __nd_syscall.dup2.return = kprobe.function("sys_dup2").return
 
 # epoll_create _______________________________________________
 # long sys_epoll_create(int size)
-#
-# FIXME: doesn't handle sys_epoll_create1()
-probe nd_syscall.epoll_create = kprobe.function("sys_epoll_create") ?
+# SYSCALL_DEFINE1(epoll_create1, int, flags)
+probe nd_syscall.epoll_create = __nd_syscall.epoll_create1 !,
+                                __nd_syscall.epoll_create ?
+{
+}
+probe __nd_syscall.epoll_create1 = kprobe.function("sys_epoll_create1")
+{
+	// size = @defined($size) ? $size : 0;
+	// flags = @defined($flags) ? $flags : 0;
+ 	asmlinkage()
+	size = 0;
+	flags = int_arg(1)
+	if (flags == 0) {
+		name = "epoll_create";
+		argstr = sprint(size);
+	} else {
+		name = "epoll_create1";
+		argstr = _epoll_create1_flag_str(flags);
+	}
+}
+probe __nd_syscall.epoll_create = kprobe.function("sys_epoll_create")
 {
 	name = "epoll_create"
 	// size = $size
@@ -788,8 +806,19 @@ probe nd_syscall.epoll_create = kprobe.function("sys_epoll_create") ?
 	flags = 0
 	argstr = sprint(size)
 }
-probe nd_syscall.epoll_create.return = kprobe.function("sys_epoll_create").return ?
+probe nd_syscall.epoll_create.return = __nd_syscall.epoll_create1.return !,
+                                       __nd_syscall.epoll_create.return ?
 {
+}
+probe __nd_syscall.epoll_create1.return = kprobe.function("sys_epoll_create1").return
+{
+	flags = @entry(__asmlinkage_int_arg(1))
+	name = (flags == 0) ? "epoll_create" : "epoll_create1";
+	retstr = returnstr(1)
+}
+probe nd_syscall.epoll_create.return = kprobe.function("sys_epoll_create").return
+{
+	flags = 0
 	name = "epoll_create"
 	retstr = returnstr(1)
 }
