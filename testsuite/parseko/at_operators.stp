@@ -1,0 +1,5 @@
+#! stap -p2
+
+# this used to be allowed, but really shouldn't have been:
+probe @hellosailor = begin { }
+probe @hellosailor { print("Hello, Sailor!\n") }

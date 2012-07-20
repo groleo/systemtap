@@ -110,7 +110,8 @@ private:
   const token* expect_op (string const & expected);
   const token* expect_kw (string const & expected);
   const token* expect_number (int64_t & expected);
-  const token* expect_ident (string & target);
+  // const token* expect_ident (string & target); // no longer used
+  const token* expect_ident_or_at_op (string & target);
   const token* expect_ident_or_keyword (string & target);
   bool peek_op (string const & op);
   bool peek_kw (string const & kw);
@@ -704,7 +705,7 @@ parser::expect_unknown2 (token_type tt1, token_type tt2, string & target)
 {
   const token *t = next();
   if (!(t && (t->type == tt1 || t->type == tt2)))
-    throw parse_error ("expected " + tt2str(tt1) + " or " + tt2str(tt2));
+    throw parse_error ("expected " + tt2str(tt1) + " or " + tt2str(tt2)); // TODOXXX gettext?
   target = t->content;
   return t;
 }
@@ -758,10 +759,28 @@ parser::expect_number (int64_t & value)
 }
 
 
+// XXX no longer used
+// const token*
+// parser::expect_ident (std::string & target)
+// {
+//   return expect_unknown (tok_identifier, target);
+// }
+
+
 const token*
-parser::expect_ident (std::string & target)
+parser::expect_ident_or_at_op (std::string & target)
 {
-  return expect_unknown (tok_identifier, target);
+  const token *t = next();
+
+  // accept identifiers and operators beginning in '@':
+  if (!t || (t->type != tok_identifier
+             && (t->type != tok_operator || t->content[0] != '@')))
+    // XXX currently this is only called from parse_hist_op_or_bare_name(),
+    // so the message is accurate, but keep an eye out in the future:
+    throw parse_error ("expected " + tt2str(tok_identifier) + " or statistical operation"); // TODOXXX gettext?
+
+  target = t->content;
+  return t;
 }
 
 
@@ -983,6 +1002,8 @@ skip:
 
       if (keywords.count(n->content))
         n->type = tok_keyword;
+      else if (n->content[0] == '@')
+        n->type = tok_operator;
 
       return n;
     }
@@ -2600,7 +2621,8 @@ parser::parse_value ()
       next ();
       return parse_target_symbol (t);
     }
-  else if (t->type == tok_identifier)
+  else if (t->type == tok_identifier
+           || (t->type == tok_operator && t->content[0] == '@'))
     return parse_symbol ();
   else
     return parse_literal ();
@@ -2611,7 +2633,7 @@ const token *
 parser::parse_hist_op_or_bare_name (hist_op *&hop, string &name)
 {
   hop = NULL;
-  const token* t = expect_ident (name);
+  const token* t = expect_ident_or_at_op (name); // TODOXXX
   if (name == "@hist_linear" || name == "@hist_log")
     {
       hop = new hist_op;
@@ -2885,7 +2907,6 @@ expression* parser::parse_symbol ()
   return sym;
 }
 
-
 // Parse a @cast or $var.  Given head token has already been consumed.
 target_symbol* parser::parse_target_symbol (const token* t)
 {
@@ -2896,7 +2917,7 @@ target_symbol* parser::parse_target_symbol (const token* t)
       t = next ();
     }
 
-  if (t->type == tok_identifier && t->content == "@cast")
+  if (t->type == tok_operator && t->content == "@cast")
     {
       cast_op *cop = new cast_op;
       cop->tok = t;
@@ -2929,7 +2950,7 @@ target_symbol* parser::parse_target_symbol (const token* t)
       return tsym;
     }
 
-  if (t->type == tok_identifier && t->content == "@var")
+  if (t->type == tok_operator && t->content == "@var")
     {
       target_symbol *tsym = new target_symbol;
       tsym->tok = t;
