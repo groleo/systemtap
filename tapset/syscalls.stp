@@ -524,6 +524,10 @@ probe syscall.dup.return = kernel.function("sys_dup").return
 	retstr = return_str(1, $return)
 }
 
+# Notice there are two syscall.dup2 probe aliases. This is
+# intentional, to handle dup2/dup3 properly (and all their corner
+# cases).  See commit 816395 for details (and a testcase).
+#
 # dup2 _______________________________________________________
 # long sys_dup2(unsigned int oldfd, unsigned int newfd)
 # Only handles corner case, others handled by dup3.
