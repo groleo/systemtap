@@ -1,0 +1,8 @@
+#! stap -p2
+
+global stat
+
+# dwarfless probes can only use @entry in .return
+probe kprobe.function("do_filp_open") {
+    stat <<< get_cycles() - @entry(get_cycles())
+}

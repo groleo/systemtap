@@ -3069,9 +3069,13 @@ dwarf_var_expanding_visitor::visit_target_symbol_saved_return (target_symbol* e)
 }
 
 expression*
-dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
-                                                     const string& name)
+gen_mapped_saved_return(systemtap_session &sess, expression* e,
+			const string& name,
+			block *& add_block, bool& add_block_tid,
+			block *& add_call_probe, bool& add_call_probe_tid)
 {
+  static unsigned tick = 0;
+
   // We've got to do several things here to handle target
   // variables in return probes.
 
@@ -3080,22 +3084,22 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
   // nesting level counter.  The arrays will look like
   // this:
   //
-  //   _dwarf_tvar_{name}_{num}
-  //   _dwarf_tvar_{name}_{num}_ctr
+  //   _entry_tvar_{name}_{num}
+  //   _entry_tvar_{name}_{num}_ctr
 
-  string aname = (string("_dwarf_tvar_")
+  string aname = (string("_entry_tvar_")
                   + name
                   + "_" + lex_cast(tick++));
   vardecl* vd = new vardecl;
   vd->name = aname;
   vd->tok = e->tok;
-  q.sess.globals.push_back (vd);
+  sess.globals.push_back (vd);
 
   string ctrname = aname + "_ctr";
   vd = new vardecl;
   vd->name = ctrname;
   vd->tok = e->tok;
-  q.sess.globals.push_back (vd);
+  sess.globals.push_back (vd);
 
   // (2) Create a new code block we're going to insert at the
   // beginning of this probe to get the cached value into a
@@ -3103,21 +3107,21 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
   // reference with the temporary variable reference.  The code
   // will look like this:
   //
-  //   _dwarf_tvar_tid = tid()
-  //   _dwarf_tvar_{name}_{num}_tmp
-  //       = _dwarf_tvar_{name}_{num}[_dwarf_tvar_tid,
-  //                    _dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid]]
-  //   delete _dwarf_tvar_{name}_{num}[_dwarf_tvar_tid,
-  //                    _dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid]--]
-  //   if (! _dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid])
-  //       delete _dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid]
+  //   _entry_tvar_tid = tid()
+  //   _entry_tvar_{name}_{num}_tmp
+  //       = _entry_tvar_{name}_{num}[_entry_tvar_tid,
+  //                    _entry_tvar_{name}_{num}_ctr[_entry_tvar_tid]]
+  //   delete _entry_tvar_{name}_{num}[_entry_tvar_tid,
+  //                    _entry_tvar_{name}_{num}_ctr[_entry_tvar_tid]--]
+  //   if (! _entry_tvar_{name}_{num}_ctr[_entry_tvar_tid])
+  //       delete _entry_tvar_{name}_{num}_ctr[_entry_tvar_tid]
 
   // (2a) Synthesize the tid temporary expression, which will look
   // like this:
   //
-  //   _dwarf_tvar_tid = tid()
+  //   _entry_tvar_tid = tid()
   symbol* tidsym = new symbol;
-  tidsym->name = string("_dwarf_tvar_tid");
+  tidsym->name = string("_entry_tvar_tid");
   tidsym->tok = e->tok;
 
   if (add_block == NULL)
@@ -3133,7 +3137,7 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
       fc->tok = e->tok;
       fc->function = string("tid");
 
-      // Assign the tid to '_dwarf_tvar_tid'.
+      // Assign the tid to '_entry_tvar_tid'.
       assignment* a = new assignment;
       a->tok = e->tok;
       a->op = "=";
@@ -3151,9 +3155,9 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
   // temporary variable (that we'll use as replacement for the
   // target variable reference).  It will look like this:
   //
-  //   _dwarf_tvar_{name}_{num}_tmp
-  //       = _dwarf_tvar_{name}_{num}[_dwarf_tvar_tid,
-  //                    _dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid]]
+  //   _entry_tvar_{name}_{num}_tmp
+  //       = _entry_tvar_{name}_{num}[_entry_tvar_tid,
+  //                    _entry_tvar_{name}_{num}_ctr[_entry_tvar_tid]]
 
   arrayindex* ai_tvar_base = new arrayindex;
   ai_tvar_base->tok = e->tok;
@@ -3174,7 +3178,7 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
   *ai_tvar_postdec = *ai_tvar_base;
 
   // Synthesize the
-  // "_dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid]" used as the
+  // "_entry_tvar_{name}_{num}_ctr[_entry_tvar_tid]" used as the
   // second index into the array.
   arrayindex* ai_ctr = new arrayindex;
   ai_ctr->tok = e->tok;
@@ -3205,8 +3209,8 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
   // (2c) Add a post-decrement to the second array index and
   // delete the array value.  It will look like this:
   //
-  //   delete _dwarf_tvar_{name}_{num}[_dwarf_tvar_tid,
-  //                    _dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid]--]
+  //   delete _entry_tvar_{name}_{num}[_entry_tvar_tid,
+  //                    _entry_tvar_{name}_{num}_ctr[_entry_tvar_tid]--]
 
   post_crement* pc = new post_crement;
   pc->tok = e->tok;
@@ -3222,8 +3226,8 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
 
   // (2d) Delete the counter value if it is 0.  It will look like
   // this:
-  //   if (! _dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid])
-  //       delete _dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid]
+  //   if (! _entry_tvar_{name}_{num}_ctr[_entry_tvar_tid])
+  //       delete _entry_tvar_{name}_{num}_ctr[_entry_tvar_tid]
 
   ds = new delete_statement;
   ds->tok = e->tok;
@@ -3247,9 +3251,9 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
   // look like this:
   //
   //   probe kernel.function("{function}").call {
-  //     _dwarf_tvar_tid = tid()
-  //     _dwarf_tvar_{name}_{num}[_dwarf_tvar_tid,
-  //                       ++_dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid]]
+  //     _entry_tvar_tid = tid()
+  //     _entry_tvar_{name}_{num}[_entry_tvar_tid,
+  //                       ++_entry_tvar_{name}_{num}_ctr[_entry_tvar_tid]]
   //       = ${param}
   //   }
 
@@ -3266,7 +3270,7 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
       fc->tok = e->tok;
       fc->function = string("tid");
 
-      // Assign the tid to '_dwarf_tvar_tid'.
+      // Assign the tid to '_entry_tvar_tid'.
       assignment* a = new assignment;
       a->tok = e->tok;
       a->op = "=";
@@ -3281,8 +3285,8 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
     }
 
   // Save the value, like this:
-  //     _dwarf_tvar_{name}_{num}[_dwarf_tvar_tid,
-  //                       ++_dwarf_tvar_{name}_{num}_ctr[_dwarf_tvar_tid]]
+  //     _entry_tvar_{name}_{num}[_entry_tvar_tid,
+  //                       ++_entry_tvar_{name}_{num}_ctr[_entry_tvar_tid]]
   //       = ${param}
   arrayindex* ai_tvar_preinc = new arrayindex;
   *ai_tvar_preinc = *ai_tvar_base;
@@ -3305,11 +3309,21 @@ dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
 
   add_call_probe = new block(add_call_probe, es);
 
-  // (4) Provide the '_dwarf_tvar_{name}_{num}_tmp' variable to
+  // (4) Provide the '_entry_tvar_{name}_{num}_tmp' variable to
   // our parent so it can be used as a substitute for the target
   // symbol.
   delete ai_tvar_base;
   return tmpsym;
+}
+
+
+expression*
+dwarf_var_expanding_visitor::gen_mapped_saved_return(expression* e,
+                                                     const string& name)
+{
+    return ::gen_mapped_saved_return(q.sess, e, name, add_block,
+				     add_block_tid, add_call_probe,
+				     add_call_probe_tid);
 }
 
 
@@ -7656,7 +7670,9 @@ static const string TOK_KPROBE("kprobe");
 
 struct kprobe_derived_probe: public derived_probe
 {
-  kprobe_derived_probe (probe *base,
+  kprobe_derived_probe (systemtap_session& sess,
+			vector<derived_probe *> & results,
+			probe *base,
 			probe_point *location,
 			const string& name,
 			int64_t stmt_addr,
@@ -7697,7 +7713,24 @@ public:
   void emit_module_exit (systemtap_session& s);
 };
 
-kprobe_derived_probe::kprobe_derived_probe (probe *base,
+struct kprobe_var_expanding_visitor: public var_expanding_visitor
+{
+  systemtap_session& sess;
+  block *add_block;
+  block *add_call_probe; // synthesized from .return probes with saved $vars
+  bool add_block_tid, add_call_probe_tid;
+
+  kprobe_var_expanding_visitor(systemtap_session& sess):
+    sess(sess), add_block(NULL), add_call_probe(NULL),
+    add_block_tid(false), add_call_probe_tid(false) {}
+
+  void visit_entry_op (entry_op* e);
+};
+
+
+kprobe_derived_probe::kprobe_derived_probe (systemtap_session& sess,
+					    vector<derived_probe *> & results,
+					    probe *base,
 					    probe_point *location,
 					    const string& name,
 					    int64_t stmt_addr,
@@ -7755,6 +7788,36 @@ kprobe_derived_probe::kprobe_derived_probe (probe *base,
     comps.push_back (new probe_point::component(TOK_RETURN));
   if (has_maxactive)
     comps.push_back (new probe_point::component(TOK_MAXACTIVE, new literal_number(maxactive_val)));
+
+  kprobe_var_expanding_visitor v (sess);
+  v.replace (this->body);
+
+  // If during target-variable-expanding the probe, we added a new block
+  // of code, add it to the start of the probe.
+  if (v.add_block)
+    this->body = new block(v.add_block, this->body);
+
+  // If when target-variable-expanding the probe, we need to
+  // synthesize a sibling function-entry probe.  We don't go through
+  // the whole probe derivation business (PR10642) that could lead to
+  // wildcard/alias resolution, or for that dwarf-induced duplication.
+  if (v.add_call_probe)
+    {
+      assert (has_return);
+
+      // We temporarily replace base.
+      statement* old_body = base->body;
+      base->body = v.add_call_probe;
+
+      derived_probe *entry_handler
+	= new kprobe_derived_probe (sess, results, base, location, name, 0,
+				    false, has_statement, has_maxactive,
+				    has_path, has_library, maxactive_val,
+				    path, library);
+      results.push_back (entry_handler);
+
+      base->body = old_body;
+    }
 
   this->sole_location()->components = comps;
 }
@@ -8253,7 +8316,8 @@ kprobe_builder::build(systemtap_session & sess,
         {
 	  function_string_val = module_string_val + ":" + function_string_val;
 	  derived_probe *dp
-	    = new kprobe_derived_probe (base, location, function_string_val,
+	    = new kprobe_derived_probe (sess, finished_results, base,
+					location, function_string_val,
 					0, has_return, has_statement_num,
 					has_maxactive, has_path, has_library,
 					maxactive_val, path_tgt, library_tgt);
@@ -8272,8 +8336,8 @@ kprobe_builder::build(systemtap_session & sess,
 	      if (! rc)
 	        {
 		  derived_probe *dp
-		    = new kprobe_derived_probe (base, location, *it,
-						0, has_return,
+		    = new kprobe_derived_probe (sess, finished_results, base,
+						location, *it, 0, has_return,
 						has_statement_num,
 						has_maxactive, has_path,
 						has_library, maxactive_val,
@@ -8289,7 +8353,9 @@ kprobe_builder::build(systemtap_session & sess,
       if ( has_statement_num && has_absolute && !base->privileged )
 	throw semantic_error (_("absolute statement probe in unprivileged script; need stap -g"), base->tok);
 
-      finished_results.push_back (new kprobe_derived_probe (base,
+      finished_results.push_back (new kprobe_derived_probe (sess,
+							    finished_results,
+							    base,
 							    location, "",
 							    statement_num_val,
 							    has_return,
@@ -8302,6 +8368,25 @@ kprobe_builder::build(systemtap_session & sess,
 							    library_tgt));
     }
 }
+
+
+void
+kprobe_var_expanding_visitor::visit_entry_op (entry_op *e)
+{
+  expression *repl = e;
+
+  // expand the operand as if it weren't a return probe
+  replace (e->operand);
+
+  // XXX it would be nice to use gen_kretprobe_saved_return when
+  // available, but it requires knowing the types already, which is
+  // problematic for arbitrary expressons.
+  repl = gen_mapped_saved_return (sess, e->operand, "entry",
+				  add_block, add_block_tid,
+				  add_call_probe, add_call_probe_tid);
+  provide (repl);
+}
+
 
 // ------------------------------------------------------------------------
 //  Hardware breakpoint based probes.
