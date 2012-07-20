@@ -3068,7 +3068,7 @@ dwarf_var_expanding_visitor::visit_target_symbol_saved_return (target_symbol* e)
   return_ts_map[ts_name] = exp;
 }
 
-expression*
+static expression*
 gen_mapped_saved_return(systemtap_session &sess, expression* e,
 			const string& name,
 			block *& add_block, bool& add_block_tid,
