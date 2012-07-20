@@ -655,11 +655,11 @@ probe nd_syscall.dup.return = kprobe.function("sys_dup").return ?
 
 # dup2 _______________________________________________________
 # long sys_dup2(unsigned int oldfd, unsigned int newfd)
-#
-# FIXME: doesn't handle dup3
-probe nd_syscall.dup2 = kprobe.function("sys_dup2") ?
+# Only handles corner case, others handled by dup3.
+probe nd_syscall.dup2 = kprobe.function("sys_dup2")
 {
-	name = "dup2"
+	// if ($oldfd != $newfd) next;
+	// name = "dup2"
 	// oldfd = $oldfd
 	// newfd = $newfd
 	// flags = 0
@@ -667,11 +667,109 @@ probe nd_syscall.dup2 = kprobe.function("sys_dup2") ?
 	asmlinkage()
 	oldfd = int_arg(1)
 	newfd = int_arg(2)
+	if (oldfd != newfd) next;
+
+	name = "dup2"
 	flags = 0
 	argstr = sprintf("%d, %d", oldfd, newfd)
 }
-probe nd_syscall.dup2.return = kprobe.function("sys_dup2").return ?
+probe nd_syscall.dup2.return = kprobe.function("sys_dup2").return
 {
+	// if ($oldfd != $newfd) next;
+	// name = "dup2"
+	// retstr = return_str(1, $return)
+	if (@entry(__asmlinkage_int_arg(1)) != @entry(int_arg(2))) next;
+	name = "dup2"
+	retstr = returnstr(1)
+}
+
+# dup3 (handles both dup2 and dup3 except for corner case)___________
+# long sys_dup2(unsigned int oldfd, unsigned int newfd)
+# SYSCALL_DEFINE3(dup3, unsigned int, oldfd, unsigned int, newfd, int, flags)
+probe nd_syscall.dup2 = __nd_syscall.dup3 !, __nd_syscall.dup2
+{
+}
+probe __nd_syscall.dup3 = kprobe.function("sys_dup3")
+{
+	// oldfd = $oldfd
+	// newfd = $newfd
+	// flags = @defined($flags) ? $flags : 0;
+	asmlinkage()
+	oldfd = int_arg(1)
+	newfd = int_arg(2)
+	flags = int_arg(3)
+
+	# Corner case handled by dup2
+	// if ($oldfd == $newfd && flags == 0) next
+	if (oldfd == newfd && flags == 0) next
+
+	// if (flags == 0) {
+	// 	name = "dup2";
+	// 	argstr = sprintf("%d, %d", $oldfd, $newfd);
+	// } else {
+	// 	name = "dup3";
+	// 	argstr = sprintf("%d, %d, %s", $oldfd, $newfd,
+	// 			 _dup3_flag_str(flags));
+	// }
+	if (flags == 0) {
+		name = "dup2";
+		argstr = sprintf("%d, %d", oldfd, newfd);
+	} else {
+		name = "dup3";
+		argstr = sprintf("%d, %d, %s", oldfd, newfd,
+				 _dup3_flag_str(flags));
+	}
+}
+probe __nd_syscall.dup2 = kprobe.function("sys_dup2")
+{
+	// oldfd = $oldfd
+	// newfd = $newfd
+	// flags = @defined($flags) ? $flags : 0;
+	asmlinkage()
+	oldfd = int_arg(1)
+	newfd = int_arg(2)
+	flags = 0
+
+	# Corner case handled by dup2
+	// if ($oldfd == $newfd && flags == 0) next
+	if (oldfd == newfd) next
+
+	// if (flags == 0) {
+	// 	name = "dup2";
+	// 	argstr = sprintf("%d, %d", $oldfd, $newfd);
+	// } else {
+	// 	name = "dup3";
+	// 	argstr = sprintf("%d, %d, %s", $oldfd, $newfd,
+	// 			 _dup3_flag_str(flags));
+	// }
+	name = "dup2";
+	argstr = sprintf("%d, %d", oldfd, newfd);
+}
+probe nd_syscall.dup2.return = __nd_syscall.dup3.return !,
+                               __nd_syscall.dup2.return
+{
+}
+probe __nd_syscall.dup3.return = kprobe.function("sys_dup3").return
+{
+	// flags = @defined($flags) ? $flags : 0;
+	flags = @entry(__asmlinkage_int_arg(3))
+
+	# Corner case handled by dup2
+	// if ($oldfd == $newfd && flags == 0) next
+	if (@entry(int_arg(1)) == @entry(int_arg(2)) && flags == 0) next
+
+	name = flags == 0 ? "dup2" : "dup3";
+	// retstr = return_str(1, $return)
+	retstr = returnstr(1)
+}
+probe __nd_syscall.dup2.return = kprobe.function("sys_dup2").return
+{
+	# Corner case handled by dup2
+	// if ($oldfd == $newfd && flags == 0) next
+	if (@entry(__asmlinkage_int_arg(1)) == @entry(int_arg(2))) next
+
+	// name = flags == 0 ? "dup2" : "dup3";
+	// retstr = return_str(1, $return)
 	name = "dup2"
 	retstr = returnstr(1)
 }

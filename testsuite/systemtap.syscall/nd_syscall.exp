@@ -3,7 +3,6 @@ source $srcdir/$subdir/test.tcl
 
 proc syscall_kfails {NAME} {
 	switch $NAME {
-		"dup" { return 13451 }
 		"eventfd" { return 13452 }
 		"inotify" { return 13453 }
 		"pipe" { return 13454 }

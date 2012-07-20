@@ -227,6 +227,13 @@ function regparm(n:long) { }
 
 %)
 
-/* There needs to be *something* in the tapset in order for it to pass
-   the smoketest when running make installcheck. */
-function registers_tapset_stub() { printf("Hello, World!") }
+/**
+ * In nd_syscall.return probes, we sometimes need @entry() values. To
+ * ensure we get the argument in the correct mode, we need a function
+ * that calls asmlinkage() first.
+ */
+function __asmlinkage_int_arg:long(n:long)
+{
+	asmlinkage()
+	return int_arg(n)
+}
