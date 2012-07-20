@@ -816,7 +816,7 @@ probe __nd_syscall.epoll_create1.return = kprobe.function("sys_epoll_create1").r
 	name = (flags == 0) ? "epoll_create" : "epoll_create1";
 	retstr = returnstr(1)
 }
-probe nd_syscall.epoll_create.return = kprobe.function("sys_epoll_create").return
+probe __nd_syscall.epoll_create.return = kprobe.function("sys_epoll_create").return
 {
 	flags = 0
 	name = "epoll_create"
