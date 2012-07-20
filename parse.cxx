@@ -705,7 +705,7 @@ parser::expect_unknown2 (token_type tt1, token_type tt2, string & target)
 {
   const token *t = next();
   if (!(t && (t->type == tt1 || t->type == tt2)))
-    throw parse_error ("expected " + tt2str(tt1) + " or " + tt2str(tt2)); // TODOXXX gettext?
+    throw parse_error (_F("expected %s or %s", tt2str(tt1).c_str(), tt2str(tt2).c_str()));
   target = t->content;
   return t;
 }
@@ -777,7 +777,7 @@ parser::expect_ident_or_at_op (std::string & target)
              && (t->type != tok_operator || t->content[0] != '@')))
     // XXX currently this is only called from parse_hist_op_or_bare_name(),
     // so the message is accurate, but keep an eye out in the future:
-    throw parse_error ("expected " + tt2str(tok_identifier) + " or statistical operation"); // TODOXXX gettext?
+    throw parse_error (_F("expected %s or statistical operation", tt2str(tok_identifier).c_str()));
 
   target = t->content;
   return t;
@@ -1003,6 +1003,7 @@ skip:
       if (keywords.count(n->content))
         n->type = tok_keyword;
       else if (n->content[0] == '@')
+        // makes it easier to detect illegal use of @words:
         n->type = tok_operator;
 
       return n;
