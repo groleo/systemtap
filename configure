@@ -10464,25 +10464,31 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 # Check for Dyninst headers and libraries
-#
-# XXX For now, require explicit enabling with a PATH.
-# ... Later this can search a distro-installed default too.
 
 # Check whether --with-dyninst was given.
 if test "${with_dyninst+set}" = set; then :
   withval=$with_dyninst;
 case "$with_dyninst" in
-yes) as_fn_error $? "--with-dyninst requires an argument" "$LINENO" 5 ;;
 ''|no) ;;
-*)  ac_ext=cpp
+yes) # Try a simple-minded distro search
+     DYNINST_CXXFLAGS="-I/usr/include/dyninst"
+     DYNINST_LDFLAGS="-L/usr/lib64/dyninst -L/usr/lib/dyninst" # XXX both lib paths!?!
+     ;;
+*)  # Use paths in the user-specified prefix
+    DYNINST_CXXFLAGS="-I$with_dyninst/include"
+    DYNINST_LDFLAGS="-L$with_dyninst/x86_64-unknown-linux2.4/lib/" # XXX arch specific!
+    ;;
+esac
+if test -n "$DYNINST_CXXFLAGS"; then
+  ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
-    old_CPPFLAGS="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS -I$with_dyninst/include"
-    for ac_header in BPatch_object.h
+  old_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $DYNINST_CXXFLAGS"
+  for ac_header in BPatch_object.h
 do :
   ac_fn_cxx_check_header_mongrel "$LINENO" "BPatch_object.h" "ac_cv_header_BPatch_object_h" "$ac_includes_default"
 if test "x$ac_cv_header_BPatch_object_h" = xyes; then :
@@ -10490,11 +10496,9 @@ if test "x$ac_cv_header_BPatch_object_h" = xyes; then :
 #define HAVE_BPATCH_OBJECT_H 1
 _ACEOF
 
-        DYNINST_CXXFLAGS="-I$with_dyninst/include"
-        DYNINST_LDFLAGS="-L$with_dyninst/x86_64-unknown-linux2.4/lib/" # XXX arch specific!
 
 
-        have_dyninst=yes
+      have_dyninst=yes
 
 else
   as_fn_error $? "Dyninst does not appear to be usable" "$LINENO" 5
@@ -10502,15 +10506,15 @@ fi
 
 done
 
-    CPPFLAGS="$old_CPPFLAGS"
-    ac_ext=c
+  CPPFLAGS="$old_CPPFLAGS"
+  ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-    ;;
-esac
+fi
+
 fi
 
  if test "${have_dyninst}" = "yes"; then
