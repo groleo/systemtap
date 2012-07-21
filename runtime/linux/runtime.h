@@ -155,7 +155,7 @@ void *kallsyms_task_work_cancel;
 
 #include "alloc.c"
 #include "print.h"
-#include "string.c"
+#include "stp_string.c"
 #include "arith.c"
 #include "copy.c"
 #include "regs.c"

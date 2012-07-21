@@ -7616,7 +7616,7 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
   if (probes.empty()) return;
   s.op->newline() << "/* ---- dyninst uprobes ---- */";
   emit_module_maxuprobes (s);
-  s.op->newline() << "#include \"uprobes-dyninst.c\"";
+  s.op->newline() << "#include \"dyninst/uprobes.c\"";
 
   // Discover and declare targets for dyninst to use
   s.op->newline() << "const struct stapdu_target "

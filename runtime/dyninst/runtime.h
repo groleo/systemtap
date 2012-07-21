@@ -261,7 +261,7 @@ extern int __get_user_bad(void) __attribute__((noreturn));
 #include "io.c"
 #include "alloc.c"
 #include "print.h"
-#include "string.c"
+#include "stp_string.c"
 #include "arith.c"
 #include "copy.c"
 #include "regs.c"

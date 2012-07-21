@@ -206,7 +206,8 @@ compile_dyninst (systemtap_session& s)
   cmd.push_back("-Wno-unused");
   cmd.push_back("-Wno-strict-aliasing");
   cmd.push_back("-O2");
-  cmd.push_back("-I" + s.runtime_path + "/dyninst");
+  cmd.push_back("-I" + s.runtime_path);
+  cmd.push_back("-D__DYNINST__");
   cmd.push_back(s.translated_source);
   cmd.push_back("-pthread");
   cmd.push_back("-fPIC");
@@ -612,7 +613,7 @@ make_dyninst_run_command (systemtap_session& s, const string& remotedir,
 			  const string& version)
 {
   vector<string> cmd;
-  cmd.push_back("stapdyn");
+  cmd.push_back(getenv("SYSTEMTAP_STAPDYN") ?: "stapdyn");
 
   if (!s.cmd.empty())
     {

@@ -2,6 +2,18 @@
    Included once at the top of the generated stap.c file by the translate.cxx
    translate_pass ().  */
 
+
+#if defined(__KERNEL__)
+
+#include "linux/runtime_defines.h"
+
+#elif defined(__DYNINST__)
+
+#include "dyninst/runtime_defines.h"
+
+#endif
+
+
 /* Strings are used for storing backtraces, they are larger on 64bit
    so raise the size on 64bit architectures. PR10486.  */
 #include <asm/types.h>
