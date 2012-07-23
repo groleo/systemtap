@@ -2477,7 +2477,7 @@ probe syscall.compat_signalfd = kernel.function("compat_sys_signalfd4").call !,
 	}
 }
 probe syscall.compat_signalfd.return =
-		kernel.function("compat_sys_signalfd4").return ?,
+		kernel.function("compat_sys_signalfd4").return !,
 		kernel.function("compat_sys_signalfd").return ?
 {
 	flags = @defined($flags) ? $flags : 0;
