@@ -583,7 +583,7 @@ probe
 %( systemtap_v <= "1.4"
 	%? nd_syscall.compat_pselect7a %: nd_syscall.compat_pselect7
 %) =
-		kernel.function("compat_sys_pselect7").call ?
+		kprobe.function("compat_sys_pselect7") ?
 {
 	name = "pselect7"
 	//argstr = sprintf("%d, %p, %p, %p, %s, %p, %d", $n, $inp, $outp, $exp,
