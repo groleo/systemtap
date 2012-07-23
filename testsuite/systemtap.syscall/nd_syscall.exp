@@ -4,7 +4,6 @@ source $srcdir/$subdir/test.tcl
 proc syscall_kfails {NAME} {
 	switch $NAME {
 		"pipe" { return 13454 }
-		"signalfd" { return 13455 }
 		"poll" { return 13456 }
 		default { return 0 }
 	}
