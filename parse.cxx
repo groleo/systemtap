@@ -42,6 +42,8 @@ public:
   lexer (istream&, const string&, systemtap_session&);
   void set_current_file (stapfile* f);
 
+  static set<string> keywords;
+  static set<string> atwords;
 private:
   inline int input_get ();
   inline int input_peek (unsigned n=0);
@@ -57,7 +59,6 @@ private:
   unsigned cursor_column;
   systemtap_session& session;
   stapfile* current_file;
-  static set<string> keywords;
 };
 
 
@@ -843,9 +844,29 @@ lexer::lexer (istream& input, const string& in, systemtap_session& s):
       keywords.insert("try");
       keywords.insert("catch");
     }
+
+  if (atwords.empty())
+    {
+      // NB: adding new @words is mildly disruptive to existing
+      // scripts that define macros with the same name, but not
+      // really. The user will merely receive a warning that they are
+      // redefining an existing operator.
+      atwords.insert("@cast");
+      atwords.insert("@defined");
+      atwords.insert("@entry");
+      atwords.insert("@var");
+      atwords.insert("@avg");
+      atwords.insert("@count");
+      atwords.insert("@sum");
+      atwords.insert("@min");
+      atwords.insert("@max");
+      atwords.insert("@hist_linear");
+      atwords.insert("@hist_log");
+    }
 }
 
 set<string> lexer::keywords;
+set<string> lexer::atwords;
 
 void
 lexer::set_current_file (stapfile* f)
