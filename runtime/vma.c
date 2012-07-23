@@ -14,7 +14,7 @@
 #define _STP_VMA_C_
 
 #include "sym.h"
-#include "string.c"
+#include "stp_string.c"
 #include "task_finder_vma.c"
 
 #include <asm/uaccess.h>

@@ -12,11 +12,14 @@
 #define _RUNTIME_H_
 
 
-#ifdef __KERNEL__
+#if defined(__KERNEL__)
 
 #include "linux/runtime.h"
 
-// TODO #elif ...
+#elif defined(__DYNINST__)
+
+#include "dyninst/runtime.h"
+
 #endif
 
 

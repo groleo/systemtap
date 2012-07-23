@@ -7,12 +7,12 @@
  * Public License (GPL); either version 2, or (at your option) any
  * later version.
  */
-#ifndef _STRING_C_
-#define _STRING_C_
+#ifndef _STP_STRING_C_
+#define _STP_STRING_C_
 
-#include "string.h"
+#include "stp_string.h"
 
-/** @file string.c
+/** @file stp_string.c
  * @brief Implements string functions.
  */
 /** @addtogroup string String Functions
@@ -171,4 +171,4 @@ bad:
 }
 
 /** @} */
-#endif /* _STRING_C_ */
+#endif /* _STP_STRING_C_ */

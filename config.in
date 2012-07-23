@@ -19,6 +19,9 @@
 /* Define to 1 if you have the <boost/shared_ptr.hpp> header file. */
 #undef HAVE_BOOST_SHARED_PTR_HPP
 
+/* Define to 1 if you have the <BPatch_object.h> header file. */
+#undef HAVE_BPATCH_OBJECT_H
+
 /* Define to 1 if you have the <crash/defs.h> header file. */
 #undef HAVE_CRASH_DEFS_H
 

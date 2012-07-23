@@ -14,7 +14,7 @@
 
 #include "sym.h"
 #include "vma.c"
-#include "string.c"
+#include "stp_string.c"
 #include <asm/uaccess.h>
 
 #ifdef STAPCONF_PROBE_KERNEL

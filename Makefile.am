@@ -199,6 +199,19 @@ stap_gen_cert_LDADD = $(nss_LIBS)
 endif
 endif
 
+if HAVE_DYNINST
+dyninst_LIBS = -lcommon -linstructionAPI -lparseAPI -lpatchAPI -lsymtabAPI -ldyninstAPI
+bin_PROGRAMS += stapdyn dynsdt
+stapdyn_SOURCES = stapdyn/stapdyn.cxx
+stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ @DYNINST_CXXFLAGS@
+stapdyn_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@ @DYNINST_LDFLAGS@
+stapdyn_LDADD = -lelf $(dyninst_LIBS)
+dynsdt_SOURCES = stapdyn/dynsdt.cxx
+dynsdt_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ @DYNINST_CXXFLAGS@
+dynsdt_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@ @DYNINST_LDFLAGS@
+dynsdt_LDADD = -lelf $(dyninst_LIBS)
+endif
+
 noinst_PROGRAMS = loc2c-test
 loc2c_test_SOURCES = loc2c-test.c loc2c.c
 loc2c_test_CFLAGS = $(stap_CFLAGS)
@@ -238,6 +251,10 @@ $(EXAMPLE_SOURCE_DIR)/index.html: $(EXAMPLE_META_FILES) $(EXAMPLE_INDEX_GEN)
 
 install-data-local:
 	(cd $(srcdir)/runtime; for f in *.[ch]; do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/$$f; done)
+if HAVE_DYNINST
+	(cd $(srcdir)/runtime/dyninst; find . \( -name '*.[ch]' \) -print \
+		| while read f; do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/dyninst/$$f; done)
+endif
 	(cd $(srcdir)/runtime/unwind; find . \( -name '*.[ch]' \) -print \
 		| while read f; do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/runtime/unwind/$$f; done)
 	(cd $(srcdir)/runtime/transport; for f in *.[ch]; \
