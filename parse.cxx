@@ -2788,7 +2788,7 @@ expression* parser::parse_symbol ()
 	  expect_op("(");
 	  if ((name == "print" || name == "println" ||
 	       name == "sprint" || name == "sprintln") &&
-	      (peek_kw("@hist_linear") || peek_kw("@hist_log")))
+	      (peek_op("@hist_linear") || peek_op("@hist_log")))
 	    {
 	      // We have a special case where we recognize
 	      // print(@hist_foo(bar)) as a magic print-the-histogram
