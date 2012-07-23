@@ -44,6 +44,8 @@ struct token
   source_loc location;
   token_type type;
   std::string content;
+  std::string msg; // for tok_junk
+  void make_junk (std::string msg);
 };
 
 

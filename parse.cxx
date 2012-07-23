@@ -260,23 +260,38 @@ void
 parser::print_error  (const parse_error &pe)
 {
   string align_parse_error ("     ");
-  cerr << _("parse error: ") << pe.what () << endl;
 
-  if (pe.tok)
+  const token *tok = pe.tok ? pe.tok : last_t;
+
+  // print either pe.what() or a deferred error from the lexer
+  bool found_junk = false;
+  if (tok && tok->type == tok_junk && tok->msg != "")
     {
-      cerr << _("\tat: ") << *pe.tok << endl;
-      session.print_error_source (cerr, align_parse_error, pe.tok);
+      found_junk = true;
+      cerr << _("parse error: ") << tok->msg << endl;
     }
   else
     {
-      const token* t = last_t;
-      if (t)
-	{
-	  cerr << _("\tsaw: ") << *t << endl;
-	  session.print_error_source (cerr, align_parse_error, t);
-	}
-      else
-        cerr << _("\tsaw: ") << input_name << " EOF" << endl;
+      cerr << _("parse error: ") << pe.what() << endl;      
+    }
+
+  // NB: It makes sense for lexer errors to always override parser
+  // errors, since the original obvious scheme was for the lexer to
+  // throw an exception before the token reached the parser.
+
+  if (pe.tok || found_junk)
+    {
+      cerr << _("\tat: ") << *tok << endl;
+      session.print_error_source (cerr, align_parse_error, tok);
+    }
+  else if (tok) // "expected" type error
+    {
+      cerr << _("\tsaw: ") << *tok << endl;
+      session.print_error_source (cerr, align_parse_error, tok);
+    }
+  else
+    {
+      cerr << _("\tsaw: ") << input_name << " EOF" << endl;
     }
 
   // XXX: make it possible to print the last input line,
@@ -978,7 +993,10 @@ skip:
       n->content.push_back (c2);
       input_get(); // swallow '#'
       if (suspended)
-        throw parse_error (_("invalid nested substitution of command line arguments"), n);
+        {
+          n->make_junk(_("invalid nested substitution of command line arguments"));
+          return n;
+        }
       size_t num_args = session.args.size ();
       input_put ((c == '$') ? lex_cast (num_args) : lex_cast_qstring (num_args), n);
       n->content.clear();
@@ -997,13 +1015,18 @@ skip:
         } while (c2 > 0 &&
                  isdigit (c2) &&
                  idx <= session.args.size()); // prevent overflow
-      if (suspended)
-        throw parse_error (_("invalid nested substitution of command line arguments"), n);
+      if (suspended) 
+        {
+          n->make_junk(_("invalid nested substitution of command line arguments"));
+          return n;
+        }
       if (idx == 0 ||
           idx-1 >= session.args.size())
-        throw parse_error (_F("command line argument index %lu out of range [1-%lu]",
-                              (unsigned long) idx, (unsigned long) session.args.size()),
-                           n);
+        {
+          n->make_junk(_F("command line argument index %lu out of range [1-%lu]",
+                          (unsigned long) idx, (unsigned long) session.args.size()));
+          return n;
+        }
       const string& arg = session.args[idx-1];
       input_put ((c == '$') ? arg : lex_cast_qstring (arg), n);
       n->content.clear();
@@ -1057,7 +1080,8 @@ skip:
 
 	  if (c < 0 || c == '\n')
 	    {
-		  throw parse_error(_("Could not find matching closing quote"), n);
+              n->make_junk(_("Could not find matching closing quote"));
+              return n;
 	    }
 	  if (c == '\"') // closing double-quotes
 	    break;
@@ -1147,7 +1171,8 @@ skip:
               c2 = input_get ();
             }
 
-	      throw parse_error (_("Could not find matching '%}' to close embedded function block"), n);
+          n->make_junk(_("Could not find matching '%}' to close embedded function block"));
+          return n;
         }
 
       // We're committed to recognizing at least the first character
@@ -1203,10 +1228,19 @@ skip:
       ostringstream s;
       s << "\\x" << hex << setw(2) << setfill('0') << c;
       n->content = s.str();
+      n->msg = ""; // signal parser to emit "expected X, found junk" type error
       return n;
     }
 }
 
+// ------------------------------------------------------------------------
+
+void
+token::make_junk (const string new_msg)
+{
+  type = tok_junk;
+  msg = new_msg;
+}
 
 // ------------------------------------------------------------------------
 
@@ -1257,6 +1291,8 @@ parser::parse ()
       catch (parse_error& pe)
 	{
 	  print_error (pe);
+
+          // XXX: do we want tok_junk to be able to force skip_some behaviour?
           if (pe.skip_some) // for recovery
             // Quietly swallow all tokens until the next keyword we can start parsing from.
             while (1)
