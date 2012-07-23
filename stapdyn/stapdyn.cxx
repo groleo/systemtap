@@ -8,6 +8,7 @@ extern "C" {
 #include <getopt.h>
 #include <gelf.h>
 #include <libelf.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
