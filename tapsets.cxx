@@ -8264,6 +8264,12 @@ kprobe_builder::load_function_name_cache(systemtap_session &sess)
 	  if (type != "t" && type != "T")
 	      continue;
 
+#ifdef __powerpc__
+	  // Map ".sys_foo" to "sys_foo".
+	  if (name[0] == '.')
+	      name.erase(0, 1);
+#endif
+
 	  // FIXME: better things to do here - look for _stext before
 	  // remembering symbols. Also:
 	  // - stop remembering names at ???
