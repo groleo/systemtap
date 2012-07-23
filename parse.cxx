@@ -112,7 +112,7 @@ private:
   const token* expect_kw (string const & expected);
   const token* expect_number (int64_t & expected);
   // const token* expect_ident (string & target); // no longer used
-  const token* expect_ident_or_at_op (string & target);
+  const token* expect_ident_or_atword (string & target);
   const token* expect_ident_or_keyword (string & target);
   bool peek_op (string const & op);
   bool peek_kw (string const & kw);
@@ -293,9 +293,6 @@ parser::print_error  (const parse_error &pe)
     {
       cerr << _("\tsaw: ") << input_name << " EOF" << endl;
     }
-
-  // XXX: make it possible to print the last input line,
-  // so as to line up an arrow with the specific error column
 
   num_errors ++;
 }
@@ -784,7 +781,7 @@ parser::expect_number (int64_t & value)
 
 
 const token*
-parser::expect_ident_or_at_op (std::string & target)
+parser::expect_ident_or_atword (std::string & target)
 {
   const token *t = next();
 
@@ -2691,7 +2688,7 @@ const token *
 parser::parse_hist_op_or_bare_name (hist_op *&hop, string &name)
 {
   hop = NULL;
-  const token* t = expect_ident_or_at_op (name); // TODOXXX
+  const token* t = expect_ident_or_atword (name);
   if (name == "@hist_linear" || name == "@hist_log")
     {
       hop = new hist_op;
