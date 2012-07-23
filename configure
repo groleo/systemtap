@@ -10476,7 +10476,7 @@ yes) # Try a simple-minded distro search
      ;;
 *)  # Use paths in the user-specified prefix
     DYNINST_CXXFLAGS="-I$with_dyninst/include"
-    DYNINST_LDFLAGS="-L$with_dyninst/x86_64-unknown-linux2.4/lib/" # XXX arch specific!
+    DYNINST_LDFLAGS="-L$with_dyninst/lib/" # XXX need lib64 too?
     ;;
 esac
 if test -n "$DYNINST_CXXFLAGS"; then

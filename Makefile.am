@@ -200,7 +200,8 @@ endif
 endif
 
 if HAVE_DYNINST
-dyninst_LIBS = -lcommon -linstructionAPI -lparseAPI -lpatchAPI -lsymtabAPI -ldyninstAPI
+dyninst_LIBS = -ldwarf -lcommon -linstructionAPI -lparseAPI -lpatchAPI \
+	       -lpcontrol -lstackwalk -lsymtabAPI -ldyninstAPI
 bin_PROGRAMS += stapdyn dynsdt
 stapdyn_SOURCES = stapdyn/stapdyn.cxx
 stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ @DYNINST_CXXFLAGS@
