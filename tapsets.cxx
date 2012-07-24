@@ -2187,6 +2187,9 @@ struct dwarf_var_expanding_visitor: public var_expanding_visitor
   Dwarf_Addr addr;
   block *add_block;
   block *add_call_probe; // synthesized from .return probes with saved $vars
+  // NB: tids are not always collected in add_block & add_call_probe, because
+  // gen_kretprobe_saved_return doesn't need them.  Thus we need these extra
+  // *_tid bools for gen_mapped_saved_return to tell what's there.
   bool add_block_tid, add_call_probe_tid;
   unsigned saved_longs, saved_strings; // data saved within kretprobes
   map<std::string, expression *> return_ts_map;
