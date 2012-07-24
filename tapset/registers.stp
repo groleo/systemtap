@@ -227,7 +227,7 @@ function regparm(n:long) { }
 
 %)
 
-/**
+/*
  * In nd_syscall.return probes, we sometimes need @entry() values. To
  * ensure we get the argument in the correct mode, we need a function
  * that calls asmlinkage() first.
