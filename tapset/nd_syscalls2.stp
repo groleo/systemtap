@@ -2997,8 +2997,8 @@ probe __nd_syscall.signalfd.return = kprobe.function("sys_signalfd").return
 	name = "signalfd"
 	retstr = returnstr(1)
 }
-probe nd_syscall.compat_signalfd = __nd_syscall.compat_sys_signalfd4 !,
-                                   __nd_syscall.compat_sys_signalfd ?
+probe nd_syscall.compat_signalfd = __nd_syscall.compat_signalfd4 !,
+                                   __nd_syscall.compat_signalfd ?
 {
 }
 probe __nd_syscall.compat_signalfd4 = kprobe.function("compat_sys_signalfd4")
@@ -3016,7 +3016,7 @@ probe __nd_syscall.compat_signalfd4 = kprobe.function("compat_sys_signalfd4")
 		// 		 $sigsetsize, _signalfd4_flags_str($flags))
 		argstr = sprintf("%d, %p, %d, %s", int_arg(1),
 				 pointer_arg(2), u32_arg(3),
-				 _signalfd4_flags_str($flags))
+				 _signalfd4_flags_str(flags))
 	}
 }
 probe __nd_syscall.compat_signalfd = kprobe.function("compat_sys_signalfd")
