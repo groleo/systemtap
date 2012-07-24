@@ -317,39 +317,86 @@ probe nd_syscall.personality.return = kprobe.function("sys_personality").return 
 # asmlinkage int
 # sys_pipe(unsigned long __user * fildes)
 #
-# FIXME: needs to handle sys_pipe2
-# FIXME: needs to support pipe0/pipe1
-probe nd_syscall.pipe =
-%( arch == "ia64" %?
-                        kprobe.function("sys_ia64_pipe") ?,
-%)
-                        kprobe.function("sys_pipe") ?
+# SYSCALL_DEFINE2(pipe2, int __user *, fildes, int, flags)
+#
+# FIXME: When ia64 kprobe support is added (PR6971 - nd_syscalls.stp
+# tapset broken on ia64), sys_ia64_pipe probing will need to be done
+# here.
+probe nd_syscall.pipe = __nd_syscall.pipe2 !, __nd_syscall.pipe
+{
+}
+probe __nd_syscall.pipe2 = kprobe.function("sys_pipe2")
+{
+	%( arch != "powerpc" %? asmlinkage() %)
+	flags = int_arg(2)
+	flag_str = _sys_pipe2_flag_str(flags);
+	name = flags == 0 ? "pipe" : "pipe2";
+	fildes_uaddr = pointer_arg(1)
+	if (fildes_uaddr == 0) {
+		pipe0 = 0;
+		pipe1 = 0;
+		argstr = "NULL"
+	} else {
+		pipe0 = _fildes_index_u(fildes_uaddr, 0)
+		pipe1 = _fildes_index_u(fildes_uaddr, 1)
+		if (flags == 0)
+			argstr = sprintf("[%d, %d]", pipe0, pipe1);
+		else
+			argstr = sprintf("[%d, %d], %s", pipe0, pipe1,
+					flag_str);
+	}
+}
+probe __nd_syscall.pipe = kprobe.function("sys_pipe")
 {
 	name = "pipe"
 	flags = 0
 	flag_str = ""
-%( arch == "ia64" %?
-# ia64 just returns value directly, so fake the arguments
-	fildes_uaddr = 0
-	argstr = "[0, 0]"
-%:
-	// fildes_uaddr = $fildes
-	// argstr = _fildes_u($fildes)
 	%( arch != "powerpc" %? asmlinkage() %)
 	fildes_uaddr = pointer_arg(1)
-	argstr = _fildes_u(fildes_uaddr)
-%)
+	if (fildes_uaddr == 0) {
+		pipe0 = 0;
+		pipe1 = 0;
+		argstr = "NULL"
+	} else {
+		pipe0 = _fildes_index_u(fildes_uaddr, 0)
+		pipe1 = _fildes_index_u(fildes_uaddr, 1)
+		argstr = sprintf("[%d, %d]", pipe0, pipe1);
+	}
 }
-
-# FIXME: needs to handle sys_pipe2.return
-# FIXME: needs to support pipe0/pipe1
-probe nd_syscall.pipe.return =
-%( arch == "ia64" %?
-                               kprobe.function("sys_ia64_pipe").return ?,
-%)
-                               kprobe.function("sys_pipe").return ?
+probe nd_syscall.pipe.return = __nd_syscall.pipe2.return !,
+                               __nd_syscall.pipe.return
 {
+}
+probe __nd_syscall.pipe2.return = kprobe.function("sys_pipe2").return
+{
+	flags = @entry(%( arch != "powerpc" %? __asmlinkage_int_arg(2)
+					    %: int_arg(2) %))
+	name = (flags == 0) ? "pipe" : "pipe2";
+
+	fildes_uaddr = @entry(pointer_arg(1))
+	if (fildes_uaddr == 0) {
+		pipe0 = 0;
+		pipe1 = 0;
+	} else {
+		pipe0 = _fildes_index_u(fildes_uaddr, 0)
+		pipe1 = _fildes_index_u(fildes_uaddr, 1)
+	}
+	retstr = returnstr(1)
+}
+probe __nd_syscall.pipe.return = kprobe.function("sys_pipe").return
+{
+	flags = 0
 	name = "pipe"
+
+	fildes_uaddr = @entry(%( arch != "powerpc" %? __asmlinkage_int_arg(1)
+					    %: int_arg(1) %))
+	if (fildes_uaddr == 0) {
+		pipe0 = 0;
+		pipe1 = 0;
+	} else {
+		pipe0 = _fildes_index_u(fildes_uaddr, 0)
+		pipe1 = _fildes_index_u(fildes_uaddr, 1)
+	}
 	retstr = returnstr(1)
 }
 

@@ -387,18 +387,18 @@ function _struct_rlimit_u:string(uaddr:long)
 	}
 %}
 
-function _fildes_u:string (uaddr:long)
+function _fildes_index_u:long (uaddr:long, index:long)
 %{ /* pure */
 	int fd[2];
 	char *ptr = (char *)(unsigned long)STAP_ARG_uaddr;
 
 	if (ptr == NULL)
-		strlcpy (STAP_RETVALUE, "NULL", MAXSTRINGLEN);
+		STAP_RETVALUE = 0;
 	else {
 		if (_stp_copy_from_user((char *)&fd, ptr, 2*sizeof(int)) == 0)
-			 snprintf(STAP_RETVALUE, MAXSTRINGLEN, "[%d, %d]", fd[0], fd[1]);
+			STAP_RETVALUE = fd[STAP_ARG_index];
 		else
-			strlcpy (STAP_RETVALUE, "UNKNOWN", MAXSTRINGLEN);
+			STAP_RETVALUE = 0;
 	}
 %}
 
