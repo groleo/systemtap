@@ -2915,7 +2915,7 @@ probe nd_syscall.sigaction32 = kprobe.function("sys32_sigaction") ?,
 	argstr = sprintf("%s, {%s}, %p", _signal_name(sig), _struct_old_sigaction32_u(act_uaddr), oact_uaddr)
 }
 probe nd_syscall.sigaction32.return = kprobe.function("sys32_sigaction").return ?,
-                                      kprobe.function("compat_sys_sigaction") ?
+                                      kprobe.function("compat_sys_sigaction").return ?
 {
 	name = "sigaction"
 	retstr = returnstr(1)
