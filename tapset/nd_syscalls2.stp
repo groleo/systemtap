@@ -3066,8 +3066,13 @@ probe nd_syscall.sigpending.return = kprobe.function("sys_sigpending").return ?
 
 # sigprocmask ________________________________________________
 # long sys_sigprocmask(int how, old_sigset_t __user *set, old_sigset_t __user *oset)
+# asmlinkage long compat_sys_sigprocmask(int how,
+# 				         compat_old_sigset_t __user *nset,
+#				         compat_old_sigset_t __user *oset)
 #
-probe nd_syscall.sigprocmask = kprobe.function("sys_sigprocmask") ?
+#
+probe nd_syscall.sigprocmask = kprobe.function("sys_sigprocmask") ?,
+			       kprobe.function("compat_sys_sigprocmask") ?
 {
 	name = "sigprocmask"
 	// how  = $how
@@ -3082,7 +3087,8 @@ probe nd_syscall.sigprocmask = kprobe.function("sys_sigprocmask") ?
 	oldset_uaddr = pointer_arg(3)
 	argstr = sprintf("%s, %p, %p", how_str, set_uaddr, oldset_uaddr)
 }
-probe nd_syscall.sigprocmask.return = kprobe.function("sys_sigprocmask").return ?
+probe nd_syscall.sigprocmask.return = kprobe.function("sys_sigprocmask").return ?,
+	kprobe.function("compat_sys_sigprocmask").return ?
 {
 	name = "sigprocmask"
 	retstr = returnstr(1)
