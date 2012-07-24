@@ -1335,8 +1335,10 @@ systemtap_session::check_options (int argc, char * const argv [])
   // If phase 5 has been requested, automatically adjust the --privilege setting to match the
   // user's actual privilege level and add --use-server, if necessary.
   // Do this only if we have a script and we are not the server.
+  // Also do this only if we're running in the kernel (e.g. not --runtime=dyninst)
   // XXX Eventually we could check remote hosts, but disable that case for now.
-  if (last_pass > 4 && have_script && ! client_options && remote_uris.empty())
+  if (last_pass > 4 && have_script && ! client_options &&
+      runtime_mode == kernel_runtime && remote_uris.empty())
     {
       // What is the user's privilege level?
       privilege_t credentials = get_privilege_credentials ();
