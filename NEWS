@@ -1,5 +1,17 @@
 * What's new in version 2.0
 
+- Systemtap probe aliases may be used with additional suffixes
+  attached. The suffixes are passed on to the underlying probe
+  point(s) as shown below:
+
+    probe foo = bar, baz { }
+    probe foo.subfoo.option("gronk") { }
+    // expands to: bar.subfoo.option("gronk"), baz.subfoo.option("gronk")
+
+  In practical terms, this allows us to specify additional options to
+  certain tapset probe aliases, by writing e.g.
+    probe syscall.open.return.maxactive(5) { ... }
+
 - Adjacent string literals are now glued together irrespective of
   intervening whitespace or comments:
     "foo " "bar" --> "foo bar"
