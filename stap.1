@@ -627,11 +627,12 @@ Whitespace is ignored.  Three forms of comments are supported:
 .BR /* " ... C style ... " */
 .RE
 Literals are either strings enclosed in double-quotes (passing through
-the usual C escape codes with backslashes), or integers (in decimal,
+the usual C escape codes with backslashes, and with adjacent string
+literals glued together, also as in C), or integers (in decimal,
 hexadecimal, or octal, using the same notation as in C).  All strings
 are limited in length to some reasonable value (a few hundred bytes).
-Integers are 64-bit signed quantities, although the parser also accepts
-(and wraps around) values above positive 2**63.
+Integers are 64-bit signed quantities, although the parser also
+accepts (and wraps around) values above positive 2**63.
 .PP
 In addition, script arguments given at the end of the command line may
 be inserted.  Use

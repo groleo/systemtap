@@ -1629,10 +1629,30 @@ in C. Integers are 64-bit signed quantities, although the parser also accepts
 
 \subsubsection{Strings\label{sub:Strings}}
 \index{strings}
-Strings are enclosed in quotation marks ({}``string''), and pass through
-standard C escape codes with backslashes. Strings are limited in length to
-MAXSTRINGLEN. For more information about this and other limits, see
-Section~\ref{sub:SystemTap-safety}.
+
+Strings are enclosed in quotation marks ({}``string''), and pass
+through standard C escape codes with backslashes. A string literal may
+be split into several pieces, which are glued together, as follows.
+
+\begin{vindent}
+\begin{verbatim}
+str1 = "foo" "bar"
+  /* --> becomes "foobar" */
+
+str2 = "a good way to do a multi-line\n"
+       "string literal"
+  /* --> becomes "a good way to do a multi-line\nstring literal" */
+
+str3 = "also a good way to " @1 " splice command line args"
+  /* --> becomes "also a good way to foo splice command line args",
+     assuming @1 is given as foo on the command line */
+\end{verbatim}
+\end{vindent}
+
+Observe that script arguments can also be glued into a string literal.
+
+Strings are limited in length to MAXSTRINGLEN. For more information
+about this and other limits, see Section~\ref{sub:SystemTap-safety}.
 
 
 \subsubsection{Associative arrays}
