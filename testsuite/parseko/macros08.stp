@@ -1,0 +1,4 @@
+#! stap -p2
+
+# attempt to redefine '@define'
+@define define %( cheese %) probe begin { print ("Hello, World!") }

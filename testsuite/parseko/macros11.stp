@@ -1,0 +1,6 @@
+#! stap -p2
+
+# error message should neatly trace through the calls:
+@define bar(b) %( @bluff %)
+@define foo(a) %( @bar(@a) %)
+probe @foo(begin) { print(42) }

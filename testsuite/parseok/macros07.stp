@@ -1,0 +1,5 @@
+#! stap -p2
+
+# this should work, although the user gets a warning
+@define min(a) %( @a %)
+probe begin { print(@min("Hello, World!\n")) }

@@ -1,0 +1,11 @@
+#! /bin/sh
+
+# test interaction between conditionals and macro expansion
+
+stap -p2 - 1 2 3 4 <<'END'
+
+@define foo %( %( $# >= 5 %? @5 %: "" %) %)
+
+probe begin { printf("Hello, World %s!", @foo) }
+
+END

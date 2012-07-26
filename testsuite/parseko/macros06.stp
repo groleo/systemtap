@@ -1,0 +1,4 @@
+#! stap -p2
+
+# incorrect number of parameters
+@define foo(a) %( probe @a %) @foo { print ("Hello World!") }
