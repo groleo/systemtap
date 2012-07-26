@@ -4,6 +4,7 @@
 #include <linux/list.h>
 #include <linux/kref.h>
 #include <linux/sched.h>
+#include <linux/binfmts.h>
 
 /*
  * Event bits passed to utrace_set_events().
