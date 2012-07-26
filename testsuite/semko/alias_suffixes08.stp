@@ -1,0 +1,14 @@
+#! stap -p2
+
+# Test detection of indefinite recursion when suffixes are involved.
+
+# a.b.c -> ... -> q.c -> r.c.c -> x.b.c.c -> ... -> x.b.c.c.c.c.c....
+probe r = x.b { }
+probe q.c = r.c.c { }
+probe x.b = q { }
+probe ants = x.b { }
+probe sandwich = ants { }
+probe bronx = sandwich { }
+probe a.b = bronx { }
+probe a.b.c { print("what?") }
+

@@ -1,0 +1,12 @@
+#! stap -p2
+
+# Test detection of indefinite recursion when suffixes are involved.
+# More involved example which has multiple expansion paths.
+
+probe q.whoosh = nonesistent { }
+probe cheese = makery { }
+probe bar = makery.whoosh { }
+probe foo = q?, cheese, bar { }
+probe makery = foo.whoosh { }
+probe a.b.c = makery { }
+probe a.b.c { print("what?") }
