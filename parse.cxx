@@ -37,6 +37,7 @@ using namespace std;
 class lexer
 {
 public:
+  bool ate_comment; // current token follows a comment
   bool ate_whitespace; // the most recent token followed whitespace
   bool saw_tokens; // the lexer found tokens (before preprocessing occurred)
 
@@ -1188,9 +1189,9 @@ parser::peek_kw (std::string const & kw)
 
 
 lexer::lexer (istream& input, const string& in, systemtap_session& s):
-  ate_whitespace(false), input_name (in), input_pointer (0), input_end (0),
-  cursor_suspend_count(0), cursor_suspend_line (1), cursor_suspend_column (1),
-  cursor_line (1), cursor_column (1),
+  ate_comment(false), ate_whitespace(false), input_name (in), input_pointer (0),
+  input_end (0), cursor_suspend_count(0), cursor_suspend_line (1),
+  cursor_suspend_column (1), cursor_line (1), cursor_column (1),
   session(s), current_file (0)
 {
   getline(input, input_contents, '\0');
@@ -1322,6 +1323,7 @@ lexer::input_put (const string& chars, const token* t)
 token*
 lexer::scan ()
 {
+  ate_comment = false; // reset for each new token
   ate_whitespace = false; // reset for each new token
 
   // XXX be very sure to restore old_saw_tokens if we return without a token:
@@ -1502,6 +1504,7 @@ skip:
           unsigned this_line = cursor_line;
           do { c = input_get (); }
           while (c >= 0 && cursor_line == this_line);
+          ate_comment = true;
           ate_whitespace = true;
           goto skip;
         }
@@ -1510,6 +1513,7 @@ skip:
           unsigned this_line = cursor_line;
           do { c = input_get (); }
           while (c >= 0 && cursor_line == this_line);
+          ate_comment = true;
           ate_whitespace = true;
           goto skip;
         }
@@ -1525,6 +1529,7 @@ skip:
               c = c2;
               c2 = input_get ();
             }
+          ate_comment = true;
           ate_whitespace = true;
           goto skip;
 	}
@@ -2197,8 +2202,11 @@ parser::parse_literal ()
 
       // PR11208: check if the next token is also a string literal; auto-concatenate it
       // This is complicated to the extent that we need to skip intermediate whitespace.
+      // NB for versions prior to 2.0: but don't skip over intervening comments
       const token *n = peek();
-      while (n != NULL && n->type == tok_string)
+      while (n != NULL && n->type == tok_string
+             && ! (strverscmp(session.compatible.c_str(), "2.0") < 0
+                   && input.ate_comment))
         {
           ls->value.append(next()->content); // consume and append the token
           n = peek();
