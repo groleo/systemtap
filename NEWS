@@ -1,5 +1,11 @@
 * What's new in version 2.0
 
+- Adjacent string literals are now glued together irrespective of
+  intervening whitespace or comments:
+    "foo " "bar" --> "foo bar"
+    "foo " /* comment */ "bar" --> "foo bar"
+  Previously, the first pair of literals would be glued correctly,
+  while the second would cause a syntax error.
 
 * What's new in version 1.8, 2012-06-17
 
