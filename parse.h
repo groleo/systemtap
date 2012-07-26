@@ -46,6 +46,7 @@ struct token
   std::string content;
   std::string msg; // for tok_junk
   void make_junk (std::string msg);
+  const token* chain; // macro invocation that produced this token
 };
 
 

@@ -38,6 +38,8 @@ class lexer
 {
 public:
   bool ate_whitespace; // the most recent token followed whitespace
+  bool saw_tokens; // the lexer found tokens (before preprocessing occurred)
+
   token* scan ();
   lexer (istream&, const string&, systemtap_session&);
   void set_current_file (stapfile* f);
@@ -80,6 +82,20 @@ private:
       PP_SKIP_ELSE,
   } pp_state_t;
 
+  struct pp1_activation;
+
+  struct pp_macrodecl {
+    const token* tok;
+    vector<string> param_names;
+    vector<const token*> body;
+
+    pp1_activation* parent_act;
+
+    pp_macrodecl (const token tok, pp1_activation* parent_act = NULL)
+      : tok(new token(tok)), parent_act(parent_act) { }
+    ~pp_macrodecl ();
+  };
+
   systemtap_session& session;
   string input_name;
   istream* free_input;
@@ -87,7 +103,29 @@ private:
   bool privileged;
   parse_context context;
 
-  // preprocessing subordinate
+  // preprocessing subordinate, first pass (macros)
+  struct pp1_activation {
+    const token* tok;
+    unsigned cursor; // position within macro body
+    map<string, pp_macrodecl*> params;
+    bool is_closure; // are params shared with an earlier activation record?
+
+    pp_macrodecl* curr_macro;
+
+    pp1_activation (const token tok, pp_macrodecl* curr_macro)
+      : tok(new token(tok)), cursor(0), is_closure(false), 
+        curr_macro(curr_macro) { }
+    ~pp1_activation ();
+  };
+
+  map<string, pp_macrodecl*> pp1_namespace;
+  vector<pp1_activation*> pp1_state;
+  const token* next_pp1 ();
+  const token* scan_pp1 ();
+  const token* slurp_pp1_param (vector<const token*>& param);
+  const token* slurp_pp1_body (vector<const token*>& body);
+
+  // preprocessing subordinate, final pass (conditionals)
   vector<pair<const token*, pp_state_t> > pp_state;
   const token* scan_pp ();
   const token* skip_pp ();
@@ -294,6 +332,13 @@ parser::print_error  (const parse_error &pe)
       cerr << _("\tsaw: ") << input_name << " EOF" << endl;
     }
 
+  // print chained macro invocations
+  while (tok && tok->chain) {
+    tok = tok->chain;
+    cerr << _("\tin expansion of macro: ") << *tok << endl;
+    session.print_error_source (cerr, align_parse_error, tok);
+  }
+
   num_errors ++;
 }
 
@@ -326,7 +371,330 @@ bool eval_comparison (const OPERAND& lhs, const token* op, const OPERAND& rhs)
 }
 
 
-// Here, we perform on-the-fly preprocessing.
+// Here, we perform on-the-fly preprocessing in two passes.
+
+// First pass - macro declaration and expansion.
+//
+// The basic form of a declaration is @define SIGNATURE %( BODY %)
+// where SIGNATURE is of the form macro_name (a, b, c, ...)
+// and BODY can obtain the parameter contents as @a, @b, @c, ....
+// Note that parameterless macros can also be declared.
+//
+// Macro definitions may not be nested.
+// A macro is available textually after it has been defined.
+//
+// The basic form of a macro invocation
+//   for a parameterless macro is @macro_name,
+//   for a macro with parameters is @macro_name(param_1, param_2, ...).
+//
+// TODOXXX NB: this means that a parameterless macro @foo called as
+// @foo(a, b, c) leaves its 'parameters' alone, rather than consuming
+// them to result in a "too many parameters error".
+//
+// Invocations of unknown macros are left unexpanded, to allow
+// the continued use of constructs such as @cast, @var, etc.
+
+parser::pp_macrodecl::~pp_macrodecl ()
+{
+  delete tok;
+  for (vector<const token*>::iterator it = body.begin();
+       it != body.end(); it++)
+    delete *it;
+}
+
+parser::pp1_activation::~pp1_activation ()
+{
+  delete tok;
+  if (is_closure) return; // body is shared with an earlier declaration
+  for (map<string, pp_macrodecl*>::iterator it = params.begin();
+       it != params.end(); it++)
+    delete it->second;
+}
+
+// Grab a token from the current input source (main file or macro body):
+const token*
+parser::next_pp1 ()
+{
+  if (pp1_state.empty())
+    return input.scan ();
+
+  // otherwise, we're inside a macro
+  pp1_activation* act = pp1_state.back();
+  unsigned& cursor = act->cursor;
+  if (cursor < act->curr_macro->body.size())
+    {
+      token* t = new token(*act->curr_macro->body[cursor]);
+      t->chain = act->tok; // mark chained token
+      cursor++;
+      return t;
+    }
+  else
+    return 0; // reached end of macro body
+}
+
+const token*
+parser::scan_pp1 ()
+{
+  while (true)
+    {
+      const token* t = next_pp1 ();
+      if (t == 0) // EOF or end of macro body
+        {
+          if (pp1_state.empty()) // actual EOF
+            return 0;
+
+          // Exit macro and loop around to look for the next token.
+          pp1_activation* act = pp1_state.back();
+          pp1_state.pop_back(); delete act;
+          continue;
+        }
+
+      // macro definition
+      if (t->type == tok_operator && t->content == "@define")
+        {
+          if (!pp1_state.empty())
+            throw parse_error (_("'@define' forbidden inside macro body"), t);
+          delete t;
+
+          // handle macro definition
+          // (1) consume macro signature
+          t = input.scan();
+          if (! (t && t->type == tok_identifier))
+            throw parse_error (_("expected identifier"), t);
+          string name = t->content;
+
+          // check for redefinition of existing macro
+          if (pp1_namespace.find(name) != pp1_namespace.end())
+            // TODOXXX use a slightly different chaining hack to also point to
+            // pp1_namespace[name]->tok, the site of the original definition?
+            throw parse_error (_F("attempt to redefine macro '@%s' in the same file", name.c_str ()), t);
+          // TODOXXX this is only really necessary if we want to leave open the possibility of statically-scoped semantics in the future...?
+
+          // TODOXXX this cascades into further parse errors as the
+          // parser tries to parse the remaining definition...
+          if (name == "define")
+            throw parse_error (_("attempt to redefine '@define'"), t);
+          if (input.atwords.count("@" + name))
+            session.print_warning (_F("macro redefines built-in operator '@%s'", name.c_str()), t);
+
+          pp_macrodecl* decl = (pp1_namespace[name] = new pp_macrodecl(*t));
+          delete t;
+
+          // determine if the macro takes parameters
+          t = input.scan();
+          if (t && t->type == tok_operator && t->content == "(")
+            do
+              {
+                delete t;
+
+                t = input.scan ();
+                if (! (t && t->type == tok_identifier))
+                  throw parse_error(_("expected identifier"), t);
+                decl->param_names.push_back(t->content);
+                delete t;
+
+                t = input.scan ();
+                if (t && t->type == tok_operator && t->content == ",")
+                  {
+                    continue;
+                  }
+                else if (t && t->type == tok_operator && t->content == ")")
+                  {
+                    delete t;
+                    t = input.scan();
+                    break;
+                  }
+                else
+                  {
+                    throw parse_error (_("expected ',' or ')'"), t);
+                  }
+              }
+            while (true);
+
+          // (2) identify & consume macro body
+          if (! (t && t->type == tok_operator && t->content == "%("))
+            // TODOXXX support & document heredoc & one-line macros
+            throw parse_error (_("expected '%('"), t);
+            // TODOXXX perhaps 'expected '%(' or '(' if params not seen?
+          delete t;
+
+          t = slurp_pp1_body (decl->body);
+          if (!t)
+            throw parse_error (_("incomplete macro definition - missing '%)'"), decl->tok);
+          delete t;
+
+          // Now loop around to look for a real token.
+          continue;
+        }
+
+      // (potential) macro invocation
+      if (t->type == tok_operator && t->content[0] == '@')
+        {
+          string name = t->content.substr(1); // strip initial '@'
+
+          // check if name refers to a real parameter or macro
+          pp_macrodecl* decl;
+          pp1_activation* act = pp1_state.empty() ? 0 : pp1_state.back();
+          if (act && act->params.find(name) != act->params.end())
+            decl = act->params[name];
+          else if (pp1_namespace.find(name) != pp1_namespace.end())
+            decl = pp1_namespace[name];
+          else // this is an ordinary @operator
+            return t;
+
+          // handle macro invocation
+          pp1_activation *new_act = new pp1_activation(*t, decl);
+          unsigned num_params = decl->param_names.size();
+
+          // (1a) restore parameter invocation closure
+          if (num_params == 0 && decl->parent_act)
+            {
+              // NB: decl->parent_act is always safe since the
+              // parameter decl (if any) comes from an activation
+              // record which deeper in the stack than new_act.
+
+              // decl is a macro parameter which must be evaluated in
+              // the context of the original point of invocation:
+              new_act->params = decl->parent_act->params;
+              new_act->is_closure = true; // hack to prevent double-freeing params
+              goto expand;
+            }
+
+          // (1b) consume macro parameters (if any)
+          if (num_params == 0)
+            goto expand;
+
+          // for simplicity, we do not allow macro constructs here
+          // -- if we did, we'd have to recursively call scan_pp1()
+          t = next_pp1 ();
+          if (! (t->type == tok_operator && t->content == "("))
+            {
+              delete new_act;
+              throw parse_error (_F(ngettext
+                                    ("expected '(' in invocation of macro '@%s'"
+                                     "taking %d parameter",
+                                     "expected '(' in invocation of macro '@%s'"
+                                     "taking %d parameters",
+                                     num_params), name.c_str(), num_params), t);
+            }
+
+          // XXX perhaps parse/count the full number of params,
+          // so we can say "expected x, found y params" on error?
+          for (unsigned i = 0; i < num_params; i++)
+            {
+              delete t;
+
+              // create parameter closure
+              string param_name = decl->param_names[i];
+              pp_macrodecl* p = (new_act->params[param_name]
+                                 = new pp_macrodecl(*new_act->tok, act));
+              // NB: *new_act->tok points to invocation, act is NULL at top level
+
+              t = slurp_pp1_param (p->body);
+
+              // check correct usage of ',' or ')'
+              if (t == 0) // hit unexpected EOF or end of macro
+                {
+                  // XXX could we pop the stack and continue parsing
+                  // the invocation, allowing macros to construct new
+                  // invocations in piecemeal fashion??
+                  const token* orig_t = new token(*new_act->tok);
+                  delete new_act;
+                  throw parse_error (_("could not find end of macro invocation"), orig_t);
+                }
+              if (t->type == tok_operator && t->content == ",")
+                {
+                  if (i + 1 == num_params)
+                    {
+                      delete new_act;
+                      throw parse_error (_F("too many parameters for macro '@%s' (expected %d)", name.c_str(), num_params), t);
+                    }
+                }
+              else if (t->type == tok_operator && t->content == ")")
+                {
+                  if (i + 1 != num_params)
+                    {
+                      delete new_act;
+                      throw parse_error (_F("too few parameters for macro '@%s' (expected %d)", name.c_str(), num_params), t);
+                    }
+                }
+              else
+                {
+                  // XXX this is, incidentally, impossible
+                  delete new_act;
+                  throw parse_error(_("expected ',' or ')' after macro parameter"), t);
+                }
+            }
+
+          delete t;
+
+          // (2) set up macro expansion
+        expand:
+          pp1_state.push_back (new_act);
+
+          // Now loop around to look for a real token.
+          continue;
+        }
+
+      // Otherwise, we have an ordinary token.
+      return t;
+    }
+}
+
+// Consume a single macro invocation's parameters, heeding nested ( )
+// brackets and stopping on an unbalanced ')' or an unbracketed ','
+// (and returning the final separator token).
+const token*
+parser::slurp_pp1_param (vector<const token*>& param)
+{
+  const token* t = 0;
+  unsigned nesting = 0;
+  do
+    {
+      t = next_pp1 ();
+
+      if (!t)
+        break;
+      if (t->type == tok_operator && t->content == "(")
+        ++nesting;
+      else if (nesting && t->type == tok_operator && t->content == ")")
+        --nesting;
+      else if (!nesting && t->type == tok_operator
+               && (t->content == ")" || t->content == ","))
+        break;
+      param.push_back(t);
+    }
+  while (true);
+  return t; // report ")" or "," or NULL
+}
+
+
+// Consume a macro declaration's body, heeding nested %( %) brackets.
+const token*
+parser::slurp_pp1_body (vector<const token*>& body)
+{
+  const token* t = 0;
+  unsigned nesting = 0;
+  do
+    {
+      t = next_pp1 ();
+
+      if (!t)
+        break;
+      if (t->type == tok_operator && t->content == "%(")
+        ++nesting;
+      else if (nesting && t->type == tok_operator && t->content == "%)")
+        --nesting;
+      else if (!nesting && t->type == tok_operator && t->content == "%)")
+        break;
+      body.push_back(t);
+    }
+  while (true);
+  return t; // report final "%)" or NULL
+}
+
+// Second pass - preprocessor conditional expansion.
+//
 // The basic form is %( CONDITION %? THEN-TOKENS %: ELSE-TOKENS %)
 // where CONDITION is: kernel_v[r] COMPARISON-OP "version-string"
 //                 or: arch COMPARISON-OP "arch-string"
@@ -525,7 +893,7 @@ parser::scan_pp ()
       if (pp == PP_SKIP_THEN || pp == PP_SKIP_ELSE)
         t = skip_pp ();
       else
-        t = input.scan ();
+        t = scan_pp1 ();
 
       if (t == 0) // EOF
         {
@@ -578,9 +946,9 @@ parser::scan_pp ()
       const token *n = NULL;
       do {
         const token *l, *op, *r;
-        l = input.scan ();
-        op = input.scan ();
-        r = input.scan ();
+        l = scan_pp1 ();
+        op = scan_pp1 ();
+        r = scan_pp1 ();
         if (l == 0 || op == 0 || r == 0)
           throw parse_error (_("incomplete condition after '%('"), t);
         // NB: consider generalizing to consume all tokens until %?, and
@@ -599,7 +967,7 @@ parser::scan_pp ()
         delete op;
         delete n;
 
-        n = input.scan ();
+        n = scan_pp1 ();
         if (n && n->type == tok_operator && n->content == "&&")
           continue;
         result |= and_result;
@@ -636,7 +1004,7 @@ parser::skip_pp ()
     {
       try
         {
-          t = input.scan ();
+          t = scan_pp1 ();
         }
       catch (const parse_error &e)
         {
@@ -955,8 +1323,14 @@ token*
 lexer::scan ()
 {
   ate_whitespace = false; // reset for each new token
+
+  // XXX be very sure to restore old_saw_tokens if we return without a token:
+  bool old_saw_tokens = saw_tokens;
+  saw_tokens = true;
+
   token* n = new token;
   n->location.file = current_file;
+  n->chain = NULL; // important safety dance
 
 skip:
   bool suspended = (cursor_suspend_count > 0);
@@ -968,6 +1342,7 @@ skip:
   if (c < 0)
     {
       delete n;
+      saw_tokens = old_saw_tokens;
       return 0;
     }
 
@@ -1255,7 +1630,7 @@ parser::parse ()
 	{
           systemtap_v_seen = 0;
 	  const token* t = peek ();
-	  if (! t) // nice clean EOF
+	  if (! t) // nice clean EOF, modulo any preprocessing that occurred
 	    break;
 
           empty = false;
@@ -1316,7 +1691,11 @@ parser::parse ()
 
   if (empty)
     {
-      cerr << _F("Input file '%s' is empty or missing.", input_name.c_str()) << endl;
+      // vary message depending on whether file was *actually* empty:
+      cerr << (input.saw_tokens
+               ? _F("Input file '%s' is empty after preprocessing.", input_name.c_str())
+               : _F("Input file '%s' is empty or missing.", input_name.c_str()))
+           << endl;
       delete f;
       f = 0;
     }
@@ -1731,9 +2110,8 @@ parser::parse_probe_point ()
           // consume u
           next ();
         }
-      token* new_t = new token;
-      new_t->location = t->location;
-      new_t->type = t->type;
+      // get around const-ness of t:
+      token* new_t = new token(*t);
       new_t->content = content;
       delete t; t = new_t;
 
