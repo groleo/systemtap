@@ -1189,10 +1189,10 @@ parser::peek_kw (std::string const & kw)
 
 
 lexer::lexer (istream& input, const string& in, systemtap_session& s):
-  ate_comment(false), ate_whitespace(false), input_name (in), input_pointer (0),
-  input_end (0), cursor_suspend_count(0), cursor_suspend_line (1),
-  cursor_suspend_column (1), cursor_line (1), cursor_column (1),
-  session(s), current_file (0)
+  ate_comment(false), ate_whitespace(false), saw_tokens(false),
+  input_name (in), input_pointer (0), input_end (0), cursor_suspend_count(0),
+  cursor_suspend_line (1), cursor_suspend_column (1), cursor_line (1),
+  cursor_column (1), session(s), current_file (0)
 {
   getline(input, input_contents, '\0');
 
