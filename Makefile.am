@@ -199,20 +199,6 @@ stap_gen_cert_LDADD = $(nss_LIBS)
 endif
 endif
 
-if HAVE_DYNINST
-dyninst_LIBS = -ldwarf -lcommon -linstructionAPI -lparseAPI -lpatchAPI \
-	       -lpcontrol -lstackwalk -lsymtabAPI -ldyninstAPI
-bin_PROGRAMS += stapdyn dynsdt
-stapdyn_SOURCES = stapdyn/stapdyn.cxx
-stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ @DYNINST_CXXFLAGS@
-stapdyn_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@ @DYNINST_LDFLAGS@
-stapdyn_LDADD = -lelf $(dyninst_LIBS)
-dynsdt_SOURCES = stapdyn/dynsdt.cxx
-dynsdt_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ @DYNINST_CXXFLAGS@
-dynsdt_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@ @DYNINST_LDFLAGS@
-dynsdt_LDADD = -lelf $(dyninst_LIBS)
-endif
-
 noinst_PROGRAMS = loc2c-test
 loc2c_test_SOURCES = loc2c-test.c loc2c.c
 loc2c_test_CFLAGS = $(stap_CFLAGS)
@@ -329,7 +315,7 @@ if BUILD_SERVER
 endif
 	(cd $(srcdir)/man; for f in *.3*; do rm -rf "$(DESTDIR)$(man3dir)/$$f"; done)
 
-SUBDIRS = . staprun doc po
+SUBDIRS = . stapdyn staprun doc po
 DIST_SUBDIRS = testsuite $(SUBDIRS)
 EXTRA_DIST = m4/ChangeLog
 

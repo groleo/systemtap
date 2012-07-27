@@ -1,0 +1,33 @@
+# Makefile.am --- automake input file for systemtap dyninst tools
+
+AM_CFLAGS = -Wall -Werror -Wunused -W -Wformat=2 -Wno-format-nonliteral
+AM_CXXFLAGS = -Wall -Werror -Wunused -W -Wformat=2 -Wno-format-nonliteral
+AM_CPPFLAGS = -D_GNU_SOURCE
+AM_CPPFLAGS += -I$(srcdir)/../includes
+AM_CPPFLAGS += -I$(builddir)/../includes/sys
+AM_CPPFLAGS += -DBINDIR='"$(bindir)"' -DSYSCONFDIR='"$(sysconfdir)"' -DPKGDATADIR='"${pkgdatadir}"' -DPKGLIBDIR='"$(pkglibexecdir)"' -DLOCALEDIR='"$(localedir)"'
+
+AM_CFLAGS += @PIECFLAGS@
+AM_CXXFLAGS += @PIECXXFLAGS@
+AM_LDFLAGS = @PIELDFLAGS@
+
+bin_PROGRAMS =
+
+if HAVE_DYNINST
+
+dyninst_LIBS = -ldwarf -lcommon -linstructionAPI -lparseAPI -lpatchAPI \
+	       -lpcontrol -lstackwalk -lsymtabAPI -ldyninstAPI
+
+bin_PROGRAMS += stapdyn dynsdt
+
+stapdyn_SOURCES = stapdyn.cxx
+stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@
+stapdyn_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
+stapdyn_LDADD = -lelf $(dyninst_LIBS)
+
+dynsdt_SOURCES = dynsdt.cxx
+dynsdt_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@
+dynsdt_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
+dynsdt_LDADD = -lelf $(dyninst_LIBS)
+
+endif # HAVE_DYNINST

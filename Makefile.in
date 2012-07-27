@@ -37,12 +37,12 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2)
+bin_PROGRAMS = $(am__EXEEXT_1)
 @BUILD_TRANSLATOR_TRUE@am__append_1 = stap
 @BUILD_TRANSLATOR_TRUE@am__append_2 = stap.1
 @BUILD_TRANSLATOR_TRUE@am__append_3 = dtrace
-@BUILD_TRANSLATOR_TRUE@pkglibexec_PROGRAMS = $(am__EXEEXT_3) \
-@BUILD_TRANSLATOR_TRUE@	$(am__EXEEXT_4)
+@BUILD_TRANSLATOR_TRUE@pkglibexec_PROGRAMS = $(am__EXEEXT_2) \
+@BUILD_TRANSLATOR_TRUE@	$(am__EXEEXT_3)
 @BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@am__append_4 = stap-sign-module stap-authorize-cert
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@am__append_5 = stap-server.8
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@am__append_6 = stap-serverd stap-gen-cert
@@ -68,7 +68,6 @@ bin_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2)
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_AVAHI_TRUE@@HAVE_NSS_TRUE@am__append_24 = $(avahi_CFLAGS)
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_AVAHI_TRUE@@HAVE_NSS_TRUE@am__append_25 = $(avahi_CFLAGS)
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_AVAHI_TRUE@@HAVE_NSS_TRUE@am__append_26 = $(avahi_LIBS)
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@am__append_27 = stapdyn dynsdt
 @BUILD_TRANSLATOR_TRUE@noinst_PROGRAMS = loc2c-test$(EXEEXT)
 subdir = .
 DIST_COMMON = INSTALL NEWS README AUTHORS $(srcdir)/Makefile.in \
@@ -95,29 +94,21 @@ CONFIG_CLEAN_FILES = includes/sys/sdt-config.h stappaths.7 \
 	initscript/systemtap initscript/stap-server run-stap dtrace
 CONFIG_CLEAN_VPATH_FILES =
 @BUILD_TRANSLATOR_TRUE@am__EXEEXT_1 = stap$(EXEEXT)
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@am__EXEEXT_2 =  \
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@	stapdyn$(EXEEXT) \
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@	dynsdt$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkglibexecdir)" \
 	"$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkglibexecdir)" \
 	"$(DESTDIR)$(man1dir)" "$(DESTDIR)$(man3dir)" \
 	"$(DESTDIR)$(man7dir)" "$(DESTDIR)$(man8dir)" \
 	"$(DESTDIR)$(oldincludedir)"
-@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@am__EXEEXT_3 = stap-sign-module$(EXEEXT) \
+@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@am__EXEEXT_2 = stap-sign-module$(EXEEXT) \
 @BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@	stap-authorize-cert$(EXEEXT)
-@BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@am__EXEEXT_4 = stap-serverd$(EXEEXT) \
+@BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@am__EXEEXT_3 = stap-serverd$(EXEEXT) \
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@	stap-gen-cert$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS) $(pkglibexec_PROGRAMS)
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@am_dynsdt_OBJECTS = dynsdt-dynsdt.$(OBJEXT)
-dynsdt_OBJECTS = $(am_dynsdt_OBJECTS)
-am__DEPENDENCIES_1 =
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@dynsdt_DEPENDENCIES = $(am__DEPENDENCIES_1)
-dynsdt_LINK = $(CXXLD) $(dynsdt_CXXFLAGS) $(CXXFLAGS) \
-	$(dynsdt_LDFLAGS) $(LDFLAGS) -o $@
 @BUILD_TRANSLATOR_TRUE@am_loc2c_test_OBJECTS =  \
 @BUILD_TRANSLATOR_TRUE@	loc2c_test-loc2c-test.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	loc2c_test-loc2c.$(OBJEXT)
 loc2c_test_OBJECTS = $(am_loc2c_test_OBJECTS)
+am__DEPENDENCIES_1 =
 @BUILD_TRANSLATOR_TRUE@@HAVE_AVAHI_TRUE@am__DEPENDENCIES_2 =  \
 @BUILD_TRANSLATOR_TRUE@@HAVE_AVAHI_TRUE@	$(am__DEPENDENCIES_1)
 @BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@am__DEPENDENCIES_3 =  \
@@ -199,11 +190,6 @@ stap_sign_module_OBJECTS = $(am_stap_sign_module_OBJECTS)
 @BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@	$(am__DEPENDENCIES_1)
 stap_sign_module_LINK = $(CXXLD) $(stap_sign_module_CXXFLAGS) \
 	$(CXXFLAGS) $(stap_sign_module_LDFLAGS) $(LDFLAGS) -o $@
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@am_stapdyn_OBJECTS = stapdyn-stapdyn.$(OBJEXT)
-stapdyn_OBJECTS = $(am_stapdyn_OBJECTS)
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@stapdyn_DEPENDENCIES = $(am__DEPENDENCIES_1)
-stapdyn_LINK = $(CXXLD) $(stapdyn_CXXFLAGS) $(CXXFLAGS) \
-	$(stapdyn_LDFLAGS) $(LDFLAGS) -o $@
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -266,10 +252,9 @@ am__v_CXXLD_0 = @echo "  CXXLD " $@;
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
-SOURCES = $(dynsdt_SOURCES) $(loc2c_test_SOURCES) $(stap_SOURCES) \
+SOURCES = $(loc2c_test_SOURCES) $(stap_SOURCES) \
 	$(stap_authorize_cert_SOURCES) $(stap_gen_cert_SOURCES) \
-	$(stap_serverd_SOURCES) $(stap_sign_module_SOURCES) \
-	$(stapdyn_SOURCES)
+	$(stap_serverd_SOURCES) $(stap_sign_module_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -530,17 +515,6 @@ PHONIES = $(am__append_17) $(am__append_23) runcheck update-po \
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@stap_gen_cert_CFLAGS = $(AM_CFLAGS) @PIECFLAGS@ $(nss_CFLAGS)
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@stap_gen_cert_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_NSS_TRUE@stap_gen_cert_LDADD = $(nss_LIBS)
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@dyninst_LIBS = -ldwarf -lcommon -linstructionAPI -lparseAPI -lpatchAPI \
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@	       -lpcontrol -lstackwalk -lsymtabAPI -ldyninstAPI
-
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@stapdyn_SOURCES = stapdyn/stapdyn.cxx
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ @DYNINST_CXXFLAGS@
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@stapdyn_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@ @DYNINST_LDFLAGS@
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@stapdyn_LDADD = -lelf $(dyninst_LIBS)
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@dynsdt_SOURCES = stapdyn/dynsdt.cxx
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@dynsdt_CXXFLAGS = $(AM_CXXFLAGS) @PIECXXFLAGS@ @DYNINST_CXXFLAGS@
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@dynsdt_LDFLAGS = $(AM_LDFLAGS) @PIELDFLAGS@ @DYNINST_LDFLAGS@
-@BUILD_TRANSLATOR_TRUE@@HAVE_DYNINST_TRUE@dynsdt_LDADD = -lelf $(dyninst_LIBS)
 @BUILD_TRANSLATOR_TRUE@loc2c_test_SOURCES = loc2c-test.c loc2c.c
 @BUILD_TRANSLATOR_TRUE@loc2c_test_CFLAGS = $(stap_CFLAGS)
 @BUILD_TRANSLATOR_TRUE@loc2c_test_CPPFLAGS = $(stap_CPPFLAGS)
@@ -555,7 +529,7 @@ LDADD =
 EXAMPLE_SOURCE_DIR = $(srcdir)/testsuite/systemtap.examples
 EXAMPLE_META_FILES = $(EXAMPLE_SOURCE_DIR)/*/*.meta
 TEST_COV_DIR = coverage
-SUBDIRS = . staprun doc po
+SUBDIRS = . stapdyn staprun doc po
 DIST_SUBDIRS = testsuite $(SUBDIRS)
 EXTRA_DIST = m4/ChangeLog
 
@@ -707,9 +681,6 @@ uninstall-pkglibexecPROGRAMS:
 
 clean-pkglibexecPROGRAMS:
 	-test -z "$(pkglibexec_PROGRAMS)" || rm -f $(pkglibexec_PROGRAMS)
-dynsdt$(EXEEXT): $(dynsdt_OBJECTS) $(dynsdt_DEPENDENCIES) $(EXTRA_dynsdt_DEPENDENCIES) 
-	@rm -f dynsdt$(EXEEXT)
-	$(AM_V_CXXLD)$(dynsdt_LINK) $(dynsdt_OBJECTS) $(dynsdt_LDADD) $(LIBS)
 loc2c-test$(EXEEXT): $(loc2c_test_OBJECTS) $(loc2c_test_DEPENDENCIES) $(EXTRA_loc2c_test_DEPENDENCIES) 
 	@rm -f loc2c-test$(EXEEXT)
 	$(AM_V_CCLD)$(loc2c_test_LINK) $(loc2c_test_OBJECTS) $(loc2c_test_LDADD) $(LIBS)
@@ -728,9 +699,6 @@ stap-serverd$(EXEEXT): $(stap_serverd_OBJECTS) $(stap_serverd_DEPENDENCIES) $(EX
 stap-sign-module$(EXEEXT): $(stap_sign_module_OBJECTS) $(stap_sign_module_DEPENDENCIES) $(EXTRA_stap_sign_module_DEPENDENCIES) 
 	@rm -f stap-sign-module$(EXEEXT)
 	$(AM_V_CXXLD)$(stap_sign_module_LINK) $(stap_sign_module_OBJECTS) $(stap_sign_module_LDADD) $(LIBS)
-stapdyn$(EXEEXT): $(stapdyn_OBJECTS) $(stapdyn_DEPENDENCIES) $(EXTRA_stapdyn_DEPENDENCIES) 
-	@rm -f stapdyn$(EXEEXT)
-	$(AM_V_CXXLD)$(stapdyn_LINK) $(stapdyn_OBJECTS) $(stapdyn_LDADD) $(LIBS)
 install-binSCRIPTS: $(bin_SCRIPTS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -802,7 +770,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynsdt-dynsdt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/loc2c_test-loc2c-test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/loc2c_test-loc2c.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-buildrun.Po@am__quote@
@@ -853,7 +820,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap_sign_module-nsscommon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap_sign_module-stap-sign-module.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap_sign_module-util.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stapdyn-stapdyn.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -938,20 +904,6 @@ stap-mdfour.obj: mdfour.c
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-
-dynsdt-dynsdt.o: stapdyn/dynsdt.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dynsdt_CXXFLAGS) $(CXXFLAGS) -MT dynsdt-dynsdt.o -MD -MP -MF $(DEPDIR)/dynsdt-dynsdt.Tpo -c -o dynsdt-dynsdt.o `test -f 'stapdyn/dynsdt.cxx' || echo '$(srcdir)/'`stapdyn/dynsdt.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dynsdt-dynsdt.Tpo $(DEPDIR)/dynsdt-dynsdt.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='stapdyn/dynsdt.cxx' object='dynsdt-dynsdt.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dynsdt_CXXFLAGS) $(CXXFLAGS) -c -o dynsdt-dynsdt.o `test -f 'stapdyn/dynsdt.cxx' || echo '$(srcdir)/'`stapdyn/dynsdt.cxx
-
-dynsdt-dynsdt.obj: stapdyn/dynsdt.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dynsdt_CXXFLAGS) $(CXXFLAGS) -MT dynsdt-dynsdt.obj -MD -MP -MF $(DEPDIR)/dynsdt-dynsdt.Tpo -c -o dynsdt-dynsdt.obj `if test -f 'stapdyn/dynsdt.cxx'; then $(CYGPATH_W) 'stapdyn/dynsdt.cxx'; else $(CYGPATH_W) '$(srcdir)/stapdyn/dynsdt.cxx'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dynsdt-dynsdt.Tpo $(DEPDIR)/dynsdt-dynsdt.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='stapdyn/dynsdt.cxx' object='dynsdt-dynsdt.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dynsdt_CXXFLAGS) $(CXXFLAGS) -c -o dynsdt-dynsdt.obj `if test -f 'stapdyn/dynsdt.cxx'; then $(CYGPATH_W) 'stapdyn/dynsdt.cxx'; else $(CYGPATH_W) '$(srcdir)/stapdyn/dynsdt.cxx'; fi`
 
 stap-main.o: main.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-main.o -MD -MP -MF $(DEPDIR)/stap-main.Tpo -c -o stap-main.o `test -f 'main.cxx' || echo '$(srcdir)/'`main.cxx
@@ -1596,20 +1548,6 @@ stap_sign_module-util.obj: util.cxx
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util.cxx' object='stap_sign_module-util.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_sign_module_CPPFLAGS) $(CPPFLAGS) $(stap_sign_module_CXXFLAGS) $(CXXFLAGS) -c -o stap_sign_module-util.obj `if test -f 'util.cxx'; then $(CYGPATH_W) 'util.cxx'; else $(CYGPATH_W) '$(srcdir)/util.cxx'; fi`
-
-stapdyn-stapdyn.o: stapdyn/stapdyn.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -MT stapdyn-stapdyn.o -MD -MP -MF $(DEPDIR)/stapdyn-stapdyn.Tpo -c -o stapdyn-stapdyn.o `test -f 'stapdyn/stapdyn.cxx' || echo '$(srcdir)/'`stapdyn/stapdyn.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stapdyn-stapdyn.Tpo $(DEPDIR)/stapdyn-stapdyn.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='stapdyn/stapdyn.cxx' object='stapdyn-stapdyn.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -c -o stapdyn-stapdyn.o `test -f 'stapdyn/stapdyn.cxx' || echo '$(srcdir)/'`stapdyn/stapdyn.cxx
-
-stapdyn-stapdyn.obj: stapdyn/stapdyn.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -MT stapdyn-stapdyn.obj -MD -MP -MF $(DEPDIR)/stapdyn-stapdyn.Tpo -c -o stapdyn-stapdyn.obj `if test -f 'stapdyn/stapdyn.cxx'; then $(CYGPATH_W) 'stapdyn/stapdyn.cxx'; else $(CYGPATH_W) '$(srcdir)/stapdyn/stapdyn.cxx'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stapdyn-stapdyn.Tpo $(DEPDIR)/stapdyn-stapdyn.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='stapdyn/stapdyn.cxx' object='stapdyn-stapdyn.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -c -o stapdyn-stapdyn.obj `if test -f 'stapdyn/stapdyn.cxx'; then $(CYGPATH_W) 'stapdyn/stapdyn.cxx'; else $(CYGPATH_W) '$(srcdir)/stapdyn/stapdyn.cxx'; fi`
 install-man1: $(man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man1dir)" || $(MKDIR_P) "$(DESTDIR)$(man1dir)"

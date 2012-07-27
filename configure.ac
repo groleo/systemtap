@@ -606,6 +606,7 @@ if test $enable_translator == "yes"; then
 	AC_CONFIG_FILES([run-stap], [chmod +x run-stap])
 fi
 AC_CONFIG_FILES([dtrace], [chmod +x dtrace])
+AC_CONFIG_FILES(stapdyn/Makefile)
 AC_CONFIG_FILES(staprun/Makefile)
 AC_CONFIG_FILES([staprun/run-staprun], [chmod +x staprun/run-staprun])
 

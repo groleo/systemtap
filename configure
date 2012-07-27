@@ -10661,6 +10661,8 @@ if test $enable_translator == "yes"; then
 fi
 ac_config_files="$ac_config_files dtrace"
 
+ac_config_files="$ac_config_files stapdyn/Makefile"
+
 ac_config_files="$ac_config_files staprun/Makefile"
 
 ac_config_files="$ac_config_files staprun/run-staprun"
@@ -11493,6 +11495,7 @@ do
     "initscript/stap-server") CONFIG_FILES="$CONFIG_FILES initscript/stap-server" ;;
     "run-stap") CONFIG_FILES="$CONFIG_FILES run-stap" ;;
     "dtrace") CONFIG_FILES="$CONFIG_FILES dtrace" ;;
+    "stapdyn/Makefile") CONFIG_FILES="$CONFIG_FILES stapdyn/Makefile" ;;
     "staprun/Makefile") CONFIG_FILES="$CONFIG_FILES staprun/Makefile" ;;
     "staprun/run-staprun") CONFIG_FILES="$CONFIG_FILES staprun/run-staprun" ;;
     "doc/beginners/publican.cfg") CONFIG_FILES="$CONFIG_FILES doc/beginners/publican.cfg:doc/SystemTap_Beginners_Guide/publican.cfg.in" ;;
