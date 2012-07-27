@@ -118,7 +118,7 @@ instrument_uprobes(BPatch_process *app, Elf_Data* data)
         }
 
       BPatch_Vector<BPatch_snippet *> args;
-      args.push_back(new BPatch_constExpr((uint64_t)i)); // probe index
+      args.push_back(new BPatch_constExpr((int64_t)i)); // probe index
       args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
       BPatch_funcCallExpr call(enter_function, args);
       app->insertSnippet(call, points);

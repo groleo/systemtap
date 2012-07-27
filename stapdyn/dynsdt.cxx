@@ -136,13 +136,13 @@ find_sdt(const string& file)
         {
           sdt_base_addr = shdr.sh_addr;
           sdt_base_offset = shdr.sh_offset;
-          warnx("SDT base addr:%#lx offset:%#lx", sdt_base_addr, sdt_base_offset);
+          warnx("SDT base addr:%#llx offset:%#llx", sdt_base_addr, sdt_base_offset);
         }
       if (sh_name && !strcmp(".probes", sh_name))
         {
           sdt_probes_addr = shdr.sh_addr;
           sdt_probes_offset = shdr.sh_offset;
-          warnx("SDT probes addr:%#lx offset:%#lx", sdt_probes_addr, sdt_probes_offset);
+          warnx("SDT probes addr:%#llx offset:%#llx", sdt_probes_addr, sdt_probes_offset);
         }
     }
 
@@ -239,7 +239,7 @@ find_sdt(const string& file)
                 joined_args << ", ";
               joined_args << p.args[i].first << "@\"" << p.args[i].second << "\"";
             }
-	  warnx("SDT offset:%#lx semaphore:%#lx %s:%s(%s)",
+	  warnx("SDT offset:%#llx semaphore:%#llx %s:%s(%s)",
 		p.pc_offset, p.sem_offset,
                 p.provider.c_str(), p.name.c_str(),
 		joined_args.str().c_str());
@@ -266,7 +266,7 @@ instrument_sdt(BPatch_process* process,
   Dyninst::Address address = object->fileOffsetToAddr(p.pc_offset);
   if (address == BPatch_object::E_OUT_OF_BOUNDS)
     {
-      warnx("couldn't convert %s:%s at %#lx to an address",
+      warnx("couldn't convert %s:%s at %#llx to an address",
             p.provider.c_str(), p.name.c_str(), p.pc_offset);
       return;
     }
@@ -275,7 +275,7 @@ instrument_sdt(BPatch_process* process,
   object->findPoints(address, points);
   if (points.empty())
     {
-      warnx("couldn't find %s:%s at %#lx -> %#lx",
+      warnx("couldn't find %s:%s at %#llx -> %#lx",
             p.provider.c_str(), p.name.c_str(), p.pc_offset, address);
       return;
     }
@@ -301,7 +301,7 @@ instrument_sdt(BPatch_process* process,
   image->findFunction("printf", printfFuncs);
   BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
 
-  warnx("inserting %s:%s at %#lx -> %#lx [%zu]",
+  warnx("inserting %s:%s at %#llx -> %#lx [%zu]",
         p.provider.c_str(), p.name.c_str(), p.pc_offset, address, points.size());
   process->insertSnippet(printfCall, points);
 
@@ -309,11 +309,11 @@ instrument_sdt(BPatch_process* process,
     {
       Dyninst::Address sem_address = object->fileOffsetToAddr(p.sem_offset);
       if (sem_address == BPatch_object::E_OUT_OF_BOUNDS)
-        warnx("couldn't convert %s:%s semaphore %#lx to an address",
+        warnx("couldn't convert %s:%s semaphore %#llx to an address",
               p.provider.c_str(), p.name.c_str(), p.sem_offset);
       else
         {
-          warnx("incrementing semaphore for %s:%s at %#lx -> %#lx",
+          warnx("incrementing semaphore for %s:%s at %#llx -> %#lx",
                 p.provider.c_str(), p.name.c_str(), p.sem_offset, sem_address);
 
           BPatch_type *sem_type = image->findType("unsigned short");
