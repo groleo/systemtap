@@ -18,6 +18,8 @@ extern "C" {
 #include <BPatch.h>
 #include <BPatch_object.h>
 
+#include "dynutil.h"
+
 
 using namespace std;
 
@@ -198,6 +200,9 @@ main(int argc, char * const argv[])
 
   if (!module || !command)
     usage (1);
+
+  if (!check_dyninst_rt())
+    return 1;
 
   BPatch patch;
 

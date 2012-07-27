@@ -24,6 +24,8 @@ extern "C" {
 #include <BPatch_object.h>
 #include <BPatch_point.h>
 
+#include "dynutil.h"
+
 
 using namespace std;
 
@@ -352,6 +354,9 @@ main(int argc, const char* argv[])
   warnx("got args:");
   for (int i = 1; i < argc; ++i)
     warnx("  [%i] %s", i - 1, argv[i]);
+
+  if (!check_dyninst_rt())
+    return 1;
 
   BPatch patch;
 
