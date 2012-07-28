@@ -68,8 +68,7 @@ private:
 class parser
 {
 public:
-  parser (systemtap_session& s, istream& i, bool p);
-  parser (systemtap_session& s, const string& n, bool p);
+  parser (systemtap_session& s, const string& n, istream& i, bool p);
   ~parser ();
 
   stapfile* parse ();
@@ -99,7 +98,6 @@ private:
 
   systemtap_session& session;
   string input_name;
-  istream* free_input;
   lexer input;
   bool privileged;
   parse_context context;
@@ -212,38 +210,39 @@ private: // nonterminals
 stapfile*
 parse (systemtap_session& s, istream& i, bool pr)
 {
-  parser p (s, i, pr);
+  parser p (s, "<input>", i, pr);
   return p.parse ();
 }
 
 
 stapfile*
-parse (systemtap_session& s, const string& n, bool pr)
+parse (systemtap_session& s, const string& name, bool pr)
 {
-  parser p (s, n, pr);
+  ifstream i(name.c_str(), ios::in);
+  if (i.fail())
+    {
+      cerr << (file_exists(name)
+               ? _F("Input file '%s' can't be opened for reading.", name.c_str())
+               : _F("Input file '%s' is missing.", name.c_str()))
+           << endl;
+      return 0;
+    }
+
+  parser p (s, name, i, pr);
   return p.parse ();
 }
 
 // ------------------------------------------------------------------------
 
 
-parser::parser (systemtap_session& s, istream& i, bool p):
-  session (s),
-  input_name ("<input>"), free_input (0),
-  input (i, input_name, s), privileged (p),
+parser::parser (systemtap_session& s, const string &n, istream& i, bool p):
+  session (s), input_name (n), input (i, input_name, s), privileged (p),
   context(con_unknown), systemtap_v_seen(0), last_t (0), next_t (0), num_errors (0)
-{ }
-
-parser::parser (systemtap_session& s, const string& fn, bool p):
-  session (s),
-  input_name (fn), free_input (new ifstream (input_name.c_str(), ios::in)),
-  input (* free_input, input_name, s), privileged (p),
-  context(con_unknown), systemtap_v_seen(0), last_t (0), next_t (0), num_errors (0)
-{ }
+{
+}
 
 parser::~parser()
 {
-  if (free_input) delete free_input;
 }
 
 static string
@@ -1699,7 +1698,7 @@ parser::parse ()
       // vary message depending on whether file was *actually* empty:
       cerr << (input.saw_tokens
                ? _F("Input file '%s' is empty after preprocessing.", input_name.c_str())
-               : _F("Input file '%s' is empty or missing.", input_name.c_str()))
+               : _F("Input file '%s' is empty.", input_name.c_str()))
            << endl;
       delete f;
       f = 0;
