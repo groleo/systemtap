@@ -572,9 +572,9 @@ parser::scan_pp1 ()
               delete new_act;
               throw parse_error (_F(ngettext
                                     ("expected '(' in invocation of macro '@%s'"
-                                     "taking %d parameter",
+                                     " taking %d parameter",
                                      "expected '(' in invocation of macro '@%s'"
-                                     "taking %d parameters",
+                                     " taking %d parameters",
                                      num_params), name.c_str(), num_params), t);
             }
 
