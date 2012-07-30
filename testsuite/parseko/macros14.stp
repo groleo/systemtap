@@ -1,7 +1,0 @@
-#! stap -p2
-
-# "expected %( for multiline macro
-
-@define foo(bar,
-            baz)
-        this is not a good macro body

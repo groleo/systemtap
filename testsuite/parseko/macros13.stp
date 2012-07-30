@@ -1,9 +1,0 @@
-#! stap -p2
-
-# interpreted as empty one-line macro
-# contrast parseok/macros11.stp and parseok/macros12.stp
-@define whatemptyfoo(a,b,c)
-
-%( @a
-+ @b
-+ @c %) # not taken as the macro body!
