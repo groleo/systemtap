@@ -567,7 +567,7 @@ parser::scan_pp1 ()
           // for simplicity, we do not allow macro constructs here
           // -- if we did, we'd have to recursively call scan_pp1()
           t = next_pp1 ();
-          if (! (t->type == tok_operator && t->content == "("))
+          if (! (t && t->type == tok_operator && t->content == "("))
             {
               delete new_act;
               throw parse_error (_F(ngettext
