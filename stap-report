@@ -2,8 +2,11 @@
 
 run(){
   echo "== $1 =="
-  sh -c "$@"
+  sh -c "$@" || true
 }
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:$PATH
+export PATH
 
 run "stap -V"
 run "which stap"
