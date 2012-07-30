@@ -1,0 +1,14 @@
+#! stap -p2
+
+# use before define
+@kaprobe (begin)
+
+@define kaprobe(
+        a)
+
+%(
+        probe @a {
+              foo = 2+2
+              print(foo)
+        }
+%)   

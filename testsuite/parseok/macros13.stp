@@ -1,0 +1,6 @@
+#! stap -p2
+
+@define irrelevant(foo,
+                   bar) %( what about this? %)
+
+probe begin { print("Hello, World!\n") }

@@ -1,0 +1,6 @@
+#! stap -p2
+
+# empty definition
+@define foo
+
+probe begin @foo { print(42) }

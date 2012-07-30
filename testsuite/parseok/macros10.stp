@@ -1,0 +1,6 @@
+#! stap -p2
+
+@define oneline(a,b) ((@a)+(@b))
+@define foo(a) @a
+
+probe @foo(begin) { print(@oneline(2,2)) }
