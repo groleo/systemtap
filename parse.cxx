@@ -380,7 +380,11 @@ bool eval_comparison (const OPERAND& lhs, const token* op, const OPERAND& rhs)
 // and BODY can obtain the parameter contents as @a, @b, @c, ....
 // Note that parameterless macros can also be declared.
 //
-// Macro definitions may not be nested.
+// One-line macros can be defined as @define SIGNATURE BODY
+// -- here the body must fit on one-line, and the overall syntax
+// mimics the C preprocessor.
+//
+// Macro definitions may not be nested within one another.
 // A macro is available textually after it has been defined.
 //
 // The basic form of a macro invocation
@@ -438,6 +442,7 @@ parser::scan_pp1 ()
   while (true)
     {
       const token* t = next_pp1 ();
+    reuse_token:
       if (t == 0) // EOF or end of macro body
         {
           if (pp1_state.empty()) // actual EOF
@@ -454,11 +459,20 @@ parser::scan_pp1 ()
         {
           if (!pp1_state.empty())
             throw parse_error (_("'@define' forbidden inside macro body"), t);
+
+          // To handle one-line macros, we need to track which tokens
+          // occur on the same line as the '@define'
+          // track line numbers in case the definition is one-line
+          unsigned orig_line = t->location.line;
+          bool shift_line = false; // -- does the signature span multiple lines?
+#define NEXT_TOK() ((t = input.scan()), \
+          (shift_line = shift_line || (t && t->location.line > orig_line)))
+
           delete t;
 
           // handle macro definition
           // (1) consume macro signature
-          t = input.scan();
+          NEXT_TOK();
           if (! (t && t->type == tok_identifier))
             throw parse_error (_("expected identifier"), t);
           string name = t->content;
@@ -478,50 +492,93 @@ parser::scan_pp1 ()
             session.print_warning (_F("macro redefines built-in operator '@%s'", name.c_str()), t);
 
           pp_macrodecl* decl = (pp1_namespace[name] = new pp_macrodecl(*t));
+
           delete t;
 
           // determine if the macro takes parameters
-          t = input.scan();
-          if (t && t->type == tok_operator && t->content == "(")
-            do
-              {
-                delete t;
-
-                t = input.scan ();
-                if (! (t && t->type == tok_identifier))
-                  throw parse_error(_("expected identifier"), t);
-                decl->param_names.push_back(t->content);
-                delete t;
-
-                t = input.scan ();
-                if (t && t->type == tok_operator && t->content == ",")
-                  {
-                    continue;
-                  }
-                else if (t && t->type == tok_operator && t->content == ")")
-                  {
-                    delete t;
-                    t = input.scan();
-                    break;
-                  }
-                else
-                  {
-                    throw parse_error (_("expected ',' or ')'"), t);
-                  }
-              }
-            while (true);
+          t = input.scan (); // NEXT_TOK() step 1
+          if (t && t->type == tok_operator && t->content == "(") 
+            {
+              shift_line = shift_line || (t && t->location.line > orig_line); // NEXT_TOK() step 2, only if the signature continues
+              do
+                {
+                  delete t;
+                  
+                  NEXT_TOK();
+                  if (! (t && t->type == tok_identifier))
+                    throw parse_error(_("expected identifier"), t);
+                  decl->param_names.push_back(t->content);
+                  delete t;
+                  
+                  NEXT_TOK();
+                  if (t && t->type == tok_operator && t->content == ",")
+                    {
+                      continue;
+                    }
+                  else if (t && t->type == tok_operator && t->content == ")")
+                    {
+                      delete t;
+                      // Don't update shift_line for token after the signature:
+                      t = input.scan();
+                      break;
+                    }
+                  else
+                    {
+                      throw parse_error (_("expected ',' or ')'"), t);
+                    }
+                }
+              while (true);
+            }
 
           // (2) identify & consume macro body
-          if (! (t && t->type == tok_operator && t->content == "%("))
-            // TODOXXX support & document heredoc & one-line macros
-            throw parse_error (_("expected '%('"), t);
-            // TODOXXX perhaps 'expected '%(' or '(' if params not seen?
-          delete t;
 
-          t = slurp_pp1_body (decl->body);
-          if (!t)
-            throw parse_error (_("incomplete macro definition - missing '%)'"), decl->tok);
-          delete t;
+          // This gets a bit complicated. Basically, oneline macros
+          // are parsed when the signature fits on one line (the line
+          // "doesn't shift") and when an immediately following '%('
+          // is not found on the same line. All other cases result in
+          // an attempt to parse a multiline macro. See
+          // testsuite/parse[ok,ko]/macros*.stp for examples.
+          if (shift_line)
+            {
+              if (! (t && t->type == tok_operator && t->content == "%("))
+                // CASE 1: line shifts, no %( --> error
+                throw parse_error (_("expected '%(' for a multi-line macro"), t);
+              // CASE 2: line shifts, %( --> multi-line
+              delete t;
+              t = slurp_pp1_body (decl->body);
+              if (!t)
+                throw parse_error (_("incomplete macro definition - missing '%)'"), decl->tok);
+              delete t;
+            }
+          else if (!t || (t->location.line > orig_line))
+            {
+              // CASE 3: same line, token on next line --> empty one-line
+
+              // The next token is not part of the macro definition.
+              goto reuse_token;
+            }
+          else if (t->type == tok_operator && t->content == "%(")
+            {
+              // CASE 4: same line, %( on same line --> multi-line
+              delete t;
+              t = slurp_pp1_body (decl->body);
+              if (!t)
+                throw parse_error (_("incomplete macro definition - missing '%)'"), decl->tok);
+              delete t;
+            }
+          else
+            {
+              // CASE 5: same line, not-%( on same line --> one-line
+              while (t && t->location.line == orig_line)
+                {
+                  decl->body.push_back(t);
+                  t = input.scan ();
+                }
+
+              // The next token is not part of the macro definition.
+              goto reuse_token;
+            }
+#undef NEXT_TOK
 
           // Now loop around to look for a real token.
           continue;
