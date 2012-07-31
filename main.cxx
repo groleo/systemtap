@@ -489,35 +489,55 @@ passes_0_4 (systemtap_session &s)
       rc ++;
     }
 
-  // Construct arch / kernel-versioning search path
+  // PASS 1b: PARSING LIBRARY SCRIPTS
+  PROBE1(stap, pass1b__start, &s);
+
   vector<string> version_suffixes;
-  string kvr = s.kernel_release;
-  const string& arch = s.architecture;
-  // add full kernel-version-release (2.6.NN-FOOBAR) + arch
-  version_suffixes.push_back ("/" + kvr + "/" + arch);
-  version_suffixes.push_back ("/" + kvr);
-  // add kernel version (2.6.NN) + arch
-  if (kvr != s.kernel_base_release) {
-    kvr = s.kernel_base_release;
-    version_suffixes.push_back ("/" + kvr + "/" + arch);
-    version_suffixes.push_back ("/" + kvr);
-  }
-  // add kernel family (2.6) + arch
-  string::size_type dot1_index = kvr.find ('.');
-  string::size_type dot2_index = kvr.rfind ('.');
-  while (dot2_index > dot1_index && dot2_index != string::npos) {
-    kvr.erase(dot2_index);
-    version_suffixes.push_back ("/" + kvr + "/" + arch);
-    version_suffixes.push_back ("/" + kvr);
-    dot2_index = kvr.rfind ('.');
-  }
-  // add architecture search path
-  version_suffixes.push_back("/" + arch);
+  if (s.runtime_mode == systemtap_session::kernel_runtime)
+    {
+      // Construct kernel-versioning search path
+      string kvr = s.kernel_release;
+
+      // add full kernel-version-release (2.6.NN-FOOBAR)
+      version_suffixes.push_back ("/" + kvr);
+
+      // add kernel version (2.6.NN)
+      if (kvr != s.kernel_base_release)
+        {
+          kvr = s.kernel_base_release;
+          version_suffixes.push_back ("/" + kvr);
+        }
+
+      // add kernel family (2.6)
+      string::size_type dot1_index = kvr.find ('.');
+      string::size_type dot2_index = kvr.rfind ('.');
+      while (dot2_index > dot1_index && dot2_index != string::npos)
+        {
+          kvr.erase(dot2_index);
+          version_suffixes.push_back ("/" + kvr);
+          dot2_index = kvr.rfind ('.');
+        }
+    }
+
   // add empty string as last element
   version_suffixes.push_back ("");
 
-  // PASS 1b: PARSING LIBRARY SCRIPTS
-  PROBE1(stap, pass1b__start, &s);
+  // Add arch variants of every path, just before each
+  const string& arch = s.architecture;
+  for (unsigned i=0; i<version_suffixes.size(); i+=2)
+    version_suffixes.insert(version_suffixes.begin() + i,
+                            version_suffixes[i] + "/" + arch);
+
+  // Add runtime variants of every path, before everything else
+  string runtime_prefix;
+  if (s.runtime_mode == systemtap_session::kernel_runtime)
+    runtime_prefix = "/linux";
+  else if (s.runtime_mode == systemtap_session::dyninst_runtime)
+    runtime_prefix = "/dyninst";
+  if (!runtime_prefix.empty())
+    for (unsigned i=0; i<version_suffixes.size(); i+=2)
+      version_suffixes.insert(version_suffixes.begin() + i/2,
+                              runtime_prefix + version_suffixes[i]);
 
   set<pair<dev_t, ino_t> > seen_library_files;
 
