@@ -462,35 +462,26 @@ passes_0_4 (systemtap_session &s)
   struct timeval tv_before;
   gettimeofday (&tv_before, NULL);
 
-  // PASS 1a: PARSING USER SCRIPT
+  // PASS 1a: PARSING LIBRARY SCRIPTS
   PROBE1(stap, pass1a__start, &s);
 
+  // We need to handle the library scripts first because this pass
+  // gathers information on .stpm files that might be needed to
+  // parse the user script.
+
+  // We need to first ascertain the status of the user script, though.
   struct stat user_file_stat;
   int user_file_stat_rc = -1;
 
   if (s.script_file == "-")
     {
-      s.user_file = parse (s, cin, s.guru_mode);
       user_file_stat_rc = fstat (STDIN_FILENO, & user_file_stat);
     }
   else if (s.script_file != "")
     {
-      s.user_file = parse (s, s.script_file, s.guru_mode);
       user_file_stat_rc = stat (s.script_file.c_str(), & user_file_stat);
     }
-  else
-    {
-      istringstream ii (s.cmdline_script);
-      s.user_file = parse (s, ii, s.guru_mode);
-    }
-  if (s.user_file == 0)
-    {
-      // Syntax errors already printed.
-      rc ++;
-    }
-
-  // PASS 1b: PARSING LIBRARY SCRIPTS
-  PROBE1(stap, pass1b__start, &s);
+  // otherwise, rc is 0 for a command line script
 
   vector<string> version_suffixes;
   if (s.runtime_mode == systemtap_session::kernel_runtime)
@@ -541,6 +532,7 @@ passes_0_4 (systemtap_session &s)
 
   set<pair<dev_t, ino_t> > seen_library_files;
 
+  // TODOXXX gather a list of .stpm file paths using a similar method
   for (unsigned i=0; i<s.include_path.size(); i++)
     {
       // now iterate upon it
@@ -616,6 +608,28 @@ passes_0_4 (systemtap_session &s)
           }
     }
 
+  // PASS 1b: PARSING USER SCRIPT
+  PROBE1(stap, pass1b__start, &s);
+
+  if (s.script_file == "-")
+    {
+      s.user_file = parse (s, cin, s.guru_mode);
+    }
+  else if (s.script_file != "")
+    {
+      s.user_file = parse (s, s.script_file, s.guru_mode);
+    }
+  else
+    {
+      istringstream ii (s.cmdline_script);
+      s.user_file = parse (s, ii, s.guru_mode);
+    }
+  if (s.user_file == 0)
+    {
+      // Syntax errors already printed.
+      rc ++;
+    }
+
   struct tms tms_after;
   times (& tms_after);
   unsigned _sc_clk_tck = sysconf (_SC_CLK_TCK);
@@ -633,6 +647,7 @@ passes_0_4 (systemtap_session &s)
   // syntax errors, if any, are already printed
   if (s.verbose)
     {
+      // XXX also include a count of helper macro files loaded (.stpm)?
       clog << "Pass 1: parsed user script and "
            << s.library_files.size()
            << " library script(s) "
