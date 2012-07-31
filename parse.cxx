@@ -470,7 +470,7 @@ parser::scan_pp1 ()
             throw parse_error (_F("attempt to redefine macro '@%s' in the same file", name.c_str ()), t);
           // TODOXXX this is only really necessary if we want to leave open the possibility of statically-scoped semantics in the future...?
 
-          // TODOXXX this cascades into further parse errors as the
+          // XXX this cascades into further parse errors as the
           // parser tries to parse the remaining definition...
           if (name == "define")
             throw parse_error (_("attempt to redefine '@define'"), t);
@@ -925,6 +925,8 @@ parser::scan_pp ()
             throw parse_error (_("incomplete conditional - missing '%('"), t);
           if (pp == PP_KEEP_ELSE || pp == PP_SKIP_ELSE)
             throw parse_error (_("invalid conditional - duplicate '%:'"), t);
+          // XXX: here and elsewhere, error cascades might be avoided
+          // by dropping tokens until we reach the closing %)
 
           pp_state.back().second = (pp == PP_KEEP_THEN) ?
                                    PP_SKIP_ELSE : PP_KEEP_ELSE;
