@@ -15,7 +15,7 @@ probe begin {
 	print (_struct_compat_itimerval_u(0))
 	print (_struct_sockaddr_u(0,0))
 	print (_struct_rlimit_u(0))
-	print (_fildes_u(0))
+	print (_fildes_index_u(0, 0))
 
 	print (__sem_flags(0))
 	print (__get_argv(0,0))

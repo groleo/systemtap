@@ -392,7 +392,7 @@ function _fildes_index_u:long (uaddr:long, index:long)
 	int fd[2];
 	char *ptr = (char *)(unsigned long)STAP_ARG_uaddr;
 
-	if (ptr == NULL)
+	if (ptr == NULL || !(STAP_ARG_index == 0 || STAP_ARG_index == 1))
 		STAP_RETVALUE = 0;
 	else {
 		if (_stp_copy_from_user((char *)&fd, ptr, 2*sizeof(int)) == 0)
