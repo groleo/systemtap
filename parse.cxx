@@ -481,41 +481,48 @@ parser::scan_pp1 ()
           delete t;
 
           // determine if the macro takes parameters
+          bool saw_params = false;
           t = input.scan();
           if (t && t->type == tok_operator && t->content == "(")
-            do
-              {
-                delete t;
-
-                t = input.scan ();
-                if (! (t && t->type == tok_identifier))
-                  throw parse_error(_("expected identifier"), t);
-                decl->param_names.push_back(t->content);
-                delete t;
-
-                t = input.scan ();
-                if (t && t->type == tok_operator && t->content == ",")
-                  {
-                    continue;
-                  }
-                else if (t && t->type == tok_operator && t->content == ")")
-                  {
-                    delete t;
-                    t = input.scan();
-                    break;
-                  }
-                else
-                  {
-                    throw parse_error (_("expected ',' or ')'"), t);
-                  }
-              }
-            while (true);
+            {
+              saw_params = true;
+              do
+                {
+                  delete t;
+                  
+                  t = input.scan ();
+                  if (! (t && t->type == tok_identifier))
+                    throw parse_error(_("expected identifier"), t);
+                  decl->param_names.push_back(t->content);
+                  delete t;
+                  
+                  t = input.scan ();
+                  if (t && t->type == tok_operator && t->content == ",")
+                    {
+                      continue;
+                    }
+                  else if (t && t->type == tok_operator && t->content == ")")
+                    {
+                      delete t;
+                      t = input.scan();
+                      break;
+                    }
+                  else
+                    {
+                      throw parse_error (_("expected ',' or ')'"), t);
+                    }
+                }
+              while (true);
+            }
 
           // (2) identify & consume macro body
           if (! (t && t->type == tok_operator && t->content == "%("))
-            // TODOXXX support & document heredoc & one-line macros
-            throw parse_error (_("expected '%('"), t);
-            // TODOXXX perhaps 'expected '%(' or '(' if params not seen?
+            {
+              if (saw_params)
+                throw parse_error (_("expected '%('"), t);
+              else
+                throw parse_error (_("expected '%(' or '('"), t);
+            }
           delete t;
 
           t = slurp_pp1_body (decl->body);
