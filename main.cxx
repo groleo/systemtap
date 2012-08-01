@@ -595,19 +595,6 @@ passes_0_4 (systemtap_session &s)
   if (s.num_errors())
     rc ++;
 
-  if (rc == 0 && s.last_pass == 1)
-    {
-      cout << _("# parse tree dump") << endl;
-      s.user_file->print (cout);
-      cout << endl;
-      if (s.verbose)
-        for (unsigned i=0; i<s.library_files.size(); i++)
-          {
-            s.library_files[i]->print (cout);
-            cout << endl;
-          }
-    }
-
   // PASS 1b: PARSING USER SCRIPT
   PROBE1(stap, pass1b__start, &s);
 
@@ -628,6 +615,19 @@ passes_0_4 (systemtap_session &s)
     {
       // Syntax errors already printed.
       rc ++;
+    }
+
+  if (rc == 0 && s.last_pass == 1)
+    {
+      cout << _("# parse tree dump") << endl;
+      s.user_file->print (cout);
+      cout << endl;
+      if (s.verbose)
+        for (unsigned i=0; i<s.library_files.size(); i++)
+          {
+            s.library_files[i]->print (cout);
+            cout << endl;
+          }
     }
 
   struct tms tms_after;
