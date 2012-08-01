@@ -27,6 +27,8 @@ run "find /debugfs /proc /sys /dev -name '*kprobes*' 2>/dev/null | xargs grep ."
 run "lsmod"
 run "avahi-browse -r -t _stap._tcp"
 run "ifconfig -a"
+run "eu-readelf -n /boot/vmlinuz-`uname -r` | grep Build"
+run "eu-readelf -n /usr/lib/debug/lib/modules/`uname -r`/vmlinux | grep Build"
 run "hexdump -C /sys/kernel/notes"
 for file in /sys/module/*/notes/.*build*
 do
