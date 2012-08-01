@@ -113,9 +113,14 @@ To list the probeable functions and local variables in the kernel, use another l
 
 .SH MORE EXAMPLES
 
-The directory to find more examples can be found in the stappaths (7) manual page.
+The directory to find more examples can be found in the stappaths (7) manual page,
+and online at
+.nh
+.BR http://sourceware.org/systemtap/examples/
+.hy
 
 .SH SEE ALSO
 .IR stap (1)
 .IR stapprobes (3stap)
 .IR stappaths (7)
+
