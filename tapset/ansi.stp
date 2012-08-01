@@ -106,7 +106,7 @@ function ansi_cursor_hide() {
 }
 
 /**
- * sfunction ansi_cursor_saves - Saves the cursor position.
+ * sfunction ansi_cursor_save - Saves the cursor position.
  *
  * Description: Sends ansi code for saving the current cursor position.
  */
@@ -115,7 +115,7 @@ function ansi_cursor_save() {
 }
 
 /**
- * sfunction ansi_cursor_saves - Restores a previously saved cursor position.
+ * sfunction ansi_cursor_restore - Restores a previously saved cursor position.
  *
  * Description: Sends ansi code for restoring the current cursor position
  * previously saved with ansi_cursor_save().
