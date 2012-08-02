@@ -1,0 +1,108 @@
+// context tapset
+// Copyright (C) 2012 Red Hat, Inc.
+//
+// This file is part of systemtap, and is free software.  You can
+// redistribute it and/or modify it under the terms of the GNU General
+// Public License (GPL); either version 2, or (at your option) any
+// later version.
+
+// NB: functionally equivalent to linux/context.stp
+
+%{
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <unistd.h>
+%}
+
+// TODO function print_regs ()
+
+// TODO function execname:string ()
+
+function pid:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = getpid();
+%}
+
+function tid:long ()
+%{ /* pure */ /* unprivileged */
+        /* NB: no glibc wrapper available */
+	STAP_RETVALUE = syscall(SYS_gettid);
+%}
+
+function ppid:long()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = getppid();
+%}
+
+function pgrp:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = getpgrp();
+%}
+
+function sid:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = getsid(0);
+%}
+
+// TODO function pexecname:string ()
+
+function gid:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = getgid();
+%}
+
+function egid:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = getegid();
+%}
+
+function uid:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = getuid();
+%}
+
+function euid:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = geteuid();
+%}
+
+
+// TODO function is_myproc:long ()
+// NB: dyninst by nature is myproc-only, *except if you're root*
+
+// TODO function cpu:long ()
+
+// TODO function registers_valid:long ()
+
+function user_mode:long ()
+{
+	return 1;
+}
+
+// TODO function is_return:long ()
+
+// TODO function target:long ()
+
+// TODO function module_name:string ()
+
+// TODO function stp_pid:long ()
+
+// TODO function remote_id:long ()
+
+// TODO function remote_uri:string ()
+
+// TODO function stack_size:long ()
+
+// TODO function stack_used:long ()
+
+// TODO function stack_unused:long ()
+
+// TODO function addr:long ()
+
+// TODO function uaddr:long ()
+
+// TODO function cmdline_args:string(n:long, m:long, delim:string)
+
+// TODO function cmdline_arg:string(n:long)
+
+// TODO function cmdline_str:string()
