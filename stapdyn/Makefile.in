@@ -637,7 +637,7 @@ uninstall-am: uninstall-binPROGRAMS
 	uninstall-am uninstall-binPROGRAMS
 
 git_version.stamp ../git_version.h:
-	$(MAKE) -C .. $@
+	$(MAKE) -C .. $(notdir $@)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -54,7 +54,7 @@ CLEANFILES =
 # Arrange for the top-level git_version.h to be regenerated at every "make".
 BUILT_SOURCES += git_version.stamp
 git_version.stamp ../git_version.h:
-	$(MAKE) -C .. $@
+	$(MAKE) -C .. $(notdir $@)
 
 
 # Why the "id -u" condition?  This way, an unprivileged user can run

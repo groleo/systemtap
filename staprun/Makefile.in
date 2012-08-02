@@ -876,7 +876,7 @@ uninstall-man: uninstall-man8
 	uninstall-man uninstall-man8 uninstall-pkglibexecPROGRAMS
 
 git_version.stamp ../git_version.h:
-	$(MAKE) -C .. $@
+	$(MAKE) -C .. $(notdir $@)
 
 # Why the "id -u" condition?  This way, an unprivileged user can run
 # make install, and have "sudo stap ...." or "sudo staprun ...." work later.
