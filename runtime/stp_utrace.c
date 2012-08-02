@@ -322,7 +322,7 @@ static bool utrace_task_alloc(struct task_struct *task)
 		kmem_cache_free(utrace_cachep, utrace);
 	}
 
-	init_task_work(&utrace->work, &utrace_resume, NULL);
+	stp_init_task_work(&utrace->work, &utrace_resume);
 	return true;
 }
 
