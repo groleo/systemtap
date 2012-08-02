@@ -19,7 +19,7 @@ extern "C" {
 #include <BPatch_object.h>
 
 #include "config.h"
-#include "git_version.h"
+#include "../git_version.h"
 
 #include "dynutil.h"
 

@@ -16,7 +16,7 @@
 #include <sys/utsname.h>
 #include <assert.h>
 #include <string.h>
-#include "git_version.h"
+#include "../git_version.h"
 
 /* variables needed by parse_args() */
 int verbose;
