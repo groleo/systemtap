@@ -16,6 +16,7 @@
 #include <linux/namei.h>
 #include <linux/rwlock.h>
 #include <linux/uprobes.h>
+#include <linux/mutex.h>
 
 /* STAPIU: SystemTap Inode Uprobes */
 
@@ -53,12 +54,14 @@ struct stapiu_target {
 
 	const char * const filename;
 	struct inode *inode;
+	struct mutex lock;
 };
 
 
 /* A consumer is a specific uprobe that we want to place.  */
 struct stapiu_consumer {
 	struct uprobe_consumer consumer;
+	unsigned registered;
 
 	struct list_head target_consumer;
 	struct stapiu_target * const target;
@@ -84,6 +87,18 @@ static struct stapiu_process {
  * XXX: consider fine-grained locking for target-processes.  */
 DEFINE_RWLOCK(stapiu_process_lock);
 
+
+static inline void
+stapiu_target_lock(struct stapiu_target *target)
+{
+	mutex_lock(&target->lock);
+}
+
+static inline void
+stapiu_target_unlock(struct stapiu_target *target)
+{
+	mutex_unlock(&target->lock);
+}
 
 /* Read-modify-write a semaphore, usually +/- 1.  */
 static int
@@ -196,92 +211,86 @@ stapiu_decrement_semaphores(struct stapiu_target *targets, size_t ntargets)
 }
 
 
-/* Release our reference to the inode in every target.  */
+/* Unregister all uprobe consumers of a target.  */
 static void
-stapiu_put(struct stapiu_target *targets, size_t ntargets)
+stapiu_target_unreg(struct stapiu_target *target)
 {
-	size_t i;
-	for (i = 0; i < ntargets; ++i) {
-		struct stapiu_target *ut = &targets[i];
-		/* NB: task_finder needs no unregister. */
-		iput(ut->inode);
-		ut->inode = NULL;
+	struct stapiu_consumer *c;
+
+	if (! target->inode)
+		return;
+	list_for_each_entry(c, &target->consumers, target_consumer) {
+		if (c->registered) {
+			c->registered = 0;
+			uprobe_unregister(target->inode, c->offset,
+					  &c->consumer);
+		}
 	}
 }
 
 
-/* Initialize every target, finding and grabbing a reference to the inode.  */
+/* Register all uprobe consumers of a target.  */
 static int
-stapiu_get(struct stapiu_target *targets, size_t ntargets)
+stapiu_target_reg(struct stapiu_target *target)
+{
+	int ret = 0;
+	struct stapiu_consumer *c;
+
+	list_for_each_entry(c, &target->consumers, target_consumer) {
+		if (! c->registered) {
+			ret = uprobe_register(target->inode, c->offset, &c->consumer);
+			if (ret) {
+				c->registered = 0;
+				_stp_error("probe %s registration error (rc %d)",
+					   c->probe->pp, ret);
+				break;
+			}
+			c->registered = 1;
+		}
+	}
+	if (ret)
+		stapiu_target_unreg(target);
+	return ret;
+}
+
+
+/* Cleanup every target.  */
+static void
+stapiu_exit_targets(struct stapiu_target *targets, size_t ntargets)
+{
+	size_t i;
+	for (i = 0; i < ntargets; ++i) {
+		struct stapiu_target *ut = &targets[i];
+
+		stapiu_target_unreg(ut);
+
+		/* NB: task_finder needs no unregister. */
+		if (ut->inode) {
+			iput(ut->inode);
+			ut->inode = NULL;
+		}
+	}
+}
+
+
+/* Initialize every target.  */
+static int
+stapiu_init_targets(struct stapiu_target *targets, size_t ntargets)
 {
 	int ret = 0;
 	size_t i;
 	for (i = 0; i < ntargets; ++i) {
-		struct path path;
 		struct stapiu_target *ut = &targets[i];
 		INIT_LIST_HEAD(&ut->consumers);
 		INIT_LIST_HEAD(&ut->processes);
+		mutex_init(&ut->lock);
 		ret = stap_register_task_finder_target(&ut->finder);
 		if (ret != 0) {
 			_stp_error("Couldn't register task finder target for file '%s': %d\n",
 				   ut->filename, ret);
 			break;
 		}
-
-		ret = kern_path(ut->filename, LOOKUP_FOLLOW, &path);
-		if (ret != 0) {
-			_stp_error("Couldn't lookup file '%s': %d\n",
-				   ut->filename, ret);
-			break;
-		}
-
-		ut->inode = igrab(path.dentry->d_inode);
-		if (!ut->inode) {
-			_stp_error("Couldn't get inode for file '%s'\n",
-				   ut->filename);
-			ret = -EINVAL;
-			break;
-		}
 	}
-	if (ret)
-		stapiu_put(targets, i);
-	return ret;
-}
-
-
-/* Unregister all uprobe consumers.  */
-static void
-stapiu_unreg(struct stapiu_consumer *consumers, size_t nconsumers)
-{
-	size_t i;
-	for (i = 0; i < nconsumers; ++i) {
-		struct stapiu_consumer *uc = &consumers[i];
-		list_del(&uc->target_consumer);
-		uprobe_unregister(uc->target->inode, uc->offset,
-				  &uc->consumer);
-	}
-}
-
-
-/* Register all uprobe consumers.  */
-static int
-stapiu_reg(struct stapiu_consumer *consumers, size_t nconsumers)
-{
-	int ret = 0;
-	size_t i;
-	for (i = 0; i < nconsumers; ++i) {
-		struct stapiu_consumer *uc = &consumers[i];
-		ret = uprobe_register(uc->target->inode, uc->offset,
-				      &uc->consumer);
-		if (ret) {
-			_stp_error("probe %s registration error (rc %d)",
-				   uc->probe->pp, ret);
-			break;
-		}
-		list_add(&uc->target_consumer, &uc->target->consumers);
-	}
-	if (ret)
-		stapiu_unreg(consumers, i);
 	return ret;
 }
 
@@ -291,11 +300,16 @@ static int
 stapiu_init(struct stapiu_target *targets, size_t ntargets,
 	    struct stapiu_consumer *consumers, size_t nconsumers)
 {
-	int ret = stapiu_get(targets, ntargets);
+	int ret = stapiu_init_targets(targets, ntargets);
 	if (!ret) {
-		ret = stapiu_reg(consumers, nconsumers);
-		if (ret)
-			stapiu_put(targets, ntargets);
+		size_t i;
+
+		/* Connect each consumer to its target. */
+		for (i = 0; i < nconsumers; ++i) {
+			struct stapiu_consumer *uc = &consumers[i];
+			list_add(&uc->target_consumer,
+				 &uc->target->consumers);
+		}
 	}
 	return ret;
 }
@@ -307,8 +321,7 @@ stapiu_exit(struct stapiu_target *targets, size_t ntargets,
 	    struct stapiu_consumer *consumers, size_t nconsumers)
 {
 	stapiu_decrement_semaphores(targets, ntargets);
-	stapiu_unreg(consumers, nconsumers);
-	stapiu_put(targets, ntargets);
+	stapiu_exit_targets(targets, ntargets);
 }
 
 
@@ -318,12 +331,57 @@ stapiu_exit(struct stapiu_target *targets, size_t ntargets,
 static int
 stapiu_change_plus(struct stapiu_target* target, struct task_struct *task,
 		   unsigned long relocation, unsigned long length,
-		   unsigned long offset, unsigned long vm_flags)
+		   unsigned long offset, unsigned long vm_flags,
+		   struct inode *inode)
 {
 	size_t i;
 	struct stapiu_process *p;
 	int rc;
 
+	/* Check the buildid of the target (if we haven't already). We
+	 * lock the target so we don't have concurrency issues. */
+	stapiu_target_lock(target);
+	if (! target->inode) {
+		if (! inode) {
+			rc = -EINVAL;
+			stapiu_target_unlock(target);
+			return rc;
+		}
+
+		/* Grab the inode first (to prevent TOCTTOU problems). */
+		target->inode = igrab(inode);
+		if (!target->inode) {
+			_stp_error("Couldn't get inode for file '%s'\n",
+				   target->filename);
+			rc = -EINVAL;
+			stapiu_target_unlock(target);
+			return rc;
+		}
+
+		/* Actually do the check. */
+		if ((rc = _stp_usermodule_check(task, target->filename,
+						relocation))) {
+			/* Be sure to release the inode on failure. */
+			iput(target->inode);
+			target->inode = NULL;
+			stapiu_target_unlock(target);
+			return rc;
+		}
+
+		/* OK, we've checked the target's buildid. Now
+		 * register all its consumers. */
+		rc = stapiu_target_reg(target);
+		if (rc) {
+			/* Be sure to release the inode on failure. */
+			iput(target->inode);
+			target->inode = NULL;
+			stapiu_target_unlock(target);
+			return rc;
+		}
+	}
+	stapiu_target_unlock(target);
+
+	/* Associate this target with this process. */
 	write_lock(&stapiu_process_lock);
 	for (i = 0; i < MAXUPROBES; ++i) {
 		p = &stapiu_process_slots[i];
@@ -338,10 +396,6 @@ stapiu_change_plus(struct stapiu_target* target, struct task_struct *task,
 		}
 	}
 	write_unlock(&stapiu_process_lock);
-
-	if ((rc = _stp_usermodule_check(task, target->filename,
-					relocation)))
-		return rc;
 
 	return 0; /* XXX: or an error? maxskipped? */
 }
@@ -397,6 +451,11 @@ stapiu_change_minus(struct stapiu_target* target, struct task_struct *task,
 		    unsigned long relocation, unsigned long length)
 {
 	struct stapiu_process *p, *tmp;
+
+	/* NB: we aren't unregistering uprobes and releasing the
+	 * inode here.  The registration is system-wide, based on
+	 * inode, not process based.  */
+
 	write_lock(&stapiu_process_lock);
 	list_for_each_entry_safe(p, tmp, &target->processes, target_process) {
 		if (p->tgid == task->tgid && (relocation <= p->relocation &&
@@ -407,6 +466,41 @@ stapiu_change_minus(struct stapiu_target* target, struct task_struct *task,
 	}
 	write_unlock(&stapiu_process_lock);
 	return 0;
+}
+
+
+static struct inode *
+stapiu_get_task_inode(struct task_struct *task)
+{
+	struct mm_struct *mm;
+	struct vm_area_struct *vma;
+	struct inode *inode = NULL;
+
+	// Grab the inode associated with the task.
+	//
+	// Note we're not calling get_task_mm()/mmput() here.  Since
+	// we're in the the context of task, the mm should stick
+	// around without locking it (and mmput() can sleep).
+	mm = task->mm;
+	if (! mm) {
+		/* If the thread doesn't have a mm_struct, it is
+		 * a kernel thread which we need to skip. */
+		return NULL;
+	}
+
+	down_read(&mm->mmap_sem);
+	vma = mm->mmap;
+	while (vma) {
+		if ((vma->vm_flags & VM_EXECUTABLE) && vma->vm_file
+		    && vma->vm_file->f_path.dentry != NULL) {
+			inode = vma->vm_file->f_path.dentry->d_inode;
+			break;
+		}
+		vma = vma->vm_next;
+	}
+
+	up_read(&mm->mmap_sem);
+	return inode;
 }
 
 
@@ -423,8 +517,15 @@ stapiu_process_found(struct stap_task_finder_target *tf_target,
 
 	/* ET_EXEC events are like shlib events, but with 0 relocation bases */
 	if (register_p) {
-		int rc = stapiu_change_plus(target, task, 0, TASK_SIZE, 0, 0);
-		stapiu_change_semaphore_plus(target, task, 0, TASK_SIZE);
+		int rc = -EINVAL;
+		struct inode *inode = stapiu_get_task_inode(task);
+
+		if (inode) {
+			rc = stapiu_change_plus(target, task, 0, TASK_SIZE,
+						0, 0, inode);
+			stapiu_change_semaphore_plus(target, task, 0,
+						     TASK_SIZE);
+		}
 		return rc;
 	} else
 		return stapiu_change_minus(target, task, 0, TASK_SIZE);
@@ -443,10 +544,12 @@ stapiu_mmap_found(struct stap_task_finder_target *tf_target,
 	struct stapiu_target *target =
 		container_of(tf_target, struct stapiu_target, finder);
 
-	/* Sanity check that the inodes match.
-	 * Doesn't guarantee safety, but it's a start.
+	/* Sanity check that the inodes match (if the target's inode
+	 * is set). Doesn't guarantee safety, but it's a start.  If
+	 * the target's inode isn't set, this is the first time we've
+	 * seen this target.
 	 */
-	if (dentry->d_inode != target->inode)
+	if (target->inode && dentry->d_inode != target->inode)
 		return 0;
 
 	/* The file path must match too. */
@@ -458,19 +561,21 @@ stapiu_mmap_found(struct stap_task_finder_target *tf_target,
 	 *     so stap_uprobe_change_plus can set a semaphore,
 	 *     i.e. a static extern, in a shared object
 	 * 2 - the shared library we're interested in
-	 * 3 - mapping should be executable or writeable (for semaphore in .so)
+	 * 3 - mapping should be executable or writeable (for
+	 *     semaphore in .so)
 	 *     NB: or both, on kernels that lack noexec mapping
 	 */
 
 	/* Check non-writable, executable sections for probes. */
 	if ((vm_flags & VM_EXEC) && !(vm_flags & VM_WRITE))
-		rc = stapiu_change_plus(target, task,
-				addr, length, offset, vm_flags);
+		rc = stapiu_change_plus(target, task, addr, length,
+					offset, vm_flags, dentry->d_inode);
 
 	/* Check writeable sections for semaphores.
-	 * NB: They may have also been executable for the check above, if we're
-	 *     running a kernel that lacks noexec mappings.  So long as there's
-	 *     no error (rc == 0), we need to look for semaphores too.
+	 * NB: They may have also been executable for the check above,
+	 *     if we're running a kernel that lacks noexec mappings.
+	 *     So long as there's no error (rc == 0), we need to look
+	 *     for semaphores too. 
 	 */
 	if ((rc == 0) && (vm_flags & VM_WRITE))
 		rc = stapiu_change_semaphore_plus(target, task, addr, length);
