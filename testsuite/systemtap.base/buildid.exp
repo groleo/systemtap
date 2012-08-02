@@ -103,13 +103,24 @@ expect {
 catch {close}; catch {wait}
 if { [error_handler [expr $ok==1] "$test ok ($ok)"] } { return }
 
-# now alter the build id using objcopy
-
-set bid_bid $srcdir/$subdir/buildid.hex
-system "objcopy --remove-section=.note.gnu.build-id buildid.ro buildid1.ro"
-system "objcopy --add-section .note.gnu.build-id=$bid_bid buildid1.ro buildid2.ro"
-set res [target_compile "" $bid_exepath executable "additional_flags=buildid2.ro"]
-if { [error_handler [expr {$res==""}] "$bid_exepath altered"] } { return }
+# Alter the build id using objcopy.  First, remove the build id from
+# the target executable.  (Since the next test relinks the target
+# executable, this is OK.)
+set status 0
+if {[catch {exec objcopy --remove-section=.note.gnu.build-id $bid_exepath} \
+	   res]} {
+    if {[lindex $::errorCode 0] eq "CHILDSTATUS"} {
+	set status [lindex $::errorCode 2]
+    }
+}
+if {$status == 0 && [file exists $bid_exepath]} {
+    pass "$test (build id removal)"
+} else {
+    verbose -log $res
+    fail "$test (build id removal)"
+    cleanup_handler $verbose
+    return
+}
 
 set ok 0
 spawn staprun $bid_ko -c $bid_exepath
@@ -120,7 +131,25 @@ expect {
     eof { }
 }
 catch {close}; catch {wait}
-error_handler [expr $ok==1] "$test !ok ($ok)"
+if { [error_handler [expr $ok==1] "$test !ok - removed ($ok)"] } { return }
+
+# Alter the build id using objcopy.  Add in an additional build id section.
+set bid_bid $srcdir/$subdir/buildid.hex
+system "objcopy --remove-section=.note.gnu.build-id buildid.ro buildid1.ro"
+system "objcopy --add-section .note.gnu.build-id=$bid_bid buildid1.ro buildid2.ro"
+set res [target_compile "" $bid_exepath executable "additional_flags=buildid2.ro"]
+if { [error_handler [expr {$res==""}] "$test (build id modified)"] } { return }
+
+set ok 0
+spawn staprun $bid_ko -c $bid_exepath
+expect {
+    -timeout 180
+    -re {ERROR: Build-id mismatch} { incr ok; exp_continue }
+    timeout { fail "$test (timeout)" }
+    eof { }
+}
+catch {close}; catch {wait}
+error_handler [expr $ok==1] "$test !ok - modified ($ok)"
 
 # stap -DSTP_NO_BUILDID_CHECK with altered build id
 
@@ -200,10 +229,22 @@ expect {
 catch {close}; catch {wait}
 if { [error_handler [expr $ok==1] "$test ok ($ok)"] } { return }
 
-# now alter the build id using objcopy
-
-system "objcopy --remove-section=.note.gnu.build-id libbid.so libbid1.so"
-system "objcopy --add-section .note.gnu.build-id=$bid_bid libbid1.so libbid.so"
+# Alter the build id using objcopy.  First, remove the build id from
+# the target library.
+set status 0
+if {[catch {exec objcopy --remove-section=.note.gnu.build-id libbid.so} res]} {
+    if {[lindex $::errorCode 0] eq "CHILDSTATUS"} {
+	set status [lindex $::errorCode 2]
+    }
+}
+if {$status == 0 && [file exists libbid.so]} {
+    pass "$test (build id removal)"
+} else {
+    verbose -log $res
+    fail "$test (build id removal)"
+    cleanup_handler $verbose
+    return
+}
 
 set ok 0
 spawn staprun $bid_shared_ko -c $bid_exepath
@@ -214,6 +255,29 @@ expect {
     eof { }
 }
 catch {close}; catch {wait}
-error_handler [expr $ok==1] "$test !ok ($ok)"
+if { [error_handler [expr $ok==1] "$test !ok - removed ($ok)"] } { return }
+
+# Alter the build id using objcopy.  Add in an "bad" build id
+# section. 
+catch {exec objcopy --add-section .note.gnu.build-id=$bid_bid libbid.so} res
+if {[file exists libbid.so]} {
+    pass "$test (build id modified)"
+} else {
+    verbose -log $res
+    fail "$test (build id modified)"
+    cleanup_handler $verbose
+    return
+}
+
+set ok 0
+spawn staprun $bid_shared_ko -c $bid_exepath
+expect {
+    -timeout 180
+    -re {ERROR: Build-id mismatch} { incr ok; exp_continue }
+    timeout { fail "$test (timeout)" }
+    eof { }
+}
+catch {close}; catch {wait}
+error_handler [expr $ok==1] "$test !ok - modified ($ok)"
 
 cleanup_handler $verbose
