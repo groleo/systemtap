@@ -530,9 +530,63 @@ passes_0_4 (systemtap_session &s)
       version_suffixes.insert(version_suffixes.begin() + i/2,
                               runtime_prefix + version_suffixes[i]);
 
+  // First, gather a list of library macros for further reference.
+  // (We need the entire list available before we parse any files.)
+  for (unsigned i=0; i<s.include_path.size(); i++)
+    {
+      // now iterate upon it
+      for (unsigned k=0; k<version_suffixes.size(); k++)
+        {
+          glob_t globbuf;
+          string dir = s.include_path[i] + version_suffixes[k] + "/*.stpm";
+          int r = glob(dir.c_str (), 0, NULL, & globbuf);
+          if (r == GLOB_NOSPACE || r == GLOB_ABORTED)
+            rc ++;
+          // GLOB_NOMATCH is acceptable
+
+          for (unsigned j=0; j<globbuf.gl_pathc; j++)
+            {
+              string path(globbuf.gl_pathv[j]);
+
+              // extract the macro name
+              assert (path.substr (path.size() - 5) == ".stpm");
+              size_t pos = path.find_last_of ("/") + 1;
+              if (pos >= path.size()) pos = 0;
+              string name = path.substr (pos, path.size() - 5);
+
+              // handle conflicts between identically named .stpm files
+              if (s.library_macro_paths.find(name)
+                  != s.library_macro_paths.end())
+                // XXX provide some facility for resolving the conflict?
+                // e.g. we might have some paths take priority over other paths
+                {
+                  s.print_warning
+                    ("Library macro in '" + path + "' conflicts with '"
+                     + s.library_macro_paths[name] + "', ignoring both."); // TODOXXX internationalization?
+
+                  // mark the error in nonfatal fashion
+                  s.library_macro_paths[name] = "";
+                  continue;
+                }
+
+              s.library_macro_paths[name] = string(path);
+
+              // The actual parsing occurs on-demand due to the
+              // possibility of .stpm macros needing to refer to one
+              // another (in non-cyclical fashion) at parse time.
+            }
+
+          if (s.verbose>1 && globbuf.gl_pathc > 0)
+            clog << _F("Searched: \" %s \", found: %zu macro definitions",
+                       dir.c_str(), globbuf.gl_pathc) << endl;
+
+          globfree (&globbuf);
+        }
+    }
+
+  // Next, gather and parse the library files.
   set<pair<dev_t, ino_t> > seen_library_files;
 
-  // TODOXXX gather a list of .stpm file paths using a similar method
   for (unsigned i=0; i<s.include_path.size(); i++)
     {
       // now iterate upon it
@@ -577,7 +631,7 @@ passes_0_4 (systemtap_session &s)
               stapfile* f = parse (s, globbuf.gl_pathv[j], true);
               if (f == 0)
                 s.print_warning("tapset '" + string(globbuf.gl_pathv[j])
-                                + "' has errors, and will be skipped.");
+                                + "' has errors, and will be skipped."); // TODOXXX internationalization?
               else
                 s.library_files.push_back (f);
             }
