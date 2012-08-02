@@ -23,9 +23,14 @@ cat $SRCTREE/doc/SystemTap_Tapset_Reference/tapsets.tmpl | grep  ^\!Itapset > ma
 sed -i -e 's/\!Itapset\///g' manpageus ;
 
 # copy list of man pages into working directory
+# with similar basenames concatenated
 for i in `cat manpageus` ; do
-  cp $SRCTREE/tapset/$i workingdir ;
+  b=`basename $i`
+  cat $SRCTREE/tapset/$i >>workingdir/$b ;
 done ;
+
+# rewrite manpageus to the resulting files
+ls workingdir >manpageus
 
 # enter workdir
 cd workingdir ;

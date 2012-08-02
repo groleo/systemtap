@@ -117,16 +117,17 @@
       and the current register values for the processor.
     </para>
 !Itapset/context.stp
-!Itapset/context-envvar.stp
-!Itapset/context-symbols.stp
-!Itapset/ucontext.stp
-!Itapset/ucontext-symbols.stp
-!Itapset/context-unwind.stp
-!Itapset/context-caller.stp
-!Itapset/ucontext-unwind.stp
-!Itapset/task.stp
+!Itapset/linux/context.stp
+!Itapset/linux/context-envvar.stp
+!Itapset/linux/context-symbols.stp
+!Itapset/linux/ucontext.stp
+!Itapset/linux/ucontext-symbols.stp
+!Itapset/linux/context-unwind.stp
+!Itapset/linux/context-caller.stp
+!Itapset/linux/ucontext-unwind.stp
+!Itapset/linux/task.stp
 !Itapset/pn.stp
-!Itapset/pstrace.stp
+!Itapset/linux/pstrace.stp
 !Itapset/registers.stp
   </chapter>
 
@@ -139,9 +140,9 @@
       when an event occurred, provide an ordering for events, or compute
       the amount of time elapsed between two time stamps.
     </para>
-!Itapset/timestamp.stp
-!Itapset/timestamp_gtod.stp
-!Itapset/timestamp_monotonic.stp
+!Itapset/linux/timestamp.stp
+!Itapset/linux/timestamp_gtod.stp
+!Itapset/linux/timestamp_monotonic.stp
 !Itapset/stopwatch.stp
   </chapter>
 
@@ -152,7 +153,7 @@
       the timestamp function gettimeofday_s()) into a human readable
       date/time strings.
     </para>
-!Itapset/ctime.stp
+!Itapset/linux/ctime.stp
 !Itapset/tzinfo.stp
   </chapter>
 
@@ -172,8 +173,8 @@
       or query the memory usage of the current process.
       It contains the following probe points:
     </para>
-!Itapset/memory.stp
-!Itapset/proc_mem.stp
+!Itapset/linux/memory.stp
+!Itapset/linux/proc_mem.stp
   </chapter>
 
   <chapter id="task_time_stp">
@@ -183,7 +184,7 @@
       properties of the current tasks, translate those in miliseconds
       and human readable strings.
     </para>
-!Itapset/task_time.stp
+!Itapset/linux/task_time.stp
   </chapter>
 
   <chapter id="sched.stp">
@@ -192,7 +193,7 @@
       This family of probe points is used to probe the task scheduler activities.
       It contains the following probe points:
     </para>
-!Itapset/scheduler.stp
+!Itapset/linux/scheduler.stp
   </chapter>
 
   <chapter id="iosched.stp">
@@ -201,8 +202,8 @@
       This family of probe points is used to probe block IO layer and IO scheduler activities.
       It contains the following probe points:
     </para>
-!Itapset/ioscheduler.stp
-!Itapset/ioblock.stp
+!Itapset/linux/ioscheduler.stp
+!Itapset/linux/ioblock.stp
   </chapter>
 
   <chapter id="scsi.stp">
@@ -211,7 +212,7 @@
       This family of probe points is used to probe SCSI activities.  
       It contains the following probe points:
     </para>
-!Itapset/scsi.stp
+!Itapset/linux/scsi.stp
   </chapter>
 
   <chapter id="tty.stp">
@@ -220,7 +221,7 @@
       This family of probe points is used to probe TTY (Teletype) activities.
       It contains the following probe points:
     </para>
-!Itapset/tty.stp
+!Itapset/linux/tty.stp
   </chapter>
 
   <chapter id="irq.stp">
@@ -230,7 +231,7 @@
       (IRQ) activities.
       It contains the following probe points:
     </para>
-!Itapset/irq.stp
+!Itapset/linux/irq.stp
   </chapter>
 
   <chapter id="networking.stp">
@@ -239,13 +240,13 @@
       This family of probe points is used to probe the activities of
       the network device and protocol layers.
     </para>
-!Itapset/networking.stp
-!Itapset/tcp.stp
-!Itapset/udp.stp
-!Itapset/ip.stp
-!Itapset/inet.stp
-!Itapset/rpc.stp
-!Itapset/netfilter.stp
+!Itapset/linux/networking.stp
+!Itapset/linux/tcp.stp
+!Itapset/linux/udp.stp
+!Itapset/linux/ip.stp
+!Itapset/linux/inet.stp
+!Itapset/linux/rpc.stp
+!Itapset/linux/netfilter.stp
   </chapter>
 
   <chapter id="socket.stp">
@@ -254,8 +255,8 @@
       This family of probe points is used to probe socket activities.
       It contains the following probe points:
    </para>
-!Itapset/socket.stp
-!Itapset/inet_sock.stp
+!Itapset/linux/socket.stp
+!Itapset/linux/inet_sock.stp
   </chapter>
   <chapter id="snmp.stp">
     <title>SNMP Information Tapset</title>
@@ -264,12 +265,12 @@
       provide SNMP type information. It contains the following functions
       and probe points:
    </para>
-!Itapset/ipmib.stp
-!Itapset/ipmib-filter-default.stp
-!Itapset/tcpmib.stp
-!Itapset/tcpmib-filter-default.stp
-!Itapset/linuxmib.stp
-!Itapset/linuxmib-filter-default.stp
+!Itapset/linux/ipmib.stp
+!Itapset/linux/ipmib-filter-default.stp
+!Itapset/linux/tcpmib.stp
+!Itapset/linux/tcpmib-filter-default.stp
+!Itapset/linux/linuxmib.stp
+!Itapset/linux/linuxmib-filter-default.stp
   </chapter>
   <chapter id="kprocess.stp">
     <title>Kernel Process Tapset</title>
@@ -277,8 +278,8 @@
       This family of probe points is used to probe process-related activities.
       It contains the following probe points:
     </para>
-!Itapset/kprocess.stp
-!Itapset/target_set.stp
+!Itapset/linux/kprocess.stp
+!Itapset/linux/target_set.stp
   </chapter>
   <chapter id="signal.stp">
     <title>Signal Tapset</title>
@@ -286,7 +287,7 @@
       This family of probe points is used to probe signal activities.
       It contains the following probe points:
     </para>
-!Itapset/signal.stp
+!Itapset/linux/signal.stp
   </chapter>
   <chapter id="errno.stp">
     <title>Errno Tapset</title>
@@ -302,7 +303,7 @@
       This set of functions is used to handle kernel and userspace device numbers.
       It contains the following functions:
     </para>
-!Itapset/dev.stp
+!Itapset/linux/dev.stp
   </chapter>
   <chapter id="dentry.stp">
     <title>Directory-entry (dentry) Tapset</title>
@@ -310,7 +311,7 @@
       This family of functions is used to map kernel VFS
       directory entry pointers to file or full path names.
     </para>
-!Itapset/dentry.stp
+!Itapset/linux/dentry.stp
     </chapter>
   <chapter id="logging.stp">
     <title>Logging Tapset</title>
@@ -319,6 +320,7 @@
       message strings to various destinations.
     </para>
 !Itapset/logging.stp
+!Itapset/linux/logging.stp
     </chapter>
   <chapter id="queue_stats.stp">
     <title>Queue Statistics Tapset</title>
@@ -341,9 +343,9 @@
       the kernel or a user space programs based on addresses. All
       strings are of a maximum length given by MAXSTRINGLEN.
     </para>
-!Itapset/conversions.stp
-!Itapset/atomic.stp
-!Itapset/uconversions.stp
+!Itapset/linux/conversions.stp
+!Itapset/linux/atomic.stp
+!Itapset/linux/uconversions.stp
    </chapter>
 
   <chapter id="conversions-guru.stp">
@@ -356,7 +358,7 @@
       memory. All the functions in this tapset require the use of
       guru mode (<command>-g</command>).
     </para>
-!Itapset/conversions-guru.stp
+!Itapset/linux/conversions-guru.stp
     </chapter>
 
   <chapter id="guru-delay.stp">
@@ -367,8 +369,8 @@
       All the functions in this tapset require the use of
       guru mode (<command>-g</command>).
     </para>
-!Itapset/guru-delay.stp
-!Itapset/panic.stp
+!Itapset/linux/guru-delay.stp
+!Itapset/linux/panic.stp
   </chapter>
 
   <chapter id="string.stp">
@@ -411,10 +413,10 @@
       This family of probe points is used to probe network file storage
       functions and operations.
     </para>
-!Itapset/nfs_proc.stp
-!Itapset/nfs.stp
-!Itapset/nfsd.stp
-!Itapset/nfsderrno.stp
+!Itapset/linux/nfs_proc.stp
+!Itapset/linux/nfs.stp
+!Itapset/linux/nfsd.stp
+!Itapset/linux/nfsderrno.stp
   </chapter>
 
   <chapter id="speculation.stp">
