@@ -95,6 +95,7 @@ static DEFINE_SPINLOCK(__stp_tf_task_work_list_lock);
 struct __stp_tf_task_work {
 	struct list_head list;
 	struct task_struct *task;
+	struct stap_task_finder_target *tgt;
 	struct task_work work;
 };
 
@@ -108,7 +109,8 @@ struct __stp_tf_task_work {
  * a 'struct task_work' for a task that isn't current, we'll need a
  * __stp_tf_alloc_task_work_for_task(task) variant.
  */
-static struct task_work *__stp_tf_alloc_task_work(void)
+static struct task_work *
+__stp_tf_alloc_task_work(struct stap_task_finder_target *tgt)
 {
 	struct __stp_tf_task_work *tf_work;
 	unsigned long flags;
@@ -120,6 +122,7 @@ static struct task_work *__stp_tf_alloc_task_work(void)
 	}
 
 	tf_work->task = current;
+	tf_work->tgt = tgt;
 
 	// Insert new item onto list.  This list could be a hashed
 	// list for easier lookup, but as short as the list should be
@@ -1205,7 +1208,9 @@ __stp_call_mmap_callbacks_for_task(struct stap_task_finder_target *tgt,
 static void
 __stp_tf_quiesce_worker(struct task_work *work)
 {
-	struct stap_task_finder_target *tgt = work->data;
+	struct __stp_tf_task_work *tf_work = \
+		container_of(work, struct __stp_tf_task_work, work);
+	struct stap_task_finder_target *tgt = tf_work->tgt;
 
 	might_sleep();
 	__stp_tf_free_task_work(work);
@@ -1287,12 +1292,12 @@ __stp_utrace_task_finder_target_quiesce(u32 action,
 
 		/* If we can't sleep, arrange for the task to truly
 		 * stop so we can sleep. */
-		work = __stp_tf_alloc_task_work();
+		work = __stp_tf_alloc_task_work(tgt);
 		if (work == NULL) {
 			_stp_error("Unable to allocate space for task_work");
 			return UTRACE_RESUME;
 		}
-		init_task_work(work, &__stp_tf_quiesce_worker, tgt);
+		stp_init_task_work(work, &__stp_tf_quiesce_worker);
 
 		rc = stp_task_work_add(tsk, work);
 		/* stp_task_work_add() returns -ESRCH if the task has
@@ -1398,7 +1403,9 @@ __stp_utrace_task_finder_target_syscall_entry(u32 action,
 static void
 __stp_tf_mmap_worker(struct task_work *work)
 {
-	struct stap_task_finder_target *tgt = work->data;
+	struct __stp_tf_task_work *tf_work = \
+		container_of(work, struct __stp_tf_task_work, work);
+	struct stap_task_finder_target *tgt = tf_work->tgt;
 	struct __stp_tf_map_entry *entry;
 
 	might_sleep();
@@ -1499,14 +1506,14 @@ __stp_utrace_task_finder_target_syscall_exit(u32 action,
 
 		/* If we can't sleep, arrange for the task to truly
 		 * stop so we can sleep. */
-		work = __stp_tf_alloc_task_work();
+		work = __stp_tf_alloc_task_work(tgt);
 		if (work == NULL) {
 			_stp_error("Unable to allocate space for task_work");
 			__stp_tf_remove_map_entry(entry);
 			__stp_tf_handler_end();
 			return UTRACE_RESUME;
 		}
-		init_task_work(work, &__stp_tf_mmap_worker, tgt);
+		stp_init_task_work(work, &__stp_tf_mmap_worker);
 		rc = stp_task_work_add(tsk, work);
 		/* stp_task_work_add() returns -ESRCH if the task has
 		 * already passed exit_task_work(). Just ignore this

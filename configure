@@ -609,6 +609,7 @@ LTLIBOBJS
 LIBOBJS
 subdirs
 STAP_PREFIX
+STAP_EXTRA_VERSION
 LOCALEDIR
 ENABLE_NLS
 support_section_question
@@ -814,6 +815,7 @@ with_avahi
 with_rpm
 with_elfutils
 with_dyninst
+with_extra_version
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1503,6 +1505,8 @@ Optional Packages:
                           find elfutils source code in DIRECTORY
   --with-dyninst=DIRECTORY
                           find dyninst headers/libraries in DIRECTORY
+  --with-extra-version=STRING
+                          Add STRING to stap -V version
 
 Some influential environment variables:
   CC          C compiler command
@@ -10634,6 +10638,29 @@ ENABLE_NLS="$USE_NLS"
 localedir="$localedir"
 
 LOCALEDIR="$localedir"
+
+
+
+# Check whether --with-extra-version was given.
+if test "${with_extra_version+set}" = set; then :
+  withval=$with_extra_version;
+fi
+
+if test "x$with_extra_version" != "xno"; then :
+
+    stap_extra_version="$with_extra_version"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Adding extra version $stap_extra_version" >&5
+$as_echo "$as_me: Adding extra version $stap_extra_version" >&6;}
+else
+
+    stap_extra_version=""
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define STAP_EXTRA_VERSION "$stap_extra_version"
+_ACEOF
+
+STAP_EXTRA_VERSION="$stap_extra_version"
 
 
 

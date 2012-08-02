@@ -1,7 +1,7 @@
 #ifndef _STP_TASK_WORK_C
 #define _STP_TASK_WORK_C
 
-#include <linux/task_work.h>
+#include "linux/task_work_compatibility.h"
 
 #if !defined(STAPCONF_TASK_WORK_ADD_EXPORTED)
 typedef int (*task_work_add_fn)(struct task_struct *task,

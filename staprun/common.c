@@ -16,7 +16,7 @@
 #include <sys/utsname.h>
 #include <assert.h>
 #include <string.h>
-#include "git_version.h"
+#include "../git_version.h"
 
 /* variables needed by parse_args() */
 int verbose;
@@ -200,10 +200,12 @@ void parse_args(int argc, char **argv)
                         }
 			break;
 		case 'V':
-                        err(_("Systemtap module loader/runner (version %s %s)\n"
+                        err(_("Systemtap module loader/runner (version %s %s%s%s)\n"
                               "Copyright (C) 2005-2012 Red Hat, Inc. and others\n"
                               "This is free software; see the source for copying conditions.\n"),
-                              VERSION, GIT_MESSAGE);
+                            VERSION, GIT_MESSAGE, 
+                            (STAP_EXTRA_VERSION[0]?", ":""),
+                            (STAP_EXTRA_VERSION[0]?STAP_EXTRA_VERSION:""));
                         _exit(1);
                         break;
                 case 'T':

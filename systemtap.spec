@@ -366,15 +366,15 @@ install -m 644 initscript/logrotate.stap-server $RPM_BUILD_ROOT%{_sysconfdir}/lo
 rm -rf ${RPM_BUILD_ROOT}
 
 %pre runtime
-getent group stapusr >/dev/null || groupadd -g 156 -r stapusr || groupadd -r stapusr
-getent group stapsys >/dev/null || groupadd -g 157 -r stapsys || groupadd -r stapsys
-getent group stapdev >/dev/null || groupadd -g 158 -r stapdev || groupadd -r stapdev
+getent group stapusr >/dev/null || groupadd -g 156 -r stapusr 2>/dev/null || groupadd -r stapusr
+getent group stapsys >/dev/null || groupadd -g 157 -r stapsys 2>/dev/null || groupadd -r stapsys
+getent group stapdev >/dev/null || groupadd -g 158 -r stapdev 2>/dev/null || groupadd -r stapdev
 exit 0
 
 %pre server
-getent group stap-server >/dev/null || groupadd -g 155 -r stap-server || groupadd -r stap-server
+getent group stap-server >/dev/null || groupadd -g 155 -r stap-server 2>/dev/null || groupadd -r stap-server
 getent passwd stap-server >/dev/null || \
-  useradd -c "Systemtap Compile Server" -u 155 -g stap-server -d %{_localstatedir}/lib/stap-server -m -r -s /sbin/nologin stap-server || \
+  useradd -c "Systemtap Compile Server" -u 155 -g stap-server -d %{_localstatedir}/lib/stap-server -m -r -s /sbin/nologin stap-server 2>/dev/null || \
   useradd -c "Systemtap Compile Server" -g stap-server -d %{_localstatedir}/lib/stap-server -m -r -s /sbin/nologin stap-server
 test -e ~stap-server && chmod 755 ~stap-server
 

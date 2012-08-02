@@ -31,3 +31,10 @@ dynsdt_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
 dynsdt_LDADD = -lelf $(dyninst_LIBS)
 
 endif # HAVE_DYNINST
+
+BUILT_SOURCES =
+
+# Arrange for the top-level git_version.h to be regenerated at every "make".
+BUILT_SOURCES += git_version.stamp
+git_version.stamp ../git_version.h:
+	$(MAKE) -C .. $@

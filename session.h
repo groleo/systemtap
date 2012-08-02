@@ -276,6 +276,9 @@ public:
   match_node* pattern_root;
   void register_library_aliases();
 
+  // data for various preprocessor library macros
+  std::map<std::string, std::string> library_macro_paths;
+
   // parse trees for the various script files
   stapfile* user_file;
   std::vector<stapfile*> library_files;

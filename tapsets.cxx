@@ -7823,10 +7823,12 @@ struct kprobe_var_expanding_visitor: public var_expanding_visitor
   block *add_block;
   block *add_call_probe; // synthesized from .return probes with saved $vars
   bool add_block_tid, add_call_probe_tid;
+  bool has_return;
 
-  kprobe_var_expanding_visitor(systemtap_session& sess):
+  kprobe_var_expanding_visitor(systemtap_session& sess, bool has_return):
     sess(sess), add_block(NULL), add_call_probe(NULL),
-    add_block_tid(false), add_call_probe_tid(false) {}
+    add_block_tid(false), add_call_probe_tid(false),
+    has_return(has_return) {}
 
   void visit_entry_op (entry_op* e);
 };
@@ -7893,7 +7895,7 @@ kprobe_derived_probe::kprobe_derived_probe (systemtap_session& sess,
   if (has_maxactive)
     comps.push_back (new probe_point::component(TOK_MAXACTIVE, new literal_number(maxactive_val)));
 
-  kprobe_var_expanding_visitor v (sess);
+  kprobe_var_expanding_visitor v (sess, has_return);
   v.replace (this->body);
 
   // If during target-variable-expanding the probe, we added a new block
@@ -8485,15 +8487,20 @@ kprobe_var_expanding_visitor::visit_entry_op (entry_op *e)
 {
   expression *repl = e;
 
-  // expand the operand as if it weren't a return probe
-  replace (e->operand);
+  if (has_return)
+    {
+      // expand the operand as if it weren't a return probe
+      has_return = false;
+      replace (e->operand);
+      has_return = true;
 
-  // XXX it would be nice to use gen_kretprobe_saved_return when
-  // available, but it requires knowing the types already, which is
-  // problematic for arbitrary expressons.
-  repl = gen_mapped_saved_return (sess, e->operand, "entry",
-				  add_block, add_block_tid,
-				  add_call_probe, add_call_probe_tid);
+      // XXX it would be nice to use gen_kretprobe_saved_return when
+      // available, but it requires knowing the types already, which is
+      // problematic for arbitrary expressons.
+      repl = gen_mapped_saved_return (sess, e->operand, "entry",
+				      add_block, add_block_tid,
+				      add_call_probe, add_call_probe_tid);
+    }
   provide (repl);
 }
 

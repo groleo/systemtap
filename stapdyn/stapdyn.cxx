@@ -18,7 +18,18 @@ extern "C" {
 #include <BPatch.h>
 #include <BPatch_object.h>
 
+#include "config.h"
+#include "../git_version.h"
+
 #include "dynutil.h"
+
+
+#define _STRINGIFY(s) #s
+#define STRINGIFY(s) _STRINGIFY(s)
+#define DYNINST_FULL_VERSION \
+  ( STRINGIFY(DYNINST_MAJOR) "." \
+    STRINGIFY(DYNINST_MINOR) "." \
+    STRINGIFY(DYNINST_SUBMINOR) )
 
 
 using namespace std;
@@ -182,13 +193,22 @@ main(int argc, char * const argv[])
   const char* module = NULL;
 
   int opt;
-  while ((opt = getopt (argc, argv, "c:")) != -1)
+  while ((opt = getopt (argc, argv, "c:V")) != -1)
     {
       switch (opt)
         {
         case 'c':
           command = optarg;
           break;
+
+        case 'V':
+          fprintf(stderr, "Systemtap Dyninst loader/runner (version %s/%s %s%s%s)\n"
+                          "Copyright (C) 2012 Red Hat, Inc. and others\n"
+                          "This is free software; see the source for copying conditions.\n",
+                  VERSION, DYNINST_FULL_VERSION, GIT_MESSAGE,
+                  (STAP_EXTRA_VERSION[0]?", ":""),
+                  (STAP_EXTRA_VERSION[0]?STAP_EXTRA_VERSION:""));
+          return 0;
 
         default:
           usage (1);
