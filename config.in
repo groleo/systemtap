@@ -116,6 +116,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* extra stap version code */
+#undef STAP_EXTRA_VERSION
+
 /* configure prefix location */
 #undef STAP_PREFIX
 

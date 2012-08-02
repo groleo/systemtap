@@ -585,6 +585,16 @@ AC_SUBST(ENABLE_NLS, "$USE_NLS")
 AC_SUBST(localedir, "$localedir")
 AC_SUBST(LOCALEDIR, "$localedir")
 
+AC_ARG_WITH([extra-version],
+  AS_HELP_STRING([--with-extra-version=STRING],
+    [Add STRING to stap -V version]))
+AS_IF([test "x$with_extra_version" != "xno"], [
+    stap_extra_version="$with_extra_version"
+    AC_MSG_NOTICE([Adding extra version $stap_extra_version])], [
+    stap_extra_version=""])
+AC_DEFINE_UNQUOTED(STAP_EXTRA_VERSION, "$stap_extra_version", [extra stap version code])
+AC_SUBST(STAP_EXTRA_VERSION, "$stap_extra_version")
+
 dnl This is here mainly to make sure that configure --prefix=... changes
 dnl the config.h files so files depending on it are recompiled
 dnl prefix is passed through indirectly in the Makefile.am AM_CPPFLAGS.
