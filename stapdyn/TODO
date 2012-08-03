@@ -1,16 +1,8 @@
 === TODO items for SystemTap+Dyninst ====
 
-* Integrate with the rest of SystemTap build.
-- Add configury, --with-dyninst or similar.
-- Add stapdyn/* to Makefiles.
-(These are partially there, but should be made more general
- and reviewed for good autoconf style.)
-
-* Reorganize the SystemTap runtime to better support different targets.
-- Leave the runtime/ base for generic shared code.
-- Move kernel-specific stuff to runtime/linux/ or runtime/kernel/.
-- Move dyninst-specific stuff to runtime/dyninst/
-- Select sub-runtimes with e.g. #ifdef __KERNEL__
+* Finish splitting the runtime (PR14179)
+- A lot of kernel-specific stuff is moved to runtime/linux/
+- More needs to be moved, and implemented in runtime/dyninst/ as needed.
 
 * Restrict the set of available probe types.
 - Currently the "bad" types will just lead to pass-4 errors.  We're operating
@@ -30,10 +22,6 @@
 - Send data to mutator, rather than dumping on mutatee stdio.
 - Will allow for other two-way commands, maybe removing the need for
   stuff like stp_dummy_init/exit.
-
-* Refactor tapset/.
-- Use a scheme like what is proposed for runtime/ ?
-- Nearly-similar embedded-c can use #ifdef __KERNEL__ alternations.
 
 * Translator generalization, reducing kernel-isms.
 - Generated code should take a more general flavor, that can be implemented on
@@ -60,5 +48,17 @@
 * Reconcile stapdyn with --remote operation.
 - Needs to check that the remote has stapdyn at all.
 - Probably needs a new stapio command akin to 'run', e.g. 'dyn'.
+
+* Need a deref implementation for memory protection!
+- Not sure how to do this, maybe just a SIGSEGV handler?
+
+* Make stapdu_target more flexible
+- Current fixed ABI is too limited IMO
+- JSON is an idea, but perhaps overkill.
+- Simpler idea: just a list of key=value strings, where each probe=TYPE starts
+  a new target.  Something like:
+    probe=uprobe\0path=/bin/foo\0offset=0x42\0
+    probe=uprobe\0path=/bin/bar\0offset=0x84\0
+  - I like keeping it textual, but want to avoid too much verbosity too...
 
 * Enumerate more TODO tasks.
