@@ -434,6 +434,14 @@ systemtap_session::version ()
 void
 systemtap_session::usage (int exitcode)
 {
+  // For error cases, just suggest --help, so we don't obscure
+  // the actual error message with all the help text.
+  if (exitcode != EXIT_SUCCESS)
+    {
+      clog << _("Try '--help' for more information.") << endl;
+      throw exit_exception(exitcode);
+    }
+
   version ();
   clog
     << endl
@@ -1264,7 +1272,7 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 	  // Invalid/unrecognized option given or argument required, but
 	  // not given. In both cases getopt_long() will have printed the
 	  // appropriate error message to stderr already.
-	  return 1;
+	  usage(1);
 	  break;
 
         default:
