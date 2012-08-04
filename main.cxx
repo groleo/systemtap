@@ -1013,7 +1013,7 @@ main (int argc, char * const argv [])
     if (rc || !extended_argv)
       {
         clog << _F("Error processing extra options in %s", rc_file.c_str());
-        exit (1);
+        return EXIT_FAILURE;
       }
     // Copy over the arguments *by reference*, first the ones from the rc file.
     char **p = & extended_argv[0];
@@ -1025,7 +1025,7 @@ main (int argc, char * const argv [])
     // Process the command line.
     rc = s.parse_cmdline (extended_argc, extended_argv);
     if (rc != 0)
-      exit (rc);
+      return rc;
 
     if (words.we_wordc > 0 && s.verbose > 1)
       clog << _F("Extra options in %s: %d\n", rc_file.c_str(), (int)words.we_wordc);
@@ -1123,17 +1123,21 @@ main (int argc, char * const argv [])
   }
   catch (const interrupt_exception& e) {
       // User entered ctrl-c, exit quietly.
-      exit(EXIT_FAILURE);
+      return EXIT_FAILURE;
+  }
+  catch (const exit_exception& e) {
+      // Exiting for any quiet reason.
+      return e.rc;
   }
   catch (const runtime_error &e) {
       // Some other uncaught runtime_error exception.
       cerr << e.what() << endl;
-      exit(EXIT_FAILURE);
+      return EXIT_FAILURE;
   }
   catch (...) {
       // Catch all other unknown exceptions.
       cerr << _("ERROR: caught unknown exception!") << endl;
-      exit(EXIT_FAILURE);
+      return EXIT_FAILURE;
   }
 }
 

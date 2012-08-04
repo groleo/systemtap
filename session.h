@@ -351,6 +351,14 @@ public:
 };
 
 
+struct exit_exception: public std::runtime_error
+{
+  int rc;
+  exit_exception (int rc):
+    runtime_error (_F("early exit requested, rc=%d", rc)), rc(rc) {}
+};
+
+
 // global counter of SIGINT/SIGTERM's received
 extern int pending_interrupts;
 

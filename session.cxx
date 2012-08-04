@@ -575,7 +575,7 @@ systemtap_session::usage (int exitcode)
   if (t && t->tm_mon*3 + t->tm_mday*173 == 0xb6)
     clog << morehelp << endl;
 
-  exit (exitcode);
+  throw exit_exception (exitcode);
 }
 
 int
@@ -597,7 +597,7 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
         {
         case 'V':
           version ();
-          exit (0);
+          throw exit_exception (EXIT_SUCCESS);
 
         case 'v':
 	  server_args.push_back (string ("-") + (char)grc);
@@ -860,8 +860,7 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 
 	case LONG_OPT_VERSION:
 	  version ();
-	  exit (0);
-	  break;
+	  throw exit_exception (EXIT_SUCCESS);
 
 	case LONG_OPT_KELF:
 	  server_args.push_back ("--kelf");
@@ -1090,7 +1089,7 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 	    return 1;
 	  }
 	  clean_cache(*this);
-	  exit(0);
+	  throw exit_exception(EXIT_SUCCESS);
 
 	case LONG_OPT_COMPATIBLE:
 	  server_args.push_back ("--compatible=" + string(optarg));
@@ -1795,7 +1794,11 @@ translator_output* systemtap_session::op_create_auxiliary()
 
 // Wrapper for checking if there are pending interrupts
 void
-assert_no_interrupts() {if(pending_interrupts) throw interrupt_exception();};
+assert_no_interrupts()
+{
+  if (pending_interrupts)
+    throw interrupt_exception();
+}
 
 // --------------------------------------------------------------------------
 

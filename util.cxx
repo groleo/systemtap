@@ -870,11 +870,9 @@ void assert_regexp_match (const string& name, const string& value, const string&
   // run regexec
   int rc = regexec (r, value.c_str(), 0, 0, 0);
   if (rc)
-    {
-      cerr << _F("ERROR: Safety pattern mismatch for %s ('%s' vs. '%s') rc=%d",
-                 name.c_str(), value.c_str(), re.c_str(), rc) << endl;
-      exit(1);
-    }
+    throw runtime_error
+      (_F("ERROR: Safety pattern mismatch for %s ('%s' vs. '%s') rc=%d",
+          name.c_str(), value.c_str(), re.c_str(), rc));
 }
 
 
