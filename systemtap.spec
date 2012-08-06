@@ -514,9 +514,8 @@ exit 0
 %{_bindir}/stap
 %{_bindir}/stap-prep
 %{_bindir}/stap-report
-%dir %{_datadir}/%{name}/runtime
+%dir %{_datadir}/%{name}
 %{_datadir}/%{name}/runtime
-%dir %{_datadir}/%{name}/tapset
 %{_datadir}/%{name}/tapset
 %{_mandir}/man1/stap.1*
 %{_mandir}/man7/stappaths.7*
