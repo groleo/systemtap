@@ -1,0 +1,33 @@
+set test "partial-class-type"
+
+# PR14434 dwflpp sometimes caches incomplete class_type
+
+proc error_handler { res message } {
+  global verbose test
+  if { $res == 0 } {
+    verbose $message 2
+    fail "$test $message"
+    return 1
+  } else {
+    pass "$test $message"
+    return 0
+  }
+}
+
+set srcpath "$srcdir/$subdir"
+set res [target_compile $srcpath/partial-class-type-heap.cxx "partial-class-type-heap.o" object "additional_flags=-g additional_flags=-O2"]
+if { [error_handler [expr {$res==""}] "partial-class-type-heap.cxx"] } { return }
+
+set res [target_compile $srcpath/partial-class-type-main.cxx "partial-class-type-main.o" object "additional_flags=-g additional_flags=-O2"]
+if { [error_handler [expr {$res==""}] "partial-class-type-main.cxx"] } { return }
+
+set res [target_compile "partial-class-type-main.o partial-class-type-heap.o" "partial-class-type" executable "additional_flags=-g additional_flags=-O2"]
+if { [error_handler [expr {$res==""}] "partial-class-type"] } { return }
+
+set script {"probe process(\"./partial-class-type\").function(\"main\") { printf(\"_size member offset: %d\\n\", &@cast(0, \"Heap\")->_size); }"}
+
+# Try compiling a couple of times, to make sure we always pick the right DIE.
+# See PR14434 for the non-determinism.
+for {set i 0} {$i < 7} {incr i} {
+  stap_compile $test-$i 1 $script -p2
+}

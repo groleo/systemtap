@@ -791,6 +791,32 @@ cache_type_prefix(Dwarf_Die* type)
   return "";
 }
 
+/* GCC might generate a struct/class without DW_AT_declaration,
+   but that only contains members which have DW_AT_declaration
+   set.  We aren't interested in those.  PR14434 (GCC bug #54181).  */
+static bool
+has_only_decl_members (Dwarf_Die *die)
+{
+  Dwarf_Die child;
+  if (dwarf_child(die, &child) != 0)
+    return false; /* no members */
+
+  do
+    {
+      if (! dwarf_hasattr(&child, DW_AT_declaration))
+	return false; /* real member found.  */
+      int tag = dwarf_tag(&child);
+      if ((tag == DW_TAG_namespace
+           || tag == DW_TAG_structure_type
+           || tag == DW_TAG_class_type)
+          && ! has_only_decl_members (&child))
+	return false; /* real grand child member found.  */
+    }
+  while (dwarf_siblingof(&child, &child) == 0);
+
+  return true; /* Tried all children and grandchildren. */
+}
+
 int
 dwflpp::global_alias_caching_callback(Dwarf_Die *die, bool has_inner_types,
                                       const string& prefix, void *arg)
@@ -798,7 +824,8 @@ dwflpp::global_alias_caching_callback(Dwarf_Die *die, bool has_inner_types,
   cu_type_cache_t *cache = static_cast<cu_type_cache_t*>(arg);
   const char *name = dwarf_diename(die);
 
-  if (!name || dwarf_hasattr(die, DW_AT_declaration))
+  if (!name || dwarf_hasattr(die, DW_AT_declaration)
+      || has_only_decl_members(die))
     return DWARF_CB_OK;
 
   int tag = dwarf_tag(die);
