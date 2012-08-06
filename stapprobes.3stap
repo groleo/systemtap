@@ -516,17 +516,18 @@ sprintf("{.a=%i, .b=%u, .c={.x=%p, .y=%c}, .d=[%i, ...]}",
         $EXPR\->a, $EXPR\->b, $EXPR\->c\->x, $EXPR\->c\->y, $EXPR\->d[0])
 .ESAMPLE
 
+.SS CONTEXT VARIABLES IN RETURN PROBES
+
 .PP
-For ".return" probes, context variables other than the "$return"
-value itself are only available for the function call parameters.
-The expressions evaluate to the
-.IR entry-time
-values of those variables, since that is when a snapshot is taken.
-Other local variables are not generally accessible, since by the time
-a ".return" probe hits, the probed function will have already returned.
+For ".return" probes, context variables other than the "$return" may
+be accessible, as a convenience for a script programmer wishing to
+access function parameters.  These values are \fBsnapshots\fP
+taken at the time of function entry.  Local variables within the
+function are \fBnot\fP generally accessible, since those variables did
+not exist in allocated/initialized form at the snapshot moment.
 .PP
-Arbitrary entry-time expressions can also be saved for ".return"
-probes using the
+In addition, arbitrary entry-time expressions can also be saved for
+".return" probes using the
 .IR @entry(expr)
 operator.  For example, one can compute the elapsed time of a function:
 .SAMPLE
@@ -534,6 +535,22 @@ probe kernel.function("do_filp_open").return {
     println( get_timeofday_us() \- @entry(get_timeofday_us()) )
 }
 .ESAMPLE
+
+.PP
+The following table summarizes how values related to a function
+parameter context variable, a pointer named \fBaddr\fP, may be
+accessed from a
+.IR .return
+probe.
+.\" summarized from http://sourceware.org/ml/systemtap/2012-q1/msg00025.html
+.TS
+l l l.
+\fBat-entry value	past-exit value\fP
+
+$addr	\fInot available\fP
+$addr->x->y	@cast(@entry($addr),"struct zz")->x->y
+$addr[0]	{kernel,user}_{char,int,...}(& $addr[0])
+.TE
 
 
 .SS DWARFLESS
@@ -1137,3 +1154,7 @@ refers to the group of probe aliases with any name in the third position
 .IR stap (1),
 .IR probe::* (3stap),
 .IR tapset::* (3stap)
+
+.\" Local Variables:
+.\" mode: nroff
+.\" End:
