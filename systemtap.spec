@@ -8,6 +8,7 @@
 %{!?with_boost: %global with_boost 0}
 %{!?with_publican: %global with_publican 1}
 %{!?publican_brand: %global publican_brand fedora}
+%{!?with_dyninst: %global with_dyninst 0%{?fedora} >= 18}
 
 Name: systemtap
 Version: 2.0
@@ -20,6 +21,7 @@ Release: 1%{?dist}
 # systemtap              empty req:-client req:-devel
 # systemtap-server       /usr/bin/stap-server*, req:-devel
 # systemtap-devel        /usr/bin/stap, runtime, tapset, req:kernel-devel
+# systemtap-dyninst      /usr/bin/stapdyn, /usr/bin/dynsdt
 # systemtap-runtime      /usr/bin/staprun, /usr/bin/stapsh
 # systemtap-client       /usr/bin/stap, samples, docs, tapset(bonus), req:-runtime
 # systemtap-initscript   /etc/init.d/systemtap, req:systemtap
@@ -48,6 +50,10 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: gcc-c++
 BuildRequires: gettext-devel
 BuildRequires: nss-devel avahi-devel pkgconfig
+%if %{with_dyninst}
+# include the prerelease version for now, but really this is >= 8.0
+BuildRequires: dyninst-devel >= 7.99
+%endif
 %if %{with_sqlite}
 BuildRequires: sqlite-devel
 %endif
@@ -137,6 +143,20 @@ installed on a self-contained developer workstation (along with the
 systemtap-client and systemtap-runtime packages), or on a dedicated
 remote server (alongside the systemtap-server package).  It includes
 a copy of the standard tapset library and the runtime library C files.
+
+
+%if %{with_dyninst}
+%package dyninst
+Summary: Programmable system-wide instrumentation system - dyninst runtime
+Group: Development/System
+License: GPLv2+
+URL: http://sourceware.org/systemtap/
+
+%description dyninst
+SystemTap dyninst runtime contains the components needed to execute a
+systemtap script that was already compiled into a module using a local
+or remote systemtap-devel installation and the --runtime=dyninst option.
+%endif
 
 
 %package runtime
@@ -257,6 +277,13 @@ cd ..
 %global elfutils_mflags LD_LIBRARY_PATH=`pwd`/lib-elfutils
 %endif
 
+# Enable/disable the dyninst pure-userspace backend
+%if %{with_dyninst}
+%global dyninst_config --with-dyninst
+%else
+%global dyninst_config --without-dyninst
+%endif
+
 # Enable/disable the sqlite coverage testing support
 %if %{with_sqlite}
 %global sqlite_config --enable-sqlite
@@ -298,7 +325,7 @@ cd ..
 %endif
 
 
-%configure %{?elfutils_config} %{sqlite_config} %{crash_config} %{docs_config} %{pie_config} %{publican_config} %{rpm_config} --disable-silent-rules
+%configure %{?elfutils_config} %{dyninst_config} %{sqlite_config} %{crash_config} %{docs_config} %{pie_config} %{publican_config} %{rpm_config} --disable-silent-rules
 make %{?_smp_mflags}
 
 %install
@@ -497,6 +524,14 @@ exit 0
 %if %{with_bundled_elfutils}
 %dir %{_libdir}/%{name}
 %{_libdir}/%{name}/lib*.so*
+%endif
+
+%if %{with_dyninst}
+%files dyninst -f %{name}.lang
+%defattr(-,root,root)
+%{_bindir}/stapdyn
+%{_bindir}/dynsdt
+%doc README AUTHORS NEWS COPYING
 %endif
 
 %files runtime -f %{name}.lang
