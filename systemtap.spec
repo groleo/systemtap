@@ -310,7 +310,7 @@ cd ..
 %endif
 
 
-%configure %{?elfutils_config} %{dyninst_config} %{sqlite_config} %{crash_config} %{docs_config} %{pie_config} %{publican_config} %{rpm_config} --disable-silent-rules
+%configure %{?elfutils_config} %{dyninst_config} %{sqlite_config} %{crash_config} %{docs_config} %{pie_config} %{publican_config} %{rpm_config} --disable-silent-rules --with-extra-version="rpm %{version}-%{release}"
 make %{?_smp_mflags}
 
 %install
