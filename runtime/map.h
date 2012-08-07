@@ -8,9 +8,14 @@
  * later version.
  */
 
-#include <linux/log2.h>
 #ifndef _MAP_H_
 #define _MAP_H_
+
+#if defined(__KERNEL__)
+#include <linux/log2.h>
+#elif defined(__DYNINST__)
+#include "dyninst/ilog2.h"
+#endif
 
 /** @file map.h
  * @brief Header file for maps and lists 
@@ -123,7 +128,7 @@ struct map_root {
 
 	int data_offset;
 
-#ifdef NEED_MAP_LOCKS
+#if NEED_MAP_LOCKS
 	spinlock_t lock;
 #endif
 

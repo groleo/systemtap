@@ -26,23 +26,14 @@
 #define CONFIG_64BIT 1
 #endif
 
+#define BITS_PER_LONG __BITS_PER_LONG
+
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-/********** shamelessly stolen kernel types **********/
-
-typedef unsigned long long cycles_t;
-
-typedef struct {
-        int counter;
-} atomic_t;
-
-#define PAGE_SHIFT	12
-#define PAGE_SIZE	(1UL << PAGE_SHIFT)
-
-/********** end stolen types **********/
+#include "linux_types.h"
 
 
 static inline int atomic_add_return(int i, atomic_t *v)
@@ -74,172 +65,7 @@ static inline void preempt_enable_no_resched(void)
 }
 
 
-/********** shamelessly stolen kernel functions **********/
-
-#define min(x, y) ({				\
-	typeof(x) _min1 = (x);			\
-	typeof(y) _min2 = (y);			\
-	(void) (&_min1 == &_min2);		\
-	_min1 < _min2 ? _min1 : _min2; })
-
-#define max(x, y) ({				\
-	typeof(x) _max1 = (x);			\
-	typeof(y) _max2 = (y);			\
-	(void) (&_max1 == &_max2);		\
-	_max1 > _max2 ? _max1 : _max2; })
-
-#define min_t(type, x, y) ({			\
-	type __min1 = (x);			\
-	type __min2 = (y);			\
-	__min1 < __min2 ? __min1: __min2; })
-
-#define max_t(type, x, y) ({			\
-	type __max1 = (x);			\
-	type __max2 = (y);			\
-	__max1 > __max2 ? __max1: __max2; })
-
-#define clamp(val, min, max) ({			\
-	typeof(val) __val = (val);		\
-	typeof(min) __min = (min);		\
-	typeof(max) __max = (max);		\
-	(void) (&__val == &__min);		\
-	(void) (&__val == &__max);		\
-	__val = __val < __min ? __min: __val;	\
-	__val > __max ? __max: __val; })
-
-#define likely(x)      __builtin_expect(!!(x), 1)
-#define unlikely(x)    __builtin_expect(!!(x), 0)
-
-#define __must_be_array(arr) 0
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
-
-#define ATOMIC_INIT(i)  { (i) }
-
-static inline void atomic_inc(atomic_t *v)
-{
-	atomic_add_return(1, v);
-}
-
-static inline void atomic_dec(atomic_t *v)
-{
-	atomic_sub_return(1, v);
-}
-
-static inline int atomic_read(const atomic_t *v)
-{
-	return (*(volatile int *)&(v)->counter);
-}
-
-static inline void atomic_set(atomic_t *v, int i)
-{
-	v->counter = i;
-}
-
-#define atomic_inc_return(v)		atomic_add_return(1, (v))
-
-
-#define do_div(n,base) ({					\
-	uint32_t __base = (base);				\
-	uint32_t __rem;						\
-	__rem = ((uint64_t)(n)) % __base;			\
-	(n) = ((uint64_t)(n)) / __base;				\
-	__rem;							\
- })
-
-static inline size_t strlcpy(char *dest, const char *src, size_t size)
-{
-	size_t ret = strlen(src);
-
-	if (size) {
-		size_t len = (ret >= size) ? size - 1 : ret;
-		memcpy(dest, src, len);
-		dest[len] = '\0';
-	}
-	return ret;
-}
-
-#define __must_check 		__attribute__((warn_unused_result))
-# define __force
-# define __user
-# define __chk_user_ptr(x) (void)0
-#define __get_user(x, ptr)					\
-({								\
-	int __gu_err = -EFAULT;					\
-	__chk_user_ptr(ptr);					\
-	switch (sizeof(*(ptr))) {				\
-	case 1: {						\
-		unsigned char __x;				\
-		__gu_err = __get_user_fn(sizeof (*(ptr)),	\
-					 ptr, &__x);		\
-		(x) = *(__force __typeof__(*(ptr)) *) &__x;	\
-		break;						\
-	};							\
-	case 2: {						\
-		unsigned short __x;				\
-		__gu_err = __get_user_fn(sizeof (*(ptr)),	\
-					 ptr, &__x);		\
-		(x) = *(__force __typeof__(*(ptr)) *) &__x;	\
-		break;						\
-	};							\
-	case 4: {						\
-		unsigned int __x;				\
-		__gu_err = __get_user_fn(sizeof (*(ptr)),	\
-					 ptr, &__x);		\
-		(x) = *(__force __typeof__(*(ptr)) *) &__x;	\
-		break;						\
-	};							\
-	case 8: {						\
-		unsigned long long __x;				\
-		__gu_err = __get_user_fn(sizeof (*(ptr)),	\
-					 ptr, &__x);		\
-		(x) = *(__force __typeof__(*(ptr)) *) &__x;	\
-		break;						\
-	};							\
-	default:						\
-		__get_user_bad();				\
-		break;						\
-	}							\
-	__gu_err;						\
-})
-
-static inline __must_check long __copy_from_user(void *to,
-		const void __user * from, unsigned long n)
-{
-	if (__builtin_constant_p(n)) {
-		switch(n) {
-		case 1:
-			*(u8 *)to = *(u8 __force *)from;
-			return 0;
-		case 2:
-			*(u16 *)to = *(u16 __force *)from;
-			return 0;
-		case 4:
-			*(u32 *)to = *(u32 __force *)from;
-			return 0;
-#ifdef CONFIG_64BIT
-		case 8:
-			*(u64 *)to = *(u64 __force *)from;
-			return 0;
-#endif
-		default:
-			break;
-		}
-	}
-
-	memcpy(to, (const void __force *)from, n);
-	return 0;
-}
-
-static inline int __get_user_fn(size_t size, const void __user *ptr, void *x)
-{
-	size = __copy_from_user(x, ptr, size);
-	return size ? -EFAULT : size;
-}
-
-extern int __get_user_bad(void) __attribute__((noreturn));
-
-/********** end stolen functions **********/
-
+#include "linux_defs.h"
 
 #define MODULE_DESCRIPTION(str)
 #define MODULE_LICENSE(str)
@@ -275,8 +101,11 @@ extern int __get_user_bad(void) __attribute__((noreturn));
 static int systemtap_module_init(void);
 static void systemtap_module_exit(void);
 
+static unsigned long stap_hash_seed; /* Init during module startup */
+
 int stp_dummy_init(void)
 {
+    stap_hash_seed = _stp_random_u ((unsigned long)-1);
     return systemtap_module_init();
 }
 

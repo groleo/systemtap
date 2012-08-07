@@ -28,7 +28,7 @@
 
 
 /* XXX for now, act like uniprocessor... */
-#define _stp_alloc_percpu(size) malloc((size))
+#define _stp_alloc_percpu(size) calloc((size), 1)
 #define _stp_free_percpu(addr) free((addr))
 #define per_cpu_ptr(ptr, cpu) (ptr)
 

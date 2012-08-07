@@ -15,7 +15,6 @@
  * @brief Implements maps (associative arrays) and lists
  */
 
-#include "sym.c"
 #include "stat-common.c"
 #include "map-stat.c"
 
@@ -195,11 +194,11 @@ static int _stp_map_init(MAP m, unsigned max_entries, int type, int key_size, in
 		
 		/* size is the size of the map_node. */
 		/* add space for the value. */
-		key_size = ALIGN(key_size,4);
+		key_size = (key_size + 3) & ~3; //ALIGN(key_size,4);
 		m->data_offset = key_size;
 		if (data_size == 0)
 			data_size = map_sizes[type];
-		data_size = ALIGN(data_size,4);
+		data_size = (data_size + 3) & ~3; //ALIGN(data_size,4);
 		size = key_size + data_size;
 		
 		
