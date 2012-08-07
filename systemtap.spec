@@ -21,7 +21,7 @@ Release: 1%{?dist}
 # systemtap              empty req:-client req:-devel
 # systemtap-server       /usr/bin/stap-server*, req:-devel
 # systemtap-devel        /usr/bin/stap, runtime, tapset, req:kernel-devel
-# systemtap-dyninst      /usr/bin/stapdyn, /usr/bin/dynsdt
+# systemtap-dyninst      /usr/bin/stapdyn
 # systemtap-runtime      /usr/bin/staprun, /usr/bin/stapsh
 # systemtap-client       /usr/bin/stap, samples, docs, tapset(bonus), req:-runtime
 # systemtap-initscript   /etc/init.d/systemtap, req:systemtap
@@ -529,7 +529,6 @@ exit 0
 %files dyninst -f %{name}.lang
 %defattr(-,root,root)
 %{_bindir}/stapdyn
-%{_bindir}/dynsdt
 %doc README AUTHORS NEWS COPYING
 %endif
 

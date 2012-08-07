@@ -12,13 +12,15 @@ AM_CXXFLAGS += @PIECXXFLAGS@
 AM_LDFLAGS = @PIELDFLAGS@
 
 bin_PROGRAMS =
+noinst_PROGRAMS =
 
 if HAVE_DYNINST
 
 dyninst_LIBS = -ldwarf -lcommon -linstructionAPI -lparseAPI -lpatchAPI \
 	       -lpcontrol -lstackwalk -lsymtabAPI -ldyninstAPI
 
-bin_PROGRAMS += stapdyn dynsdt
+bin_PROGRAMS += stapdyn
+noinst_PROGRAMS += dynsdt
 
 stapdyn_SOURCES = stapdyn.cxx dynutil.cxx ../util.cxx
 stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@

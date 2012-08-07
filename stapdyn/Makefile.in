@@ -37,7 +37,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = $(am__EXEEXT_1)
-@HAVE_DYNINST_TRUE@am__append_1 = stapdyn dynsdt
+noinst_PROGRAMS = $(am__EXEEXT_2)
+@HAVE_DYNINST_TRUE@am__append_1 = stapdyn
+@HAVE_DYNINST_TRUE@am__append_2 = dynsdt
 subdir = stapdyn
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -52,9 +54,10 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-@HAVE_DYNINST_TRUE@am__EXEEXT_1 = stapdyn$(EXEEXT) dynsdt$(EXEEXT)
+@HAVE_DYNINST_TRUE@am__EXEEXT_1 = stapdyn$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)"
-PROGRAMS = $(bin_PROGRAMS)
+@HAVE_DYNINST_TRUE@am__EXEEXT_2 = dynsdt$(EXEEXT)
+PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 @HAVE_DYNINST_TRUE@am_dynsdt_OBJECTS = dynsdt-dynsdt.$(OBJEXT) \
 @HAVE_DYNINST_TRUE@	dynsdt-dynutil.$(OBJEXT) \
 @HAVE_DYNINST_TRUE@	dynsdt-util.$(OBJEXT)
@@ -343,6 +346,9 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+
+clean-noinstPROGRAMS:
+	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
 dynsdt$(EXEEXT): $(dynsdt_OBJECTS) $(dynsdt_DEPENDENCIES) $(EXTRA_dynsdt_DEPENDENCIES) 
 	@rm -f dynsdt$(EXEEXT)
 	$(AM_V_CXXLD)$(dynsdt_LINK) $(dynsdt_OBJECTS) $(dynsdt_LDADD) $(LIBS)
@@ -554,7 +560,8 @@ maintainer-clean-generic:
 	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-noinstPROGRAMS \
+	mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -624,17 +631,17 @@ uninstall-am: uninstall-binPROGRAMS
 .MAKE: all check install install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-binPROGRAMS \
-	clean-generic ctags distclean distclean-compile \
-	distclean-generic distclean-tags dvi dvi-am html html-am info \
-	info-am install install-am install-binPROGRAMS install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-binPROGRAMS
+	clean-generic clean-noinstPROGRAMS ctags distclean \
+	distclean-compile distclean-generic distclean-tags dvi dvi-am \
+	html html-am info info-am install install-am \
+	install-binPROGRAMS install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
+	tags uninstall uninstall-am uninstall-binPROGRAMS
 
 git_version.stamp ../git_version.h:
 	$(MAKE) -C .. $(notdir $@)
