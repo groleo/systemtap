@@ -13,6 +13,25 @@
     stap --runtime=dyninst -c 'stap -V' \
       -e 'probe process.function("main") { println("hi from dyninst!") }'
 
+- The systemtap preprocessor now has a simple macro facility as follows:
+
+    @define add(a,b) %( ((@a)+(@b)) %)
+    @define probegin(x) %(
+       probe begin {
+         @x
+       }
+    %)
+
+    @probegin( foo = @add(40, 2); print(foo) ) 
+
+  Macros defined in the user script and regular tapset .stp files are
+  local to the file. To get around this, the tapset library can define
+  globally visible 'library macros' inside .stpm files. (A .stpm file
+  must contain a series of @define directives and nothing else.)
+
+  The status of the feature is experimental; semantics of macroexpansion
+  may change (unlikely) or expand in the future.
+
 - Systemtap probe aliases may be used with additional suffixes
   attached. The suffixes are passed on to the underlying probe
   point(s) as shown below:
