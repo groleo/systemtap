@@ -517,7 +517,9 @@ exit 0
 %{_bindir}/stapsh
 %{_bindir}/stap-merge
 %{_bindir}/stap-report
+%if %{with_dyninst}
 %{_bindir}/stapdyn
+%endif
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/stapio
 %{_libexecdir}/%{name}/stap-env
