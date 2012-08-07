@@ -1868,13 +1868,15 @@ output will be
 \end{verbatim}
 \end{vindent}
 
+
 \subsection{Conditional compilation}
 
 
 \subsubsection{Conditions}
 \index{conditions}
-One of the steps of parsing is a simple conditional preprocessing stage.
-The general form of this is similar to the ternary operator (Section~\ref{sub:Ternary-operator}).
+One of the steps of parsing is a simple preprocessing stage.  The
+preprocessor supports conditionals with a general form similar to the
+ternary operator (Section~\ref{sub:Ternary-operator}).
 
 \begin{vindent}
 \begin{verbatim}
@@ -1970,6 +1972,73 @@ The following code adapts to the presence of a kernel CONFIG option.
 %)
 \end{verbatim}
 \end{vindent}
+
+
+\subsection{Preprocessor macros (experimental)}
+
+This is an experimental feature whose semantics are subject to change.
+
+\subsubsection{Local macros}
+
+The preprocessor also supports a simple macro facility.
+
+Macros taking zero or more arguments are defined using the following
+construct:
+
+\begin{vindent}
+\begin{verbatim}
+@define NAME %( BODY %)
+@define NAME(PARAM_1, PARAM_2, ...) %( BODY %)
+\end{verbatim}
+\end{vindent}
+
+Macro arguments are referred to in the body by prefixing the argument
+name with an \texttt{@} symbol. Likewise, once defined, macros are
+invoked by prefixing the macro name with an \texttt{@} symbol:
+
+\begin{vindent}
+\begin{verbatim}
+@define foo %( x %)
+@define add(a,b) %( ((@a)+(@b)) %)
+
+   @foo = @add(2,2)
+\end{verbatim}
+\end{vindent}
+
+Macro expansion is currently performed in a separate pass before
+conditional compilation. Therefore, both TRUE- and FALSE-tokens in
+conditional expressions will be macroexpanded regardless of how the
+condition is evaluated. This can sometimes lead to errors:
+
+\begin{vindent}
+\begin{verbatim}
+// The following results in a conflict:
+%( CONFIG_UTRACE == "y" %?
+    @define foo %( process.syscall %)
+%:
+    @define foo %( **ERROR** %)
+%)
+
+// The following works properly as expected:
+@define foo %(
+  %( CONFIG_UTRACE == "y" %? process.syscall %: **ERROR** %)
+%)
+\end{verbatim}
+\end{vindent}
+
+The first example is incorrect because both \texttt{@define}s are
+evaluated in a pass prior to the conditional being evaluated.
+
+\subsubsection{Library macros}
+
+Normally, a macro definition is local to the file it occurs in. Thus,
+defining a macro in a tapset does not make it available to the user of
+the tapset.
+
+Publically available library macros can be defined by including
+\texttt{.stpm} files on the tapset search path. These files may only
+contain \texttt{@define} constructs, which become visible across all
+tapsets and user scripts.
 
 \section{Statement types\label{sec:Statement-Types}}
 

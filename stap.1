@@ -740,6 +740,51 @@ probe kernel.function (
 %)
 .ESAMPLE
 
+.SS PREPROCESSOR MACROS (EXPERIMENTAL)
+The preprocessor also supports a simple macro facility, run as a
+separate pass before conditional preprocessing.
+.PP
+Macros are defined using the following construct:
+.SAMPLE
+@define NAME %( BODY %)
+@define NAME(PARAM_1, PARAM_2, ...) %( BODY %)
+.ESAMPLE
+Macros, and parameters inside a macro body, are both invoked by
+prefixing the macro name with an @ symbol:
+.SAMPLE
+@define foo %( x %)
+@define add(a,b) %( ((@a)+(@b)) %)
+
+   @foo = @add(2,2)
+.ESAMPLE
+.PP
+Macro expansion is currently performed in a separate pass before
+conditional compilation. Therefore, both TRUE- and FALSE-tokens in
+conditional expressions will be macroexpanded regardless of how the
+condition is evaluated. This can sometimes lead to errors:
+.SAMPLE
+// The following results in a conflict:
+%( CONFIG_UTRACE == "y" %?
+    @define foo %( process.syscall %)
+%:
+    @define foo %( **ERROR** %)
+%)
+
+// The following works properly as expected:
+@define foo %(
+  %( CONFIG_UTRACE == "y" %? process.syscall %: **ERROR** %)
+%)
+.ESAMPLE
+The first example is incorrect because both @defines are evaluated in
+a pass prior to the conditional being evaluated.
+
+Normally, a macro definition is local to the file it occurs in. Thus,
+defining a macro in a tapset does not make it available to the user of
+the tapset. Publically available library macros can be defined by
+including .stpm files on the tapset search path. These files may only
+contain @define constructs, which become visible across all tapsets
+and user scripts.
+
 .SS VARIABLES
 Identifiers for variables and functions are an alphanumeric sequence,
 and may include "_" and "$" characters.  They may not start with a
