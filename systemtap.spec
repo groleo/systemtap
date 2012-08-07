@@ -21,8 +21,7 @@ Release: 1%{?dist}
 # systemtap              empty req:-client req:-devel
 # systemtap-server       /usr/bin/stap-server*, req:-devel
 # systemtap-devel        /usr/bin/stap, runtime, tapset, req:kernel-devel
-# systemtap-dyninst      /usr/bin/stapdyn
-# systemtap-runtime      /usr/bin/staprun, /usr/bin/stapsh
+# systemtap-runtime      /usr/bin/staprun, /usr/bin/stapsh, /usr/bin/stapdyn
 # systemtap-client       /usr/bin/stap, samples, docs, tapset(bonus), req:-runtime
 # systemtap-initscript   /etc/init.d/systemtap, req:systemtap
 # systemtap-sdt-devel    /usr/include/sys/sdt.h /usr/bin/dtrace
@@ -143,20 +142,6 @@ installed on a self-contained developer workstation (along with the
 systemtap-client and systemtap-runtime packages), or on a dedicated
 remote server (alongside the systemtap-server package).  It includes
 a copy of the standard tapset library and the runtime library C files.
-
-
-%if %{with_dyninst}
-%package dyninst
-Summary: Programmable system-wide instrumentation system - dyninst runtime
-Group: Development/System
-License: GPLv2+
-URL: http://sourceware.org/systemtap/
-
-%description dyninst
-SystemTap dyninst runtime contains the components needed to execute a
-systemtap script that was already compiled into a module using a local
-or remote systemtap-devel installation and the --runtime=dyninst option.
-%endif
 
 
 %package runtime
@@ -525,12 +510,6 @@ exit 0
 %{_libdir}/%{name}/lib*.so*
 %endif
 
-%if %{with_dyninst}
-%files dyninst -f %{name}.lang
-%defattr(-,root,root)
-%{_bindir}/stapdyn
-%doc README AUTHORS NEWS COPYING
-%endif
 
 %files runtime -f %{name}.lang
 %defattr(-,root,root)
@@ -538,6 +517,7 @@ exit 0
 %{_bindir}/stapsh
 %{_bindir}/stap-merge
 %{_bindir}/stap-report
+%{_bindir}/stapdyn
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/stapio
 %{_libexecdir}/%{name}/stap-env
