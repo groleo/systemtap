@@ -603,6 +603,13 @@ Provide an alternate value for an environment variable where the value on a
 remote system differs.  Path variables (e.g. PATH, LD_LIBRARY_PATH) are assumed
 to be relative to the directory provided by \fI\-\-sysroot\fR, if provided.
 
+.TP
+.BI \-\-runtime "=MODE"
+Set the pass-5 runtime mode.  Valid options are \fIkernel\fR (default)
+and \fIdyninst\fR.  See
+.BR ALTERNATE\ RUNTIMES
+below for more information.
+
 .SH ARGUMENTS
 
 Any additional arguments on the command line are passed to the script
@@ -2019,6 +2026,30 @@ members of only the group stapusr.
 .\"Based only on the symbol table, systemtap cannot tell the difference.
 .\"Placing return probes on symbols that aren't entry points
 .\"will most likely lead to kernel stack corruption.
+
+.SH ALTERNATE RUNTIMES
+
+As described above, systemtap's default runtime mode involves building and
+loading kernel modules, with various security tradeoffs presented.  Systemtap
+now includes a new prototype backend, selected with \fI\-\-runtime=dyninst\fR,
+which uses Dyninst to instrument a user's own processes at runtime. This
+backend does not use kernel modules, and does not require root privileges, but
+is restricted with respect to the kinds of probes and other constructs that a
+script may use.
+
+The \fIdyninst\fR runtime operates in target-attach mode, so it does require
+a \fI\-c COMMAND\fR or \fI\-x PID\fR process.  For example:
+
+.SAMPLE
+stap \-\-runtime=dyninst \-c 'stap \-V' \\
+     \-e 'probe process.function("main")
+         { println("hi from dyninst!") }'
+.ESAMPLE
+
+It may be necessary to disable a conflicting selinux check with
+.SAMPLE
+# setsebool allow_execstack 1
+.ESAMPLE
 
 .SH EXIT STATUS
 
