@@ -1,5 +1,18 @@
 * What's new in version 2.0
 
+- Systemtap includes a new prototype backend, which uses Dyninst to instrument
+  a user's own processes at runtime. This backend does not use kernel modules,
+  and does not require root privileges, but is restricted with respect to the
+  kinds of probes and other constructs that a script may use.
+
+  Your distro may provide this functionality with a systemtap-dyninst package.
+  Users from source should configure --with-dyninst.  Select this new backend
+  with the stap option --runtime=dyninst and a -c or -x target process, along
+  with normal options.  For example:
+
+    stap --runtime=dyninst -c 'stap -V' \
+      -e 'probe process.function("main") { println("hi from dyninst!") }'
+
 - Systemtap probe aliases may be used with additional suffixes
   attached. The suffixes are passed on to the underlying probe
   point(s) as shown below:
