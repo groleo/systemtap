@@ -530,8 +530,12 @@ passes_0_4 (systemtap_session &s)
       version_suffixes.insert(version_suffixes.begin() + i/2,
                               runtime_prefix + version_suffixes[i]);
 
-  // First, gather a list of library macros for further reference.
-  // (We need the entire list available before we parse any files.)
+  // First, parse .stpm files on the include path. We need to have the
+  // resulting macro definitions available for parsing library files,
+  // but since .stpm files can consist only of '@define' constructs,
+  // we can parse each one without reference to the others.
+  set<pair<dev_t, ino_t> > seen_library_macro_files;
+
   for (unsigned i=0; i<s.include_path.size(); i++)
     {
       // now iterate upon it
@@ -544,41 +548,50 @@ passes_0_4 (systemtap_session &s)
             rc ++;
           // GLOB_NOMATCH is acceptable
 
+          unsigned prev_s_library_files = s.library_files.size();
+
           for (unsigned j=0; j<globbuf.gl_pathc; j++)
             {
-              string path(globbuf.gl_pathv[j]);
+              assert_no_interrupts();
 
-              // extract the macro name
-              assert (path.substr (path.size() - 5) == ".stpm");
-              size_t pos = path.find_last_of ("/") + 1;
-              if (pos >= path.size()) pos = 0;
-              string name = path.substr (pos, path.size() - 5);
-
-              // handle conflicts between identically named .stpm files
-              if (s.library_macro_paths.find(name)
-                  != s.library_macro_paths.end())
-                // XXX provide some facility for resolving the conflict?
-                // e.g. we might have some paths take priority over other paths
+              struct stat tapset_file_stat;
+              int stat_rc = stat (globbuf.gl_pathv[j], & tapset_file_stat);
+              if (stat_rc == 0 && user_file_stat_rc == 0 &&
+                  user_file_stat.st_dev == tapset_file_stat.st_dev &&
+                  user_file_stat.st_ino == tapset_file_stat.st_ino)
                 {
-                  s.print_warning
-                    ("Library macro in '" + path + "' conflicts with '"
-                     + s.library_macro_paths[name] + "', ignoring both."); // TODOXXX internationalization?
-
-                  // mark the error in nonfatal fashion
-                  s.library_macro_paths[name] = "";
-                  continue;
+                  cerr
+                  << _F("usage error: macro tapset file '%s' cannot be run directly as a session script.",
+                        globbuf.gl_pathv[j]) << endl;
+                  rc ++;
                 }
 
-              s.library_macro_paths[name] = string(path);
+              // PR11949: duplicate-eliminate tapset files
+              if (stat_rc == 0)
+                {
+                  pair<dev_t,ino_t> here = make_pair(tapset_file_stat.st_dev,
+                                                     tapset_file_stat.st_ino);
+                  if (seen_library_macro_files.find(here)
+                      != seen_library_macro_files.end())
+                    continue;
+                  seen_library_macro_files.insert (here);
+                }
 
-              // The actual parsing occurs on-demand due to the
-              // possibility of .stpm macros needing to refer to one
-              // another (in non-cyclical fashion) at parse time.
+              // XXX: privilege only for /usr/share/systemtap?
+              stapfile* f = parse_library_macros (s, globbuf.gl_pathv[j]);
+              if (f == 0)
+                s.print_warning("macro tapset '" + string(globbuf.gl_pathv[j])
+                                + "' has errors, and will be skipped."); // TODOXXX internationalization?
+              else
+                s.library_files.push_back (f);
             }
 
+          unsigned next_s_library_files = s.library_files.size();
           if (s.verbose>1 && globbuf.gl_pathc > 0)
-            clog << _F("Searched: \" %s \", found: %zu macro definitions",
-                       dir.c_str(), globbuf.gl_pathc) << endl;
+            //TRANSLATORS: Searching through directories, 'processed' means 'examined so far'
+            clog << _F("Searched for library macro files: \" %s \", found: %zu, processed: %u",
+                       dir.c_str(), globbuf.gl_pathc,
+                       (next_s_library_files-prev_s_library_files)) << endl;
 
           globfree (&globbuf);
         }

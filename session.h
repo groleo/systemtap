@@ -83,6 +83,8 @@ struct statistic_decl
   }
 };
 
+struct macrodecl; // defined in parse.h
+
 struct systemtap_session
 {
 private:
@@ -125,7 +127,7 @@ public:
   bool have_script;
   std::vector<std::string> include_path;
   int include_arg_start;
-  std::vector<std::string> macros;
+  std::vector<std::string> macros; // TODOXXX rename to clarify that these are macros for the C compiler?
   std::vector<std::string> args;
   std::vector<std::string> kbuildflags; // -B var=val
   std::vector<std::string> globalopts; // -G var=val
@@ -265,7 +267,8 @@ public:
   void register_library_aliases();
 
   // data for various preprocessor library macros
-  std::map<std::string, std::string> library_macro_paths;
+  std::map<std::string, macrodecl*> library_macros;
+  std::vector<stapfile*> library_macro_files; // for error reporting purposes
 
   // parse trees for the various script files
   stapfile* user_file;

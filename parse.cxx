@@ -72,6 +72,7 @@ public:
   ~parser ();
 
   stapfile* parse ();
+  stapfile* parse_library_macros ();
 
 private:
   typedef enum {
@@ -84,16 +85,10 @@ private:
 
   struct pp1_activation;
 
-  struct pp_macrodecl {
-    const token* tok;
-    vector<string> param_names;
-    vector<const token*> body;
-
-    pp1_activation* parent_act;
-
-    pp_macrodecl (const token tok, pp1_activation* parent_act = NULL)
-      : tok(new token(tok)), parent_act(parent_act) { }
-    ~pp_macrodecl ();
+  struct pp_macrodecl : public macrodecl {
+    pp1_activation* parent_act; // used for param bindings
+    virtual bool is_closure() { return parent_act != 0; }
+    pp_macrodecl () : macrodecl(), parent_act(0) { }
   };
 
   systemtap_session& session;
@@ -107,17 +102,15 @@ private:
     const token* tok;
     unsigned cursor; // position within macro body
     map<string, pp_macrodecl*> params;
-    bool is_closure; // are params shared with an earlier activation record?
 
-    pp_macrodecl* curr_macro;
+    macrodecl* curr_macro;
 
-    pp1_activation (const token tok, pp_macrodecl* curr_macro)
-      : tok(new token(tok)), cursor(0), is_closure(false), 
-        curr_macro(curr_macro) { }
+    pp1_activation (const token tok, macrodecl* curr_macro)
+      : tok(new token(tok)), cursor(0), curr_macro(curr_macro) { }
     ~pp1_activation ();
   };
 
-  map<string, pp_macrodecl*> pp1_namespace;
+  map<string, macrodecl*> pp1_namespace;
   vector<pp1_activation*> pp1_state;
   const token* next_pp1 ();
   const token* scan_pp1 ();
@@ -230,6 +223,23 @@ parse (systemtap_session& s, const string& name, bool pr)
 
   parser p (s, name, i, pr);
   return p.parse ();
+}
+
+stapfile*
+parse_library_macros (systemtap_session& s, const string& name)
+{
+  ifstream i(name.c_str(), ios::in);
+  if (i.fail())
+    {
+      cerr << (file_exists(name)
+               ? _F("Input file '%s' can't be opened for reading.", name.c_str())
+               : _F("Input file '%s' is missing.", name.c_str()))
+           << endl;
+      return 0;
+    }
+
+  parser p (s, name, i, false); // TODOXX pr is ...? should path be full??
+  return p.parse_library_macros ();
 }
 
 // ------------------------------------------------------------------------
@@ -394,7 +404,7 @@ bool eval_comparison (const OPERAND& lhs, const token* op, const OPERAND& rhs)
 // Invocations of unknown macros are left unexpanded, to allow
 // the continued use of constructs such as @cast, @var, etc.
 
-parser::pp_macrodecl::~pp_macrodecl ()
+macrodecl::~macrodecl ()
 {
   delete tok;
   for (vector<const token*>::iterator it = body.begin();
@@ -405,7 +415,7 @@ parser::pp_macrodecl::~pp_macrodecl ()
 parser::pp1_activation::~pp1_activation ()
 {
   delete tok;
-  if (is_closure) return; // body is shared with an earlier declaration
+  if (curr_macro->is_closure()) return; // body is shared with an earlier declaration
   for (map<string, pp_macrodecl*>::iterator it = params.begin();
        it != params.end(); it++)
     delete it->second;
@@ -477,8 +487,8 @@ parser::scan_pp1 ()
           if (input.atwords.count("@" + name))
             session.print_warning (_F("macro redefines built-in operator '@%s'", name.c_str()), t);
 
-          pp_macrodecl* decl = (pp1_namespace[name] = new pp_macrodecl(*t));
-          delete t;
+          macrodecl* decl = (pp1_namespace[name] = new macrodecl);
+          decl->tok = t;
 
           // determine if the macro takes parameters
           bool saw_params = false;
@@ -493,7 +503,7 @@ parser::scan_pp1 ()
                   t = input.scan ();
                   if (! (t && t->type == tok_identifier))
                     throw parse_error(_("expected identifier"), t);
-                  decl->param_names.push_back(t->content);
+                  decl->formal_args.push_back(t->content);
                   delete t;
                   
                   t = input.scan ();
@@ -540,21 +550,25 @@ parser::scan_pp1 ()
           string name = t->content.substr(1); // strip initial '@'
 
           // check if name refers to a real parameter or macro
-          pp_macrodecl* decl;
+          macrodecl* decl;
           pp1_activation* act = pp1_state.empty() ? 0 : pp1_state.back();
           if (act && act->params.find(name) != act->params.end())
             decl = act->params[name];
-          else if (pp1_namespace.find(name) != pp1_namespace.end())
+          else if (!(act && act->curr_macro->context == ctx_library)
+                   && pp1_namespace.find(name) != pp1_namespace.end())
             decl = pp1_namespace[name];
+          else if (session.library_macros.find(name)
+                   != session.library_macros.end())
+            decl = session.library_macros[name];
           else // this is an ordinary @operator
             return t;
 
           // handle macro invocation
           pp1_activation *new_act = new pp1_activation(*t, decl);
-          unsigned num_params = decl->param_names.size();
+          unsigned num_params = decl->formal_args.size();
 
           // (1a) restore parameter invocation closure
-          if (num_params == 0 && decl->parent_act)
+          if (num_params == 0 && decl->is_closure())
             {
               // NB: decl->parent_act is always safe since the
               // parameter decl (if any) comes from an activation
@@ -562,8 +576,7 @@ parser::scan_pp1 ()
 
               // decl is a macro parameter which must be evaluated in
               // the context of the original point of invocation:
-              new_act->params = decl->parent_act->params;
-              new_act->is_closure = true; // hack to prevent double-freeing params
+              new_act->params = ((pp_macrodecl*)decl)->parent_act->params;
               goto expand;
             }
 
@@ -592,9 +605,11 @@ parser::scan_pp1 ()
               delete t;
 
               // create parameter closure
-              string param_name = decl->param_names[i];
+              string param_name = decl->formal_args[i];
               pp_macrodecl* p = (new_act->params[param_name]
-                                 = new pp_macrodecl(*new_act->tok, act));
+                                 = new pp_macrodecl);
+              p->tok = new token(*new_act->tok);
+              p->parent_act = act;
               // NB: *new_act->tok points to invocation, act is NULL at top level
 
               t = slurp_pp1_param (p->body);
@@ -698,6 +713,70 @@ parser::slurp_pp1_body (vector<const token*>& body)
     }
   while (true);
   return t; // report final "%)" or NULL
+}
+
+// Used for parsing .stpm files.
+stapfile*
+parser::parse_library_macros ()
+{
+  stapfile* f = new stapfile;
+  input.set_current_file (f);
+
+  try
+    {
+      const token* t = scan_pp1 ();
+
+      // Currently we only take objection to macro invocations if they
+      // produce a non-whitespace token after being expanded.
+
+      // XXX should we prevent macro invocations even if they expand to empty??
+
+      if (t != 0)
+        throw parse_error (_F("library macro file '%s' contains non-@define construct", input_name.c_str()), t);
+
+      // We need to first check whether *any* of the macros are duplicates,
+      // then commit to including the entire file in the global namespace
+      // (or not). Yuck.
+      for (map<string, macrodecl*>::iterator it = pp1_namespace.begin();
+           it != pp1_namespace.end(); it++)
+        {
+          string name = it->first;
+
+          if (session.library_macros.find(name) != session.library_macros.end())
+            {
+              // XXX ugly hack simulates chaining
+              parse_error* er1 = new parse_error (_F("duplicate definition of library macro '%s'", name.c_str()), it->second->tok);
+              parse_error* er2 = new parse_error (_("location of original definition was"), session.library_macros[name]->tok);
+              print_error (*er1);
+              print_error (*er2);
+              delete er1; delete er2;
+
+              delete f;
+              return 0;
+            }
+        }
+
+    }
+  catch (const parse_error& pe)
+    {
+      print_error (pe);
+      delete f;
+      return 0;
+    }
+
+  // If no errors, include the entire file.  Note how this is outside
+  // of the try-catch block -- no errors possible.
+  for (map<string, macrodecl*>::iterator it = pp1_namespace.begin();
+       it != pp1_namespace.end(); it++)
+    {
+      string name = it->first;
+      
+      session.library_macros[name] = it->second;
+      session.library_macros[name]->context = ctx_library;
+      // TODOXXX be sure declaration is retained and not deleted
+    }
+
+  return f;
 }
 
 // Second pass - preprocessor conditional expansion.
