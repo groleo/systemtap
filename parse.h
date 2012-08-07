@@ -82,7 +82,7 @@ struct macrodecl {
   virtual bool is_closure() { return false; }
 
   macrodecl () : tok(0), context(ctx_local) { }
-  ~macrodecl ();
+  virtual ~macrodecl ();
 };
 
 
