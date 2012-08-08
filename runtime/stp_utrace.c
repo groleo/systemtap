@@ -2088,6 +2088,13 @@ void utrace_resume(struct task_work *work)
 	might_sleep();
 	utrace->task_work_added = 0;
 
+	/* Make sure the task isn't exiting. */
+	if (task->flags & PF_EXITING) {
+		/* Remember that this task_work_func is finished. */
+		stp_task_work_func_done();
+		return;
+	}
+
 	/*
 	 * Some machines get here with interrupts disabled.  The same arch
 	 * code path leads to calling into get_signal_to_deliver(), which

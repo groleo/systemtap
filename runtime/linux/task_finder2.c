@@ -1214,7 +1214,8 @@ __stp_tf_quiesce_worker(struct task_work *work)
 
 	might_sleep();
 	__stp_tf_free_task_work(work);
-	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING) {
+	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING
+	    || current->flags & PF_EXITING) {
 		/* Remember that this task_work_func is finished. */
 		stp_task_work_func_done();
 		return;
@@ -1410,15 +1411,19 @@ __stp_tf_mmap_worker(struct task_work *work)
 
 	might_sleep();
 	__stp_tf_free_task_work(work);
-	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING) {
+
+	// See if we can find saved syscall info.
+	entry = __stp_tf_get_map_entry(current);
+	if (entry == NULL) {
 		/* Remember that this task_work_func is finished. */
 		stp_task_work_func_done();
 		return;
 	}
 
-	// See if we can find saved syscall info.
-	entry = __stp_tf_get_map_entry(current);
-	if (entry == NULL) {
+	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING
+	    || current->flags & PF_EXITING) {
+		__stp_tf_remove_map_entry(entry);
+
 		/* Remember that this task_work_func is finished. */
 		stp_task_work_func_done();
 		return;
