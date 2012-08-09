@@ -336,7 +336,7 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   // copy them from "other".  In the same order as declared...
   script_file = other.script_file;
   cmdline_script = other.cmdline_script;
-  macros = other.macros;
+  c_macros = other.c_macros;
   args = other.args;
   kbuildflags = other.kbuildflags;
   globalopts = other.globalopts;
@@ -817,7 +817,7 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 	  if (client_options)
 	    client_options_disallowed_for_unprivileged += client_options_disallowed_for_unprivileged.empty () ? "-D" : ", -D";
 	  server_args.push_back (string ("-") + (char)grc + optarg);
-	  macros.push_back (string (optarg));
+	  c_macros.push_back (string (optarg));
 	  break;
 
 	case 'S':

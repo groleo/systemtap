@@ -367,8 +367,8 @@ compile_pass (systemtap_session& s)
 
   o << module_cflags << " += -include $(STAPCONF_HEADER)" << endl;
 
-  for (unsigned i=0; i<s.macros.size(); i++)
-    o << "EXTRA_CFLAGS += -D " << lex_cast_qstring(s.macros[i]) << endl; // XXX right quoting?
+  for (unsigned i=0; i<s.c_macros.size(); i++)
+    o << "EXTRA_CFLAGS += -D " << lex_cast_qstring(s.c_macros[i]) << endl; // XXX right quoting?
 
   if (s.verbose > 3)
     o << "EXTRA_CFLAGS += -ftime-report -Q" << endl;

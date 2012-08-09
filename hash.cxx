@@ -242,8 +242,8 @@ find_script_hash (systemtap_session& s, const string& script)
 	  h.add("Kernel Symtab Timestamp: ", st.st_mtime);
         }
     }
-  for (unsigned i = 0; i < s.macros.size(); i++)
-    h.add("Macros: ", s.macros[i]);
+  for (unsigned i = 0; i < s.c_macros.size(); i++)
+    h.add("Macros: ", s.c_macros[i]);
 
   // Add any custom kbuild flags (-B)
   for (unsigned i = 0; i < s.kbuildflags.size(); i++)
