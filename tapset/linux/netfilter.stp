@@ -16,12 +16,9 @@
 #include <net/ipv6.h>
 %}
 
-# XXX: a macro facility might be nice to avoid duplication -- see PR11207
 # XXX: IPPROTO_* and NF_* constants should be secure globals -- needs PR10607
   # ... currently we use a hideous copypasta hack which defines them as
   # locals in each probe alias. Blegh
-# XXX: mangling locals would be nice to avoid the constant name
-# collisions that popped up in the process of writing this tapset -- see PR
 
 function __get_mac_addr:string(addr:long) {
          return sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
@@ -67,6 +64,95 @@ function __ip6_skb_proto:long(addr:long)
    CATCH_DEREF_FAULT();
 %}
 
+@define netfilter_common_setup(pf_name) %(
+        pf = @pf_name
+
+        /* XXX not relevant for netfilter.arp & netfilter.bridge probes */
+        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
+        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
+
+        /* from include/linux/netfilter.h: */
+        nf_drop = 0
+        nf_accept = 1
+        nf_stolen = 2
+        nf_queue = 3
+        nf_repeat = 4
+        nf_stop = 5
+
+        indev = $in; outdev = $out
+        indev_name = kernel_string2(@cast(indev,"struct net_device")->name,
+                                    "")
+        outdev_name = kernel_string2(@cast(outdev,"struct net_device")->name,
+                                     "")
+
+        if (indev) {
+           indev_mac_len = @cast(indev,"struct net_device")->addr_len
+           in_mac = __get_mac_addr(indev)
+        }
+        if (outdev) {
+           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
+           out_mac = __get_mac_addr(outdev)
+        }
+%)
+
+@define netfilter_ip4_setup %(
+        iphdr = __get_skb_iphdr($skb)
+        family = %{ /* pure */ AF_INET %}
+        saddr = format_ipaddr(__ip_skb_saddr(iphdr), %{ /* pure */ AF_INET %})
+        daddr = format_ipaddr(__ip_skb_daddr(iphdr), %{ /* pure */ AF_INET %})
+        protocol = __ip_skb_proto(iphdr)
+
+        length = @cast($skb, "struct sk_buff")->len
+
+        tcphdr = __get_skb_tcphdr($skb)
+        if (protocol == ipproto_tcp) {
+           dport = __tcp_skb_dport(tcphdr)
+           sport = __tcp_skb_sport(tcphdr)
+           urg = __tcp_skb_urg(tcphdr)
+           ack = __tcp_skb_ack(tcphdr)
+           psh = __tcp_skb_psh(tcphdr)
+           rst = __tcp_skb_rst(tcphdr)
+           syn = __tcp_skb_syn(tcphdr)
+           fin = __tcp_skb_fin(tcphdr)
+        }
+
+        udphdr = tcphdr /* the same place where tcphdr would have been */
+        if (protocol == ipproto_udp) {
+           dport = ntohs(@cast(udphdr,"udphdr")->dest)
+           sport = ntohs(@cast(udphdr,"udphdr")->source)
+        }
+%)
+
+@define netfilter_ip6_setup %(
+        iphdr = __get_skb_iphdr($skb)
+        family = %{ /* pure */ AF_INET6 %}
+        saddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->saddr,
+                              %{ /* pure */ AF_INET6 %})
+        daddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->daddr,
+                              %{ /* pure */ AF_INET6 %})
+        protocol = __ip6_skb_proto($skb)
+
+        length = @cast($skb, "struct sk_buff")->len
+
+        tcphdr = __get_skb_tcphdr($skb)
+        if (protocol == ipproto_tcp) {
+           dport = __tcp_skb_dport(tcphdr)
+           sport = __tcp_skb_sport(tcphdr)
+           urg = __tcp_skb_urg(tcphdr)
+           ack = __tcp_skb_ack(tcphdr)
+           psh = __tcp_skb_psh(tcphdr)
+           rst = __tcp_skb_rst(tcphdr)
+           syn = __tcp_skb_syn(tcphdr)
+           fin = __tcp_skb_fin(tcphdr)
+        }
+
+        udphdr = tcphdr /* the same place where tcphdr would have been */
+        if (protocol == ipproto_udp) {
+           dport = ntohs(@cast(udphdr,"udphdr")->dest)
+           sport = ntohs(@cast(udphdr,"udphdr")->source)
+        }        
+%)
+
 /**
  * probe netfilter.ip.pre_routing - Called before an IP packet is routed
  * @pf: Protocol family - either 'ipv4' or 'ipv6'
@@ -105,120 +191,16 @@ probe netfilter.ip.pre_routing = netfilter.ipv4.pre_routing,
 probe netfilter.ipv4.pre_routing
         = netfilter.hook("NF_INET_PRE_ROUTING").pf("NFPROTO_IPV4")
 {
-        pf = "ipv4"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast(indev,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast(outdev,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET %}
-        saddr = format_ipaddr(__ip_skb_saddr(iphdr), %{ /* pure */ AF_INET %})
-        daddr = format_ipaddr(__ip_skb_daddr(iphdr), %{ /* pure */ AF_INET %})
-        protocol = __ip_skb_proto(iphdr)
-
-        length = @cast($skb, "struct sk_buff")->len
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv4")
+        @netfilter_ip4_setup
 }
 
 
 probe netfilter.ipv6.pre_routing
         = netfilter.hook("NF_IP6_PRE_ROUTING").pf("NFPROTO_IPV6")
 {
-        pf = "ipv6"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET6 %}
-        saddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->saddr,
-                              %{ /* pure */ AF_INET6 %})
-        daddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->daddr,
-                              %{ /* pure */ AF_INET6 %})
-        protocol = __ip6_skb_proto($skb)
-
-        length = @cast($skb, "struct sk_buff")->len
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv6")
+        @netfilter_ip6_setup
 }
 
 /**
@@ -259,119 +241,16 @@ probe netfilter.ip.local_in = netfilter.ipv4.local_in,
 probe netfilter.ipv4.local_in
         = netfilter.hook("NF_INET_LOCAL_IN").pf("NFPROTO_IPV4")
 {
-        pf = "ipv4"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast(indev,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast(outdev,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET %}
-        saddr = format_ipaddr(__ip_skb_saddr(iphdr), %{ /* pure */ AF_INET %})
-        daddr = format_ipaddr(__ip_skb_daddr(iphdr), %{ /* pure */ AF_INET %})
-        protocol = __ip_skb_proto(iphdr)
-
-        length = @cast($skb, "struct sk_buff")->len
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv4")
+        @netfilter_ip4_setup
 }
 
 
 probe netfilter.ipv6.local_in
         = netfilter.hook("NF_IP6_LOCAL_IN").pf("NFPROTO_IPV6")
 {
-        pf = "ipv6"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET6 %}
-        saddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->saddr,
-                              %{ /* pure */ AF_INET6 %})
-        daddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->daddr,
-                              %{ /* pure */ AF_INET6 %})
-        length = @cast($skb, "struct sk_buff")->len
-        protocol = __ip6_skb_proto($skb)
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv6")
+        @netfilter_ip6_setup
 }
 
 /**
@@ -412,118 +291,16 @@ probe netfilter.ip.forward = netfilter.ipv4.forward,
 probe netfilter.ipv4.forward
         = netfilter.hook("NF_INET_FORWARD").pf("NFPROTO_IPV4")
 {
-        pf = "ipv4"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast(indev,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast(outdev,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET %}
-        saddr = format_ipaddr(__ip_skb_saddr(iphdr), %{ /* pure */ AF_INET %})
-        daddr = format_ipaddr(__ip_skb_daddr(iphdr), %{ /* pure */ AF_INET %})
-        protocol = __ip_skb_proto(iphdr)
-
-        length = @cast($skb, "struct sk_buff")->len
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv4")
+        @netfilter_ip4_setup
 }
 
 
 probe netfilter.ipv6.forward
         = netfilter.hook("NF_IP6_FORWARD").pf("NFPROTO_IPV6")
 {
-        pf = "ipv6"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET6 %}
-        saddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->saddr,
-                              %{ /* pure */ AF_INET6 %})
-        daddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->daddr,
-                              %{ /* pure */ AF_INET6 %})
-        protocol = __ip6_skb_proto($skb)
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv6")
+        @netfilter_ip6_setup
 }
 
 /**
@@ -564,117 +341,15 @@ probe netfilter.ip.local_out = netfilter.ipv4.local_out,
 probe netfilter.ipv4.local_out
         = netfilter.hook("NF_INET_LOCAL_OUT").pf("NFPROTO_IPV4")
 {
-        pf = "ipv4"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast(indev,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast(outdev,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET %}
-        saddr = format_ipaddr(__ip_skb_saddr(iphdr), %{ /* pure */ AF_INET %})
-        daddr = format_ipaddr(__ip_skb_daddr(iphdr), %{ /* pure */ AF_INET %})
-        protocol = __ip_skb_proto(iphdr)
-
-        length = @cast($skb, "struct sk_buff")->len
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv4")
+        @netfilter_ip4_setup
 }
 
 probe netfilter.ipv6.local_out
         = netfilter.hook("NF_IP6_LOCAL_OUT").pf("NFPROTO_IPV6")
 {
-        pf = "ipv6"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET6 %}
-        saddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->saddr,
-                              %{ /* pure */ AF_INET6 %})
-        daddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->daddr,
-                              %{ /* pure */ AF_INET6 %})
-        protocol = __ip6_skb_proto($skb)
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv6")
+        @netfilter_ip6_setup
 }
 
 /**
@@ -715,122 +390,32 @@ probe netfilter.ip.post_routing = netfilter.ipv4.post_routing,
 probe netfilter.ipv4.post_routing
         = netfilter.hook("NF_INET_POST_ROUTING").pf("NFPROTO_IPV4")
 {
-        pf = "ipv4"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast(indev,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast(outdev,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET %}
-        saddr = format_ipaddr(__ip_skb_saddr(iphdr), %{ /* pure */ AF_INET %})
-        daddr = format_ipaddr(__ip_skb_daddr(iphdr), %{ /* pure */ AF_INET %})
-        protocol = __ip_skb_proto(iphdr)
-
-        length = @cast($skb, "struct sk_buff")->len
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv4")
+        @netfilter_ip4_setup
 }
 
 
 probe netfilter.ipv6.post_routing
         = netfilter.hook("NF_IP6_POST_ROUTING").pf("NFPROTO_IPV6")
 {
-        pf = "ipv6"
-
-        ipproto_tcp = %{ /* pure */ IPPROTO_TCP %}
-        ipproto_udp = %{ /* pure */ IPPROTO_UDP %}
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        iphdr = __get_skb_iphdr($skb)
-        family = %{ /* pure */ AF_INET6 %}
-        saddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->saddr,
-                              %{ /* pure */ AF_INET6 %})
-        daddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->daddr,
-                              %{ /* pure */ AF_INET6 %})
-        protocol = __ip6_skb_proto($skb)
-
-        tcphdr = __get_skb_tcphdr($skb)
-        if (protocol == ipproto_tcp) {
-           dport = __tcp_skb_dport(tcphdr)
-           sport = __tcp_skb_sport(tcphdr)
-           urg = __tcp_skb_urg(tcphdr)
-           ack = __tcp_skb_ack(tcphdr)
-           psh = __tcp_skb_psh(tcphdr)
-           rst = __tcp_skb_rst(tcphdr)
-           syn = __tcp_skb_syn(tcphdr)
-           fin = __tcp_skb_fin(tcphdr)
-        }
-
-        udphdr = tcphdr /* the same place where tcphdr would have been */
-        if (protocol == ipproto_udp) {
-           dport = ntohs(@cast(udphdr,"udphdr")->dest)
-           sport = ntohs(@cast(udphdr,"udphdr")->source)
-        }
+        @netfilter_common_setup("ipv6")
+        @netfilter_ip6_setup
 }
 
 # XXX: include functionality to parse ARP packet contents
 # XXX: think of some way to comprehensively study bridged packets?
+
+@define netfilter_arp_setup %(
+        arphdr = __get_skb_arphdr($skb)
+        family = %{ /* pure */ NF_ARP %} // from linux/netfilter_arp.h
+        ar_hrd = @cast(arphdr, "struct arphdr")->ar_hrd
+        ar_pro = @cast(arphdr, "struct arphdr")->ar_pro
+        ar_hln = @cast(arphdr, "struct arphdr")->ar_hln
+        ar_pln = @cast(arphdr, "struct arphdr")->ar_pln
+        ar_op = @cast(arphdr, "struct arphdr")->ar_op
+
+        length = @cast($skb, "struct sk_buff")->len
+%)
 
 /**
  * probe netfilter.arp.in -- Called for each incoming ARP packet
@@ -855,41 +440,8 @@ probe netfilter.ipv6.post_routing
  */
 probe netfilter.arp.in = netfilter.hook("NF_ARP_IN").pf("NFPROTO_ARP")
 {
-        pf = "arp"
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        arphdr = __get_skb_arphdr($skb)
-        family = %{ /* pure */ NF_ARP %} // from linux/netfilter_arp.h
-        ar_hrd = @cast(arphdr, "struct arphdr")->ar_hrd
-        ar_pro = @cast(arphdr, "struct arphdr")->ar_pro
-        ar_hln = @cast(arphdr, "struct arphdr")->ar_hln
-        ar_pln = @cast(arphdr, "struct arphdr")->ar_pln
-        ar_op = @cast(arphdr, "struct arphdr")->ar_op
-
-        length = @cast($skb, "struct sk_buff")->len
-
+        @netfilter_common_setup("arp")
+        @netfilter_arp_setup
 }
 
 
@@ -916,40 +468,8 @@ probe netfilter.arp.in = netfilter.hook("NF_ARP_IN").pf("NFPROTO_ARP")
  */
 probe netfilter.arp.out = netfilter.hook("NF_ARP_OUT").pf("NFPROTO_ARP")
 {
-        pf = "arp"
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        arphdr = __get_skb_arphdr($skb)
-        family = %{ /* pure */ NF_ARP %} // from linux/netfilter_arp.h
-        ar_hrd = @cast(arphdr, "struct arphdr")->ar_hrd
-        ar_pro = @cast(arphdr, "struct arphdr")->ar_pro
-        ar_hln = @cast(arphdr, "struct arphdr")->ar_hln
-        ar_pln = @cast(arphdr, "struct arphdr")->ar_pln
-        ar_op = @cast(arphdr, "struct arphdr")->ar_op
-
-        length = @cast($skb, "struct sk_buff")->len
+        @netfilter_common_setup("arp")
+        @netfilter_arp_setup
 }
 
 /**
@@ -975,40 +495,8 @@ probe netfilter.arp.out = netfilter.hook("NF_ARP_OUT").pf("NFPROTO_ARP")
  */
 probe netfilter.arp.forward = netfilter.hook("NF_ARP_FORWARD").pf("NFPROTO_ARP")
 {
-        pf = "arp"
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
-        arphdr = __get_skb_arphdr($skb)
-        family = %{ /* pure */ NF_ARP %} // from linux/netfilter_arp.h
-        ar_hrd = @cast(arphdr, "struct arphdr")->ar_hrd
-        ar_pro = @cast(arphdr, "struct arphdr")->ar_pro
-        ar_hln = @cast(arphdr, "struct arphdr")->ar_hln
-        ar_pln = @cast(arphdr, "struct arphdr")->ar_pln
-        ar_op = @cast(arphdr, "struct arphdr")->ar_op
-
-        length = @cast($skb, "struct sk_buff")->len
+        @netfilter_common_setup("arp")
+        @netfilter_arp_setup
 }
 
 /**
@@ -1029,31 +517,7 @@ probe netfilter.arp.forward = netfilter.hook("NF_ARP_FORWARD").pf("NFPROTO_ARP")
 probe netfilter.bridge.pre_routing
         = netfilter.hook("NF_BR_PRE_ROUTING").pf("NFPROTO_BRIDGE")
 {
-        pf = "bridge"
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
+        @netfilter_common_setup("bridge")
         length = @cast($skb, "struct sk_buff")->len
 }
 
@@ -1075,31 +539,7 @@ probe netfilter.bridge.pre_routing
 probe netfilter.bridge.local_in
         = netfilter.hook("NF_BR_LOCAL_IN").pf("NFPROTO_BRIDGE")
 {
-        pf = "bridge"
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
+        @netfilter_common_setup("bridge")
         length = @cast($skb, "struct sk_buff")->len
 }
 
@@ -1121,31 +561,7 @@ probe netfilter.bridge.local_in
 probe netfilter.bridge.forward
         = netfilter.hook("NF_BR_FORWARD").pf("NFPROTO_BRIDGE")
 {
-        pf = "bridge"
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
+        @netfilter_common_setup("bridge")
         length = @cast($skb, "struct sk_buff")->len
 }
 
@@ -1167,31 +583,7 @@ probe netfilter.bridge.forward
 probe netfilter.bridge.local_out
         = netfilter.hook("NF_BR_LOCAL_OUT").pf("NFPROTO_BRIDGE")
 {
-        pf = "bridge"
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
+        @netfilter_common_setup("bridge")
         length = @cast($skb, "struct sk_buff")->len
 }
 
@@ -1213,30 +605,6 @@ probe netfilter.bridge.local_out
 probe netfilter.bridge.post_routing
         = netfilter.hook("NF_BR_POST_ROUTING").pf("NFPROTO_BRIDGE")
 {
-        pf = "bridge"
-
-        /* from include/linux/netfilter.h: */
-        nf_drop = 0
-        nf_accept = 1
-        nf_stolen = 2
-        nf_queue = 3
-        nf_repeat = 4
-        nf_stop = 5
-
-        indev = $in; outdev = $out
-        indev_name = kernel_string2(@cast($in,"struct net_device")->name,
-                                    "")
-        outdev_name = kernel_string2(@cast($out,"struct net_device")->name,
-                                     "")
-
-        if (indev) {
-           indev_mac_len = @cast(indev,"struct net_device")->addr_len
-           in_mac = __get_mac_addr(indev)
-        }
-        if (outdev) {
-           outdev_mac_len = @cast(outdev,"struct net_device")->addr_len
-           out_mac = __get_mac_addr(outdev)
-        }
-
+        @netfilter_common_setup("bridge")
         length = @cast($skb, "struct sk_buff")->len
 }
