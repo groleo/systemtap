@@ -402,17 +402,15 @@ probe netfilter.ipv6.post_routing
         @netfilter_ip6_setup
 }
 
-# XXX: include functionality to parse ARP packet contents
-# XXX: think of some way to comprehensively study bridged packets?
-
 @define netfilter_arp_setup %(
+# XXX: include functionality to parse ARP packet contents
         arphdr = __get_skb_arphdr($skb)
         family = %{ /* pure */ NF_ARP %} // from linux/netfilter_arp.h
-        ar_hrd = @cast(arphdr, "struct arphdr")->ar_hrd
-        ar_pro = @cast(arphdr, "struct arphdr")->ar_pro
+        ar_hrd = ntohs(@cast(arphdr, "struct arphdr")->ar_hrd)
+        ar_pro = ntohs(@cast(arphdr, "struct arphdr")->ar_pro)
         ar_hln = @cast(arphdr, "struct arphdr")->ar_hln
         ar_pln = @cast(arphdr, "struct arphdr")->ar_pln
-        ar_op = @cast(arphdr, "struct arphdr")->ar_op
+        ar_op = ntohs(@cast(arphdr, "struct arphdr")->ar_op)
 
         length = @cast($skb, "struct sk_buff")->len
 %)
@@ -498,6 +496,8 @@ probe netfilter.arp.forward = netfilter.hook("NF_ARP_FORWARD").pf("NFPROTO_ARP")
         @netfilter_common_setup("arp")
         @netfilter_arp_setup
 }
+
+# XXX: think of some way to comprehensively study bridged packets?
 
 /**
  * probe netfilter.bridge.pre_routing -- Called before a bridging packet is routed
