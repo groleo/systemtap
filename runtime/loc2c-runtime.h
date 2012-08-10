@@ -477,6 +477,7 @@ static void ursl_store64 (const struct usr_regset_lut* lut,unsigned lutsize,  in
           DEREF_FAULT(ptr); \
         _v; \
     })
+#define uread kread
 
 #define kwrite(ptr, value) ({ \
         typeof(*(ptr)) _v; \
@@ -485,6 +486,7 @@ static void ursl_store64 (const struct usr_regset_lut* lut,unsigned lutsize,  in
             probe_kernel_write((void *)(ptr), (void *)&_v, sizeof(*(ptr)))) \
           STORE_DEREF_FAULT(ptr); \
     })
+#define uwrite kwrite
 
 #define uderef(size, addr) ({ \
     intptr_t _i = 0; \
@@ -497,6 +499,7 @@ static void ursl_store64 (const struct usr_regset_lut* lut,unsigned lutsize,  in
     } \
     _i; \
   })
+#define kderef uderef
 
 #define store_uderef(size, addr, value) ({ \
     switch (size) { \
@@ -507,6 +510,7 @@ static void ursl_store64 (const struct usr_regset_lut* lut,unsigned lutsize,  in
       default: __store_deref_bad(); \
     } \
   })
+#define store_kderef store_uderef
 
 
 extern void __deref_bad(void);
@@ -933,36 +937,42 @@ extern void __store_deref_bad(void);
 
 /* x86 and arm can't do 8-byte put/get_user_asm, so we have to split it */
 
-#define kread(ptr)					\
+#define __Xread(ptr, Xderef)				\
   ((sizeof(*(ptr)) == 8) ?				\
        *(typeof(ptr))&(u32[2]) {			\
-	 (u32) kderef(4, &((u32 *)(ptr))[0]),		\
-	 (u32) kderef(4, &((u32 *)(ptr))[1]) }		\
-     : (typeof(*(ptr))) kderef(sizeof(*(ptr)), (ptr)))
+	 (u32) Xderef(4, &((u32 *)(ptr))[0]),		\
+	 (u32) Xderef(4, &((u32 *)(ptr))[1]) }		\
+     : (typeof(*(ptr))) Xderef(sizeof(*(ptr)), (ptr)))
 
-#define kwrite(ptr, value)						     \
+#define __Xwrite(ptr, value, store_Xderef)				     \
   ({									     \
     if (sizeof(*(ptr)) == 8) {						     \
       union { typeof(*(ptr)) v; u32 l[2]; } _kw;			     \
       _kw.v = (typeof(*(ptr)))(value);					     \
-      store_kderef(4, &((u32 *)(ptr))[0], _kw.l[0]);			     \
-      store_kderef(4, &((u32 *)(ptr))[1], _kw.l[1]);			     \
+      store_Xderef(4, &((u32 *)(ptr))[0], _kw.l[0]);			     \
+      store_Xderef(4, &((u32 *)(ptr))[1], _kw.l[1]);			     \
     } else								     \
-      store_kderef(sizeof(*(ptr)), (ptr), (long)(typeof(*(ptr)))(value));     \
+      store_Xderef(sizeof(*(ptr)), (ptr), (long)(typeof(*(ptr)))(value));     \
   })
 
 #else
 
-#define kread(ptr) \
-  ( (typeof(*(ptr))) kderef(sizeof(*(ptr)), (ptr)) )
-#define kwrite(ptr, value) \
-  ( store_kderef(sizeof(*(ptr)), (ptr), (long)(typeof(*(ptr)))(value)) )
+#define __Xread(ptr, Xderef) \
+  ( (typeof(*(ptr))) Xderef(sizeof(*(ptr)), (ptr)) )
+#define __Xwrite(ptr, value, store_Xderef) \
+  ( store_Xderef(sizeof(*(ptr)), (ptr), (long)(typeof(*(ptr)))(value)) )
 
 #endif
 
+#define kread(ptr) __Xread((ptr), kderef)
+#define uread(ptr) __Xread((ptr), uderef)
+
+#define kwrite(ptr, value) __Xwrite((ptr), (value), store_kderef)
+#define uwrite(ptr, value) __Xwrite((ptr), (value), store_uderef)
+
 #endif /* STAPCONF_PROBE_KERNEL */
 
-/* Derefence a kernel buffer ADDR of size MAXBYTES. Put the bytes in
+/* Dereference a kernel buffer ADDR of size MAXBYTES. Put the bytes in
  * address DST (which can be NULL).
  *
  * This function is useful for reading memory when the size isn't a
