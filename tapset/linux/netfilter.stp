@@ -451,10 +451,10 @@ function __read4:long (x:long) %{ /* pure */
  * @ar_pln: Length of protocol address
  * @ar_op: ARP opcode (command)
  * @ar_data: Address of ARP packet data region (after the header)
- * @ar_sha: Ethernet only (ar_pro==0x800): source hardware (MAC) address 
- * @ar_sip: Ethernet only (ar_pro==0x800): source IP address
- * @ar_tha: Ethernet only (ar_pro==0x800): target hardware (MAC) address
- * @ar_tip: Ethernet only (ar_pro==0x800): target IP address
+ * @ar_sha: Ethernet+IP only (ar_pro==0x800): source hardware (MAC) address 
+ * @ar_sip: Ethernet+IP only (ar_pro==0x800): source IP address
+ * @ar_tha: Ethernet+IP only (ar_pro==0x800): target hardware (MAC) address
+ * @ar_tip: Ethernet+IP only (ar_pro==0x800): target IP address
  * @nf_drop: Constant used to signify a 'drop' verdict
  * @nf_accept: Constant used to signify an 'accept' verdict
  * @nf_stolen: Constant used to signify a 'stolen' verdict
@@ -484,10 +484,10 @@ probe netfilter.arp.in = netfilter.hook("NF_ARP_IN").pf("NFPROTO_ARP")
  * @ar_pln: Length of protocol address
  * @ar_op: ARP opcode (command)
  * @ar_data: Address of ARP packet data region (after the header)
- * @ar_sha: Ethernet only (ar_pro==0x800): source hardware (MAC) address 
- * @ar_sip: Ethernet only (ar_pro==0x800): source IP address
- * @ar_tha: Ethernet only (ar_pro==0x800): target hardware (MAC) address
- * @ar_tip: Ethernet only (ar_pro==0x800): target IP address
+ * @ar_sha: Ethernet+IP only (ar_pro==0x800): source hardware (MAC) address 
+ * @ar_sip: Ethernet+IP only (ar_pro==0x800): source IP address
+ * @ar_tha: Ethernet+IP only (ar_pro==0x800): target hardware (MAC) address
+ * @ar_tip: Ethernet+IP only (ar_pro==0x800): target IP address
  * @nf_drop: Constant used to signify a 'drop' verdict
  * @nf_accept: Constant used to signify an 'accept' verdict
  * @nf_stolen: Constant used to signify a 'stolen' verdict
@@ -516,10 +516,10 @@ probe netfilter.arp.out = netfilter.hook("NF_ARP_OUT").pf("NFPROTO_ARP")
  * @ar_pln: Length of protocol address
  * @ar_op: ARP opcode (command)
  * @ar_data: Address of ARP packet data region (after the header)
- * @ar_sha: Ethernet only (ar_pro==0x800): source hardware (MAC) address 
- * @ar_sip: Ethernet only (ar_pro==0x800): source IP address
- * @ar_tha: Ethernet only (ar_pro==0x800): target hardware (MAC) address
- * @ar_tip: Ethernet only (ar_pro==0x800): target IP address
+ * @ar_sha: Ethernet+IP only (ar_pro==0x800): source hardware (MAC) address 
+ * @ar_sip: Ethernet+IP only (ar_pro==0x800): source IP address
+ * @ar_tha: Ethernet+IP only (ar_pro==0x800): target hardware (MAC) address
+ * @ar_tip: Ethernet+IP only (ar_pro==0x800): target IP address
  * @nf_drop: Constant used to signify a 'drop' verdict
  * @nf_accept: Constant used to signify an 'accept' verdict
  * @nf_stolen: Constant used to signify a 'stolen' verdict
