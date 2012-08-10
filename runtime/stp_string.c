@@ -170,5 +170,66 @@ bad:
 	strlcpy (outstr, "<unknown>", len);
 }
 
+/**
+ * Convert a UTF-32 character into a UTF-8 string.
+ *
+ * @param buf The output buffer.
+ * @param size The size of the output buffer.
+ * @param c The character to convert.
+ *
+ * @return The number of bytes written (not counting \0),
+ *         0 if there's not enough room for the full character,
+ *         or < 0 for invalid characters (with buf untouched).
+ */
+static int _stp_convert_utf32(char* buf, int size, u32 c)
+{
+	int i, n;
+
+	/* 0xxxxxxx */
+	if (c < 0x7F)
+		n = 1;
+
+	/* 110xxxxx 10xxxxxx */
+	else if (c < 0x7FF)
+		n = 2;
+
+	/* UTF-16 surrogates are not valid by themselves.
+	 * XXX We could decide to be lax and just encode it anyway...
+	 */
+	else if (c >= 0xD800 && c <= 0xDFFF)
+		return -EINVAL;
+
+	/* 1110xxxx 10xxxxxx 10xxxxxx */
+	else if (c < 0xFFFF)
+		n = 3;
+
+	/* 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
+	else if (c < 0x10FFFF)
+		n = 4;
+
+	/* The original UTF-8 design could go up to 0x7FFFFFFF, but RFC 3629
+	 * sets the upperbound to 0x10FFFF; thus all higher values are errors.
+	 */
+	else
+		return -EINVAL;
+
+	if (size < n + 1)
+		return 0;
+
+	buf[n] = '\0';
+	if (n == 1)
+		buf[0] = c;
+	else {
+		u8 msb = ((1 << n) - 1) << (8 - n);
+		for (i = n - 1; i > 0; --i) {
+			buf[i] = 0x80 | (c & 0x3F);
+			c >>= 6;
+		}
+		buf[0] = msb | c;
+	}
+
+	return n;
+}
+
 /** @} */
 #endif /* _STP_STRING_C_ */

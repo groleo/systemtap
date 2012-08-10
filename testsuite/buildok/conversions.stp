@@ -5,6 +5,8 @@
 probe begin {
   print (kernel_string(2342))
   print (kernel_string_n(2342, 1))
+  print (kernel_string_utf32(2342))
+  print (kernel_string_utf16(2342))
   print (kernel_long(2342))
   print (kernel_int(2342))
   print (kernel_short(2342))
@@ -20,6 +22,8 @@ probe begin {
   print (user_string_n2(2342, 5, "foobar"))
   print (user_string_n_warn(2342, 5))
   print (user_string_n_quoted(2342, 5))
+  print (user_string_utf32(2342))
+  print (user_string_utf16(2342))
   print (user_short(2342))
   print (user_short_warn(2342))
   print (user_int(2342))

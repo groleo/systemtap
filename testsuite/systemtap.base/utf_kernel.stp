@@ -1,0 +1,39 @@
+function utf16_addr:long() %{
+    static u16 utf16_string[] = {
+        0x73, 0x74, 0x61, 0x70, // "stap" (one-byte UTF-8 each)
+        0x391, 0x3A9,           // "ΑΩ" (two-byte UTF-8 each)
+        0x263A,                 // "☺" (three-byte UTF-8)
+        0xD83D, 0xDE08,         // U+1F608 "😈" (four-byte UTF-8)
+        0
+    };
+    STAP_RETVALUE = (intptr_t)utf16_string;
+%}
+
+function utf32_addr:long() %{
+    static u32 utf32_string[] = {
+        0x73, 0x74, 0x61, 0x70, // "stap" (one-byte UTF-8 each)
+        0x391, 0x3A9,           // "ΑΩ" (two-byte UTF-8 each)
+        0x263A,                 // "☺" (three-byte UTF-8)
+        0x1F608,                // "😈" (four-byte UTF-8)
+        0
+    };
+    STAP_RETVALUE = (intptr_t)utf32_string;
+%}
+
+probe begin
+{
+  s = utf16_addr();
+  for (p = s; i = kernel_short(p) & 0xffff; p += 2)
+    printf("%X ", i)
+  println(":")
+  println(kernel_string_utf16(s))
+
+  s = utf32_addr();
+  for (p = s; i = kernel_int(p) & 0xffffffff; p += 4)
+    printf("%X ", i)
+  println(":")
+  println(kernel_string_utf32(s))
+
+  exit()
+}
+

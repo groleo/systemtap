@@ -1,0 +1,6 @@
+set test "utf_kernel"
+set ::result_string {73 74 61 70 391 3A9 263A D83D DE08 :
+stapΑΩ☺😈
+73 74 61 70 391 3A9 263A 1F608 :
+stapΑΩ☺😈}
+stap_run3 $test $srcdir/$subdir/$test.stp -g

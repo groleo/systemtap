@@ -3,6 +3,8 @@
 probe begin {
 	print (kernel_string (0))
 	print (kernel_string_n(0, 1))
+	print (kernel_string_utf32 (0))
+	print (kernel_string_utf16 (0))
 	print (kernel_long (0))
 	print (kernel_int (0))
 	print (kernel_short (0))
@@ -18,6 +20,8 @@ probe begin {
 	print (user_string_n2(0, 5, "foobar"))
 	print (user_string_n_warn(0, 0))
 	print (user_string_n_quoted(0, 0))
+	print (user_string_utf32 (0))
+	print (user_string_utf16 (0))
 	print (user_short(0))
 	print (user_short_warn(0))
 	print (user_ushort(0))

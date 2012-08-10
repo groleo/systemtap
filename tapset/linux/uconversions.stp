@@ -192,6 +192,118 @@ function user_string_n_quoted:string (addr:long, n:long) %{ /* pure */ /* myproc
 %}
 
 /**
+ * sfunction user_string_utf32 - Retrieves UTF-32 string from user memory
+ * @addr: The user address to retrieve the string from
+ *
+ * Description: This function returns a null terminated UTF-8 string converted
+ * from the UTF-32 string at a given user memory address. Reports an error on
+ * string copy fault or conversion error.
+ */
+function user_string_utf32:string (addr:long) %{ /* pure */ /* myproc-unprivileged */
+  int rc = 0, len = MAXSTRINGLEN;
+  uint32_t c32, *source = (uint32_t*)(intptr_t)STAP_ARG_addr;
+  char *destination = STAP_RETVALUE;
+
+  assert_is_myproc();
+
+  *destination = '\0';
+  while (len > 1 && (c32 = uread(source))) {
+    if ((rc = _stp_convert_utf32(destination, len, c32)) <= 0) {
+      snprintf (CONTEXT->error_buffer, sizeof(CONTEXT->error_buffer),
+                "invalid UTF-32 character U+%X at 0x%p", c32, source);
+      CONTEXT->last_error = CONTEXT->error_buffer;
+      break;
+    }
+    ++source;
+    destination += rc;
+    len -= rc;
+  }
+
+  if (0) {
+deref_fault: /* branched to from deref_string() */
+    snprintf (CONTEXT->error_buffer, sizeof(CONTEXT->error_buffer),
+              "user string copy fault at 0x%p", source);
+    CONTEXT->last_error = CONTEXT->error_buffer;
+  }
+%}
+
+/**
+ * sfunction user_string2_utf32 - Retrieves UTF-32 string from user memory with alternative error string
+ * @addr: The user address to retrieve the string from
+ * @err_msg: The error message to return when data isn't available
+ *
+ * Description: This function returns a null terminated UTF-8 string converted
+ * from the UTF-32 string at a given user memory address. Reports the given
+ * error message on string copy fault or conversion error.
+ */
+function user_string2_utf32:string (addr:long, err_msg:string) {
+  try { return user_string_utf32(addr) } catch { return err_msg }
+}
+
+/**
+ * sfunction user_string_utf16 - Retrieves UTF-16 string from user memory
+ * @addr: The user address to retrieve the string from
+ *
+ * Description: This function returns a null terminated UTF-8 string converted
+ * from the UTF-16 string at a given user memory address. Reports an error on
+ * string copy fault or conversion error.
+ */
+function user_string_utf16:string (addr:long) %{ /* pure */ /* myproc-unprivileged */
+  int rc = 0, len = MAXSTRINGLEN;
+  uint32_t c32;
+  uint16_t c16low, *source = (uint16_t*)(intptr_t)STAP_ARG_addr;
+  char *destination = STAP_RETVALUE;
+
+  assert_is_myproc();
+
+  *destination = '\0';
+  while (len > 1 && (c32 = uread(source))) {
+    /* Check for a UTF-16 high surrogate, then its low pair, and combine them.
+     * Broken surrogates will just fall through to _stp_convert_utf32 and get
+     * flagged as an error there.  (Or even allowed, if we decide to be lax.)
+     */
+    if (c32 >= 0xD800 && c32 <= 0xDBFF) {
+      ++source;
+      c16low = uread(source);
+      if (c16low >= 0xDC00 && c16low <= 0xDFFF)
+        c32 = 0x10000 + ((c32 & 0x3FF) << 10) + (c16low & 0x3FF);
+      else
+        --source;
+    }
+
+    if ((rc = _stp_convert_utf32(destination, len, c32)) <= 0) {
+      snprintf (CONTEXT->error_buffer, sizeof(CONTEXT->error_buffer),
+                "invalid UTF-16 character U+%X at 0x%p", c32, source);
+      CONTEXT->last_error = CONTEXT->error_buffer;
+      break;
+    }
+    ++source;
+    destination += rc;
+    len -= rc;
+  }
+
+  if (0) {
+deref_fault: /* branched to from deref_string() */
+    snprintf (CONTEXT->error_buffer, sizeof(CONTEXT->error_buffer),
+              "user string copy fault at 0x%p", source);
+    CONTEXT->last_error = CONTEXT->error_buffer;
+  }
+%}
+
+/**
+ * sfunction user_string2_utf16 - Retrieves UTF-16 string from user memory with alternative error string
+ * @addr: The user address to retrieve the string from
+ * @err_msg: The error message to return when data isn't available
+ *
+ * Description: This function returns a null terminated UTF-8 string converted
+ * from the UTF-16 string at a given user memory address. Reports the given
+ * error message on string copy fault or conversion error.
+ */
+function user_string2_utf16:string (addr:long, err_msg:string) {
+  try { return user_string_utf16(addr) } catch { return err_msg }
+}
+
+/**
  * sfunction user_char - Retrieves a char value stored in user space
  *
  * @addr: the user space address to retrieve the char from

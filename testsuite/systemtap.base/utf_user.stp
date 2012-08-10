@@ -1,0 +1,15 @@
+probe process.function("main")
+{
+  s = $utf16_string;
+  for (p = s; i = user_short(p) & 0xffff; p += 2)
+    printf("%X ", i)
+  println(":")
+  println(kernel_string_utf16(s))
+
+  s = $utf32_string;
+  for (p = s; i = user_int(p) & 0xffffffff; p += 4)
+    printf("%X ", i)
+  println(":")
+  println(kernel_string_utf32(s))
+}
+

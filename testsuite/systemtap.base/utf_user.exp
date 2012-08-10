@@ -1,0 +1,21 @@
+set test "utf_user"
+set ::result_string {73 74 61 70 391 3A9 263A D83D DE08 :
+stapΑΩ☺😈
+73 74 61 70 391 3A9 263A 1F608 :
+stapΑΩ☺😈}
+
+set srcfile "$srcdir/$subdir/$test.c"
+set stpfile "$srcdir/$subdir/$test.stp"
+set exefile "[pwd]/$test.exe"
+set test_flags "additional_flags=-g"
+set res [target_compile "$srcfile" "$exefile" executable "$test_flags"]
+if { $res != "" } {
+  verbose "target_compile failed: $res" 2
+  fail "$test compile"
+  untested "$test"
+  return
+} else {
+  pass "$test compile"
+}
+
+stap_run3 $test "$stpfile" -c "$exefile"
