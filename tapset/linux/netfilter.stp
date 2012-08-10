@@ -20,15 +20,20 @@
   # ... currently we use a hideous copypasta hack which defines them as
   # locals in each probe alias. Blegh
 
-function __get_mac_addr:string(addr:long) {
-         return sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
-                        @cast(addr, "struct net_device")->dev_addr[0],
-                        @cast(addr, "struct net_device")->dev_addr[1],
-                        @cast(addr, "struct net_device")->dev_addr[2],
-                        @cast(addr, "struct net_device")->dev_addr[3],
-                        @cast(addr, "struct net_device")->dev_addr[4],
-                        @cast(addr, "struct net_device")->dev_addr[5])
+function __read_char:long(addr:long) %{ /* pure */
+         STAP_RETVALUE = kderef(sizeof(char), STAP_ARG_addr);
+         CATCH_DEREF_FAULT ();
+%}
 
+function __mac_addr_to_string:string(addr:long) {
+         return sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
+                        __read_char(addr), __read_char(addr+1),
+                        __read_char(addr+2), __read_char(addr+3),
+                        __read_char(addr+4), __read_char(addr+5))         
+}
+
+function __get_mac_addr:string(addr:long) {
+         return __mac_addr_to_string(@cast(addr, "struct net_device")->dev_addr)
 }
 
 function __get_skb_arphdr:long(addr:long)
@@ -402,6 +407,12 @@ probe netfilter.ipv6.post_routing
         @netfilter_ip6_setup
 }
 
+function __read4:long (x:long) %{ /* pure */
+         long a = kderef(sizeof(u32),STAP_ARG_x);
+         STAP_RETVALUE = a;
+         CATCH_DEREF_FAULT();
+%}
+
 @define netfilter_arp_setup %(
 # XXX: include functionality to parse ARP packet contents
         arphdr = __get_skb_arphdr($skb)
@@ -411,6 +422,15 @@ probe netfilter.ipv6.post_routing
         ar_hln = @cast(arphdr, "struct arphdr")->ar_hln
         ar_pln = @cast(arphdr, "struct arphdr")->ar_pln
         ar_op = ntohs(@cast(arphdr, "struct arphdr")->ar_op)
+
+        ar_data = arphdr + 8
+        if (ar_pro == 0x800) {
+           /* additional info available for most common (Ethernet) case: */
+           ar_sha = __mac_addr_to_string(ar_data)
+           ar_sip = format_ipaddr(__read4(ar_data + 6), %{ /* pure */ AF_INET %})
+           ar_tha = __mac_addr_to_string(ar_data)
+           ar_tip =  format_ipaddr(__read4(ar_data + 6), %{ /* pure */ AF_INET %})
+        }
 
         length = @cast($skb, "struct sk_buff")->len
 %)
@@ -429,6 +449,11 @@ probe netfilter.ipv6.post_routing
  * @ar_hln: Length of hardware address
  * @ar_pln: Length of protocol address
  * @ar_op: ARP opcode (command)
+ * @ar_data: Address of ARP packet data region (after the header)
+ * @ar_sha: Ethernet only (ar_pro==0x800): source hardware (MAC) address 
+ * @ar_sip: Ethernet only (ar_pro==0x800): source IP address
+ * @ar_tha: Ethernet only (ar_pro==0x800): target hardware (MAC) address
+ * @ar_tip: Ethernet only (ar_pro==0x800): target IP address
  * @nf_drop: Constant used to signify a 'drop' verdict
  * @nf_accept: Constant used to signify an 'accept' verdict
  * @nf_stolen: Constant used to signify a 'stolen' verdict
@@ -457,6 +482,11 @@ probe netfilter.arp.in = netfilter.hook("NF_ARP_IN").pf("NFPROTO_ARP")
  * @ar_hln: Length of hardware address
  * @ar_pln: Length of protocol address
  * @ar_op: ARP opcode (command)
+ * @ar_data: Address of ARP packet data region (after the header)
+ * @ar_sha: Ethernet only (ar_pro==0x800): source hardware (MAC) address 
+ * @ar_sip: Ethernet only (ar_pro==0x800): source IP address
+ * @ar_tha: Ethernet only (ar_pro==0x800): target hardware (MAC) address
+ * @ar_tip: Ethernet only (ar_pro==0x800): target IP address
  * @nf_drop: Constant used to signify a 'drop' verdict
  * @nf_accept: Constant used to signify an 'accept' verdict
  * @nf_stolen: Constant used to signify a 'stolen' verdict
@@ -484,6 +514,11 @@ probe netfilter.arp.out = netfilter.hook("NF_ARP_OUT").pf("NFPROTO_ARP")
  * @ar_hln: Length of hardware address
  * @ar_pln: Length of protocol address
  * @ar_op: ARP opcode (command)
+ * @ar_data: Address of ARP packet data region (after the header)
+ * @ar_sha: Ethernet only (ar_pro==0x800): source hardware (MAC) address 
+ * @ar_sip: Ethernet only (ar_pro==0x800): source IP address
+ * @ar_tha: Ethernet only (ar_pro==0x800): target hardware (MAC) address
+ * @ar_tip: Ethernet only (ar_pro==0x800): target IP address
  * @nf_drop: Constant used to signify a 'drop' verdict
  * @nf_accept: Constant used to signify an 'accept' verdict
  * @nf_stolen: Constant used to signify a 'stolen' verdict
