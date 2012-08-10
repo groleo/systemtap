@@ -424,13 +424,14 @@ function __read4:long (x:long) %{ /* pure */
         ar_op = ntohs(@cast(arphdr, "struct arphdr")->ar_op)
 
         ar_data = arphdr + 8
-        if (ar_pro == 0x800) {
-           /* additional info available for most common (Ethernet) case: */
+        if (ar_hrd == 0x001 && ar_pro == 0x800) {
+           /* additional info available for most common (Ethernet+IP) case: */
            ar_sha = __mac_addr_to_string(ar_data)
            ar_sip = format_ipaddr(__read4(ar_data + 6), %{ /* pure */ AF_INET %})
            ar_tha = __mac_addr_to_string(ar_data)
            ar_tip =  format_ipaddr(__read4(ar_data + 6), %{ /* pure */ AF_INET %})
         }
+        /* XXX support for additional cases? */
 
         length = @cast($skb, "struct sk_buff")->len
 %)
