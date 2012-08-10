@@ -130,7 +130,7 @@ __extension__ extern unsigned long long __sdt_unsp;
   (!__extension__							\
    (__builtin_constant_p ((((unsigned long long)			\
 			    (_SDT_ARGINTTYPE (x)) __sdt_unsp)		\
-			   & (1ULL << (sizeof (unsigned long long)	\
+			   & ((unsigned long long)1 << (sizeof (unsigned long long)	\
 				       * __CHAR_BIT__ - 1))) == 0)	\
     || (_SDT_ARGINTTYPE (x)) -1 > (_SDT_ARGINTTYPE (x)) 0))
 # define _SDT_ARGSIZE(x)	\
