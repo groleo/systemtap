@@ -9345,6 +9345,11 @@ static vector<string> tracepoint_extra_decls (systemtap_session& s, const string
   if (header.find("nfs") != string::npos && s.kernel_config["CONFIG_NFSD"] != string("")) {
     they_live.push_back ("struct rpc_task;");
   }
+  // RHEL6.3
+  if (header.find("rpc") != string::npos && s.kernel_config["CONFIG_NFSD"] != string("")) {
+    they_live.push_back ("struct rpc_clnt;");
+    they_live.push_back ("struct rpc_wait_queue;");
+  }
 
   they_live.push_back ("#include <asm/cputime.h>");
 
