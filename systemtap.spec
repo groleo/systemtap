@@ -405,20 +405,23 @@ test -e %{_localstatedir}/log/stap-server/log || {
      chmod 664 %{_localstatedir}/log/stap-server/log
      chown stap-server:stap-server %{_localstatedir}/log/stap-server/log
 }
-
 # If it does not already exist, as stap-server, generate the certificate
 # used for signing and for ssl.
 if test ! -e ~stap-server/.systemtap/ssl/server/stap.cert; then
    runuser -s /bin/sh - stap-server -c %{_libexecdir}/%{name}/stap-gen-cert >/dev/null
-   # Authorize the certificate as a trusted ssl peer and as a trusted signer
-   # on the local host.
-   %{_libexecdir}/%{name}/stap-authorize-cert ~stap-server/.systemtap/ssl/server/stap.cert %{_sysconfdir}/systemtap/ssl/client >/dev/null
-   %{_libexecdir}/%{name}/stap-authorize-cert ~stap-server/.systemtap/ssl/server/stap.cert %{_sysconfdir}/systemtap/staprun >/dev/null
 fi
-
 # Activate the service
 /sbin/chkconfig --add stap-server
 exit 0
+
+%triggerin client -- systemtap-server
+if test -e ~stap-server/.systemtap/ssl/server/stap.cert; then
+   # echo Authorizing ssl-peer/trusted-signer certificate for local systemtap-server
+   %{_libexecdir}/%{name}/stap-authorize-cert ~stap-server/.systemtap/ssl/server/stap.cert %{_sysconfdir}/systemtap/ssl/client >/dev/null
+   %{_libexecdir}/%{name}/stap-authorize-cert ~stap-server/.systemtap/ssl/server/stap.cert %{_sysconfdir}/systemtap/staprun >/dev/null
+fi
+exit 0
+# XXX: corresponding %triggerun?
 
 %preun server
 # Check that this is the actual deinstallation of the package, as opposed to
@@ -482,6 +485,7 @@ exit 0
 %{_libexecdir}/%{name}/stap-stop-server
 %{_libexecdir}/%{name}/stap-gen-cert
 %{_libexecdir}/%{name}/stap-sign-module
+%{_libexecdir}/%{name}/stap-authorize-cert
 %{_mandir}/man7/stappaths.7*
 %{_mandir}/man8/stap-server.8*
 %{_sysconfdir}/rc.d/init.d/stap-server
