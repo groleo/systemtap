@@ -1646,6 +1646,7 @@ stap_start_task_finder(void)
 		if (mmpath == NULL || IS_ERR(mmpath)) {
 			rc = -PTR_ERR(mmpath);
 			if (rc == ENOENT) {
+				rc = 0;	/* ignore ENOENT */
 				continue;
 			}
 			else {
@@ -1699,6 +1700,7 @@ stap_start_task_finder(void)
 						 UTRACE_STOP);
 			if (rc != 0 && rc != EPERM)
 				goto stf_err;
+			rc = 0;		/* ignore EPERM */
 			tgt->engine_attached = 1;
 		}
 	} while_each_thread(grp, tsk);

@@ -1619,15 +1619,17 @@ stap_start_task_finder(void)
 		// should also keep us safe.
 		task_lock(tsk);
 		if (! tsk->mm) {
-		    /* If the thread doesn't have a mm_struct, it is
-		     * a kernel thread which we need to skip. */
-		    continue;
+			/* If the thread doesn't have a mm_struct, it
+			 * is a kernel thread which we need to
+			 * skip. */
+			continue;
 		}
 		mmpath = __stp_get_mm_path(tsk->mm, mmpath_buf, PATH_MAX);
 		task_unlock(tsk);
 		if (mmpath == NULL || IS_ERR(mmpath)) {
 			rc = -PTR_ERR(mmpath);
 			if (rc == ENOENT) {
+				rc = 0;	/* ignore ENOENT */
 				continue;
 			}
 			else {
@@ -1680,6 +1682,7 @@ stap_start_task_finder(void)
 						 UTRACE_STOP);
 			if (rc != 0 && rc != EPERM)
 				goto stf_err;
+			rc = 0;		/* ignore EPERM */
 			tgt->engine_attached = 1;
 		}
 	} while_each_thread(grp, tsk);
