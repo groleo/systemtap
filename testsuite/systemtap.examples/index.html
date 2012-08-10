@@ -40,7 +40,10 @@
 
 <h2>All Examples</h2>
 <ul>
-<li><a name="general/ansi_colors.stp"></a><a href="#general/ansi_colors.stp">&para;</a> <a href="general/ansi_colors.stp">general/ansi_colors.stp</a> - Color Table for ansi_set_color2() and ansi_set_color3()<br>
+<li><a name="general/alias_suffixes.stp"></a><a href="#general/alias_suffixes.stp">&para;</a> <a href="general/alias_suffixes.stp">general/alias_suffixes.stp</a> - Count I/O Syscalls using Alias Suffixes<br>
+keywords: <a href="keyword-index.html#IO">IO</a> <a href="keyword-index.html#STATISTICS">STATISTICS</a> <br>
+<p>alias_suffixes.stp is a demonstration of how alias suffixes in the systemtap language might be used. The script tracks the wall clock time for each invocation of the system calls open, close, read, and write. When the script exists it prints out the minimum, average, and maximum times in microseconds for each system call, followed by a count of times that each syscall was invoked and a histogram showing the distributions of times.<p><font size="-2"><pre># stap alias_suffixes.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a name="general/ansi_colors.stp"></a><a href="#general/ansi_colors.stp">&para;</a> <a href="general/ansi_colors.stp">general/ansi_colors.stp</a> - Color Table for ansi_set_color2() and ansi_set_color3()<br>
 keywords: <a href="keyword-index.html#FORMAT">FORMAT</a> <br>
 <p>The script prints a table showing the available color combinations for the ansi_set_color2() and ans_set_color3() functions in the ansi.stp tapset.<p><font size="-2"><pre># stap ansi_colors.stp</pre></font></p>
 </li><li><a name="general/ansi_colors2.stp"></a><a href="#general/ansi_colors2.stp">&para;</a> <a href="general/ansi_colors2.stp">general/ansi_colors2.stp</a> - Show Attribues in Table for ansi_set_color3()<br>

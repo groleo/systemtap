@@ -185,7 +185,10 @@ keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-inde
 </li></ul>
 <h3><a name="IO"><a href="#IO">&para;</a> IO</a></h3>
 <ul>
-<li><a href="io/inodewatch.stp">io/inodewatch.stp</a> - Monitoring Reads and Writes to a File<br>
+<li><a href="general/alias_suffixes.stp">general/alias_suffixes.stp</a> - Count I/O Syscalls using Alias Suffixes<br>
+keywords: <a href="keyword-index.html#IO">IO</a> <a href="keyword-index.html#STATISTICS">STATISTICS</a> <br>
+<p>alias_suffixes.stp is a demonstration of how alias suffixes in the systemtap language might be used. The script tracks the wall clock time for each invocation of the system calls open, close, read, and write. When the script exists it prints out the minimum, average, and maximum times in microseconds for each system call, followed by a count of times that each syscall was invoked and a histogram showing the distributions of times.<p><font size="-2"><pre># stap alias_suffixes.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a href="io/inodewatch.stp">io/inodewatch.stp</a> - Monitoring Reads and Writes to a File<br>
 keywords: <a href="keyword-index.html#IO">IO</a> <br>
 <p> The inodewatch.stp outputs the executable name and process id each time a read or write occurs to the specified inode on the specified major/minor device.<p><font size="-2"><pre># stap inodewatch.stp 0x08 0x01 100 -c &quot;sleep 0.2&quot;</pre></font></p>
 </li><li><a href="io/inodewatch2.stp">io/inodewatch2.stp</a> - Monitoring Attribute Changes to a File<br>
@@ -588,7 +591,10 @@ keywords: <a href="keyword-index.html#NETWORK">NETWORK</a> <a href="keyword-inde
 </li></ul>
 <h3><a name="STATISTICS"><a href="#STATISTICS">&para;</a> STATISTICS</a></h3>
 <ul>
-<li><a href="general/eventcount.stp">general/eventcount.stp</a> - Count Specified Events<br>
+<li><a href="general/alias_suffixes.stp">general/alias_suffixes.stp</a> - Count I/O Syscalls using Alias Suffixes<br>
+keywords: <a href="keyword-index.html#IO">IO</a> <a href="keyword-index.html#STATISTICS">STATISTICS</a> <br>
+<p>alias_suffixes.stp is a demonstration of how alias suffixes in the systemtap language might be used. The script tracks the wall clock time for each invocation of the system calls open, close, read, and write. When the script exists it prints out the minimum, average, and maximum times in microseconds for each system call, followed by a count of times that each syscall was invoked and a histogram showing the distributions of times.<p><font size="-2"><pre># stap alias_suffixes.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a href="general/eventcount.stp">general/eventcount.stp</a> - Count Specified Events<br>
 keywords: <a href="keyword-index.html#STATISTICS">STATISTICS</a> <a href="keyword-index.html#THREAD">THREAD</a> <a href="keyword-index.html#PROCESS">PROCESS</a> <br>
 <p>The script prints a count of specified events and their related tid&#39;s over the course of execution.  Numerous configuration options exist to control filtering / reporting, see the script source.<p><font size="-2"><pre># stap eventcount.stp syscall.* -c &#39;sleep 0.2&#39;</pre></font></p>
 </li><li><a href="general/func_time_stats.stp">general/func_time_stats.stp</a> - Function Time Statistics<br>

@@ -1,6 +1,20 @@
 SYSTEMTAP EXAMPLES INDEX
 (see also keyword-index.txt)
 
+general/alias_suffixes.stp - Count I/O Syscalls using Alias Suffixes
+keywords: io statistics
+
+  alias_suffixes.stp is a demonstration of how alias suffixes in the
+  systemtap language might be used. The script tracks the wall clock
+  time for each invocation of the system calls open, close, read, and
+  write. When the script exists it prints out the minimum, average, and
+  maximum times in microseconds for each system call, followed by a
+  count of times that each syscall was invoked and a histogram showing
+  the distributions of times.
+
+  # stap alias_suffixes.stp -c "sleep 0.2"
+
+
 general/ansi_colors.stp - Color Table for ansi_set_color2() and ansi_set_color3()
 keywords: format
 
