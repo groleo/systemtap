@@ -23,6 +23,10 @@ extern "C" {
 #define DW_AT_linkage_name 0x6e
 #endif
 
+#if ! _ELFUTILS_PREREQ(0, 155)
+#define DW_ATE_UTF 0x10
+#endif
+
 
 // NB: "rc == 0" means OK in this case
 void dwfl_assert(const std::string& desc, int rc);

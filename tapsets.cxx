@@ -2685,6 +2685,7 @@ dwarf_pretty_print::recurse_base (Dwarf_Die* type, target_symbol* e,
       pf->raw_components.append("?");
       break;
 
+    case DW_ATE_UTF: // XXX need to add unicode to _stp_vsprint_char
     case DW_ATE_signed_char:
     case DW_ATE_unsigned_char:
       // Use escapes to make sure that non-printable characters
@@ -2890,25 +2891,52 @@ dwarf_pretty_print::print_chars (Dwarf_Die* start_type, target_symbol* e,
 {
   Dwarf_Die type;
   dw.resolve_unqualified_inner_typedie (start_type, &type, e);
-  const char *name = dwarf_diename (&type);
-  if (name && (name == string("char") || name == string("unsigned char")))
+
+  Dwarf_Attribute attr;
+  Dwarf_Word encoding = (Dwarf_Word) -1;
+  dwarf_formudata (dwarf_attr_integrate (&type, DW_AT_encoding, &attr),
+                   &encoding);
+  switch (encoding)
     {
-      if (push_deref (pf, "\"%s\"", e))
-        {
-          // steal the last arg for a string access
-          assert (!pf->args.empty());
-          functioncall* fcall = new functioncall;
-          fcall->tok = e->tok;
-          fcall->function = userspace_p ? "user_string2" : "kernel_string2";
-          fcall->args.push_back (pf->args.back());
-          expression *err_msg = new literal_string ("<unknown>");
-          err_msg->tok = e->tok;
-          fcall->args.push_back (err_msg);
-          pf->args.back() = fcall;
-        }
-      return true;
+    case DW_ATE_UTF:
+    case DW_ATE_signed_char:
+    case DW_ATE_unsigned_char:
+      break;
+    default:
+      return false;
     }
-  return false;
+
+  string function = userspace_p ? "user_string2" : "kernel_string2";
+  Dwarf_Word size = (Dwarf_Word) -1;
+  dwarf_formudata (dwarf_attr_integrate (&type, DW_AT_byte_size, &attr), &size);
+  switch (size)
+    {
+    case 1:
+      break;
+    case 2:
+      function += "_utf16";
+      break;
+    case 4:
+      function += "_utf32";
+      break;
+    default:
+      return false;
+    }
+
+  if (push_deref (pf, "\"%s\"", e))
+    {
+      // steal the last arg for a string access
+      assert (!pf->args.empty());
+      functioncall* fcall = new functioncall;
+      fcall->tok = e->tok;
+      fcall->function = function;
+      fcall->args.push_back (pf->args.back());
+      expression *err_msg = new literal_string ("<unknown>");
+      err_msg->tok = e->tok;
+      fcall->args.push_back (err_msg);
+      pf->args.back() = fcall;
+    }
+  return true;
 }
 
 // PR10601: adapt to kernel-vs-userspace loc2c-runtime

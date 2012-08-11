@@ -1,0 +1,5 @@
+probe process.function("main")
+{
+  println($strings$)
+}
+
