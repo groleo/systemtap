@@ -20,6 +20,7 @@ extern "C" {
 
 #include "config.h"
 #include "../git_version.h"
+#include "../version.h"
 
 #include "dynutil.h"
 
@@ -202,12 +203,10 @@ main(int argc, char * const argv[])
           break;
 
         case 'V':
-          fprintf(stderr, "Systemtap Dyninst loader/runner (version %s/%s %s%s%s)\n"
+          fprintf(stderr, "Systemtap Dyninst loader/runner (version %s/%s, %s)\n"
                           "Copyright (C) 2012 Red Hat, Inc. and others\n"
                           "This is free software; see the source for copying conditions.\n",
-                  VERSION, DYNINST_FULL_VERSION, GIT_MESSAGE,
-                  (STAP_EXTRA_VERSION[0]?", ":""),
-                  (STAP_EXTRA_VERSION[0]?STAP_EXTRA_VERSION:""));
+                  VERSION, DYNINST_FULL_VERSION, STAP_EXTENDED_VERSION);
           return 0;
 
         default:
