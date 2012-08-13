@@ -10502,6 +10502,9 @@ _ACEOF
 
 
 
+
+$as_echo "#define HAVE_DYNINST 1" >>confdefs.h
+
       have_dyninst=yes
 
 else

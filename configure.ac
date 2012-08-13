@@ -498,6 +498,7 @@ if test -n "$DYNINST_CXXFLAGS"; then
   AC_CHECK_HEADERS([BPatch_object.h], [
       AC_SUBST(DYNINST_CXXFLAGS)
       AC_SUBST(DYNINST_LDFLAGS)
+      AC_DEFINE([HAVE_DYNINST],[1],[Define to 1 if Dyninst is enabled])
       have_dyninst=yes
     ],
     AC_MSG_ERROR([Dyninst does not appear to be usable]))

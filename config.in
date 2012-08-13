@@ -29,6 +29,9 @@
    */
 #undef HAVE_DCGETTEXT
 
+/* Define to 1 if Dyninst is enabled */
+#undef HAVE_DYNINST
+
 /* Define to 1 if libelf has elf_getshdrstrndx */
 #undef HAVE_ELF_GETSHDRSTRNDX
 

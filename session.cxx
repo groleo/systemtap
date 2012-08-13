@@ -427,6 +427,9 @@ systemtap_session::version ()
 #ifdef ENABLE_NLS
        << " NLS"
 #endif
+#ifdef HAVE_DYNINST
+       << " DYNINST"
+#endif
        << endl;
 }
 
