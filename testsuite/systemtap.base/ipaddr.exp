@@ -71,15 +71,7 @@ proc run_ipv4_client {} {
     global IPV4_ONLY
 
     catch {
-    verbose -log "reading ipaddr.txt"
-    set f [open $srcdir/$subdir/ipaddr.txt]
-    set data [read $f]
-    close $f
-
-    verbose -log "sending it to localhost:8079"
-    set s [socket localhost 8079]
-    puts $s $data
-    close $s
+        exec bash -c "cat $srcdir/$subdir/ipaddr.txt > /dev/tcp/127.0.0.1/8079"
     }
     return 0
 }
@@ -95,15 +87,7 @@ proc run_ipv6_client {} {
 	return 1
     }
     catch {
-    verbose -log "reading ipaddr.txt"
-    set f [open $srcdir/$subdir/ipaddr.txt]
-    set data [read $f]
-    close $f
-
-    verbose -log "sending it to localhost6:8079"
-    set s [socket localhost6 8079]
-    puts $s $data
-    close $s
+        exec bash -c "cat $srcdir/$subdir/ipaddr.txt > /dev/tcp/::1/8079"
     }
     return 0
 }
