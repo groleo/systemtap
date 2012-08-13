@@ -3,21 +3,21 @@ global localhost
 
 probe tcp.recvmsg
 {
-	if (ntohs(sport) != 8080 && ntohs(dport) != 8080) {
+	if (ntohs(sport) != 8079 && ntohs(dport) != 8079) {
 		next
 	}
 	#printf("receive [%s]:%d -> [%s]:%d\n", saddr, ntohs(sport), daddr, ntohs(dport))
-	# We got a packet with either a source or destination port of 8080.
+	# We got a packet with either a source or destination port of 8079.
 	packets <<< 1
 
 	# Did the IP address get converted correctly?
 	if (family == AF_INET() || family == AF_INET6()) {
-		if (ntohs(sport) == 8080 && saddr != localhost[family]) {
+		if (ntohs(sport) == 8079 && saddr != localhost[family]) {
 			addr_errors <<< 1
 			printf("error: saddr %s isn't %s\n", saddr,
 			       localhost[family])
 		}
-		else if (ntohs(dport) == 8080 && daddr != localhost[family]) {
+		else if (ntohs(dport) == 8079 && daddr != localhost[family]) {
 			addr_errors <<< 1
 			printf("error: daddr %s isn't %s\n", daddr,
 			       localhost[family])
