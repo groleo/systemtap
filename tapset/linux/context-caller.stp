@@ -14,6 +14,50 @@
 #include "linux/uprobes-inc.h"
 %}
 
+@define unwind_error(depth) %(
+        error(sprint("reached end of stack before unwinding to level ", @depth))
+%)
+
+/**
+ *  sfunction callers - return list of PCs at top n levels of kernel stack
+ *  @n: number of levels to descend in the stack (not counting the top
+ *  level). If n is -1, print the entire stack.
+ */
+function callers:string (n:long) {
+         str = ""
+         for (i = 0; i <= n || n == -1; i++) {
+             foo = i > 0 ? " " : ""
+             try {
+                 foo .= sprintf("0x%x", stack(i))
+             } catch { /* assume we've hit the end of the stack */
+                 if (n == -1) break
+                 @unwind_error(n)
+             }
+             str .= foo
+         }
+         return str
+}
+
+/**
+ *  sfunction ucallers - return list of PCs at top n levels of user stack
+ *  @n: number of levels to descend in the stack (not counting the top
+ *  level). If n is -1, print the entire stack.
+ */
+function ucallers:string (n:long) {
+         str = ""
+         for (i = 0; i <= n || n == -1; i++) {
+             foo = i > 0 ? " " : ""
+             try {
+                 foo .= sprintf("0x%x", ustack(i))
+             } catch { /* assume we've hit the end of the stack */
+                 if (n == -1) break
+                 @unwind_error(n)
+             }
+             str .= foo
+         }
+         return str
+}
+
 /**
  *  sfunction caller - Return name and address of calling function
  *
