@@ -95,7 +95,7 @@ static DEFINE_SPINLOCK(__stp_tf_task_work_list_lock);
 struct __stp_tf_task_work {
 	struct list_head list;
 	struct task_struct *task;
-	struct stap_task_finder_target *tgt;
+	void *data;
 	struct task_work work;
 };
 
@@ -110,7 +110,7 @@ struct __stp_tf_task_work {
  * __stp_tf_alloc_task_work_for_task(task) variant.
  */
 static struct task_work *
-__stp_tf_alloc_task_work(struct stap_task_finder_target *tgt)
+__stp_tf_alloc_task_work(void *data)
 {
 	struct __stp_tf_task_work *tf_work;
 	unsigned long flags;
@@ -122,7 +122,7 @@ __stp_tf_alloc_task_work(struct stap_task_finder_target *tgt)
 	}
 
 	tf_work->task = current;
-	tf_work->tgt = tgt;
+	tf_work->data = data;
 
 	// Insert new item onto list.  This list could be a hashed
 	// list for easier lookup, but as short as the list should be
@@ -927,6 +927,45 @@ __stp_utrace_attach_match_tsk(struct task_struct *path_tsk,
 	return;
 }
 
+static void
+__stp_tf_clone_worker(struct task_work *work)
+{
+	struct __stp_tf_task_work *tf_work = \
+		container_of(work, struct __stp_tf_task_work, work);
+	struct utrace_engine_ops *ops = \
+		(struct utrace_engine_ops *)tf_work->data;
+	struct task_struct *parent = tf_work->task;
+	int rc;
+
+	might_sleep();
+	__stp_tf_free_task_work(work);
+	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING
+	    || current->flags & PF_EXITING) {
+		/* Remember that this task_work_func is finished. */
+		stp_task_work_func_done();
+		return;
+	}
+
+	__stp_tf_handler_start();
+
+	// On clone, attach to the child, but we might need to sleep...
+	rc = __stp_utrace_attach(current, ops, 0,
+				 __STP_TASK_FINDER_EVENTS, UTRACE_RESUME);
+	if (rc == 0 || rc == EPERM) {
+		// Assume that if the thread is a thread group leader,
+		// it is a process.
+		__stp_utrace_attach_match_tsk(parent, current,
+					      (current->pid == current->tgid));
+	}
+
+	__stp_tf_handler_end();
+
+	/* Remember that this task_work_func is finished. */
+	stp_task_work_func_done();
+	return;
+}
+
+
 static u32
 __stp_utrace_task_finder_report_clone(u32 action,
 				      struct utrace_engine *engine,
@@ -934,6 +973,7 @@ __stp_utrace_task_finder_report_clone(u32 action,
 				      struct task_struct *child)
 {
 	int rc;
+	struct task_work *work;
 
 	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING) {
 		debug_task_finder_detach();
@@ -942,16 +982,24 @@ __stp_utrace_task_finder_report_clone(u32 action,
 
 	__stp_tf_handler_start();
 
-	// On clone, attach to the child.
-	rc = __stp_utrace_attach(child, engine->ops, 0,
-				 __STP_TASK_FINDER_EVENTS, UTRACE_RESUME);
-	if (rc != 0 && rc != EPERM) {
-		__stp_tf_handler_end();
+	// We can't sleep in tracepoint handlers.
+	// __stp_utrace_attach() might need to call utrace_barrier(),
+	// which can sleep when task != current.  So, arrange for the
+	// child task to truly stop.
+	work = __stp_tf_alloc_task_work((void *)(engine->ops));
+	if (work == NULL) {
+		_stp_error("Unable to allocate space for task_work");
 		return UTRACE_RESUME;
 	}
+	stp_init_task_work(work, &__stp_tf_clone_worker);
+	rc = stp_task_work_add(child, work);
+	// stp_task_work_add() returns -ESRCH if the task has already
+	// passed exit_task_work(). Just ignore this error.
+	if (rc != 0 && rc != -ESRCH) {
+		printk(KERN_ERR "%s:%d - stp_task_work_add() returned %d\n",
+		       __FUNCTION__, __LINE__, rc);
+	}
 
-	__stp_utrace_attach_match_tsk(current, child,
-				      (clone_flags & CLONE_THREAD) == 0);
 	__stp_tf_handler_end();
 	return UTRACE_RESUME;
 }
@@ -1210,7 +1258,8 @@ __stp_tf_quiesce_worker(struct task_work *work)
 {
 	struct __stp_tf_task_work *tf_work = \
 		container_of(work, struct __stp_tf_task_work, work);
-	struct stap_task_finder_target *tgt = tf_work->tgt;
+	struct stap_task_finder_target *tgt = \
+		(struct stap_task_finder_target *)tf_work->data;
 
 	might_sleep();
 	__stp_tf_free_task_work(work);
@@ -1406,7 +1455,8 @@ __stp_tf_mmap_worker(struct task_work *work)
 {
 	struct __stp_tf_task_work *tf_work = \
 		container_of(work, struct __stp_tf_task_work, work);
-	struct stap_task_finder_target *tgt = tf_work->tgt;
+	struct stap_task_finder_target *tgt = \
+		(struct stap_task_finder_target *)tf_work->data;
 	struct __stp_tf_map_entry *entry;
 
 	might_sleep();
