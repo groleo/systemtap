@@ -12,9 +12,6 @@
 //processor.
 // </tapsetdescription>
 
-@define unwind_error(depth) %(
-        error(sprint("reached end of stack before unwinding to level ", @depth))
-%)
 
 /**
  *  sfunction stack - return PC at stack unwind level n
@@ -23,23 +20,6 @@
 function stack:long (n:long) {
          /* XXX this is the naive method */
          b = backtrace (); orig_n = n;
-         sym = tokenize (b, " ");
-         if (sym == "") @unwind_error(orig_n);
-         while (n > 0) {
-               sym = tokenize ("", " ");
-               if (sym == "") @unwind_error(orig_n);
-               n--;
-         }
-         return strtol(sym, 16)
-}
-
-/**
- *  sfunction ustack - return PC at user-space stack unwind level n
- *  @n: number of levels to descend in the stack.
- */
-function ustack:long (n:long) {
-         /* XXX this is the naive method */
-         b = ubacktrace (); orig_n = n;
          sym = tokenize (b, " ");
          if (sym == "") @unwind_error(orig_n);
          while (n > 0) {

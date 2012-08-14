@@ -22,3 +22,23 @@ function umodname:string (addr:long) %{
     name = "<unknown>";
   strlcpy (STAP_RETVALUE, name, MAXSTRINGLEN);
 %}
+
+/**
+ *  sfunction ucallers - return list of PCs at top n levels of user stack
+ *  @n: number of levels to descend in the stack (not counting the top
+ *  level). If n is -1, print the entire stack.
+ */
+function ucallers:string (n:long) {
+         str = ""
+         for (i = 0; i <= n || n == -1; i++) {
+             foo = i > 0 ? " " : ""
+             try {
+                 foo .= sprintf("0x%x", ustack(i))
+             } catch { /* assume we've hit the end of the stack */
+                 if (n == -1) break
+                 @unwind_error(n)
+             }
+             str .= foo
+         }
+         return str
+}

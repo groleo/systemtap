@@ -49,24 +49,12 @@ function sprint_backtrace:string () %{
  * sfunction backtrace - Hex backtrace of current kernelmode stack
  * 
  * Description: This function returns a string of hex addresses
- * that are a backtrace of the kernel stack. Output may be truncated as
+ * that are a backtrace of the kernel stack. Output may be truncated
  * as per maximum string length (MAXSTRINGLEN).
  */
 function backtrace:string () %{ /* pure */ /* pragma:unwind */
 	_stp_stack_kernel_sprint (STAP_RETVALUE, MAXSTRINGLEN,
 				  CONTEXT, _STP_SYM_NONE);
-%}
-
-/**
- * sfunction ubacktrace - Hex backtrace of current usermode stack
- * 
- * Description: This function returns a string of hex addresses
- * that are a backtrace of the user stack. Output may be truncated as
- * as per maximum string length (MAXSTRINGLEN).
- */
-function ubacktrace:string () %{ /* pure */ /* pragma:unwind */
-         _stp_stack_user_sprint (STAP_RETVALUE, MAXSTRINGLEN,
-                                 CONTEXT, _STP_SYM_NONE);
 %}
 
 %( systemtap_v <= "1.6" %?
