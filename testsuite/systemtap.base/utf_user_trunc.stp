@@ -1,10 +1,10 @@
 probe process.function("main")
 {
   for (i = 0; s = $utf16_strings[i]; ++i)
-    println("utf-16:", kernel_string_utf16(s))
+    println("utf-16:", user_string_utf16(s))
 
   for (i = 0; s = $utf32_strings[i]; ++i)
-    println("utf-32:", kernel_string_utf32(s))
+    println("utf-32:", user_string_utf32(s))
 
   exit()
 }
