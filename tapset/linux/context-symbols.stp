@@ -225,3 +225,16 @@ function symdata:string (addr: long) %{ /* pure */ /* pragma:symbols */
 	_stp_snprint_addr(STAP_RETVALUE, MAXSTRINGLEN, STAP_ARG_addr,
 			  _STP_SYM_DATA, NULL);
 %}
+
+/**
+ * sfunction psyms - print symdata() for all addresses in callers
+ *
+ * @callers: String with list of hexadecimal (kernel) addresses
+ */
+function psyms (callers:string) {
+         sym = tokenize (callers, " ");
+         while (sym != "") {
+               println (symdata (strtol(sym,16)));
+               sym = tokenize ("", " ");
+         }
+}
