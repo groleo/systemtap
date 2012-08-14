@@ -1,0 +1,45 @@
+set test "utf_user_trunc"
+set ::result_string {utf-16:012345678Z
+utf-16:0123456789
+utf-16:01234567Ω
+utf-16:012345678
+utf-16:0123456789
+utf-16:0123456☺
+utf-16:01234567
+utf-16:012345678
+utf-16:0123456789
+utf-16:012345😈
+utf-16:0123456
+utf-16:01234567
+utf-16:012345678
+utf-16:0123456789
+utf-32:012345678Z
+utf-32:0123456789
+utf-32:01234567Ω
+utf-32:012345678
+utf-32:0123456789
+utf-32:0123456☺
+utf-32:01234567
+utf-32:012345678
+utf-32:0123456789
+utf-32:012345😈
+utf-32:0123456
+utf-32:01234567
+utf-32:012345678
+utf-32:0123456789}
+
+set srcfile "$srcdir/$subdir/$test.c"
+set stpfile "$srcdir/$subdir/$test.stp"
+set exefile "[pwd]/$test.exe"
+set test_flags "additional_flags=-g additional_flags=-DMAXSTRINGLEN=11"
+set res [target_compile "$srcfile" "$exefile" executable "$test_flags"]
+if { $res != "" } {
+  verbose "target_compile failed: $res" 2
+  fail "$test compile"
+  untested "$test"
+  return
+} else {
+  pass "$test compile"
+}
+
+stap_run3 $test "$stpfile" -c "$exefile" -DMAXSTRINGLEN=11

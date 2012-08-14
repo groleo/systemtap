@@ -209,9 +209,11 @@ function user_string_utf32:string (addr:long) %{ /* pure */ /* myproc-unprivileg
   *destination = '\0';
   while (len > 1 && (c32 = uread(source))) {
     if ((rc = _stp_convert_utf32(destination, len, c32)) <= 0) {
-      snprintf (CONTEXT->error_buffer, sizeof(CONTEXT->error_buffer),
-                "invalid UTF-32 character U+%X at 0x%p", c32, source);
-      CONTEXT->last_error = CONTEXT->error_buffer;
+      if (rc < 0) {
+        snprintf (CONTEXT->error_buffer, sizeof(CONTEXT->error_buffer),
+                  "invalid UTF-32 character U+%X at 0x%p", c32, source);
+        CONTEXT->last_error = CONTEXT->error_buffer;
+      }
       break;
     }
     ++source;
@@ -272,9 +274,11 @@ function user_string_utf16:string (addr:long) %{ /* pure */ /* myproc-unprivileg
     }
 
     if ((rc = _stp_convert_utf32(destination, len, c32)) <= 0) {
-      snprintf (CONTEXT->error_buffer, sizeof(CONTEXT->error_buffer),
-                "invalid UTF-16 character U+%X at 0x%p", c32, source);
-      CONTEXT->last_error = CONTEXT->error_buffer;
+      if (rc < 0) {
+        snprintf (CONTEXT->error_buffer, sizeof(CONTEXT->error_buffer),
+                  "invalid UTF-16 character U+%X at 0x%p", c32, source);
+        CONTEXT->last_error = CONTEXT->error_buffer;
+      }
       break;
     }
     ++source;
