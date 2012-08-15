@@ -19,6 +19,10 @@ probe miscellany.return {
       delete start[name, tid()]
 }
 
+probe begin {
+      printf("Collecting data... press Ctrl-C to stop.\n")
+}
+
 probe end {
       foreach (name in intervals) {
               printf("intervals for %s -- min:%dus avg:%dus max:%dus count:%d\n",
