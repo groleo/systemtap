@@ -451,7 +451,7 @@ probe syscall.read = kernel.function("sys_read") {
 \index{+=}
 The statement block that follows an alias definition is implicitly added
 as an epilogue to any probe that refers to the alias.  It is not useful
-to define new variable there (since no subsequent code will see it), but
+to define new variables there (since no subsequent code will see it), but
 rather the code can take action based upon variables set by the
 prologue or by the user code.  The following is an example:
 
@@ -483,32 +483,51 @@ probe syscall.read {
 
 It is possible to include a suffix with a probe alias invocation. If
 only the initial part of a probe point matches an alias, the remainder
-is treated as a suffix and attached to the underlying probe point when
+is treated as a suffix and attached to the underlying probe point(s) when
 the alias is expanded. For example:
 
 \begin{vindent}
 \begin{verbatim}
-probe syscall.read.return.maxactive(10) {
-    printf("returning from reading fd=%d\n", fildes)
+/* Define an alias: */
+probe sendrecv = tcp.sendmsg, tcp.recvmsg { ... }
+
+/* Use the alias in its basic form: */
+probe sendrecv { ... }
+
+/* Use the alias with an additional suffix: */
+probe sendrecv.return { ... }
+\end{verbatim}
+\end{vindent}
+
+Here, the second use of the probe alias is equivalent to writing \verb+probe tcp.sendmsg.return, tcp.recvmsg.return+.
+
+As another example, the probe points \verb+tcp.sendmsg.return+ and \verb+tcp.recvmsg.return+ are actually defined as aliases in the tapset \verb+tcp.stp+. They expand to a probe point of the form \verb+kernel.function("...").return+, so they can also be suffixed:
+
+\begin{vindent}
+\begin{verbatim}
+probe tcp.sendmsg.return.maxactive(10) {
+    printf("returning from sending %d bytes\n", size)
 }
 \end{verbatim}
 \end{vindent}
 
 Here, the probe point expands to
-\verb+kernel.function("sys_read").return.maxactive(10)+, as might be
-expected.
+\verb+kernel.function("tcp_sendmsg").return.maxactive(10)+.
 
-When expanding wildcards, SystemTap generally avoids including alias
-suffixes. The exception is when a wildcard element is encountered that
-does not have any ordinary expansions. Consider the following example:
+\subsubsection{Alias suffixes and wildcards}
+
+When expanding wildcards, SystemTap generally avoids considering alias
+suffixes in the expansion. The exception is when a wildcard element is
+encountered that does not have any ordinary expansions. Consider the
+following example:
 
 \begin{vindent}
 \begin{verbatim}
-probe unrelated { ... }
+probe some_unrelated_probe = ... { ... }
 
 probe myprobe = syscall.read { ... }
 
-probe myprobe.test = unrelated { ... }
+probe myprobe.test = some_unrelated_probe { ... }
 
 probe myprobe.* { ... }
 
