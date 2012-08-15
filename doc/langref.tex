@@ -451,7 +451,7 @@ probe syscall.read = kernel.function("sys_read") {
 \index{+=}
 The statement block that follows an alias definition is implicitly added
 as an epilogue to any probe that refers to the alias.  It is not useful
-to define new variables there (since no subsequent code will see it), but
+to define new variables there (since no subsequent code will see them), but
 rather the code can take action based upon variables set by the
 prologue or by the user code.  The following is an example:
 
