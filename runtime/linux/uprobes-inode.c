@@ -40,6 +40,10 @@ typedef void (*uprobe_unregister_fn)(struct inode *inode, loff_t offset,
 #define uprobe_unregister unregister_uprobe
 #endif
 
+#if !defined(STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED)
+typedef unsigned long (*uprobe_get_swbp_addr_fn)(struct pt_regs *regs);
+#define uprobe_get_swbp_addr (* (uprobe_get_swbp_addr_fn)kallsyms_uprobe_get_swbp_addr)
+#endif
 
 /* A target is a specific file/inode that we want to probe.  */
 struct stapiu_target {

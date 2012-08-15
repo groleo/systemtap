@@ -7569,9 +7569,17 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
                                  "_STP_PROBE_HANDLER_UPROBE");
   s.op->newline() << "c->uregs = regs;";
   s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
-  // XXX: Can't set SET_REG_IP; we don't actually know the relocated address.
-  // ...  In some error cases, uprobes itself calls uprobes_get_bkpt_addr().
+  // Make it look like the IP is set as it would in the actual user
+  // task when calling real probe handler. Reset IP regs on return, so
+  // we don't confuse uprobes.
+  s.op->newline() << "{";
+  s.op->indent(1);
+  s.op->newline() << "unsigned long uprobes_ip = REG_IP(regs);";
+  s.op->newline() << "SET_REG_IP(regs, uprobe_get_swbp_addr(regs));";
   s.op->newline() << "(*sup->probe->ph) (c);";
+  s.op->newline() << "SET_REG_IP(regs, uprobes_ip);";
+  s.op->newline(-1) << "}";
+
   common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
   s.op->newline() << "return 0;";
   s.op->newline(-1) << "}";

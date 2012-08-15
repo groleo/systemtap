@@ -348,6 +348,13 @@ static int _stp_transport_init(void)
                 goto err0;
         }
 #endif
+#if !defined(STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED)
+        kallsyms_uprobe_get_swbp_addr = (void*) kallsyms_lookup_name ("uprobe_get_swbp_addr");
+        if (kallsyms_uprobe_get_swbp_addr == NULL) {
+                printk(KERN_ERR "%s can't resolve uprobe_get_swbp_addr!", THIS_MODULE->name);
+                goto err0;
+        }
+#endif
 #endif
 
 

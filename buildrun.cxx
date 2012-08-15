@@ -359,6 +359,10 @@ compile_pass (systemtap_session& s)
   output_either_exportconf(s, o, "uprobe_unregister", "unregister_uprobe",
 			   "STAPCONF_UPROBE_UNREGISTER_EXPORTED");
   output_autoconf(s, o, "autoconf-old-inode-uprobes.c", "STAPCONF_OLD_INODE_UPROBES", NULL);
+
+  // used by tapsets.cxx inode uprobe generated code
+  output_exportconf(s, o, "uprobe_get_swbp_addr", "STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED");
+
   // used by runtime/loc2c-runtime.h
   output_exportconf(s, o, "task_user_regset_view", "STAPCONF_TASK_USER_REGSET_VIEW_EXPORTED");
 

@@ -143,6 +143,9 @@ void *kallsyms_uprobe_register;
 #if !defined(STAPCONF_UPROBE_UNREGISTER_EXPORTED)
 void *kallsyms_uprobe_unregister;
 #endif
+#if !defined(STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED)
+void *kallsyms_uprobe_get_swbp_addr;
+#endif
 
 /* task_work functions lack the necessary SYMBOL_EXPORT's */
 #if !defined(STAPCONF_TASK_WORK_ADD_EXPORTED)
