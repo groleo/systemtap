@@ -88,6 +88,15 @@ static struct notifier_block _stp_module_notifier_nb = {
                          invoked after kprobe module callback. */
 };
 
+#if STP_TRANSPORT_VERSION == 2
+static int _stp_module_panic_notifier (struct notifier_block * nb,
+                                 unsigned long val, void *data);
+static struct notifier_block _stp_module_panic_notifier_nb = {
+        .notifier_call = _stp_module_panic_notifier,
+        .priority = INT_MAX
+};
+#endif
+
 struct timer_list _stp_ctl_work_timer;
 
 /*
@@ -136,6 +145,11 @@ static void _stp_handle_start(struct _stp_msg_start *st)
 		   file write (in _stp_ctl_write_cmd), so may notify
 		   the reader directly. */
 		_stp_ctl_send_notify(STP_START, st, sizeof(*st));
+
+		/* Register the panic notifier. */
+#if STP_TRANSPORT_VERSION == 2
+		atomic_notifier_chain_register(&panic_notifier_list, &_stp_module_panic_notifier_nb);
+#endif
 	}
 }
 
@@ -202,6 +216,11 @@ static void _stp_cleanup_and_exit(int send_exit)
 			_stp_ctl_send_notify(STP_EXIT, NULL, 0);
 		}
 		dbug_trans(1, "done with ctl_send STP_EXIT\n");
+
+		/* Unregister the panic notifier. */
+#if STP_TRANSPORT_VERSION == 2
+		atomic_notifier_chain_unregister(&panic_notifier_list, &_stp_module_panic_notifier_nb);
+#endif
 	}
 }
 
