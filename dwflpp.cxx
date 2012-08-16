@@ -1256,13 +1256,18 @@ dwflpp::iterate_over_libraries (void (*callback)(void *object, const char *arg),
           char *line = fgets (linebuf, 256, fp);
           if (line == 0) break; // EOF or error
 
+#if __GLIBC__ >2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 7)
+#define MS_FMT "%ms"
+#else
+#define MS_FMT "%as"
+#endif
           // Try soname => shlib (0xaddr)
-          int nf = sscanf (line, "%as => %as (0x%lx)",
+          int nf = sscanf (line, MS_FMT " => " MS_FMT " (0x%lx)",
               &soname, &shlib, &addr);
           if (nf != 3 || shlib[0] != '/')
             {
               // Try shlib (0xaddr)
-              nf = sscanf (line, " %as (0x%lx)", &shlib, &addr);
+              nf = sscanf (line, " " MS_FMT " (0x%lx)", &shlib, &addr);
               if (nf != 2 || shlib[0] != '/')
                 continue; // fewer than expected fields, or bad shlib.
             }

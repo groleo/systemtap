@@ -6828,8 +6828,13 @@ symbol_table::read_symbols(FILE *f, const string& path)
   Dwarf_Addr high_addr = 0;
   int line = 0;
 
-  // %as (non-POSIX) mallocs space for the string and stores its address.
-  while ((ret = fscanf(f, "%llx %c %as [%as", &addr, &type, &name, &mod)) > 0)
+#if __GLIBC__ >2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 7)
+#define MS_FMT "%ms"
+#else
+#define MS_FMT "%as"
+#endif
+  // %ms (newer than %as) mallocs space for the string and stores its address.
+  while ((ret = fscanf(f, "%llx %c " MS_FMT " [" MS_FMT, &addr, &type, &name, &mod)) > 0)
     {
       auto_free free_name(name);
       auto_free free_mod(mod);
