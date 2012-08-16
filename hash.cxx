@@ -36,15 +36,15 @@ extern "C" {
 using namespace std;
 
 
-class hash
+class stap_hash
 {
 private:
   struct mdfour md4;
   std::ostringstream parm_stream;
 
 public:
-  hash() { start(); }
-  hash(const hash &base) { md4 = base.md4; parm_stream << base.parm_stream.str(); }
+  stap_hash() { start(); }
+  stap_hash(const stap_hash &base) { md4 = base.md4; parm_stream << base.parm_stream.str(); }
 
   void start();
 
@@ -61,14 +61,14 @@ public:
 
 
 void
-hash::start()
+stap_hash::start()
 {
   mdfour_begin(&md4);
 }
 
 
 void
-hash::add(const std::string& description, const unsigned char *buffer, size_t size)
+stap_hash::add(const std::string& description, const unsigned char *buffer, size_t size)
 {
   parm_stream << description << buffer << endl;
   mdfour_update(&md4, buffer, size);
@@ -76,7 +76,7 @@ hash::add(const std::string& description, const unsigned char *buffer, size_t si
 
 
 template <typename T> void
-hash::add(const std::string& d, const T& x)
+stap_hash::add(const std::string& d, const T& x)
 {
   parm_stream << d << x << endl;
   mdfour_update(&md4, (const unsigned char *)&x, sizeof(x));
@@ -84,7 +84,7 @@ hash::add(const std::string& d, const T& x)
 
 
 void
-hash::add_path(const std::string& description, const std::string& path)
+stap_hash::add_path(const std::string& description, const std::string& path)
 {
   struct stat st;
   memset (&st, 0, sizeof(st));
@@ -99,7 +99,7 @@ hash::add_path(const std::string& description, const std::string& path)
 
 
 void
-hash::result(string& r)
+stap_hash::result(string& r)
 {
   ostringstream rstream;
   unsigned char sum[16];
@@ -130,15 +130,15 @@ void create_hash_log(const string &type_str, const string &parms, const string &
   log_file.close();
 }
 
-static const hash&
+static const stap_hash&
 get_base_hash (systemtap_session& s)
 {
   map<string, string> dummy;
   if (s.base_hash)
     return *s.base_hash;
 
-  s.base_hash = new hash();
-  hash& h = *s.base_hash;
+  s.base_hash = new stap_hash();
+  stap_hash& h = *s.base_hash;
 
   // Hash kernel release and arch.
   h.add("Kernel Release: ", s.kernel_release);
@@ -207,7 +207,7 @@ create_hashdir (systemtap_session& s, const string& result, string& hashdir)
 void
 find_script_hash (systemtap_session& s, const string& script)
 {
-  hash h(get_base_hash(s));
+  stap_hash h(get_base_hash(s));
   struct stat st;
 
   // Hash getuid.  This really shouldn't be necessary (since who you
@@ -301,7 +301,7 @@ find_script_hash (systemtap_session& s, const string& script)
 void
 find_stapconf_hash (systemtap_session& s)
 {
-  hash h(get_base_hash(s));
+  stap_hash h(get_base_hash(s));
 
   // Add any custom kbuild flags
   for (unsigned i = 0; i < s.kbuildflags.size(); i++)
@@ -323,7 +323,7 @@ find_stapconf_hash (systemtap_session& s)
 string
 find_tracequery_hash (systemtap_session& s, const string& header)
 {
-  hash h(get_base_hash(s));
+  stap_hash h(get_base_hash(s));
 
   // Add the tracepoint header to the computed hash
   h.add_path("Header ", header);
@@ -347,7 +347,7 @@ find_tracequery_hash (systemtap_session& s, const string& header)
 string
 find_typequery_hash (systemtap_session& s, const string& name)
 {
-  hash h(get_base_hash(s));
+  stap_hash h(get_base_hash(s));
 
   // Add the typequery name to distinguish the hash
   h.add("Typequery Name: ", name);
@@ -373,7 +373,7 @@ find_typequery_hash (systemtap_session& s, const string& name)
 string
 find_uprobes_hash (systemtap_session& s)
 {
-  hash h(get_base_hash(s));
+  stap_hash h(get_base_hash(s));
 
   // Hash runtime uprobes paths
   h.add_path("Uprobes Runtime Path /uprobes ", s.runtime_path + "/uprobes");

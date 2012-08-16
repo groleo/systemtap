@@ -31,7 +31,7 @@ extern "C" {
 #include "util.h"
 
 // forward decls for all referenced systemtap types
-class hash;
+class stap_hash;
 class match_node;
 struct stapfile;
 struct vardecl;
@@ -244,7 +244,7 @@ public:
   std::string cache_path;       // usually ~/.systemtap/cache
   std::string hash_path;        // path to the cached script module
   std::string stapconf_path;    // path to the cached stapconf
-  hash *base_hash;              // hash common to all caching
+  stap_hash *base_hash;         // hash common to all caching
 
   // dwarfless operation
   bool consult_symtab;
