@@ -74,16 +74,7 @@ function usymdata:string (addr: long) %{
  *  name  of the function containing the address, and an estimate of
  *  its position within that function.  Return nothing.
  */
-function print_ustack(stk:string) %{
-/* myproc-unprivileged */ /* pragma:vma */ /* pragma:symbols */
-        char *ptr = STAP_ARG_stk;
-        char *tok = strsep(&ptr, " ");
-        while (tok && *tok) {
-                _stp_print_addr(simple_strtol(tok, NULL, 16),
-				_STP_SYM_FULL, current);
-                tok = strsep(&ptr, " ");
-        }
-%}
+function print_ustack(stk:string) { print_stack(stk) } // XXX deprecate? -- these are identical to the non-ucontext functions
 
 /**
  * sfunction sprint_ustack - Return stack for the current task from string.
@@ -103,23 +94,4 @@ function print_ustack(stk:string) %{
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
  * print_ustack.
  */
-function sprint_ustack:string(stk:string) %{ /* pure */ /* pragma:symbols */
-	char *ptr = STAP_ARG_stk;
-	char *tok = strsep(&ptr, " ");
-	char *str = STAP_RETVALUE;
-	size_t len = MAXSTRINGLEN - 1;
-	while (tok && *tok && len > 0) {
-		int s = _stp_snprint_addr(str, len,
-					  simple_strtol(tok, NULL, 16),
-					  _STP_SYM_SIMPLE, current);
-		len -= s;
-		str += s;
-		tok = strsep(&ptr, " ");
-	}
-
-	str--;
-	if (len > 0)
-		str[0] = '\0';
-	else
-		STAP_RETVALUE[MAXSTRINGLEN - 1] = '\0';
-%}
+function sprint_ustack:string(stk:string) { return sprint_ustack(stk) } // XXX deprecate? -- these are identical to the non-ucontext functions
