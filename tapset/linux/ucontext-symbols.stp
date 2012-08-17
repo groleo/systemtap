@@ -21,10 +21,10 @@ function ustack:long (n:long) {
          /* XXX this is the naive method */
          b = ubacktrace (); orig_n = n;
          sym = tokenize (b, " ");
-         if (sym == "") @unwind_error(orig_n);
+         if (sym == "") @__context_unwind_error(orig_n);
          while (n > 0) {
                sym = tokenize ("", " ");
-               if (sym == "") @unwind_error(orig_n);
+               if (sym == "") @__context_unwind_error(orig_n);
                n--;
          }
          return strtol(sym, 16)
