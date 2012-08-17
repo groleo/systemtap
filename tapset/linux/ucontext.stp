@@ -36,7 +36,7 @@ function ucallers:string (n:long) {
                  foo .= sprintf("0x%x", ustack(i))
              } catch { /* assume we've hit the end of the stack */
                  if (n == -1) break
-                 @unwind_error(n)
+                 @__context_unwind_error(n)
              }
              str .= foo
          }
