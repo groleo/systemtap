@@ -1436,6 +1436,9 @@ int utrace_barrier(struct task_struct *target, struct utrace_engine *engine)
 	if (unlikely(target == current))
 		return 0;
 
+	/* If we get here, we might call
+	 * schedule_timeout_interruptible(), which sleeps. */
+	might_sleep();
 	do {
 		utrace = get_utrace_lock(target, engine, false);
 		if (unlikely(IS_ERR(utrace))) {

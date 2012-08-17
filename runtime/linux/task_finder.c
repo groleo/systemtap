@@ -577,17 +577,16 @@ __stp_utrace_attach_flags(struct task_struct *tsk,
 
 			if (action != UTRACE_RESUME) {
 				rc = utrace_control(tsk, engine, UTRACE_STOP);
-				if (rc == -EINPROGRESS)
-					/* EINPROGRESS means we must wait for
-					 * a callback, which is what we want. */
-					do {
-						rc = utrace_barrier(tsk, engine);
-					} while (rc == -ERESTARTSYS);
-				if (rc != 0)
+				/* If utrace_control(..., UTRACE_STOP)
+				 * returns EINPROGRESS, that means the
+				 * task hasn't stopped quite yet, but
+				 * will soon.  Ignore this error. */
+				if (rc != 0 && rc != -EINPROGRESS) {
 					_stp_error("utrace_control returned error %d on pid %d",
 						   rc, (int)tsk->pid);
+				}
+				rc = 0;
 			}
-
 		}
 		else if (rc != -ESRCH && rc != -EALREADY)
 			_stp_error("utrace_set_events2 returned error %d on pid %d",

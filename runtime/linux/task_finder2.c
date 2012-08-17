@@ -559,17 +559,16 @@ __stp_utrace_attach(struct task_struct *tsk,
 
 			if (action != UTRACE_RESUME) {
 				rc = utrace_control(tsk, engine, UTRACE_STOP);
-				if (rc == -EINPROGRESS)
-					/* EINPROGRESS means we must wait for
-					 * a callback, which is what we want. */
-					do {
-						rc = utrace_barrier(tsk, engine);
-					} while (rc == -ERESTARTSYS);
-				if (rc != 0)
+				/* If utrace_control(..., UTRACE_STOP)
+				 * returns EINPROGRESS, that means the
+				 * task hasn't stopped quite yet, but
+				 * will soon.  Ignore this error. */
+				if (rc != 0 && rc != -EINPROGRESS) {
 					_stp_error("utrace_control returned error %d on pid %d",
 						   rc, (int)tsk->pid);
+				}
+				rc = 0;
 			}
-
 		}
 		else if (rc != -ESRCH && rc != -EALREADY)
 			_stp_error("utrace_set_events2 returned error %d on pid %d",
@@ -852,8 +851,7 @@ __stp_utrace_attach_match_filename(struct task_struct *tsk,
 		// Set up events we need for attached tasks. We won't
 		// actually call the callbacks here - we'll call them
 		// when the thread gets quiesced.
-		rc = __stp_utrace_attach(tsk, &tgt->ops,
-					 tgt,
+		rc = __stp_utrace_attach(tsk, &tgt->ops, tgt,
 					 __STP_ATTACHED_TASK_EVENTS,
 					 UTRACE_STOP);
 		if (rc != 0 && rc != EPERM)
