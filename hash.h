@@ -4,8 +4,6 @@
 // Grabbed from linux/module.h kernel include.
 #define MODULE_NAME_LEN (64 - sizeof(unsigned long))
 
-class hash;
-
 void find_script_hash (systemtap_session& s, const std::string& script);
 void find_stapconf_hash (systemtap_session& s);
 std::string find_tracequery_hash (systemtap_session& s,
