@@ -94,4 +94,4 @@ function print_ustack(stk:string) { print_stack(stk) } // XXX deprecate? -- thes
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
  * print_ustack.
  */
-function sprint_ustack:string(stk:string) { return sprint_ustack(stk) } // XXX deprecate? -- these are identical to the non-ucontext functions
+function sprint_ustack:string(stk:string) { return sprint_stack(stk) } // XXX deprecate? -- these are identical to the non-ucontext functions
