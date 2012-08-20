@@ -582,6 +582,21 @@ if test $build_elfutils = yes -a $enable_translator = yes; then
   if test $? != 0; then exit -1; fi
 fi
 
+dnl Optional libselinux support allows stapdyn to check
+dnl for booleans that would prevent Dyninst from working.
+AC_ARG_WITH([selinux],
+  AS_HELP_STRING([--without-selinux],
+    [Do not use libselinux even if present]))
+
+AS_IF([test "x$with_selinux" != "xno"], [
+  PKG_CHECK_MODULES([selinux], [libselinux],
+    [have_selinux=yes
+     AC_DEFINE([HAVE_SELINUX], [1], [Define to 1 if you have the SELinux libraries.])
+    ], [have_selinux=no])
+], [have_selinux=no])
+
+AM_CONDITIONAL([HAVE_SELINUX], [test "${have_selinux}" = "yes"])
+
 AC_SUBST(ENABLE_NLS, "$USE_NLS")
 AC_SUBST(localedir, "$localedir")
 AC_SUBST(LOCALEDIR, "$localedir")

@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <string>
 #include <cstdlib>
 
@@ -5,6 +7,10 @@ extern "C" {
 #include <err.h>
 #include <link.h>
 }
+
+#ifdef HAVE_SELINUX
+#include <selinux/selinux.h>
+#endif
 
 #include "dynutil.h"
 #include "../util.h"
@@ -71,6 +77,36 @@ check_dyninst_rt(void)
       warn("Can't set %s", rt_env_name);
       return false;
     }
+
+  return true;
+}
+
+
+// Check that SELinux settings are ok for Dyninst operation.
+bool
+check_dyninst_sebools(void)
+{
+#ifdef HAVE_SELINUX
+  // For all these checks, we could examine errno on failure to act differently
+  // for e.g. ENOENT vs. EPERM.  But since these are just early diagnostices,
+  // I'm only going worry about successful bools for now.
+
+  // deny_ptrace is definitely a blocker for us to attach at all
+  if (security_get_boolean_active("deny_ptrace") > 0)
+    {
+      warnx("SELinux boolean 'deny_ptrace' is active, which blocks Dyninst");
+      return false;
+    }
+
+  // We might have to get more nuanced about allow_execstack, especially if
+  // Dyninst is later enhanced to work around this restriction.  But for now,
+  // this is also a blocker.
+  if (security_get_boolean_active("allow_execstack") == 0)
+    {
+      warnx("SELinux boolean 'allow_execstack' is disabled, which blocks Dyninst");
+      return false;
+    }
+#endif
 
   return true;
 }

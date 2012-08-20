@@ -358,6 +358,9 @@ main(int argc, const char* argv[])
   if (!check_dyninst_rt())
     return 1;
 
+  if (!check_dyninst_sebools())
+    return 1;
+
   BPatch patch;
 
   warnx("creating the process");

@@ -53,6 +53,7 @@ BuildRequires: nss-devel avahi-devel pkgconfig
 # include the prerelease version for now, but really this is >= 8.0
 BuildRequires: dyninst-devel >= 7.99
 BuildRequires: libdwarf-devel
+BuildRequires: libselinux-devel
 %endif
 %if %{with_sqlite}
 BuildRequires: sqlite-devel

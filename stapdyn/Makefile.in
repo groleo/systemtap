@@ -36,10 +36,12 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@HAVE_SELINUX_TRUE@am__append_1 = $(selinux_CFLAGS)
+@HAVE_SELINUX_TRUE@am__append_2 = $(selinux_LIBS)
 bin_PROGRAMS = $(am__EXEEXT_1)
 noinst_PROGRAMS = $(am__EXEEXT_2)
-@HAVE_DYNINST_TRUE@am__append_1 = stapdyn
-@HAVE_DYNINST_TRUE@am__append_2 = dynsdt
+@HAVE_DYNINST_TRUE@am__append_3 = stapdyn
+@HAVE_DYNINST_TRUE@am__append_4 = dynsdt
 subdir = stapdyn
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -238,6 +240,8 @@ prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
 sbindir = @sbindir@
+selinux_CFLAGS = @selinux_CFLAGS@
+selinux_LIBS = @selinux_LIBS@
 sharedstatedir = @sharedstatedir@
 sqlite3_LIBS = @sqlite3_LIBS@
 srcdir = @srcdir@
@@ -258,8 +262,9 @@ AM_CXXFLAGS = -Wall -Werror -Wunused -W -Wformat=2 \
 AM_CPPFLAGS = -D_GNU_SOURCE -I$(srcdir)/../includes \
 	-I$(builddir)/../includes/sys -DBINDIR='"$(bindir)"' \
 	-DSYSCONFDIR='"$(sysconfdir)"' -DPKGDATADIR='"${pkgdatadir}"' \
-	-DPKGLIBDIR='"$(pkglibexecdir)"' -DLOCALEDIR='"$(localedir)"'
-AM_LDFLAGS = @PIELDFLAGS@
+	-DPKGLIBDIR='"$(pkglibexecdir)"' -DLOCALEDIR='"$(localedir)"' \
+	$(am__append_1)
+AM_LDFLAGS = @PIELDFLAGS@ $(am__append_2)
 @HAVE_DYNINST_TRUE@dyninst_LIBS = -ldwarf -lcommon -linstructionAPI -lparseAPI -lpatchAPI \
 @HAVE_DYNINST_TRUE@	       -lpcontrol -lstackwalk -lsymtabAPI -ldyninstAPI
 
