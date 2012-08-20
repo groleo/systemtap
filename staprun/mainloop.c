@@ -14,9 +14,14 @@
 #include <sys/utsname.h>
 #include <sys/ptrace.h>
 #include <sys/select.h>
-#include <search.h>
-#include <wordexp.h>
 
+#ifdef HAVE_SEARCH_H
+#include <search.h>
+#endif
+
+#ifdef HAVE_WORDEXP_H
+#include <wordexp.h>
+#endif
 
 #define WORKAROUND_BZ467568 1  /* PR 6964; XXX: autoconf when able */
 
@@ -202,13 +207,16 @@ void start_cmd(void)
     exit(1);
   } else if (pid == 0) {
     /* We're in the target process.	 Let's start the execve of target_cmd, */
+#ifdef HAVE_WORDEXP_H
     int rc;
     wordexp_t words;
+#endif
     char *sh_c_argv[4] = { NULL, NULL, NULL, NULL };
 
     a.sa_handler = SIG_DFL;
     sigaction(SIGINT, &a, NULL);
 
+#ifdef HAVE_WORDEXP_H
     /* Formerly, we just execl'd(sh,-c,$target_cmd).  But this does't
        work well if target_cmd is a shell builtin.  We really want to
        probe a new child process, not a mishmash of shell-interpreted
@@ -220,10 +228,12 @@ void start_cmd(void)
            we use system(3) to evaluate 'stap -c CMD'.  We could generate
            an error message ... but let's just do what the user meant.
            rhbz 467652. */
+#endif
         sh_c_argv[0] = "sh";
         sh_c_argv[1] = "-c";
         sh_c_argv[2] = target_cmd;
         sh_c_argv[3] = NULL;
+#ifdef HAVE_WORDEXP_H
       }
     else
       {
@@ -240,6 +250,7 @@ void start_cmd(void)
           }
         if (words.we_wordc < 1) { _err ("empty -c COMMAND"); _exit (1); }
       }
+#endif
 
 /* PR 6964: when tracing all the user space process including the
    child the signal will be messed due to uprobe module or utrace
@@ -275,9 +286,12 @@ void start_cmd(void)
        ...  but see PR6964.  XXX: Instead, we could open-code the
        $PATH search here; put the pause() afterward; and run a direct
        execve instead of execvp().  */
-
+#ifdef HAVE_SEARCH_H
     if (execvp ((sh_c_argv[0] == NULL ? words.we_wordv[0] : sh_c_argv[0]),
                 (sh_c_argv[0] == NULL ? words.we_wordv    : sh_c_argv)) < 0)
+#else
+    if (execvp (sh_c_argv[0], sh_c_argv) < 0)
+#endif
       perror(target_cmd);
 
       /* (There is no need to wordfree() words; they are or will be gone.) */
@@ -659,6 +673,7 @@ int stp_main_loop(void)
               if (verbose) { /* don't eliminate duplicates */
                       eprintf("%.*s", (int) nb, recvbuf.payload.data);
                       break;
+#ifdef HAVE_SEARCH_H
               } else { /* eliminate duplicates */
                       static void *seen = 0;
                       static unsigned seen_count = 0;
@@ -704,6 +719,7 @@ int stp_main_loop(void)
                       } else { /* old message */
                               free (dupstr);
                       }
+#endif
               } /* duplicate elimination */
       /* Note that "ERROR:" should not be translated, since it is
        * part of the module cmd protocol. */
