@@ -15,11 +15,17 @@
 #include <iomanip>
 #include <map>
 extern "C" {
+#ifdef HAVE_LIBINTL_H
 #include <libintl.h>
+#endif
+#ifdef HAVE_LOCALE_H
 #include <locale.h>
+#endif
 #include <signal.h>
 #include <stdint.h>
+#ifdef HAVE_SPAWN_H
 #include <spawn.h>
+#endif
 #include <assert.h>
 #include <poll.h>
 }

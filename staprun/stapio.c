@@ -25,11 +25,11 @@ char *__name__ = "stapio";
 
 int main(int argc, char **argv)
 {
-
+#ifdef HAVE_LOCALE_H
 	setlocale (LC_ALL, "");
 	bindtextdomain (PACKAGE, LOCALEDIR);
 	textdomain (PACKAGE);
-
+#endif
 	setup_signals();
 	parse_args(argc, argv);
 

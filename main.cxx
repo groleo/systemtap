@@ -26,8 +26,13 @@
 #include "tapsets.h"
 #include "setupdwfl.h"
 
+#ifdef HAVE_LIBINTL_H
 #include <libintl.h>
+#endif
+
+#ifdef HAVE_LOCALE_H
 #include <locale.h>
+#endif
 
 #include "stap-probe.h"
 

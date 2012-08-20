@@ -473,6 +473,10 @@ date=`date +%Y-%m-%d`
 AC_DEFINE_UNQUOTED(DATE, "$date", [Configuration/build date])
 AC_SUBST(DATE, "$date")
 
+AC_CHECK_HEADERS([spawn.h])
+AC_CHECK_HEADERS([libintl.h])
+AC_CHECK_HEADERS([locale.h])
+
 # Before PR4037, we used to arrange to pass CFLAGS+=-m64 for a staprun
 # being compiled on 32-bit userspace but running against 64-bit kernels.
 # This is no longer necessary.

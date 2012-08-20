@@ -10309,6 +10309,43 @@ _ACEOF
 DATE="$date"
 
 
+for ac_header in spawn.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "spawn.h" "ac_cv_header_spawn_h" "$ac_includes_default"
+if test "x$ac_cv_header_spawn_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SPAWN_H 1
+_ACEOF
+
+fi
+
+done
+
+for ac_header in libintl.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "libintl.h" "ac_cv_header_libintl_h" "$ac_includes_default"
+if test "x$ac_cv_header_libintl_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBINTL_H 1
+_ACEOF
+
+fi
+
+done
+
+for ac_header in locale.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "locale.h" "ac_cv_header_locale_h" "$ac_includes_default"
+if test "x$ac_cv_header_locale_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LOCALE_H 1
+_ACEOF
+
+fi
+
+done
+
+
 # Before PR4037, we used to arrange to pass CFLAGS+=-m64 for a staprun
 # being compiled on 32-bit userspace but running against 64-bit kernels.
 # This is no longer necessary.

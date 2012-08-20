@@ -37,12 +37,19 @@
 #include <sys/wait.h>
 #include <sys/statfs.h>
 #include <syslog.h>
-#include <libintl.h>
-#include <locale.h>
 
 /* Include config.h to pick up dependency for --prefix usage. */
 #include "../config.h"
 #include "../privilege.h"
+
+#ifdef HAVE_LIBINTL_H
+#include <libintl.h>
+#endif
+
+#ifdef HAVE_LOCALE_H
+#include <locale.h>
+#endif
+
 
 /* define gettext options if NLS is set */
 #if ENABLE_NLS

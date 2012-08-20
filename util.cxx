@@ -30,7 +30,9 @@ extern "C" {
 #include <fcntl.h>
 #include <grp.h>
 #include <pwd.h>
+#ifdef HAVE_SPAWN_H
 #include <spawn.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
