@@ -193,10 +193,12 @@ function psyms (callers:string) {
  */
 function spsyms (callers:string) {
          sym = tokenize (callers, " ");
-         foo = "";
+         foo = ""; l = 0
          while (sym != "") {
-               // TODOXXX handle overflow
-               foo .= symdata (strtol(sym, 16)) . "\n"
+               // cleanly handle overflow instead of printing partial line:
+               line = symdata (strtol(sym, 16)) . "\n"; l += strlen(line)
+               if (l > %{ MAXSTRINGLEN %}) break
+               foo .= line
                sym = tokenize ("", " ")
          }
          return foo
