@@ -26,22 +26,36 @@
 #error "not to be built without CONFIG_UPROBES"
 #endif
 #if !defined(STAPCONF_UPROBE_REGISTER_EXPORTED)
-typedef int (*uprobe_register_fn)(struct inode *inode, loff_t offset, 
-                                  struct uprobe_consumer *consumer);
+// First get the right typeof(name) that's found in uprobes.h
+#if defined(STAPCONF_OLD_INODE_UPROBES)
+typedef typeof(&register_uprobe) uprobe_register_fn;
+#else
+typedef typeof(&uprobe_register) uprobe_register_fn;
+#endif
+// Then define the typecasted call via function pointer
 #define uprobe_register (* (uprobe_register_fn)kallsyms_uprobe_register)
 #elif defined(STAPCONF_OLD_INODE_UPROBES)
+// In this case, just need to map the new name to the old
 #define uprobe_register register_uprobe
 #endif
+
 #if !defined(STAPCONF_UPROBE_UNREGISTER_EXPORTED)
-typedef void (*uprobe_unregister_fn)(struct inode *inode, loff_t offset,
-                                     struct uprobe_consumer *consumer);
+// First get the right typeof(name) that's found in uprobes.h
+#if defined(STAPCONF_OLD_INODE_UPROBES)
+typedef typeof(&unregister_uprobe) uprobe_unregister_fn;
+#else
+typedef typeof(&uprobe_unregister) uprobe_unregister_fn;
+#endif
+// Then define the typecasted call via function pointer
 #define uprobe_unregister (* (uprobe_unregister_fn)kallsyms_uprobe_unregister)
 #elif defined(STAPCONF_OLD_INODE_UPROBES)
+// In this case, just need to map the new name to the old
 #define uprobe_unregister unregister_uprobe
 #endif
 
 #if !defined(STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED)
-typedef unsigned long (*uprobe_get_swbp_addr_fn)(struct pt_regs *regs);
+// First typedef from the original decl, then #define it as a typecasted call.
+typedef typeof(&uprobe_get_swbp_addr) uprobe_get_swbp_addr_fn;
 #define uprobe_get_swbp_addr (* (uprobe_get_swbp_addr_fn)kallsyms_uprobe_get_swbp_addr)
 #endif
 

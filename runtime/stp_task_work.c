@@ -4,11 +4,10 @@
 #include "linux/task_work_compatibility.h"
 
 #if !defined(STAPCONF_TASK_WORK_ADD_EXPORTED)
-typedef int (*task_work_add_fn)(struct task_struct *task,
-				  struct task_work *twork, bool notify);
+// First typedef from the original decls, then #define as typecasted calls.
+typedef typeof(&task_work_add) task_work_add_fn;
 #define task_work_add (* (task_work_add_fn)kallsyms_task_work_add)
-typedef struct task_work *(*task_work_cancel_fn)(struct task_struct *,
-						 task_work_func_t);
+typedef typeof(&task_work_cancel) task_work_cancel_fn;
 #define task_work_cancel (* (task_work_cancel_fn)kallsyms_task_work_cancel)
 #endif
 
