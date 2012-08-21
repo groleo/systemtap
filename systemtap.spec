@@ -218,8 +218,11 @@ URL: http://sourceware.org/systemtap/
 Requires: systemtap = %{version}-%{release}
 Requires: systemtap-sdt-devel = %{version}-%{release}
 Requires: systemtap-server = %{version}-%{release}
-Requires: dejagnu which prelink elfutils grep nc
+Requires: dejagnu which elfutils grep nc
 Requires: gcc gcc-c++ make glibc-devel
+%ifnarch ia64
+Requires: prelink
+%endif
 # testsuite/systemtap.server/client.exp needs avahi
 Requires: avahi
 %if %{with_crash}
