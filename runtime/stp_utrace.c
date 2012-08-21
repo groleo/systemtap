@@ -309,20 +309,19 @@ static bool utrace_task_alloc(struct task_struct *task)
 	INIT_LIST_HEAD(&utrace->attaching);
 	utrace->resume = UTRACE_RESUME;
 	utrace->task = task;
+	stp_init_task_work(&utrace->work, &utrace_resume);
 
 	spin_lock(&task_utrace_lock);
 	u = __task_utrace_struct(task);
 	if (u == NULL) {
 		hlist_add_head(&utrace->hlist,
 			       &task_utrace_table[hash_ptr(task, TASK_UTRACE_HASH_BITS)]);
-		spin_unlock(&task_utrace_lock);
 	}
 	else {
-		spin_unlock(&task_utrace_lock);
 		kmem_cache_free(utrace_cachep, utrace);
 	}
+	spin_unlock(&task_utrace_lock);
 
-	stp_init_task_work(&utrace->work, &utrace_resume);
 	return true;
 }
 
