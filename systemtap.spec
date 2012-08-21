@@ -7,7 +7,11 @@
 %{!?pie_supported: %global pie_supported 1}
 %{!?with_boost: %global with_boost 0}
 %{!?with_publican: %global with_publican 1}
+%if 0%{?rhel}
+%{!?publican_brand: %global publican_brand RedHat}
+%else
 %{!?publican_brand: %global publican_brand fedora}
+%endif
 %{!?with_dyninst: %global with_dyninst 0%{?fedora} >= 18}
 
 Name: systemtap
