@@ -81,7 +81,12 @@ privilege_t get_privilege_credentials (void)
   int ngids = getgroups(NGROUPS_MAX, gidlist);
   if (ngids < 0)
     {
+#ifdef __ANDROID__
+       /* using streams brings in some incompatible exception code, sorry */
+      fprintf(stderr, "Unable to retrieve group list");
+#else
       cerr << _("Unable to retrieve group list") << endl;
+#endif
       return stp_privilege;
     }
 
