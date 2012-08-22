@@ -2096,7 +2096,7 @@ try {
 \end{vindent}
 
 
-\subsection{delete}
+\subsection{delete\label{sub:delete}}
 \index{delete}
 \texttt{delete} removes an element.
 
@@ -2371,6 +2371,12 @@ SystemTap forbids any modification of an array during iteration with a foreach.
 
 For a full description of \texttt{foreach} see subsection \ref{sub:foreach}.
 
+\subsection{Deletion}
+\index{delete}
+The \texttt{delete} statement can either remove a single element by index from
+an array or clear an entire array at once.  See subsection \ref{sub:delete} for
+details and examples.
+
 \section{Statistics (aggregates)\label{sec:Statistics}}
 \index{aggregates}
 Aggregate instances are used to collect statistics on numerical values, when
@@ -2546,6 +2552,10 @@ value |-------------------------------------------------- count
 \end{vindent}
 \end{samepage}
 
+\subsection{Deletion}
+\index{delete}
+The \texttt{delete} statement (subsection \ref{sub:delete}) applied to an
+aggregate variable will reset it to the initial empty state.
 
 \section{Formatted output}
 
