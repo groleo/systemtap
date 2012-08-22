@@ -541,15 +541,26 @@ int send_relocation_kernel ()
       size_t linesz = 0;
       while (! feof(kallsyms) && !done_with_kallsyms)
         {
-          ssize_t linesize = getline (& line, & linesz, kallsyms);
+          ssize_t linesize ;
+#ifdef __ANDROID__
+          char* lineIt = fgetln(kallsyms,&linesize);
+#else
+          linesize = getline (& line, & linesz, kallsyms);
+#endif
           if (linesize > 0)
             {
+#ifdef __ANDROID__
+	      line = malloc(linesize+1);
+	      memcpy(line,lineIt,linesize);
+	      line[linesize]=0;
+#endif
               unsigned long long address;
 	      int pos = -1;
-	      if (sscanf (line, "%llx %*c %n", &address, &pos) == 1
+	      int rv = sscanf (line, "%llx %*c %n", &address, &pos);
+	      if (rv == 1
 		  && pos != -1
 		  && linesize - pos == sizeof KERNEL_RELOC_SYMBOL
-		  && !strcmp(line + pos, KERNEL_RELOC_SYMBOL "\n"))
+		  && !strncmp(line + pos, KERNEL_RELOC_SYMBOL, sizeof(KERNEL_RELOC_SYMBOL)-1 ))
                 {
                   /* NB: even on ppc, we use the _stext relocation name. */
                   rc = send_a_relocation ("kernel", "_stext", address);
@@ -559,9 +570,12 @@ int send_relocation_kernel ()
                   /* We need nothing more from the kernel. */
                   done_with_kallsyms=1;
                 }
+		free(line);
             }
         }
+#ifndef __ANDROID__
       free (line);
+#endif
       fclose (kallsyms);
       if (!done_with_kallsyms)
 	return rc;

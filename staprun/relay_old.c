@@ -12,6 +12,7 @@
  */
 
 #include "staprun.h"
+#include <pthread.h>
 
 /* temporary per-cpu output written here for relayfs, filebase0...N */
 static int relay_fd[NR_CPUS];
@@ -69,7 +70,13 @@ void close_oldrelayfs(int detach)
 	
 	if (detach) {
 		for (i = 0; i < ncpus; i++)
-			if (reader[i]) pthread_cancel(reader[i]);
+			if (reader[i])
+			#ifdef __ANDROID__
+				pthread_kill(reader[i], SIGTERM);
+			#else
+				pthread_cancel(reader[i]);
+			#endif
+
 	} else {
 		for (i = 0; i < ncpus; i++)
 			if (reader[i]) pthread_join(reader[i], NULL);
@@ -264,7 +271,11 @@ static int process_subbufs(struct _stp_buf_info *info,
 			scb->wsize = len;
 		}
 		if (len) {
+		#ifdef __ANDROID__
+			if (fwrite (subbuf_ptr, len, 1, percpu_tmpfile[cpu]) != 1) {
+		#else
 			if (fwrite_unlocked (subbuf_ptr, len, 1, percpu_tmpfile[cpu]) != 1) {
+		#endif
 				if (errno != EPIPE)
 					_perr("Couldn't write to output file for cpu %d, exiting:", cpu);
 				return -1;
@@ -352,6 +363,7 @@ static void *reader_thread(void *data)
 	/* Signal the main thread that we need to quit */
 	kill(getpid(), SIGTERM);
 	pthread_exit(NULL);
+	return NULL;
 }
 
 /**
@@ -502,7 +514,12 @@ err:
 		close_relayfs_files(j);
 
 	for (j = 0; j < i; j++)
-		if (reader[j]) pthread_cancel(reader[j]);
+		if (reader[j])
+		#ifdef __ANDROID__
+			pthread_kill(reader[j], SIGTERM);
+		#else
+			pthread_cancel(reader[j]);
+		#endif
 	
 	return -1;
 }

@@ -70,8 +70,10 @@ const std::string cmdstr_quoted(const std::string& cmd);
 const std::string cmdstr_join(const std::vector<std::string>& cmds);
 int stap_waitpid(int verbose, pid_t pid);
 pid_t stap_spawn(int verbose, const std::vector<std::string>& args);
+#ifndef __ANDROID__
 pid_t stap_spawn(int verbose, const std::vector<std::string>& args,
 		 posix_spawn_file_actions_t* fa, const std::vector<std::string>& envVec = std::vector<std::string> ());
+#endif
 pid_t stap_spawn_piped(int verbose, const std::vector<std::string>& args,
                        int* child_in=NULL, int* child_out=NULL, int* child_err=NULL);
 int stap_system(int verbose, const std::string& description,
@@ -102,7 +104,11 @@ inline std::string lex_cast(IN const & in)
 {
   std::ostringstream ss;
   if (!(ss << in))
+#ifdef __ANDROID__
+    throw "bad lexical cast";
+#else
     throw std::runtime_error(_("bad lexical cast"));
+#endif
   return ss.str();
 }
 
@@ -113,7 +119,11 @@ inline OUT lex_cast(std::string const & in)
   std::istringstream ss(in);
   OUT out;
   if (!(ss >> out && ss.eof()))
+#ifdef __ANDROID__
+    throw "bad lexical cast";
+#else
     throw std::runtime_error(_("bad lexical cast"));
+#endif
   return out;
 }
 
@@ -124,7 +134,11 @@ inline int8_t lex_cast(std::string const & in)
 {
   int16_t out = lex_cast<int16_t>(in);
   if (out < -128 || out > 127)
+#ifdef __ANDROID__
+    throw "bad lexical cast";
+#else
     throw std::runtime_error(_("bad lexical cast"));
+#endif
   return out;
 }
 template <>
@@ -132,7 +146,11 @@ inline uint8_t lex_cast(std::string const & in)
 {
   uint16_t out = lex_cast<uint16_t>(in);
   if (out > 0xff && out < 0xff80) // don't error if it looks sign-extended
+#ifdef __ANDROID__
+    throw "bad lexical cast";
+#else
     throw std::runtime_error(_("bad lexical cast"));
+#endif
   return out;
 }
 
@@ -143,7 +161,11 @@ lex_cast_hex(IN const & in)
 {
   std::ostringstream ss;
   if (!(ss << std::showbase << std::hex << in << std::dec))
+#ifdef __ANDROID__
+    throw "bad lexical cast";
+#else
     throw std::runtime_error(_("bad lexical cast"));
+#endif
   return ss.str();
 }
 
@@ -155,8 +177,11 @@ hex_dump(IN const & in,  size_t len)
   std::ostringstream ss;
   unsigned i;
   if (!(ss << std::hex << std::setfill('0')))
+#ifdef __ANDROID__
+    throw "bad lexical cast";
+#else
     throw std::runtime_error(_("bad lexical cast"));
-
+#endif
   for(i = 0; i < len; i++)
   {
     int temp = in[i];
@@ -175,7 +200,12 @@ lex_cast_qstring(IN const & in)
 {
   std::stringstream ss;
   if (!(ss << in))
+#ifdef __ANDROID__
+    throw "bad lexical cast";
+#else
     throw std::runtime_error(_("bad lexical cast"));
+#endif
+
   return lex_cast_qstring(ss.str());
 }
 

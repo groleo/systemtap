@@ -23,8 +23,9 @@
 #include <string>
 #include <fstream>
 #include <cassert>
+#ifndef __ANDROID__
 #include <ext/stdio_filebuf.h>
-
+#endif
 extern "C" {
 #include <elf.h>
 #include <fcntl.h>
@@ -46,6 +47,7 @@ extern "C" {
 #endif
 }
 
+#ifndef __ANDROID__
 using namespace std;
 using namespace __gnu_cxx;
 
@@ -230,6 +232,7 @@ remove_file_or_dir (const char *name)
 
   return 0;
 }
+#endif
 
 /* Obtain the gid of the given group. */
 gid_t get_gid (const char *group_name)
@@ -242,6 +245,7 @@ gid_t get_gid (const char *group_name)
   return stgr->gr_gid;
 }
 
+#ifndef __ANDROID__
 // Determine whether the current user is in the given group
 // by gid.
 bool
