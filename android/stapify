@@ -1,0 +1,215 @@
+#! /bin/bash -e
+
+function print_usage()
+{
+    echo "Usage: "
+    echo "stapify <options> <script.stp>"
+    echo "    -p: pid to attach to"
+    echo "    -n: process name to attach to"
+    echo "    -c: command to run"
+    echo "    -P: stop after pushing the .ko to the device"
+    echo "    -v: enable .stp compile verbosity"
+    echo "    -D: enable .ko runtime debug"
+    echo "    -s: sync binaries"
+    echo "    -u: run stap script unpriviledged (for userspace probes)"
+}
+
+function target_pid()
+{
+    local EXE="$1"
+    if [ "$EXE" ] ; then
+        local target_pid=`adb shell ps | fgrep $1 | sed -e 's/[^ ]* *\([0-9]*\).*/\1/'`
+        echo "$target_pid"
+    else
+        echo "usage: target_pid name"
+    fi
+}
+
+function run_echo()
+{
+    echo $*
+    $*
+}
+
+exec 2>&1
+
+V_FLAG=""
+D_FLAG=""
+P_FLAG=""
+
+if [ $# -lt 1 ]; then
+    print_usage;
+    exit 1
+fi
+
+shopt -s extglob
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -P)
+            STOP_AFTER_PUSH=1
+            shift
+            ;;
+        -p)
+            PID=$2
+            shift 2
+            ;;
+        -n)
+            PNAME=$2
+            shift 2
+            ;;
+        -c)
+            CMD=$2
+            shift 2
+            ;;
+        -+(v))
+            V_FLAG="$1 --vp 0001"
+            shift
+            ;;
+        -D)
+            D_FLAG="-DDEBUG_UNWIND=9 -DDEBUG_UPROBES -DDEBUG_TASK_FINDER_VMA -DDEBUG_TASK_FINDER"
+            shift 2
+            ;;
+        -s)
+            SYNC=true
+            shift
+            ;;
+        -u)
+            P_FLAG="--unprivileged"
+            shift
+            ;;
+        -*)
+            print_usage
+            exit 1;;
+         *)
+            EXTRA="$EXTRA $1"
+            shift
+           ;;
+    esac
+done
+
+PATH_STP="$EXTRA"
+BASE_STP=`basename $PATH_STP`
+BASE=${BASE_STP%.stp}
+# we are deriving the module name from the stp file name. But, modules can't
+# contain -'s, so transform them to _'s.
+BASE=`echo $BASE | sed 's/-/_/g'`
+BASE_KO="${BASE}.ko"
+
+# Prepare stap arguments.
+# path to host binary
+STAP=$ANDROID_HOST_OUT/bin/stap
+KERNEL=$ANDROID_PRODUCT_OUT/obj/kernel
+SYSROOT=$ANDROID_PRODUCT_OUT/symbols
+STAP_SRC=$ANDROID_BUILD_TOP/external/systemtap
+CROSS=i686-linux-android-
+
+# remove old files
+rm -rf $BASE_KO
+rm -rf /tmp/stap*
+
+LIBS=""
+for file in $SYSROOT/system/lib/* ; do
+    LIBS="$LIBS -d '$file'"
+done
+
+echo "compile the stp file: $V_FLAG $D_FLAG"
+    #-B CROSS_COMPILE=$CROSS \
+    #-a i386  \
+
+(
+# stap also looks into XDG_DATA_DIRS which can contain the
+# system-wide instalation of host systemtap tapsets
+unset XDG_DATA_DIRS
+KCFLAGS="-fno-pic -mfpmath=387" \
+$STAP -k $V_FLAG $D_FLAG $P_FLAG \
+    -p4 \
+    --sysroot=$SYSROOT \
+    -r $KERNEL \
+    -d $SYSROOT/system/bin/surfaceflinger \
+    -d $SYSROOT/system/bin/mediaserver \
+    -d $SYSROOT/system/bin/system_server \
+    -d $SYSROOT/system/bin/app_process \
+    -d $SYSROOT/system/lib/dri/i965_dri.so \
+    -d $SYSROOT/system/lib/egl/libGLES_mesa.so \
+    -d $SYSROOT/system/lib/libGLESv1_CM.so \
+    -d $SYSROOT/system/lib/libGLESv2.so \
+    -d $SYSROOT/system/lib/libEGL.so \
+    -d $SYSROOT/system/lib/libOMXVideoEncoderAVC.so \
+    -d $SYSROOT/system/lib/libc.so \
+    -d $SYSROOT/system/lib/libdrm.so \
+    -d $SYSROOT/system/lib/libglapi.so \
+    -d $SYSROOT/system/lib/libgui.so \
+    -d $SYSROOT/system/lib/libsurfaceflinger.so \
+    -d $SYSROOT/system/lib/libutils.so \
+    -d $SYSROOT/system/lib/libva-tpi.so \
+    -d $SYSROOT/system/lib/libva.so \
+    -d $SYSROOT/system/lib/libva_videoencoder.so \
+    -d $SYSROOT/system/lib/libwrs_omxil_common.so \
+    -R $STAP_SRC/runtime/ \
+    -I $STAP_SRC/tapset/ \
+    -m $BASE \
+    $PATH_STP
+)
+
+    #-DMAXSTRINGLEN=4096 \
+
+
+if [ ! -f "$BASE_KO" ]; then
+    echo "stap failed"
+    exit 1
+fi
+
+
+if [ ! -z "$SYNC" ]; then
+    echo "=================================================="
+    echo "Pushing stap{io,run}"
+    echo "=================================================="
+    adb remount
+    adb sync
+fi
+
+echo "=================================================="
+echo "Pushing kernel module"
+echo "=================================================="
+run_echo adb shell "[ -f /data/$BASE_KO ] && rm /data/$BASE_KO"
+run_echo adb push "$BASE_KO" /data/
+rm -rf $BASE_KO
+STAPIO_target_pid=$(target_pid stapio)
+if [ "$STAPIO_target_pid" != "" ]; then
+    run_echo adb shell "kill -9 $(target_pid stapio)"
+fi
+
+if [ "$(adb shell 'lsmod' | awk '{print $1}' | grep $BASE)" != "" ]; then
+    run_echo adb shell "rmmod $BASE_KO"
+fi
+
+if [ "$STOP_AFTER_PUSH" = "1" ]; then
+    exit 0
+fi
+
+echo "=================================================="
+echo "Running..."
+echo "=================================================="
+
+if [ "$PNAME" != "" ]; then
+    PID=$(target_pid $PNAME)
+    if [ "$PID" == "" ]; then
+        echo "Process $PNAME is not running. Try something else."
+        exit 1
+    fi
+fi
+
+# Turning on kallsyms.
+run_echo adb shell "echo 1 > /proc/sys/kernel/kptr_restrict"
+
+if [ "$PID" != "" ]; then
+    run_echo adb shell "staprun $V -x $PID /data/$BASE_KO"
+elif [ "$CMD" != "" ]; then
+    run_echo adb shell "staprun $V -c '$CMD' /data/$BASE_KO"
+else
+    run_echo adb shell "staprun $V /data/$BASE_KO"
+fi
+
+# Turning off kallsyms.
+run_echo adb shell "echo 2 > /proc/sys/kernel/kptr_restrict"
