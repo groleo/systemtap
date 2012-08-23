@@ -1,0 +1,154 @@
+#! /bin/bash -
+
+function print_usage()
+{
+    echo "Usage: "
+    echo "stapify <script.stp> <PID to attach to | process name | cmd to run> [-D] [-V] [-s] [-u]"
+    echo "    -p: pid to attach to"
+    echo "    -n: process name to attach to"
+    echo "    -c: command to run"
+    echo "    -D: enable runtime debug"
+    echo "    -V: enable verbosity of stp script compilation"
+    echo "    -s: sync binaries"
+    echo "    -u: run stap script unpriviledged (for userspace probes)"
+}
+
+function target_pid()
+{
+    local EXE="$1"
+    if [ "$EXE" ] ; then
+        local target_pid=`adb shell ps | fgrep $1 | sed -e 's/[^ ]* *\([0-9]*\).*/\1/'`
+        echo "$target_pid"
+    else
+        echo "usage: target_pid name"
+    fi
+}
+
+function run_echo()
+{
+    echo $*
+    $*
+}
+
+exec 2>&1
+
+V_FLAG=""
+D_FLAG=""
+P_FLAG=""
+
+if [ $# -lt 1 ]; then
+    print_usage;
+    exit 1
+fi
+
+BASE_STP="$1"
+BASE=${BASE_STP%.stp}
+BASE_KO="${BASE}.ko"
+
+shift
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -p)
+            PID=$2
+            shift;
+            break;;
+        -n)
+            PNAME=$2
+            shift;
+            break;;
+        -c)
+            CMD=$2
+            shift;
+            break;;
+        -V)
+            V_FLAG="-vvvvvv"
+            break;;
+        -D)
+            D_FLAG="-DDEBUG_UNWIND=9 -DDEBUG_UPROBES -DDEBUG_TASK_FINDER_VMA -DDEBUG_TASK_FINDER"
+            break;;
+        -s)
+            SYNC=true
+            break;;
+        -u)
+            P_FLAG="--unprivileged"
+            break;;
+        -*)
+            print_usage
+            exit 1;;
+
+    esac
+    shift
+done
+
+# Prepare stap arguments.
+# path to host binary
+STAP=../../out/host/linux-x86/bin/stap
+KERNEL=$ANDROID_PRODUCT_OUT/obj/kernel
+SYSROOT=$ANDROID_PRODUCT_OUT/symbols
+CROSS=i686-linux-android-
+
+# remove old files
+rm -rf $BASE_KO
+sudo rm -rf /tmp/stap*
+
+# compile the stp file
+(
+# stap also looks into XDG_DATA_DIRS which can contain the
+# system-wide instalation of host systemtap tapsets
+unset XDG_DATA_DIRS
+sudo env PATH=$PATH KCFLAGS="-fno-pic -mfpmath=387" \
+    $STAP -k $V_FLAG $D_FLAG $P_FLAG -a i386 \
+    --sysroot=$SYSROOT -r $KERNEL -B CROSS_COMPILE=$CROSS \
+    -R runtime/ -I tapset/ -m $BASE $BASE_STP | \
+    sed -e "s/at :/at ${BASE_STP}:/"
+)
+
+if [ ! -f "$BASE_KO" ]; then
+    echo "stap failed"
+    exit 1
+fi
+
+
+if [ ! -z "$SYNC" ]; then
+    echo "=================================================="
+    echo "Pushing stap{io,run}"
+    echo "=================================================="
+    adb remount
+    adb sync
+fi
+
+echo "=================================================="
+echo "Pushing kernel module"
+echo "=================================================="
+run_echo adb shell "[ -f /data/$BASE_KO ] && rm /data/$BASE_KO"
+run_echo adb push "$BASE_KO" /data/
+rm -rf $BASE_KO
+STAPIO_target_pid=$(target_pid stapio)
+if [ "$STAPIO_target_pid" != "" ]; then
+    run_echo adb shell "kill -9 $(target_pid stapio)"
+fi
+sudo chown $USER:$USER /tmp/stap*
+
+if [ "$(adb shell 'lsmod' | awk '{print $1}' | grep $BASE)" != "" ]; then
+    run_echo adb shell "rmmod $BASE_KO"
+fi
+
+echo "=================================================="
+echo "Running..."
+echo "=================================================="
+
+if [ "$PNAME" != "" ]; then
+    PID=$(target_pid $PNAME)
+    if [ "$PID" == "" ]; then
+        echo "Process $PNAME is not running. Try something else."
+        exit 1
+    fi
+fi
+
+if [ "$PID" != "" ]; then
+    run_echo adb shell "staprun $V -x $PID /data/$BASE_KO"
+elif [ "$CMD" != "" ]; then
+    run_echo adb shell "staprun $V -c '$CMD' /data/$BASE_KO"
+else
+    run_echo adb shell "staprun $V /data/$BASE_KO"
+fi
