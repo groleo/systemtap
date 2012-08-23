@@ -6,8 +6,8 @@
   kinds of probes and other constructs that a script may use.
 
   Users from source should configure --with-dyninst and install a
-  fresh dyninst snapshot such as that in Fedora rawhide.  It may be necessary
-  to disable a conflicting selinux check with # setsebool allow_execstack 1
+  fresh dyninst snapshot such as that in Fedora rawhide.  It may be
+  necessary to disable conflicting selinux checks; systemtap will advise.
 
   Select this new backend with the stap option --runtime=dyninst and a
   -c or -x target process, along with normal options.  For example:
