@@ -46,6 +46,18 @@
   certain tapset probe aliases, by writing e.g.
     probe syscall.open.return.maxactive(5) { ... }
 
+- To ease migration to the embedded-C locals syntax introduced in 1.8
+  (namely, STAP_ARG_* and STAP_RETVALUE), the old syntax can now be
+  re-enabled on a per-function basis using the /* unmangled */ pragma:
+
+    function add_foo:long(a:long, b:long) %{ /* unmangled */
+      THIS->__retvalue = THIS->a + STAP_ARG_b;
+    %}
+
+  Note that both the old and the new syntax may be used in an
+  /* unmangled */ function. Functions not marked /* unmangled */
+  can only use the new syntax.
+
 - Adjacent string literals are now glued together irrespective of
   intervening whitespace or comments:
     "foo " "bar" --> "foo bar"

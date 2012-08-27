@@ -1403,6 +1403,17 @@ means that the C code is so unsafe that a systemtap user must specify
 .IR \-g
 (guru mode) to use this.
 .TP
+.I /* unmangled */
+means that the legacy (pre-1.8) argument access syntax should be made available inside the function. Hence, in addition to
+.I STAP_ARG_foo
+and
+.I STAP_RETVALUE
+one can use
+.I THIS->foo
+and
+.I THIS->__retvalue
+respectively in side the function. This is useful for quickly migrating code written for SystemTap version 1.7 and earlier.
+.TP
 .I /* string */
 in embedded-C expressions only, means that the expression has
 .I const char *
