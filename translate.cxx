@@ -2027,8 +2027,9 @@ c_unparser::emit_function (functiondecl* v)
   for (unsigned i = 0; i < v->locals.size(); i++) {
     o->newline() << c_arg_define(v->locals[i]->name); // #define STAP_ARG_foo ...
   }
-  // XXX PR10299: define STAP_RETVALUE only if the function is non-void
-  o->newline() << "#define STAP_RETVALUE THIS->__retvalue";
+  // define STAP_RETVALUE only if the function is non-void
+  if (v->type != pe_unknown)
+    o->newline() << "#define STAP_RETVALUE THIS->__retvalue";
 
   // set this, in case embedded-c code sets last_error but doesn't otherwise identify itself
   o->newline() << "c->last_stmt = " << lex_cast_qstring(*v->tok) << ";";
