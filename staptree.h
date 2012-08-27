@@ -516,6 +516,7 @@ struct functiondecl: public symboldecl
   std::vector<vardecl*> unused_locals;
   statement* body;
   bool synthetic;
+  bool mangle_oldstyle;
   functiondecl ();
   void print (std::ostream& o) const;
   void printsig (std::ostream& o) const;

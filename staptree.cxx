@@ -192,7 +192,7 @@ vardecl::compatible_arity (int a)
 
 
 functiondecl::functiondecl ():
-  body (0), synthetic (false)
+  body (0), synthetic (false), mangle_oldstyle (false)
 {
 }
 
@@ -1954,6 +1954,10 @@ varuse_collecting_visitor::visit_embeddedcode (embeddedcode *s)
   if (!session.guru_mode && s->code.find ("/* guru */") != string::npos)
     throw semantic_error (_("function may not be used unless -g is specified"),
 			  current_function->tok);
+
+  // PR14524: Support old-style THIS->local syntax on per-function basis.
+  if (s->code.find ("/* unmangled */") != string::npos)
+    current_function->mangle_oldstyle = true;
 
   // We want to elide embedded-C functions when possible.  For
   // example, each $target variable access is expanded to an
