@@ -278,6 +278,13 @@ into the body of the embedded-C function, to mark it as /* unprivileged */
 (see above) and to have the systemtap translator automatically add a call to
 assert_is_myproc() to the beginning of the function.
 
+Add the string
+    /* unmangled */
+into a legacy (pre-SystemTap 1.8) embedded-C function that needs to
+use the old argument / return slot access syntax (namely, THIS->foo
+and THIS->__retvalue). This is useful for migrating tapsets to work
+with the new syntax.
+
 
 Review & Submission
 -------------------
