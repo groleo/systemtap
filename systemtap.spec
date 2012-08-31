@@ -494,6 +494,7 @@ exit 0
 %{_libexecdir}/%{name}/stap-gen-cert
 %{_libexecdir}/%{name}/stap-sign-module
 %{_libexecdir}/%{name}/stap-authorize-cert
+%{_libexecdir}/%{name}/stap-env
 %{_mandir}/man7/stappaths.7*
 %{_mandir}/man8/stap-server.8*
 %{_sysconfdir}/rc.d/init.d/stap-server
@@ -535,7 +536,6 @@ exit 0
 %endif
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/stapio
-%{_libexecdir}/%{name}/stap-env
 %{_libexecdir}/%{name}/stap-authorize-cert
 %if %{with_crash}
 %dir %{_libdir}/%{name}
