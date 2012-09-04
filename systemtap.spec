@@ -12,7 +12,7 @@
 %else
 %{!?publican_brand: %global publican_brand fedora}
 %endif
-%{!?with_dyninst: %global with_dyninst 0%{?fedora} >= 18}
+%{!?with_dyninst: %global with_dyninst 0%{?fedora} >= 18 || 0%{?rhel} >= 7}
 
 Name: systemtap
 Version: 2.0
