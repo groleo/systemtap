@@ -1272,8 +1272,8 @@ static int unwind_frame(struct unwind_context *context,
 	if (!processCFI(cieStart, cieEnd, 0, ptrType, user, state))
 		goto err;
 
-	/* Store initial state for use with DW_CFA_restore... */
-	memcpy(&state->cie_regs, &REG_STATE, sizeof (REG_STATE));
+	/* Store initial state registers for use with DW_CFA_restore... */
+	memcpy(&state->cie_regs, &REG_STATE.regs, sizeof (REG_STATE.regs));
 
 	/* Process Frame Description Entry (FDE) instructions. */
 	dbug_unwind (1, "processCFI for FDE\n");

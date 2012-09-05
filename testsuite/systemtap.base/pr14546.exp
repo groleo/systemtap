@@ -46,7 +46,7 @@ set ko 0
 expect {
     -timeout 60
     timeout { fail "$test (timeout)" }
-    -re {^ERROR: [^\r\n]*\r\n} { incr ok; exp_continue }
+    -re {^ERROR: [^\r\n]*\r\n} { incr ko; exp_continue }
     eof { }
 }
 if {$ko == 0} then { pass $test } else { fail "$test ($ko)" }
