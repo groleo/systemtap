@@ -1,0 +1,7 @@
+probe kernel.function("irq_*").call {
+      x = 10; y = 10; z = 10; w = 10
+      $1
+      if (x != 10 || y != 10 || z != 10 || w != 10)
+         error("memory got corrupted by " . @1)
+      exit()
+}
