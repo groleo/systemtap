@@ -42,7 +42,8 @@ if [ $# -lt 1 ]; then
 fi
 
 BASE_STP="$1"
-BASE=${BASE_STP%.stp}
+FILE_STP=`basename $BASE_STP`
+BASE=${FILE_STP%.stp}
 BASE_KO="${BASE}.ko"
 
 shift
@@ -82,9 +83,10 @@ done
 
 # Prepare stap arguments.
 # path to host binary
-STAP=../../out/host/linux-x86/bin/stap
+STAP=$ANDROID_HOST_OUT/bin/stap
 KERNEL=$ANDROID_PRODUCT_OUT/obj/kernel
 SYSROOT=$ANDROID_PRODUCT_OUT/symbols
+STAP_SRC=$ANDROID_BUILD_TOP/external/systemtap
 CROSS=i686-linux-android-
 
 # remove old files
@@ -99,8 +101,7 @@ unset XDG_DATA_DIRS
 sudo env PATH=$PATH KCFLAGS="-fno-pic -mfpmath=387" \
     $STAP -k $V_FLAG $D_FLAG $P_FLAG -a i386 \
     --sysroot=$SYSROOT -r $KERNEL -B CROSS_COMPILE=$CROSS \
-    -R runtime/ -I tapset/ -m $BASE $BASE_STP | \
-    sed -e "s/at :/at ${BASE_STP}:/"
+    -R $STAP_SRC/runtime/ -I $STAP_SRC/tapset/ -m $BASE $BASE_STP
 )
 
 if [ ! -f "$BASE_KO" ]; then
