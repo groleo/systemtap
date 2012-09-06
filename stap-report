@@ -18,9 +18,14 @@ run "uname -a"
 run "dmesg | egrep 'stap|systemtap' | tail -n 10"
 run "cat /proc/cpuinfo | egrep 'processor|vendor_id|model name'"
 if [ -x /usr/bin/dpkg ]; then
+  # debian/ubuntu
   run "dpkg --list | egrep 'systemtap|elfutils|kernel|gcc' | awk '{print \$2,\$3}' | sort"
-else
+elif [ -x /usr/bin/rpm -o -x /bin/rpm ]; then
+  # fedora/rhel/suse/...
   run "rpm -qa --qf '%{name}-%{version} %{release}.%{arch}\\t%{buildtime:date}@%{buildhost}\\n' | egrep 'systemtap|elfutils|kernel|gcc' | sort"
+elif [ -f /var/log/packages ]; then
+  # slackware
+  run "cat /var/log/packages | egrep 'systemtap|elfutils|kernel|gcc' | sort -k9"
 fi
 run "egrep 'PROBE|TRACE|MARKER|_DEBUG_|MODULE' /lib/modules/`uname -r`/build/.config | grep -v not.set | sort | fmt -w 80"
 run "find /debugfs /proc /sys /dev -name '*kprobes*' 2>/dev/null | xargs grep ."
