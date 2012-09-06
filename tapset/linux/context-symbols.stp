@@ -43,7 +43,15 @@ function stack:long (n:long) {
  *  name  of the function containing the address, and an estimate of
  *  its position within that function.  Return nothing.
  */
-function print_stack(stk:string) { psyms(stk) }
+function print_stack(stk:string) %{ /* pragma:symbols */
+	char *ptr = STAP_ARG_stk;
+	char *tok = strsep(&ptr, " ");
+	while (tok && *tok) {
+		_stp_print_addr (simple_strtol(tok, NULL, 16),
+				 _STP_SYM_FULL, NULL);
+		tok = strsep(&ptr, " ");
+	}
+%}
 
 /**
  * sfunction sprint_stack - Return stack for kernel addresses from string
@@ -62,7 +70,26 @@ function print_stack(stk:string) { psyms(stk) }
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
  * print_stack.
  */
-function sprint_stack:string(stk:string) { return spsyms(stk) }
+function sprint_stack:string(stk:string) %{ /* pure */ /* pragma:symbols */
+	char *ptr = STAP_ARG_stk;
+	char *tok = strsep(&ptr, " ");
+	char *str = STAP_RETVALUE;
+	size_t len = MAXSTRINGLEN - 1;
+	while (tok && *tok && len > 0) {
+		int s = _stp_snprint_addr(str, len,
+					  simple_strtol(tok, NULL, 16),
+					  _STP_SYM_SIMPLE, NULL);
+		len -= s;
+		str += s;
+		tok = strsep(&ptr, " ");
+	}
+
+        str--;
+        if (len > 0)
+                str[0] = '\0';
+        else
+                STAP_RETVALUE[MAXSTRINGLEN - 1] = '\0';
+%}
 
 /**
  * sfunction probefunc - Return the probe point's function name, if known
@@ -73,7 +100,36 @@ function sprint_stack:string(stk:string) { return spsyms(stk) }
  * usymname(). This function might return a function name based on the
  * current address if the probe point context couldn't be parsed.
  */
-function probefunc:string () { return symname(stack(0)) }
+function probefunc:string () %{ /* pure */ /* pragma:symbols */
+	char *ptr, *start;
+
+	STAP_RETVALUE[0] = '\0';
+	start = strstr(CONTEXT->probe_point, "function(\"");
+	ptr = start + 10; 
+	if (!start) {
+		start = strstr(CONTEXT->probe_point, "inline(\"");
+		ptr = start + 8;
+	}
+
+	if (start) {
+		int len = MAXSTRINGLEN;
+		char *dst = STAP_RETVALUE;
+		while (*ptr != '@' && *ptr != '"' && --len > 0 && *ptr)
+			*dst++ = *ptr++;
+		*dst = 0;
+
+	} else {
+		struct pt_regs *regs;
+		int user_mode;
+		user_mode = c->probe_flags & _STP_PROBE_STATE_USER_MODE;
+		regs = user_mode ? CONTEXT->uregs : CONTEXT->kregs;
+		if (regs) {
+			_stp_snprint_addr(STAP_RETVALUE, MAXSTRINGLEN,
+					  REG_IP(regs), _STP_SYM_SYMBOL,
+					  (user_mode ? current : NULL));
+		}
+	}
+%}
 
 /**
  * sfunction probemod - Return the probe point's kernel module name

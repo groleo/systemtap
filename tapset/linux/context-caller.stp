@@ -9,6 +9,11 @@
 // space.
 // </tapsetdescription>
 
+%{
+/* caller_addr() might be user caller, so needs at least uprobes structs. */
+#include "linux/uprobes-inc.h"
+%}
+
 /**
  *  sfunction callers - return list of PCs at top n levels of kernel stack
  *  @n: number of levels to descend in the stack (not counting the top
@@ -49,4 +54,13 @@ function caller:string() {
  *  Description: This function returns the address of the calling function. 
  *  Works only for return probes at this time.
  */
-function caller_addr:long () { return stack(1) }
+function caller_addr:long () %{ /* pure */
+        if (CONTEXT->probe_type == _STP_PROBE_HANDLER_KRETPROBE)
+		STAP_RETVALUE = (int64_t)(long)_stp_ret_addr_r(CONTEXT->ips.krp.pi);
+#ifdef STAPCONF_UPROBE_GET_PC
+	else if (CONTEXT->probe_type == _STP_PROBE_HANDLER_URETPROBE)
+		STAP_RETVALUE = (int64_t)(long)_stp_ret_addr_r(CONTEXT->ips.ri);
+#endif
+        else
+		STAP_RETVALUE = 0;
+%}

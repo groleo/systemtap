@@ -40,7 +40,11 @@ function print_ubacktrace () %{ /* pragma:unwind */ /* pragma:symbols */
  * shared libraries not mentioned in the current script run stap with
  * -d /path/to/exe-or-so and/or add --ldd to load all needed unwind data.
  */
-function sprint_ubacktrace:string () { return spsyms(ucallers(-1)) }
+function sprint_ubacktrace:string () %{ /* pragma:unwind */ /* pragma:symbols */
+/* pure */ /* myproc-unprivileged */ /* pragma:uprobes */ /* pragma:vma */
+    _stp_stack_user_sprint (STAP_RETVALUE, MAXSTRINGLEN, CONTEXT,
+			    _STP_SYM_SIMPLE);
+%}
 
 /**
  * sfunction print_ubacktrace_brief- Print stack back trace for current task.
