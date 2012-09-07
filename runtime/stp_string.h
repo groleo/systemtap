@@ -12,6 +12,8 @@
 #define to_oct_digit(c) ((c) + '0')
 static void _stp_text_str(char *out, char *in, int len, int quoted, int user);
 
+#if defined(__KERNEL__)
+
 /*
  * Powerpc uses a paranoid user address check in __get_user() which
  * spews warnings "BUG: Sleeping function...." when DEBUG_SPINLOCK_SLEEP
@@ -41,5 +43,11 @@ static void _stp_text_str(char *out, char *in, int len, int quoted, int user);
 #else /* !defined(__powerpc__) && !defined(__ia64) */
 #define __stp_get_user(x, ptr) __get_user(x, ptr)
 #endif /* !defined(__powerpc__) && !defined(__ia64) */
+
+#elif defined(__DYNINST__)
+
+#define __stp_get_user(x, ptr) __get_user(x, ptr)
+
+#endif
 
 #endif /* _STP_STRING_H_ */

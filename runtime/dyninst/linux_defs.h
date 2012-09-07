@@ -3,6 +3,8 @@
 #ifndef _STAPDYN_LINUX_DEFS_H_
 #define _STAPDYN_LINUX_DEFS_H_
 
+#include <unistd.h>
+
 #include "linux_hash.h"
 
 #define min(x, y) ({				\
@@ -110,6 +112,7 @@ static inline size_t strlcat(char *dest, const char *src, size_t count)
 # define __force
 # define __user
 # define __chk_user_ptr(x) (void)0
+#define user_mode(regs) 1
 #define __get_user(x, ptr)					\
 ({								\
 	int __gu_err = -EFAULT;					\
@@ -150,32 +153,26 @@ static inline size_t strlcat(char *dest, const char *src, size_t count)
 	__gu_err;						\
 })
 
+static int _stp_mem_fd;
+
 static inline __must_check long __copy_from_user(void *to,
 		const void __user * from, unsigned long n)
 {
-	if (__builtin_constant_p(n)) {
-		switch(n) {
-		case 1:
-			*(u8 *)to = *(u8 __force *)from;
-			return 0;
-		case 2:
-			*(u16 *)to = *(u16 __force *)from;
-			return 0;
-		case 4:
-			*(u32 *)to = *(u32 __force *)from;
-			return 0;
-#ifdef CONFIG_64BIT
-		case 8:
-			*(u64 *)to = *(u64 __force *)from;
-			return 0;
-#endif
-		default:
-			break;
-		}
-	}
+	int rc = 0;
 
-	memcpy(to, (const void __force *)from, n);
-	return 0;
+	/* The pread syscall is faster than lseek()/read() (since it
+	 * is only one syscall). 
+	 */
+	/* FIXME _ need a pread configure test */
+#define HAVE_PREAD
+#ifdef HAVE_PREAD
+	if (pread (_stp_mem_fd, to, n, (off_t)from) != n)
+#else
+	if (lseek (_stp_mem_fd, (off_t)from, SEEK_SET) == -1
+	    || read (_stp_mem_fd, to, n) != n)
+#endif
+		rc = -EFAULT;
+	return rc;
 }
 
 static inline int __get_user_fn(size_t size, const void __user *ptr, void *x)

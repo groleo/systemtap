@@ -19,6 +19,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <linux/ptrace.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "loc2c-runtime.h"
 
@@ -82,6 +86,15 @@ static inline void preempt_enable_no_resched(void)
 
 #define access_ok(type, addr, size) 1
 
+/*
+ * By definition, we can only debug our own processes with dyninst, so
+ * assert_is_myproc() will never assert.
+ *
+ * FIXME: We might want to add the check back, to get a better error
+ * message.
+ */
+#define assert_is_myproc() do {} while (0)
+
 #include "debug.h"
 
 #include "io.c"
@@ -103,15 +116,24 @@ static void systemtap_module_exit(void);
 
 static unsigned long stap_hash_seed; /* Init during module startup */
 
+static int _stp_mem_fd = -1;
+
 int stp_dummy_init(void)
 {
     stap_hash_seed = _stp_random_u ((unsigned long)-1);
+    _stp_mem_fd = open("/proc/self/mem", O_RDWR /*| O_LARGEFILE*/);
+    if (_stp_mem_fd < 0) {
+	return -errno;
+    }
     return systemtap_module_init();
 }
 
 int stp_dummy_exit(void)
 {
     systemtap_module_exit();
+    if (_stp_mem_fd != -1) {
+	close (_stp_mem_fd);
+    }
     return 0;
 }
 
