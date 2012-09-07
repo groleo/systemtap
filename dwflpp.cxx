@@ -2200,8 +2200,10 @@ dwflpp::find_variable_and_frame_base (vector<Dwarf_Die>& scopes,
       stringstream alternatives;
       print_locals (scopes, alternatives);
       if (e->cu_name == "")
-        throw semantic_error (_F("unable to find local '%s' near pc %s %s %s %s (%s)",
+        throw semantic_error (_F("unable to find local '%s', dieoffset %s in %s, near pc %s %s %s %s (%s)",
                                  local.c_str(),
+                                 lex_cast_hex(dwarf_dieoffset(scope_die)).c_str(),
+                                 module_name.c_str(),
                                  lex_cast_hex(pc).c_str(),
                                  (scope_die == NULL) ? "" : _("in"),
                                  (dwarf_diename(scope_die) ?: "<unknown>"),
@@ -2212,8 +2214,10 @@ dwflpp::find_variable_and_frame_base (vector<Dwarf_Die>& scopes,
                                        + alternatives.str())).c_str()),
                               e->tok);
       else
-        throw semantic_error (_F("unable to find global '%s' %s %s %s (%s)",
+        throw semantic_error (_F("unable to find global '%s', dieoffset %s in %s, %s %s %s (%s)",
                                  local.c_str(),
+                                 lex_cast_hex(dwarf_dieoffset(scope_die)).c_str(),
+                                 module_name.c_str(),
                                  (scope_die == NULL) ? "" : _("in"),
                                  (dwarf_diename(scope_die) ?: "<unknown>"),
                                  e->cu_name.c_str(),
