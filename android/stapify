@@ -145,6 +145,9 @@ if [ "$PNAME" != "" ]; then
     fi
 fi
 
+# Turning on kallsyms.
+run_echo adb shell "echo 1 > /proc/sys/kernel/kptr_restrict"
+
 if [ "$PID" != "" ]; then
     run_echo adb shell "staprun $V -x $PID /data/$BASE_KO"
 elif [ "$CMD" != "" ]; then
@@ -152,3 +155,6 @@ elif [ "$CMD" != "" ]; then
 else
     run_echo adb shell "staprun $V /data/$BASE_KO"
 fi
+
+# Turning off kallsyms.
+run_echo adb shell "echo 2 > /proc/sys/kernel/kptr_restrict"
