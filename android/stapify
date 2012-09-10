@@ -41,9 +41,12 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-BASE_STP="$1"
-FILE_STP=`basename $BASE_STP`
-BASE=${FILE_STP%.stp}
+PATH_STP="$1"
+BASE_STP=`basename $PATH_STP`
+BASE=${BASE_STP%.stp}
+# we are deriving the module name from the stp file name. But, modules can't
+# contain -'s, so transform them to _'s.
+BASE=`echo $BASE | sed 's/-/_/g'`
 BASE_KO="${BASE}.ko"
 
 shift
@@ -101,7 +104,7 @@ unset XDG_DATA_DIRS
 sudo env PATH=$PATH KCFLAGS="-fno-pic -mfpmath=387" \
     $STAP -k $V_FLAG $D_FLAG $P_FLAG -a i386 \
     --sysroot=$SYSROOT -r $KERNEL -B CROSS_COMPILE=$CROSS \
-    -R $STAP_SRC/runtime/ -I $STAP_SRC/tapset/ -m $BASE $BASE_STP
+    -R $STAP_SRC/runtime/ -I $STAP_SRC/tapset/ -m $BASE $PATH_STP
 )
 
 if [ ! -f "$BASE_KO" ]; then
