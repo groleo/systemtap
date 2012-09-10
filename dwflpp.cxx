@@ -2210,7 +2210,7 @@ dwflpp::find_variable_and_frame_base (vector<Dwarf_Die>& scopes,
                                  (dwarf_diename(cu) ?: "<unknown>"),
                                  (alternatives.str() == ""
                                   ? (_("<no alternatives>"))
-				  : (_(" (alternatives:")
+				  : (_("alternatives:")
                                        + alternatives.str())).c_str()),
                               e->tok);
       else
@@ -2223,7 +2223,7 @@ dwflpp::find_variable_and_frame_base (vector<Dwarf_Die>& scopes,
                                  e->cu_name.c_str(),
                                  (alternatives.str() == ""
                                   ? (_("<no alternatives>"))
-				  : (_(" (alternatives:")
+				  : (_("alternatives:")
                                        + alternatives.str())).c_str()),
                               e->tok);
     }
