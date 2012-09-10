@@ -630,17 +630,47 @@ limit. See Section~\ref{sub:SystemTap-safety}.
 
 \subsection{Embedded C\label{sub:Embedded-C}}
 \index{embedded C}
-SystemTap supports a \emph{guru\index{guru mode} mode} where script safety
-features such as code and data memory reference protection are removed. Guru
-mode is set by passing the \textbf{-g} option to the stap command. When in guru
-mode, the translator accepts C code enclosed between {}``\%\{''
-and {}``\%\}'' markers in the script file. The embedded C code is transcribed
-verbatim, without analysis, in sequence, into generated C code. At the outermost
-level of a script, guru mode may be useful to add \#include instructions,
-or any auxiliary definitions for use by other embedded code.
+SystemTap supports a \emph{guru\index{guru mode} mode} where script
+safety features such as code and data memory reference protection are
+removed. Guru mode is set by passing the \textbf{-g} option to the
+stap command. When in guru mode, the translator accepts C code
+enclosed between {}``\%\{'' and {}``\%\}'' markers in the top level of
+the script file. The embedded C code is transcribed verbatim, without
+analysis, in sequence, into the top level of the generated C
+code. Thus, guru mode may be useful for adding \#include instructions
+at the top level of the generated module, or providing auxiliary
+definitions for use by other embedded code.
 
+When in guru mode, embedded C code blocks are also allowed as the body
+of a SystemTap function (as described in
+Section~\ref{sub:Embedded-C-Functions}), and in place of any SystemTap
+expression. In the latter case, the code block must contain a valid
+expression according to C syntax.
 
-\subsection{Embedded C functions}
+Here is an example of the various permitted methods of embedded C code inclusion:
+
+\begin{vindent}
+\begin{verbatim}
+%{
+#include <linux/in.h>
+#include <linux/ip.h>
+%} /* <-- top level */
+
+/* Reads the char value stored at a given address: */ 
+function __read_char:long(addr:long) %{ /* pure */
+         STAP_RETVALUE = kderef(sizeof(char), STAP_ARG_addr);
+         CATCH_DEREF_FAULT ();
+%} /* <-- function body */
+
+/* Determines whether an IP packet is TCP, based on the iphdr: */
+function is_tcp_packet:long(iphdr) {
+         protocol = @cast(iphdr, "iphdr")->protocol
+         return (protocol == %{ IPPROTO_TCP %}) /* <-- expression */
+}
+\end{verbatim}
+\end{vindent}
+
+\subsection{Embedded C functions\label{sub:Embedded-C-Functions}}
 
 General syntax:
 
@@ -654,7 +684,7 @@ In that case, the script language
 body is replaced entirely by a piece of C code enclosed between 
 {}``\%\{'' and {}``\%\}'' markers.
 The enclosed code may do anything reasonable and safe as allowed
-by the parser.
+by the C parser.
 
 There are a number of undocumented but complex safety constraints on concurrency,
 resource consumption and runtime limits that are applied to code written

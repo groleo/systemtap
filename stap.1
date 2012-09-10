@@ -1325,13 +1325,13 @@ probe foo {
 
 .SS EMBEDDED C
 When in guru mode, the translator accepts embedded code in the
-script.  Such code is enclosed between
+top level of the script.  Such code is enclosed between
 .IR %{
 and
 .IR %}
 markers, and is transcribed verbatim, without analysis, in some
-sequence, into the generated C code.  At the outermost level, this may
-be useful to add
+sequence, into the top level of the generated C code.  At the
+outermost level, this may be useful to add
 .IR #include
 instructions, and any auxiliary definitions for use by other embedded
 code.
