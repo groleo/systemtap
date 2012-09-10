@@ -369,7 +369,7 @@ in the \texttt{stapprobes(3)}, \texttt{tapset::*(3stap)}, and
 
 The probe handler is interpreted relative to the context of each event. For
 events associated with kernel code, this context may include variables defined
-in the source code at that location. These \emph{target variables}\index{target variables}
+in the source code at that location. These \emph{target variables}\index{target variables} (or ``context variables'')
 are presented to the script as variables whose names are prefixed with a
 dollar sign (\$). They may be accessed only if the compiler used to compile
 the kernel preserved them, despite optimization. This is the same constraint
@@ -1106,10 +1106,7 @@ to not register. Also, statement probes are available only in guru mode.
 \index{userspace probing}
 \index{process}
 Support for userspace probing is supported on kernels that are
-configured to include the utrace extensions.  Red Hat and CentOS
-distributions provide kernels with utrace support enabled.  For more
-information about utrace, see
-\url{http://people.redhat.com/roland/utrace/}.
+configured to include the utrace or uprobes extensions.
 
 \subsubsection{Begin/end variants}
 \label{sec:beginendvariants}
