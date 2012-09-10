@@ -587,11 +587,11 @@ Also, statement probes must be run under guru-mode only.
 
 
 .SS USER-SPACE
-Support for user-space probing is available for kernels
-that are configured with the utrace extensions.  See
-.SAMPLE
-http://people.redhat.com/roland/utrace/
-.ESAMPLE
+Support for user-space probing is available for kernels that are
+configured with the utrace extensions, or have the uprobes facility in
+linux 3.5.  (Various kernel build configuration options need to be
+enabled; systemtap will advise if these are missing.)
+
 .PP
 There are several forms.  First, a non-symbolic probe point:
 .SAMPLE
@@ -692,21 +692,25 @@ process("PATH").provider("PROVIDER").mark("LABEL")
 A
 .B .mark
 probe gets called via a static probe which is defined in the
-application by STAP_PROBE1(PROVIDER,LABEL,arg1), which is defined in
-sdt.h.  The handle is an application handle, LABEL corresponds to
-the .mark argument, and arg1 is the argument.  STAP_PROBE1 is used for
-probes with 1 argument, STAP_PROBE2 is used for probes with 2
-arguments, and so on.  The arguments of the probe are available in the
-context variables $arg1, $arg2, ...  An alternative to using the
-STAP_PROBE macros is to use the dtrace script to create custom macros.
-Additionally, the variables $$name and $$provider are available as
-parts of the probe point name.
+application by STAP_PROBE1(PROVIDER,LABEL,arg1), which are macros defined in
+.BR sys/sdt.h .
+The PROVIDER is an arbitrary application identifier, LABEL is the
+marker site identifier, and arg1 is the integer-typed argument.
+STAP_PROBE1 is used for probes with 1 argument, STAP_PROBE2 is used
+for probes with 2 arguments, and so on.  The arguments of the probe
+are available in the context variables $arg1, $arg2, ...  An
+alternative to using the STAP_PROBE macros is to use the dtrace script
+to create custom macros.  Additionally, the variables $$name and
+$$provider are available as parts of the probe point name.  The 
+.B sys/sdt.h 
+macro names DTRACE_PROBE* are available as aliases for STAP_PROBE*.
 
 .PP
-Finally, full symbolic source-level probes in user-space programs
-and shared libraries are supported.  These are exactly analogous
-to the symbolic DWARF-based kernel/module probes described above,
-and expose similar contextual $variables.
+Finally, full symbolic source-level probes in user-space programs and
+shared libraries are supported.  These are exactly analogous to the
+symbolic DWARF-based kernel/module probes described above.  They
+expose the same sorts of context $variables for function parameters,
+local variables, and so on.
 .SAMPLE
 process("PATH").function("NAME")
 process("PATH").statement("*@FILE.c:123")
