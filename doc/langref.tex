@@ -734,6 +734,37 @@ embedded-C. Note that all SystemTap functions and probes run with interrupts
 disabled, thus you cannot call functions that might sleep within the embedded
 C.
 
+\subsection{Embedded C pragma comments}
+
+Embedded C blocks may contain various markers to assert optimization
+and safety properties.
+
+\begin{itemize}
+\item \verb+/* pure */+ means that the C code has no side effects and
+  may be elided entirely if its value is not used by script code.
+\item \verb+/* unprivileged */+ means that the C code is so safe that
+  even unprivileged users are permitted to use it. (This is useful, in
+  particular, to define an embedded-C function inside a tapset that
+  may be used by unprivileged code.)
+\item \verb+/* myproc-unprivileged */+ means that the C code is so
+  safe that even unprivileged users are permitted to use it, provided
+  that the target of the current probe is within the user's own
+  process.
+\item \verb+/* guru */+ means that the C code is so unsafe that a
+  systemtap user must specify \verb+-g+ (guru mode) to use this, even
+  if the C code is being exported from a tapset.
+\item \verb+/* unmangled */+, used in an embedded-C function, means
+  that the legacy (pre-1.8) argument access syntax should be made
+  available inside the function. Hence, in addition to
+  \verb+STAP_ARG_foo+ and \verb+STAP_RETVALUE+ one can use
+  \verb+THIS->foo+ and \verb+THIS->__retvalue+ respectively inside the
+  function. This is useful for quickly migrating code written for
+  SystemTap version 1.7 and earlier.
+\item \verb+/* string */+ in embedded-C expressions only, means that
+  the expression has \verb+const char *+ type and should be treated as
+  a string value, instead of the default long numeric.
+\end{itemize}
+
 \section{Probe points\label{sec:Probe-Points}}
 \index{probe points}
 \subsection{General syntax}
