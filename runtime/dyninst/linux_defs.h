@@ -160,17 +160,14 @@ static inline __must_check long __copy_from_user(void *to,
 {
 	int rc = 0;
 
-	/* The pread syscall is faster than lseek()/read() (since it
-	 * is only one syscall). 
+	/*
+	 * The pread syscall is faster than lseek()/read() (since it
+	 * is only one syscall). Also, if we used lseek()/read() we
+	 * couldn't use a cached fd - since 2 threads might hit this
+	 * code at the same time and the 2nd lseek() might finish
+	 * before the 1st read()...
 	 */
-	/* FIXME _ need a pread configure test */
-#define HAVE_PREAD
-#ifdef HAVE_PREAD
-	if (pread (_stp_mem_fd, to, n, (off_t)from) != n)
-#else
-	if (lseek (_stp_mem_fd, (off_t)from, SEEK_SET) == -1
-	    || read (_stp_mem_fd, to, n) != n)
-#endif
+	if (pread(_stp_mem_fd, to, n, (off_t)from) != n)
 		rc = -EFAULT;
 	return rc;
 }
@@ -182,6 +179,64 @@ static inline int __get_user_fn(size_t size, const void __user *ptr, void *x)
 }
 
 extern int __get_user_bad(void) __attribute__((noreturn));
+
+#define __put_user(x, ptr)						\
+({									\
+	int __gu_err = -EFAULT;						\
+	__chk_user_ptr(ptr);						\
+	switch (sizeof(*(ptr))) {					\
+	case 1: {							\
+		unsigned char __x = (unsigned char)(x);			\
+		__gu_err = __put_user_fn(sizeof (*(ptr)),		\
+					 ptr, &__x);			\
+		break;							\
+	};								\
+	case 2: {							\
+		unsigned short __x = (unsigned short)(x);		\
+		__gu_err = __put_user_fn(sizeof (*(ptr)),		\
+					 ptr, &__x);			\
+		break;							\
+	};								\
+	case 4: {							\
+		unsigned int __x = (unsigned int)(x);			\
+		__gu_err = __put_user_fn(sizeof (*(ptr)),		\
+					 ptr, &__x);			\
+		break;							\
+	};								\
+	case 8: {							\
+		unsigned long long __x = (unsigned long long)(x);	\
+		__gu_err = __put_user_fn(sizeof (*(ptr)),		\
+					 ptr, &__x);			\
+		break;							\
+	};								\
+	default:							\
+		__put_user_bad();					\
+		break;							\
+	}								\
+	__gu_err;							\
+})
+
+static inline __must_check long __copy_to_user(void *to, const void *from,
+					       unsigned long n)
+{
+	int rc = 0;
+
+	/*
+	 * The pwrite syscall is faster than lseek()/write() (since it
+	 * is only one syscall).
+	 */
+	if (pwrite(_stp_mem_fd, to, n, (off_t)from) != n)
+		rc = -EFAULT;
+	return rc;
+}
+
+static inline int __put_user_fn(size_t size, const void __user *ptr, void *x)
+{
+	size = __copy_to_user(x, ptr, size);
+	return size ? -EFAULT : size;
+}
+
+extern int __put_user_bad(void) __attribute__((noreturn));
 
 static inline void INIT_LIST_HEAD(struct list_head *list)
 {
