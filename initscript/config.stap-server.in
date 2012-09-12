@@ -4,13 +4,13 @@
 # The suggested settings below are the default settings.
 
 # Where to find individual server configurations
-# CONFIG_PATH=/etc/stap-server/conf.d
+# CONFIG_PATH=@sysconfdir@/stap-server/conf.d
 
 # Where to keep information about running servers
-# STAT_PATH=/var/run/stap-server
+# STAT_PATH=@localstatedir@/run/stap-server
 
 # Where to log messages
-# LOG_FILE=/var/log/stap-server/log
+# LOG_FILE=@localsatedir@/log/stap-server/log
 
 # The user who will run the server(s).  The default for the initscript
 # is the 'stap-server' user, otherwise the user running the
