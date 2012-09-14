@@ -128,7 +128,7 @@ timer_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->line() << ");";
   s.op->newline(-1) << "{";
   s.op->indent(1);
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "stp->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "stp->probe",
 				 "_STP_PROBE_HANDLER_TIMER");
   s.op->newline() << "(*stp->probe->ph) (c);";
   common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
@@ -315,7 +315,7 @@ hrtimer_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline(-1) << "}";
   s.op->newline() << "{";
   s.op->indent(1);
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "stp->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "stp->probe",
 				 "_STP_PROBE_HANDLER_HRTIMER");
   s.op->newline() << "(*stp->probe->ph) (c);";
   common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
@@ -431,7 +431,7 @@ profile_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "static void enter_all_profile_probes (struct pt_regs *regs) {";
   s.op->newline(1) << "struct stap_probe * probe = "
                    << common_probe_init (probes[0]) << ";";
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "probe",
 				 "_STP_PROBE_HANDLER_PROFILE_TIMER");
   // Timer interrupts save all registers, so if the interrupt happened
   // in user space we can rely on it being the full user pt_regs.

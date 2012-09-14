@@ -79,109 +79,114 @@ common_probe_init (derived_probe* p)
 
 
 void
-common_probe_entryfn_prologue (translator_output* o, string statestr,
-                               string probe, string probe_type,
-			       bool overload_processing)
+common_probe_entryfn_prologue (systemtap_session& s,
+			       string statestr, string probe,
+			       string probe_type, bool overload_processing)
 {
-  o->newline() << "#ifdef STP_ALIBI";
-  o->newline() << "atomic_inc(&(" << probe << "->alibi));";
-  o->newline() << "#else";
+  s.op->newline() << "#ifdef STP_ALIBI";
+  s.op->newline() << "atomic_inc(&(" << probe << "->alibi));";
+  s.op->newline() << "#else";
 
-  o->newline() << "struct context* __restrict__ c;";
-  o->newline() << "#if !INTERRUPTIBLE";
-  o->newline() << "unsigned long flags;";
-  o->newline() << "#endif";
+  s.op->newline() << "struct context* __restrict__ c;";
+  s.op->newline() << "#if !INTERRUPTIBLE";
+  s.op->newline() << "unsigned long flags;";
+  s.op->newline() << "#endif";
 
   if (overload_processing)
-    o->newline() << "#if defined(STP_TIMING) || defined(STP_OVERLOAD)";
+    s.op->newline() << "#if defined(STP_TIMING) || defined(STP_OVERLOAD)";
   else
-    o->newline() << "#ifdef STP_TIMING";
-  o->newline() << "cycles_t cycles_atstart = get_cycles ();";
-  o->newline() << "#endif";
+    s.op->newline() << "#ifdef STP_TIMING";
+  s.op->newline() << "cycles_t cycles_atstart = get_cycles ();";
+  s.op->newline() << "#endif";
 
-  o->newline() << "#ifdef STP_TIMING";
-  o->newline() << "Stat stat = " << probe << "->timing;";
-  o->newline() << "#endif";
+  s.op->newline() << "#ifdef STP_TIMING";
+  s.op->newline() << "Stat stat = " << probe << "->timing;";
+  s.op->newline() << "#endif";
 
-  o->newline() << "#if INTERRUPTIBLE";
-  o->newline() << "preempt_disable ();";
-  o->newline() << "#else";
-  o->newline() << "local_irq_save (flags);";
-  o->newline() << "#endif";
+  s.op->newline() << "#if INTERRUPTIBLE";
+  s.op->newline() << "preempt_disable ();";
+  s.op->newline() << "#else";
+  s.op->newline() << "local_irq_save (flags);";
+  s.op->newline() << "#endif";
 
-  // Check for enough free enough stack space
-  o->newline() << "#ifdef __KERNEL__"; // XXX needed in dyninst mode?
-  o->newline() << "if (unlikely ((((unsigned long) (& c)) & (THREAD_SIZE-1))"; // free space
-  o->newline(1) << "< (MINSTACKSPACE + sizeof (struct thread_info)))) {"; // needed space
-  // XXX: may need porting to platforms where task_struct is not at bottom of kernel stack
-  // NB: see also CONFIG_DEBUG_STACKOVERFLOW
-  o->newline() << "atomic_inc (& skipped_count);";
-  o->newline() << "#ifdef STP_TIMING";
-  o->newline() << "atomic_inc (& skipped_count_lowstack);";
-  o->newline() << "#endif";
-  o->newline() << "goto probe_epilogue;";
-  o->newline(-1) << "}";
-  o->newline() << "#endif // __KERNEL__";
+  if (! s.is_usermode())
+    {
+      // Check for enough free enough stack space
+      s.op->newline() << "if (unlikely ((((unsigned long) (& c)) & (THREAD_SIZE-1))"; // free space
+      s.op->newline(1) << "< (MINSTACKSPACE + sizeof (struct thread_info)))) {"; // needed space
+      // XXX: may need porting to platforms where task_struct is not
+      // at bottom of kernel stack NB: see also
+      // CONFIG_DEBUG_STACKOVERFLOW
+      s.op->newline() << "atomic_inc (& skipped_count);";
+      s.op->newline() << "#ifdef STP_TIMING";
+      s.op->newline() << "atomic_inc (& skipped_count_lowstack);";
+      s.op->newline() << "#endif";
+      s.op->newline() << "goto probe_epilogue;";
+      s.op->newline(-1) << "}";
+    }
 
-  o->newline() << "if (atomic_read (&session_state) != " << statestr << ")";
-  o->newline(1) << "goto probe_epilogue;";
-  o->indent(-1);
+  s.op->newline() << "if (atomic_read (&session_state) != " << statestr << ")";
+  s.op->newline(1) << "goto probe_epilogue;";
+  s.op->indent(-1);
 
-  o->newline() << "c = contexts[smp_processor_id()];";
-  o->newline() << "if (atomic_inc_return (& c->busy) != 1) {";
-  o->newline(1) << "#if !INTERRUPTIBLE";
-  o->newline() << "atomic_inc (& skipped_count);";
-  o->newline() << "#endif";
-  o->newline() << "#ifdef STP_TIMING";
-  o->newline() << "atomic_inc (& skipped_count_reentrant);";
-  o->newline() << "#ifdef DEBUG_REENTRANCY";
-  o->newline() << "_stp_warn (\"Skipped %s due to %s residency on cpu %u\\n\", "
+  if (! s.is_usermode())
+    s.op->newline() << "c = contexts[smp_processor_id()];";
+  else
+    s.op->newline() << "c = &contexts;";
+  s.op->newline() << "if (atomic_inc_return (& c->busy) != 1) {";
+  s.op->newline(1) << "#if !INTERRUPTIBLE";
+  s.op->newline() << "atomic_inc (& skipped_count);";
+  s.op->newline() << "#endif";
+  s.op->newline() << "#ifdef STP_TIMING";
+  s.op->newline() << "atomic_inc (& skipped_count_reentrant);";
+  s.op->newline() << "#ifdef DEBUG_REENTRANCY";
+  s.op->newline() << "_stp_warn (\"Skipped %s due to %s residency on cpu %u\\n\", "
                << probe << "->pp, c->probe_point ?: \"?\", smp_processor_id());";
   // NB: There is a conceivable race condition here with reading
   // c->probe_point, knowing that this other probe is sort of running.
   // However, in reality, it's interrupted.  Plus even if it were able
   // to somehow start again, and stop before we read c->probe_point,
   // at least we have that   ?: "?"  bit in there to avoid a NULL deref.
-  o->newline() << "#endif";
-  o->newline() << "#endif";
-  o->newline() << "atomic_dec (& c->busy);";
-  o->newline() << "goto probe_epilogue;";
-  o->newline(-1) << "}";
-  o->newline();
-  o->newline() << "c->last_stmt = 0;";
-  o->newline() << "c->last_error = 0;";
-  o->newline() << "c->nesting = -1;"; // NB: PR10516 packs locals[] tighter
-  o->newline() << "c->uregs = 0;";
-  o->newline() << "c->kregs = 0;";
-  o->newline() << "#if defined __ia64__";
-  o->newline() << "c->unwaddr = 0;";
-  o->newline() << "#endif";
-  o->newline() << "c->probe_point = " << probe << "->pp;";
-  o->newline() << "#ifdef STP_NEED_PROBE_NAME";
-  o->newline() << "c->probe_name = " << probe << "->pn;";
-  o->newline() << "#endif";
-  o->newline() << "c->probe_type = " << probe_type << ";";
+  s.op->newline() << "#endif";
+  s.op->newline() << "#endif";
+  s.op->newline() << "atomic_dec (& c->busy);";
+  s.op->newline() << "goto probe_epilogue;";
+  s.op->newline(-1) << "}";
+  s.op->newline();
+  s.op->newline() << "c->last_stmt = 0;";
+  s.op->newline() << "c->last_error = 0;";
+  s.op->newline() << "c->nesting = -1;"; // NB: PR10516 packs locals[] tighter
+  s.op->newline() << "c->uregs = 0;";
+  s.op->newline() << "c->kregs = 0;";
+  s.op->newline() << "#if defined __ia64__";
+  s.op->newline() << "c->unwaddr = 0;";
+  s.op->newline() << "#endif";
+  s.op->newline() << "c->probe_point = " << probe << "->pp;";
+  s.op->newline() << "#ifdef STP_NEED_PROBE_NAME";
+  s.op->newline() << "c->probe_name = " << probe << "->pn;";
+  s.op->newline() << "#endif";
+  s.op->newline() << "c->probe_type = " << probe_type << ";";
   // reset Individual Probe State union
-  o->newline() << "memset(&c->ips, 0, sizeof(c->ips));";
-  o->newline() << "c->probe_flags = 0;";
-  o->newline() << "#ifdef STAP_NEED_REGPARM"; // i386 or x86_64 register.stp
-  o->newline() << "c->regparm = 0;";
-  o->newline() << "#endif";
+  s.op->newline() << "memset(&c->ips, 0, sizeof(c->ips));";
+  s.op->newline() << "c->probe_flags = 0;";
+  s.op->newline() << "#ifdef STAP_NEED_REGPARM"; // i386 or x86_64 register.stp
+  s.op->newline() << "c->regparm = 0;";
+  s.op->newline() << "#endif";
 
-  o->newline() << "#if INTERRUPTIBLE";
-  o->newline() << "c->actionremaining = MAXACTION_INTERRUPTIBLE;";
-  o->newline() << "#else";
-  o->newline() << "c->actionremaining = MAXACTION;";
-  o->newline() << "#endif";
+  s.op->newline() << "#if INTERRUPTIBLE";
+  s.op->newline() << "c->actionremaining = MAXACTION_INTERRUPTIBLE;";
+  s.op->newline() << "#else";
+  s.op->newline() << "c->actionremaining = MAXACTION;";
+  s.op->newline() << "#endif";
   // NB: The following would actually be incorrect.
   // That's because cycles_sum/cycles_base values are supposed to survive
   // between consecutive probes.  Periodically (STP_OVERLOAD_INTERVAL
   // cycles), the values will be reset.
   /*
-  o->newline() << "#ifdef STP_OVERLOAD";
-  o->newline() << "c->cycles_sum = 0;";
-  o->newline() << "c->cycles_base = 0;";
-  o->newline() << "#endif";
+  s.op->newline() << "#ifdef STP_OVERLOAD";
+  s.op->newline() << "c->cycles_sum = 0;";
+  s.op->newline() << "c->cycles_base = 0;";
+  s.op->newline() << "#endif";
   */
 }
 
@@ -4818,7 +4823,7 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->line() << "kprobe_idx:0)"; // NB: at least we avoid memory corruption
   // XXX: it would be nice to give a more verbose error though; BUG_ON later?
   s.op->line() << "];";
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sdp->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sdp->probe",
 				 "_STP_PROBE_HANDLER_KPROBE");
   s.op->newline() << "c->kregs = regs;";
 
@@ -4855,7 +4860,7 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "struct stap_probe *sp = entry ? sdp->entry_probe : sdp->probe;";
   s.op->newline() << "if (sp) {";
   s.op->indent(1);
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sp",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sp",
 				 "_STP_PROBE_HANDLER_KRETPROBE");
   s.op->newline() << "c->kregs = regs;";
 
@@ -7386,7 +7391,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline() << "static void enter_uprobe_probe (struct uprobe *inst, struct pt_regs *regs) {";
   s.op->newline(1) << "struct stap_uprobe *sup = container_of(inst, struct stap_uprobe, up);";
   s.op->newline() << "const struct stap_uprobe_spec *sups = &stap_uprobe_specs [sup->spec_index];";
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sups->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sups->probe",
 				 "_STP_PROBE_HANDLER_UPROBE");
   s.op->newline() << "if (sup->spec_index < 0 || "
                   << "sup->spec_index >= " << probes.size() << ") {";
@@ -7415,7 +7420,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline() << "static void enter_uretprobe_probe (struct uretprobe_instance *inst, struct pt_regs *regs) {";
   s.op->newline(1) << "struct stap_uprobe *sup = container_of(inst->rp, struct stap_uprobe, urp);";
   s.op->newline() << "const struct stap_uprobe_spec *sups = &stap_uprobe_specs [sup->spec_index];";
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sups->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sups->probe",
 				 "_STP_PROBE_HANDLER_URETPROBE");
   s.op->newline() << "c->ips.ri = inst;";
   s.op->newline() << "if (sup->spec_index < 0 || "
@@ -7570,7 +7575,7 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
                   << "(struct uprobe_consumer *inst, struct pt_regs *regs) {";
   s.op->newline(1) << "struct stapiu_consumer *sup = "
                    << "container_of(inst, struct stapiu_consumer, consumer);";
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sup->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
                                  "_STP_PROBE_HANDLER_UPROBE");
   s.op->newline() << "c->uregs = regs;";
   s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
@@ -7734,7 +7739,7 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
                   << "(uint64_t index, struct pt_regs *regs) {";
   s.op->newline(1) << "struct stapdu_consumer *sup = "
                    << "&stap_dyninst_uprobe_consumers[index];";
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sup->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
                                  "_STP_PROBE_HANDLER_UPROBE");
   s.op->newline() << "c->uregs = regs;";
   s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
@@ -8103,7 +8108,7 @@ kprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->line() << "kprobe_idx:0)"; // NB: at least we avoid memory corruption
   // XXX: it would be nice to give a more verbose error though; BUG_ON later?
   s.op->line() << "];";
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sdp->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sdp->probe",
 				 "_STP_PROBE_HANDLER_KPROBE");
   s.op->newline() << "c->kregs = regs;";
 
@@ -8137,7 +8142,7 @@ kprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
   // XXX: it would be nice to give a more verbose error though; BUG_ON later?
   s.op->line() << "];";
 
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sdp->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sdp->probe",
 				 "_STP_PROBE_HANDLER_KRETPROBE");
   s.op->newline() << "c->kregs = regs;";
   s.op->newline() << "c->ips.krp.pi = inst;"; // for assisting runtime's backtrace logic
@@ -8743,7 +8748,7 @@ hwbkpt_derived_probe_group::emit_module_decls (systemtap_session& s)
   // XXX: why not match stap_hwbkpt_ret_array[i] against bp instead?
   s.op->newline() << "if (bp->attr.bp_addr==hp->bp_addr && bp->attr.bp_type==hp->bp_type && bp->attr.bp_len==hp->bp_len) {";
   s.op->newline(1) << "struct stap_hwbkpt_probe *sdp = &stap_hwbkpt_probes[i];";
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "sdp->probe",
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sdp->probe",
 				 "_STP_PROBE_HANDLER_HWBKPT");
   s.op->newline() << "if (user_mode(regs)) {";
   s.op->newline(1)<< "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
@@ -9504,7 +9509,7 @@ tracepoint_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline(-2) << "{";
       s.op->newline(1) << "struct stap_probe * const probe = "
                        << common_probe_init (p) << ";";
-      common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "probe",
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "probe",
 				     "_STP_PROBE_HANDLER_TRACEPOINT");
       s.op->newline() << "c->ips.tracepoint_name = "
                       << lex_cast_qstring (p->tracepoint_name)

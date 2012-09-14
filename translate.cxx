@@ -1112,7 +1112,10 @@ c_unparser::emit_common_header ()
   emit_compiled_printf_locals ();
 
   o->newline(-1) << "};\n";
-  o->newline() << "static struct context *contexts[NR_CPUS] = { NULL };\n";
+  if (!session->is_usermode())
+    o->newline() << "static struct context *contexts[NR_CPUS] = { NULL };\n";
+  else
+    o->newline() << "static __thread struct context contexts;\n";
 
   emit_map_type_instantiations ();
 
@@ -1473,6 +1476,10 @@ c_unparser::emit_global_param (vardecl *v)
 {
   string vn = c_globalname (v->name);
 
+  // XXX: No module parameters with dyninst.
+  if (session->is_usermode())
+    return;
+
   // NB: systemtap globals can collide with linux macros,
   // e.g. VM_FAULT_MAJOR.  We want the parameter name anyway.  This
   // #undef is spit out at the end of the C file, so that removing the
@@ -1561,86 +1568,86 @@ c_unparser::emit_module_init ()
   o->newline() << "const char *probe_point = \"\";";
 
   // NB: This block of initialization only makes sense in kernel
-  o->newline() << "#ifdef __KERNEL__";
-  // XXX Plus, most of this code is completely static, so it probably should
-  // move into the runtime, where kernel/dyninst is more easily separated.
+  if (! session->is_usermode())
+  {
+      // XXX Plus, most of this code is completely static, so it probably should
+      // move into the runtime, where kernel/dyninst is more easily separated.
 
-  // Compare actual and targeted kernel releases/machines.  Sometimes
-  // one may install the incorrect debuginfo or -devel RPM, and try to
-  // run a probe compiled for a different version.  Catch this early,
-  // just in case modversions didn't.
-  o->newline() << "{";
-  o->newline(1) << "const char* release = UTS_RELEASE;";
-  o->newline() << "#ifdef STAPCONF_GENERATED_COMPILE";
-  o->newline() << "const char* version = UTS_VERSION;";
-  o->newline() << "#endif";
+      // Compare actual and targeted kernel releases/machines.  Sometimes
+      // one may install the incorrect debuginfo or -devel RPM, and try to
+      // run a probe compiled for a different version.  Catch this early,
+      // just in case modversions didn't.
+      o->newline() << "{";
+      o->newline(1) << "const char* release = UTS_RELEASE;";
+      o->newline() << "#ifdef STAPCONF_GENERATED_COMPILE";
+      o->newline() << "const char* version = UTS_VERSION;";
+      o->newline() << "#endif";
 
-  // NB: This UTS_RELEASE compile-time macro directly checks only that
-  // the compile-time kbuild tree matches the compile-time debuginfo/etc.
-  // It does not check the run time kernel value.  However, this is
-  // probably OK since the kbuild modversions system aims to prevent
-  // mismatches between kbuild and runtime versions at module-loading time.
+      // NB: This UTS_RELEASE compile-time macro directly checks only that
+      // the compile-time kbuild tree matches the compile-time debuginfo/etc.
+      // It does not check the run time kernel value.  However, this is
+      // probably OK since the kbuild modversions system aims to prevent
+      // mismatches between kbuild and runtime versions at module-loading time.
 
-  // o->newline() << "const char* machine = UTS_MACHINE;";
-  // NB: We could compare UTS_MACHINE too, but on x86 it lies
-  // (UTS_MACHINE=i386, but uname -m is i686).  Sheesh.
+      // o->newline() << "const char* machine = UTS_MACHINE;";
+      // NB: We could compare UTS_MACHINE too, but on x86 it lies
+      // (UTS_MACHINE=i386, but uname -m is i686).  Sheesh.
 
-  o->newline() << "if (strcmp (release, "
-               << lex_cast_qstring (session->kernel_release) << ")) {";
-  o->newline(1) << "_stp_error (\"module release mismatch (%s vs %s)\", "
-                << "release, "
-                << lex_cast_qstring (session->kernel_release)
-                << ");";
-  o->newline() << "rc = -EINVAL;";
-  o->newline(-1) << "}";
+      o->newline() << "if (strcmp (release, "
+		   << lex_cast_qstring (session->kernel_release) << ")) {";
+      o->newline(1) << "_stp_error (\"module release mismatch (%s vs %s)\", "
+		    << "release, "
+		    << lex_cast_qstring (session->kernel_release)
+		    << ");";
+      o->newline() << "rc = -EINVAL;";
+      o->newline(-1) << "}";
 
-  o->newline() << "#ifdef STAPCONF_GENERATED_COMPILE";
-  o->newline() << "if (strcmp (utsname()->version, version)) {";
-  o->newline(1) << "_stp_error (\"module version mismatch (%s vs %s), release %s\", "
-                << "version, "
-                << "utsname()->version, "
-                << "release"
-                << ");";
-  o->newline() << "rc = -EINVAL;";
-  o->newline(-1) << "}";
-  o->newline() << "#endif";
+      o->newline() << "#ifdef STAPCONF_GENERATED_COMPILE";
+      o->newline() << "if (strcmp (utsname()->version, version)) {";
+      o->newline(1) << "_stp_error (\"module version mismatch (%s vs %s), release %s\", "
+		    << "version, "
+		    << "utsname()->version, "
+		    << "release"
+		    << ");";
+      o->newline() << "rc = -EINVAL;";
+      o->newline(-1) << "}";
+      o->newline() << "#endif";
 
-  // perform buildid-based checking if able
-  o->newline() << "if (_stp_module_check()) rc = -EINVAL;";
+      // perform buildid-based checking if able
+      o->newline() << "if (_stp_module_check()) rc = -EINVAL;";
 
-  // Perform checking on the user's credentials vs those required to load/run this module.
-  o->newline() << "if (_stp_privilege_credentials == 0) {";
-  o->newline(1) << "if (STP_PRIVILEGE_CONTAINS(STP_PRIVILEGE, STP_PR_STAPDEV) ||";
-  o->newline() << "    STP_PRIVILEGE_CONTAINS(STP_PRIVILEGE, STP_PR_STAPUSR)) {";
-  o->newline(1) << "_stp_privilege_credentials = STP_PRIVILEGE;";
-  o->newline() << "#ifdef DEBUG_PRIVILEGE";
-  o->newline(1) << "_dbug(\"User's privilege credentials default to %s\\n\",";
-  o->newline() << "      privilege_to_text(_stp_privilege_credentials));";
-  o->newline(-1) << "#endif";
-  o->newline(-1) << "}";
-  o->newline() << "else {";
-  o->newline(1) << "_stp_error (\"Unable to verify that you have the required privilege credentials to run this module (%s required). You must use staprun version 1.7 or higher.\",";
-  o->newline() << "            privilege_to_text(STP_PRIVILEGE));";
-  o->newline() << "rc = -EINVAL;";
-  o->newline(-1) << "}";
-  o->newline(-1) << "}";
-  o->newline() << "else {";
-  o->newline(1) << "#ifdef DEBUG_PRIVILEGE";
-  o->newline(1) << "_dbug(\"User's privilege credentials provided as %s\\n\",";
-  o->newline() << "      privilege_to_text(_stp_privilege_credentials));";
-  o->newline(-1) << "#endif";
-  o->newline() << "if (! STP_PRIVILEGE_CONTAINS(_stp_privilege_credentials, STP_PRIVILEGE)) {";
-  o->newline(1) << "_stp_error (\"Your privilege credentials (%s) are insufficient to run this module (%s required).\",";
-  o->newline () << "            privilege_to_text(_stp_privilege_credentials), privilege_to_text(STP_PRIVILEGE));";
-  o->newline() << "rc = -EINVAL;";
-  o->newline(-1) << "}";
-  o->newline(-1) << "}";
+      // Perform checking on the user's credentials vs those required to load/run this module.
+      o->newline() << "if (_stp_privilege_credentials == 0) {";
+      o->newline(1) << "if (STP_PRIVILEGE_CONTAINS(STP_PRIVILEGE, STP_PR_STAPDEV) ||";
+      o->newline() << "    STP_PRIVILEGE_CONTAINS(STP_PRIVILEGE, STP_PR_STAPUSR)) {";
+      o->newline(1) << "_stp_privilege_credentials = STP_PRIVILEGE;";
+      o->newline() << "#ifdef DEBUG_PRIVILEGE";
+      o->newline(1) << "_dbug(\"User's privilege credentials default to %s\\n\",";
+      o->newline() << "      privilege_to_text(_stp_privilege_credentials));";
+      o->newline(-1) << "#endif";
+      o->newline(-1) << "}";
+      o->newline() << "else {";
+      o->newline(1) << "_stp_error (\"Unable to verify that you have the required privilege credentials to run this module (%s required). You must use staprun version 1.7 or higher.\",";
+      o->newline() << "            privilege_to_text(STP_PRIVILEGE));";
+      o->newline() << "rc = -EINVAL;";
+      o->newline(-1) << "}";
+      o->newline(-1) << "}";
+      o->newline() << "else {";
+      o->newline(1) << "#ifdef DEBUG_PRIVILEGE";
+      o->newline(1) << "_dbug(\"User's privilege credentials provided as %s\\n\",";
+      o->newline() << "      privilege_to_text(_stp_privilege_credentials));";
+      o->newline(-1) << "#endif";
+      o->newline() << "if (! STP_PRIVILEGE_CONTAINS(_stp_privilege_credentials, STP_PRIVILEGE)) {";
+      o->newline(1) << "_stp_error (\"Your privilege credentials (%s) are insufficient to run this module (%s required).\",";
+      o->newline () << "            privilege_to_text(_stp_privilege_credentials), privilege_to_text(STP_PRIVILEGE));";
+      o->newline() << "rc = -EINVAL;";
+      o->newline(-1) << "}";
+      o->newline(-1) << "}";
 
-  o->newline(-1) << "}";
+      o->newline(-1) << "}";
 
-  o->newline() << "if (rc) goto out;";
-
-  o->newline() << "#endif // __KERNEL__";
+      o->newline() << "if (rc) goto out;";
+  }
 
   // initialize gettimeofday (if needed)
   o->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";
@@ -1661,18 +1668,20 @@ c_unparser::emit_module_init ()
   // while to abort right away.  Currently running probes are allowed to
   // terminate.  These may set STAP_SESSION_ERROR!
 
-  // per-cpu context
-  o->newline() << "for_each_possible_cpu(cpu) {";
-  o->indent(1);
-  // Module init, so in user context, safe to use "sleeping" allocation.
-  o->newline() << "contexts[cpu] = _stp_kzalloc_gfp(sizeof(struct context), STP_ALLOC_SLEEP_FLAGS);";
-  o->newline() << "if (contexts[cpu] == NULL) {";
-  o->indent(1);
-  o->newline() << "_stp_error (\"context (size %lu) allocation failed\", (unsigned long) sizeof (struct context));";
-  o->newline() << "rc = -ENOMEM;";
-  o->newline() << "goto out;";
-  o->newline(-1) << "}";
-  o->newline(-1) << "}";
+  if (!session->is_usermode()) {
+    // per-cpu context
+    o->newline() << "for_each_possible_cpu(cpu) {";
+    o->indent(1);
+    // Module init, so in user context, safe to use "sleeping" allocation.
+    o->newline() << "contexts[cpu] = _stp_kzalloc_gfp(sizeof(struct context), STP_ALLOC_SLEEP_FLAGS);";
+    o->newline() << "if (contexts[cpu] == NULL) {";
+    o->indent(1);
+    o->newline() << "_stp_error (\"context (size %lu) allocation failed\", (unsigned long) sizeof (struct context));";
+    o->newline() << "rc = -ENOMEM;";
+    o->newline() << "goto out;";
+    o->newline(-1) << "}";
+    o->newline(-1) << "}";
+  }
 
   for (unsigned i=0; i<session->globals.size(); i++)
     {
@@ -1767,14 +1776,16 @@ c_unparser::emit_module_init ()
   o->newline() << "#endif";
 
   // Free up the context memory after an error too
-  o->newline() << "for_each_possible_cpu(cpu) {";
-  o->indent(1);
-  o->newline() << "if (contexts[cpu] != NULL) {";
-  o->indent(1);
-  o->newline() << "_stp_kfree(contexts[cpu]);";
-  o->newline() << "contexts[cpu] = NULL;";
-  o->newline(-1) << "}";
-  o->newline(-1) << "}";
+  if (!session->is_usermode()) {
+    o->newline() << "for_each_possible_cpu(cpu) {";
+    o->indent(1);
+    o->newline() << "if (contexts[cpu] != NULL) {";
+    o->indent(1);
+    o->newline() << "_stp_kfree(contexts[cpu]);";
+    o->newline() << "contexts[cpu] = NULL;";
+    o->newline(-1) << "}";
+    o->newline(-1) << "}";
+  }
 
   o->newline() << "return rc;";
   o->newline(-1) << "}\n";
@@ -1802,12 +1813,14 @@ c_unparser::emit_module_exit ()
 {
   o->newline() << "static void systemtap_module_exit (void) {";
   // rc?
-  o->newline(1) << "int holdon;";
-  o->newline() << "int i=0, j=0;"; // for derived_probe_group use
-  o->newline() << "int cpu;";
-  o->newline() << "unsigned long hold_start;";
-  o->newline() << "int hold_index;";
-
+  o->newline(1) << "int i=0, j=0;"; // for derived_probe_group use
+  if (! session->is_usermode())
+    {
+      o->newline() << "int holdon;";
+      o->newline() << "int cpu;";
+      o->newline() << "unsigned long hold_start;";
+      o->newline() << "int hold_index;";
+    }
   o->newline() << "(void) i;";
   o->newline() << "(void) j;";
   // If we aborted startup, then everything has been cleaned up already, and
@@ -1844,57 +1857,60 @@ c_unparser::emit_module_exit ()
   // NB: systemtap_module_exit is assumed to be called from ordinary
   // user context, say during module unload.  Among other things, this
   // means we can sleep a while.
-  // XXX for now, only limit kernel holds, not dyninst
-  o->newline() << "#ifdef __KERNEL__";
-  o->newline() << "hold_start = jiffies;";
-  o->newline() << "hold_index = -1;";
-  o->newline() << "#endif // __KERNEL__";
-  o->newline() << "do {";
-  o->newline(1) << "int i;";
-  o->newline() << "holdon = 0;";
-  o->newline() << "for_each_possible_cpu(i)";
-  o->newline(1) << "if (contexts[i] != NULL && "
-                << "atomic_read (& contexts[i]->busy)) {";
-  o->newline(1) << "holdon = 1;";
-
-  // just in case things are really stuck, let's print some diagnostics
-  o->newline() << "#ifdef __KERNEL__";
-  o->newline() << "if (time_after(jiffies, hold_start + HZ) "; // > 1 second
-  o->line() << "&& (i > hold_index)) {"; // not already printed
-  o->newline(1) << "hold_index = i;";
-  o->newline() << "printk(KERN_ERR \"%s context[%d] stuck: %s\\n\", THIS_MODULE->name, i, contexts[i]->probe_point);";
-  o->newline(-1) << "}";
-  o->newline() << "#endif // __KERNEL__";
-  o->newline(-1) << "}";
-  o->indent(-1);
-
-  // Just in case things are really really stuck, a handler probably
-  // suffered a fault, and the kernel probably killed a task/thread
-  // already.  We can't be quite sure in what state everything is in,
-  // however auxiliary stuff like kprobes / uprobes / locks have
-  // already been unregistered.  So it's *probably* safe to
-  // pretend/assume/hope everything is OK, and let the cleanup finish.
   //
-  // In the worst case, there may occur a fault, as a genuinely
-  // running probe handler tries to access script globals (about to be
-  // freed), or something accesses module memory (about to be
-  // unloaded).  This is sometimes stinky, so the alternative
-  // (default) is to change from a livelock to a livelock that sleeps
-  // awhile.
-  o->newline() << "#ifdef __KERNEL__";
-  o->newline() << "#ifdef STAP_OVERRIDE_STUCK_CONTEXT";
-  o->newline() << "if (time_after(jiffies, hold_start + HZ*10)) { "; // > 10 seconds
-  o->newline(1) << "printk(KERN_ERR \"%s overriding stuck context to allow module shutdown.\", THIS_MODULE->name);";
-  o->newline() << "holdon = 0;"; // allow loop to exit
-  o->newline(-1) << "}";
-  o->newline() << "#else";
-  o->newline() << "msleep (250);"; // at least stop sucking down the staprun cpu
-  o->newline() << "#endif";
-  o->newline() << "#endif // __KERNEL__";
+  // XXX for now, only limit kernel holds, not dyninst. Note that with
+  // TLS (which the dyninst runtime code uses), there isn't an
+  // easy/easily-found way to loop over all the current threads to get
+  // each thread's data value.
+  if (! session->is_usermode())
+    {
+      o->newline() << "hold_start = jiffies;";
+      o->newline() << "hold_index = -1;";
+      o->newline() << "do {";
+      o->newline(1) << "int i;";
+      o->newline() << "holdon = 0;";
 
-  // NB: we run at least one of these during the shutdown sequence:
-  o->newline () << "yield ();"; // aka schedule() and then some
-  o->newline(-1) << "} while (holdon);";
+      o->newline() << "for_each_possible_cpu(i)";
+      o->newline(1) << "if (contexts[i] != NULL && "
+		    << "atomic_read (& contexts[i]->busy)) {";
+      o->newline(1) << "holdon = 1;";
+
+      // just in case things are really stuck, let's print some diagnostics
+      o->newline() << "if (time_after(jiffies, hold_start + HZ) "; // > 1 second
+      o->line() << "&& (i > hold_index)) {"; // not already printed
+      o->newline(1) << "hold_index = i;";
+      o->newline() << "printk(KERN_ERR \"%s context[%d] stuck: %s\\n\", THIS_MODULE->name, i, contexts[i]->probe_point);";
+      o->newline(-1) << "}";
+      o->newline(-1) << "}";
+      o->indent(-1);
+
+      // Just in case things are really really stuck, a handler
+      // probably suffered a fault, and the kernel probably killed a
+      // task/thread already.  We can't be quite sure in what state
+      // everything is in, however auxiliary stuff like kprobes /
+      // uprobes / locks have already been unregistered.  So it's
+      // *probably* safe to pretend/assume/hope everything is OK, and
+      // let the cleanup finish.
+      //
+      // In the worst case, there may occur a fault, as a genuinely
+      // running probe handler tries to access script globals (about
+      // to be freed), or something accesses module memory (about to
+      // be unloaded).  This is sometimes stinky, so the alternative
+      // (default) is to change from a livelock to a livelock that
+      // sleeps awhile.
+      o->newline() << "#ifdef STAP_OVERRIDE_STUCK_CONTEXT";
+      o->newline() << "if (time_after(jiffies, hold_start + HZ*10)) { "; // > 10 seconds
+      o->newline(1) << "printk(KERN_ERR \"%s overriding stuck context to allow module shutdown.\", THIS_MODULE->name);";
+      o->newline() << "holdon = 0;"; // allow loop to exit
+      o->newline(-1) << "}";
+      o->newline() << "#else";
+      o->newline() << "msleep (250);"; // at least stop sucking down the staprun cpu
+      o->newline() << "#endif";
+
+      // NB: we run at least one of these during the shutdown sequence:
+      o->newline () << "yield ();"; // aka schedule() and then some
+      o->newline(-1) << "} while (holdon);";
+    }
 
   // cargo cult epilogue
   o->newline() << "atomic_set (&session_state, STAP_SESSION_STOPPED);";
@@ -1914,14 +1930,17 @@ c_unparser::emit_module_exit ()
 	o->newline() << getvar (v).fini();
     }
 
-  o->newline() << "for_each_possible_cpu(cpu) {";
-  o->indent(1);
-  o->newline() << "if (contexts[cpu] != NULL) {";
-  o->indent(1);
-  o->newline() << "_stp_kfree(contexts[cpu]);";
-  o->newline() << "contexts[cpu] = NULL;";
-  o->newline(-1) << "}";
-  o->newline(-1) << "}";
+  if (! session->is_usermode())
+    {
+      o->newline() << "for_each_possible_cpu(cpu) {";
+      o->indent(1);
+      o->newline() << "if (contexts[cpu] != NULL) {";
+      o->indent(1);
+      o->newline() << "_stp_kfree(contexts[cpu]);";
+      o->newline() << "contexts[cpu] = NULL;";
+      o->newline(-1) << "}";
+      o->newline(-1) << "}";
+    }
 
   // teardown gettimeofday (if needed)
   o->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";

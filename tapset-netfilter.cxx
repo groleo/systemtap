@@ -280,7 +280,7 @@ netfilter_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline(-1) << "#endif";
       s.op->newline(1) << "struct stap_probe * const stp = & stap_probes[" << np->session_index << "];";
       s.op->newline() << "int nf_verdict = NF_ACCEPT;"; // default NF_ACCEPT, to be used by $verdict context var
-      common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "stp",
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "stp",
                                      "_STP_PROBE_HANDLER_NETFILTER",
                                      false);
 

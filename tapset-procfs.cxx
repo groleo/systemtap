@@ -248,7 +248,7 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
     {
       s.op->newline() << "struct _stp_procfs_data pdata;";
 
-      common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING",
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING",
 				     "spp->read_probe",
 				     "_STP_PROBE_HANDLER_PROCFS");
 
@@ -294,7 +294,7 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
     {
       s.op->newline() << "struct _stp_procfs_data pdata;";
 
-      common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING",
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING",
 				     "spp->write_probe",
 				     "_STP_PROBE_HANDLER_PROCFS");
 
