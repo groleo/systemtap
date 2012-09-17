@@ -29,8 +29,9 @@ const char *probe_name;
    and what information it gets passed.  */
 int probe_type;
 
-/* Common status of probe.  _STP_PROBE_STATE_ flags.  */
-int probe_flags;
+/* Common status flags of probe.  */
+unsigned user_mode_p:1;
+unsigned full_uregs_p:1;
 
 /* Number of "actions" this probe handler is still allowed to do.
    Setup in common_probe_entryfn_prologue to either MAXACTION or
@@ -65,8 +66,7 @@ const char *last_stmt;
 
 /* Set when probe handler gets pt_regs handed to it. kregs holds the kernel
    registers when availble. uregs holds the user registers when available.
-   uregs are at least available when probe_flags contains
-   _STP_PROBE_STATE_USER_MODE.  */
+   uregs are at least available when user_mode_p == 1.  */
 struct pt_regs *kregs;
 struct pt_regs *uregs;
 

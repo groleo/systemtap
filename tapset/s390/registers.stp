@@ -43,8 +43,7 @@ function _stp_register_regs() {
  * says "32bit process"
  */
 function probing_32bit_app() %{ /* pure */
-	if ((CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
-	    && _stp_is_compat_task())
+	if (CONTEXT->user_mode_p && _stp_is_compat_task())
 		STAP_RETVALUE = 1;
 	else
 		STAP_RETVALUE = 0;
@@ -57,8 +56,7 @@ function _stp_probing_kernel: long () {
 function _stp_get_register_by_offset:long (offset:long) %{ /* pure */
 	long value;
 	struct pt_regs *regs;
-	regs = ((CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
-		? CONTEXT->uregs : CONTEXT->kregs);
+	regs = (CONTEXT->user_mode_p ? CONTEXT->uregs : CONTEXT->kregs);
 	if (!regs) {
 		CONTEXT->last_error = "No registers available in this context";
 		return;
@@ -143,7 +141,7 @@ function _stp_arg:long (argnum:long, sign_extend:long, truncate:long)
 		CONTEXT->last_error = CONTEXT->error_buffer;
 		return;
 	}
-	if (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE) {
+	if (CONTEXT->user_mode_p) {
 		CONTEXT->last_error = ("Cannot access function args in"
 				       " user context");
 		return;

@@ -168,7 +168,7 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline() << "c->probe_type = " << probe_type << ";";
   // reset Individual Probe State union
   s.op->newline() << "memset(&c->ips, 0, sizeof(c->ips));";
-  s.op->newline() << "c->probe_flags = 0;";
+  s.op->newline() << "c->user_mode_p = 0; c->full_uregs_p = 0;";
   s.op->newline() << "#ifdef STAP_NEED_REGPARM"; // i386 or x86_64 register.stp
   s.op->newline() << "c->regparm = 0;";
   s.op->newline() << "#endif";
@@ -7401,7 +7401,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline() << "goto probe_epilogue;";
   s.op->newline(-1) << "}";
   s.op->newline() << "c->uregs = regs;";
-  s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
+  s.op->newline() << "c->user_mode_p = 1;";
 
   // Make it look like the IP is set as it would in the actual user
   // task when calling real probe handler. Reset IP regs on return, so
@@ -7432,7 +7432,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline(-1) << "}";
 
   s.op->newline() << "c->uregs = regs;";
-  s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
+  s.op->newline() << "c->user_mode_p = 1;";
 
   // Make it look like the IP is set as it would in the actual user
   // task when calling real probe handler. Reset IP regs on return, so
@@ -7578,7 +7578,7 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
                                  "_STP_PROBE_HANDLER_UPROBE");
   s.op->newline() << "c->uregs = regs;";
-  s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
+  s.op->newline() << "c->user_mode_p = 1;";
   // Make it look like the IP is set as it would in the actual user
   // task when calling real probe handler. Reset IP regs on return, so
   // we don't confuse uprobes.
@@ -7742,7 +7742,7 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
                                  "_STP_PROBE_HANDLER_UPROBE");
   s.op->newline() << "c->uregs = regs;";
-  s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
+  s.op->newline() << "c->user_mode_p = 1;";
   // XXX: once we have regs, check how dyninst sets the IP
   // XXX: the way that dyninst rewrites stuff is probably going to be
   // ...  very confusing to our backtracer (at least if we stay in process)
@@ -8751,7 +8751,7 @@ hwbkpt_derived_probe_group::emit_module_decls (systemtap_session& s)
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sdp->probe",
 				 "_STP_PROBE_HANDLER_HWBKPT");
   s.op->newline() << "if (user_mode(regs)) {";
-  s.op->newline(1)<< "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
+  s.op->newline(1)<< "c->user_mode_p = 1;";
   s.op->newline() << "c->uregs = regs;";
   s.op->newline(-1) << "} else {";
   s.op->newline(1) << "c->kregs = regs;";

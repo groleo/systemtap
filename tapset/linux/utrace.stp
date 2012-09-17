@@ -5,8 +5,7 @@
 %}
 
 function _utrace_syscall_nr:long () %{		/* pure */ /* myproc-unprivileged */
-    if (! CONTEXT->uregs
-        || ! (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)) {
+    if (! CONTEXT->uregs || ! CONTEXT->user_mode_p) {
        CONTEXT->last_error = "invalid call without context registers";
     } else {
        STAP_RETVALUE = syscall_get_nr(current, CONTEXT->uregs);
@@ -15,8 +14,7 @@ function _utrace_syscall_nr:long () %{		/* pure */ /* myproc-unprivileged */
 
 function _utrace_syscall_arg:long (n:long) %{	/* pure */ /* myproc-unprivileged */
     unsigned long arg = 0;
-    if (! CONTEXT->uregs
-        || ! (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)) {
+    if (! CONTEXT->uregs || ! CONTEXT->user_mode_p) {
        CONTEXT->last_error = "invalid call without context registers";
     } else {
        syscall_get_arguments(current, CONTEXT->uregs, (int)STAP_ARG_n, 1, &arg);
@@ -31,8 +29,7 @@ function _utrace_syscall_return:long () %{	/* pure */ /* myproc-unprivileged */
      * getting sign extended.  This caused return values to not match
      * up with the same values passes as arguments.
      */
-    if (! CONTEXT->uregs
-        || ! (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)) {
+    if (! CONTEXT->uregs || ! CONTEXT->user_mode_p) {
        CONTEXT->last_error = "invalid call without context registers";
     } else {
        STAP_RETVALUE = (unsigned long)syscall_get_return_value(current,

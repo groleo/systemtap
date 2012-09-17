@@ -409,8 +409,7 @@ static long _stp_returnval(struct pt_regs *regs) {
  */
 function returnval:long () %{ /* pure */
 	struct pt_regs *regs;
-	regs = ((CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
-		? CONTEXT->uregs : CONTEXT->kregs);
+	regs = ((CONTEXT->user_mode_p ? CONTEXT->uregs : CONTEXT->kregs);
 	STAP_RETVALUE = _stp_returnval(regs);
 %}
 
@@ -429,8 +428,7 @@ function returnval:long () %{ /* pure */
  */
 function returnstr:string (format:long) %{ /* pure */
 	struct pt_regs *regs;
-	regs = ((CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
-		? CONTEXT->uregs : CONTEXT->kregs);
+	regs = ((CONTEXT->user_mode_p ? CONTEXT->uregs : CONTEXT->kregs);
 	if (regs) {
 		long ret = _stp_returnval(regs);
 		if (ret < 0 && ret > -Maxerrno && errlist[-ret])

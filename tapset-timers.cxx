@@ -436,7 +436,7 @@ profile_derived_probe_group::emit_module_decls (systemtap_session& s)
   // Timer interrupts save all registers, so if the interrupt happened
   // in user space we can rely on it being the full user pt_regs.
   s.op->newline() << "if (user_mode(regs)) {";
-  s.op->newline(1) << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
+  s.op->newline(1) << "c->user_mode_p = 1;";
   s.op->newline() << "c->uregs = regs;";
   s.op->newline(-1) << "} else {";
   s.op->newline(1) << "c->kregs = regs;";

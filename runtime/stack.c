@@ -141,29 +141,28 @@ static void _stp_stack_print_fallback(unsigned long s, int v, int l, int k) {
 // used through context-unwind.stp.
 #if defined (CONFIG_KPROBES)
 
-/** Gets user space registers when available, also sets context probe_flags
- * _STP_PROBE_STATE_FULL_UREGS if appropriate.  Should be used instead of
- * accessing context uregs field directly when (full) uregs are needed
- * from kernel context.
+/** Gets user space registers when available, also sets context
+ * full_uregs_p if appropriate.  Should be used instead of accessing
+ * context uregs field directly when (full) uregs are needed from
+ * kernel context.
  */
 static struct pt_regs *_stp_get_uregs(struct context *c)
 {
   /* When the probe occurred in user context uregs are always complete. */
-  if (c->uregs && c->probe_flags & _STP_PROBE_STATE_USER_MODE)
-    c->probe_flags |= _STP_PROBE_STATE_FULL_UREGS;
+  if (c->uregs && c->user_mode_p)
+    c->full_uregs_p = 1;
   else if (c->uregs == NULL)
     {
       /* First try simple recovery through task_pt_regs,
 	 on some platforms that already provides complete uregs. */
       c->uregs = _stp_current_pt_regs();
       if (c->uregs && _stp_task_pt_regs_valid(current, c->uregs))
-	c->probe_flags |= _STP_PROBE_STATE_FULL_UREGS;
+	c->full_uregs_p = 1;
 
 /* Sadly powerpc does support the dwarf unwinder, but doesn't have enough
    CFI in the kernel to recover fully to user space. */
 #if defined(STP_USE_DWARF_UNWINDER) && !defined (__powerpc__)
-      else if (c->uregs != NULL && c->kregs != NULL
-	       && ! (c->probe_flags & _STP_PROBE_STATE_USER_MODE))
+      else if (c->uregs != NULL && c->kregs != NULL && !c->user_mode_p)
 	{
 	  struct unwind_frame_info *info = &c->uwcontext.info;
 	  int ret = 0;
@@ -201,7 +200,7 @@ static struct pt_regs *_stp_get_uregs(struct context *c)
 		 has been rerun. See __stp_stack_print invocation below. */
 	      UNW_SP(info) = REG_SP(c->uregs); /* Fix up user stack */
 	      c->uregs = &info->regs;
-	      c->probe_flags |= _STP_PROBE_STATE_FULL_UREGS;
+	      c->full_uregs_p = 1;
 	      dbug_unwind(1, "recovered with pc=0x%lx sp=0x%lx\n",
 			  UNW_PC(info), UNW_SP(info));
 	    }
@@ -271,7 +270,7 @@ static void _stp_stack_kernel_print(struct context *c, int sym_flags)
 	if (c->uregs == &c->uwcontext.info.regs) {
 		/* Unwinder needs the reg state, clear uregs ref. */
 		c->uregs = NULL;
-		c->probe_flags &= ~_STP_PROBE_STATE_FULL_UREGS;
+		c->full_uregs_p = 0;
 	}
 	__stp_dwarf_stack_kernel_print(regs, sym_flags, MAXBACKTRACE,
 				       &c->uwcontext);
@@ -295,7 +294,7 @@ static void _stp_stack_user_print(struct context *c, int sym_flags)
 #endif
 
 	regs = _stp_get_uregs(c);
-	uregs_valid = c->probe_flags & _STP_PROBE_STATE_FULL_UREGS;
+	uregs_valid = c->full_uregs_p;
 
 	if (! current->mm || ! regs) {
 		if (sym_flags & _STP_SYM_SYMBOL)
@@ -329,7 +328,7 @@ static void _stp_stack_user_print(struct context *c, int sym_flags)
 	if (c->uregs == &c->uwcontext.info.regs) {
 		/* Unwinder needs the reg state, clear uregs ref. */
 		c->uregs = NULL;
-		c->probe_flags &= ~_STP_PROBE_STATE_FULL_UREGS;
+		c->full_uregs_p = 0;
 	}
 	__stp_dwarf_stack_user_print(regs, sym_flags, MAXBACKTRACE,
 				     &c->uwcontext, ri, uregs_valid);

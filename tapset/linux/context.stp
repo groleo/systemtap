@@ -16,7 +16,7 @@
  */
 function print_regs ()
 %{
-	if ((c->probe_flags & _STP_PROBE_STATE_USER_MODE) && CONTEXT->uregs) {
+	if (c->user_mode_p && CONTEXT->uregs) {
 		_stp_print_regs (CONTEXT->uregs);
 	} else if (CONTEXT->kregs) {
 		_stp_print_regs (CONTEXT->kregs);
@@ -219,7 +219,7 @@ function cpu:long ()
  */
 function registers_valid:long ()
 %{ /* pure */ /* unprivileged */
-	STAP_RETVALUE = ((c->probe_flags & _STP_PROBE_STATE_USER_MODE)
+	STAP_RETVALUE = (c->user_mode_p
 			    ? (CONTEXT->uregs != NULL)
 			    : (CONTEXT->kregs != NULL));
 %}
@@ -231,8 +231,7 @@ function registers_valid:long ()
  */
 function user_mode:long ()
 %{ /* pure */ /* unprivileged */
-  STAP_RETVALUE = (CONTEXT->probe_flags
-		      & _STP_PROBE_STATE_USER_MODE) ? 1 : 0;
+  STAP_RETVALUE = CONTEXT->user_mode_p ? 1 : 0;
 %}
 
 /**
@@ -368,7 +367,7 @@ function stack_unused:long ()
  */
 function addr:long ()
 %{ /* pure */
-  if (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE) {
+  if (CONTEXT->user_mode_p) {
     STAP_RETVALUE = (intptr_t)(CONTEXT->uregs ? REG_IP(CONTEXT->uregs) : 0);
   } else {
     STAP_RETVALUE = (intptr_t)(CONTEXT->kregs ? REG_IP(CONTEXT->kregs) : 0);
@@ -389,7 +388,7 @@ function uaddr:long ()
 %{ /* pure */ /* myproc-unprivileged */
   struct pt_regs *uregs;
 
-  if (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
+  if (CONTEXT->user_mode_p)
     uregs = CONTEXT->uregs;
   else
     uregs = _stp_current_pt_regs();

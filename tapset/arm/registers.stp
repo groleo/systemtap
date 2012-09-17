@@ -30,7 +30,7 @@ function _stp_register_regs() {
 function _stp_get_register_by_offset:long (offset:long) %{ /* pure */
 	long value;
 	struct pt_regs *regs;
-	if (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE) {
+	if (CONTEXT->user_mode_p) {
 		regs = CONTEXT->uregs;
 	} else {
 		regs = CONTEXT->kregs;

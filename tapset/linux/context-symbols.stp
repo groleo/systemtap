@@ -121,7 +121,7 @@ function probefunc:string () %{ /* pure */ /* pragma:symbols */
 	} else {
 		struct pt_regs *regs;
 		int user_mode;
-		user_mode = c->probe_flags & _STP_PROBE_STATE_USER_MODE;
+		user_mode = c->user_mode_p;
 		regs = user_mode ? CONTEXT->uregs : CONTEXT->kregs;
 		if (regs) {
 			_stp_snprint_addr(STAP_RETVALUE, MAXSTRINGLEN,
@@ -149,8 +149,7 @@ function probemod:string () %{ /* pure */
 		while (*ptr != '"' && --len && *ptr)
 			*dst++ = *ptr++;
 		*dst = 0;
-	} else if (CONTEXT->kregs
-		   && ! (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)) {
+	} else if (CONTEXT->kregs && ! CONTEXT->user_mode_p) {
 		struct _stp_module *m;
 		m = _stp_kmod_sec_lookup (REG_IP(CONTEXT->kregs), NULL);
 		if (m && m->name)
