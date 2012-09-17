@@ -42,20 +42,20 @@
 
 /* for the paranoid. */
 #if NEED_STAT_LOCKS == 1
-#define STAT_LOCK(st) spin_lock(&st->lock)
-#define STAT_UNLOCK(st) spin_unlock(&st->lock)
+#define STAT_LOCK(sd) spin_lock(&sd->lock)
+#define STAT_UNLOCK(sd) spin_unlock(&sd->lock)
 #else
-#define STAT_LOCK(st) ;
-#define STAT_UNLOCK(st) ;
+#define STAT_LOCK(sd) ;
+#define STAT_UNLOCK(sd) ;
 #endif
 
 /** Stat struct for stat.c. Maps do not need this */
 struct _Stat {
 	struct _Hist hist;
 	/* per-cpu data. allocated with _stp_alloc_percpu() */
-	stat *sd;
+	stat_data *sd;
 	/* aggregated data */   
-	stat *agg;  
+	stat_data *agg;  
 };
 
 typedef struct _Stat *Stat;
@@ -77,7 +77,7 @@ typedef struct _Stat *Stat;
 static Stat _stp_stat_init (int type, ...)
 {
 	int size, buckets=0, start=0, stop=0, interval=0;
-	stat *sd, *agg;
+	stat_data *sd, *agg;
 	Stat st;
 
 	if (type != HIST_NONE) {
@@ -102,8 +102,8 @@ static Stat _stp_stat_init (int type, ...)
 	if (st == NULL)
 		return NULL;
 	
-	size = buckets * sizeof(int64_t) + sizeof(stat);	
-	sd = (stat *) _stp_alloc_percpu (size);
+	size = buckets * sizeof(int64_t) + sizeof(stat_data);	
+	sd = (stat_data *) _stp_alloc_percpu (size);
 	if (sd == NULL)
 		goto exit1;
 
@@ -111,13 +111,13 @@ static Stat _stp_stat_init (int type, ...)
 	{
 		int i;
 		for_each_possible_cpu(i) {
-			stat *sdp = per_cpu_ptr (sd, i);
+			stat_data *sdp = per_cpu_ptr (sd, i);
 			spin_lock_init(sdp->lock);
 		}
 	}
 #endif
 	
-	agg = (stat *)_stp_kmalloc_gfp(size, STP_ALLOC_SLEEP_FLAGS);
+	agg = (stat_data *)_stp_kmalloc_gfp(size, STP_ALLOC_SLEEP_FLAGS);
 	if (agg == NULL)
 		goto exit2;
 
@@ -159,7 +159,7 @@ static void _stp_stat_del (Stat st)
  */
 static void _stp_stat_add (Stat st, int64_t val)
 {
-	stat *sd = per_cpu_ptr (st->sd, get_cpu());
+	stat_data *sd = per_cpu_ptr (st->sd, get_cpu());
 	STAT_LOCK(sd);
 	__stp_stat_add (&st->hist, sd, val);
 	STAT_UNLOCK(sd);
@@ -176,14 +176,14 @@ static void _stp_stat_add (Stat st, int64_t val)
  * @param cpu CPU number
  * @returns A pointer to a stat.
  */
-static stat *_stp_stat_get_cpu (Stat st, int cpu)
+static stat_data *_stp_stat_get_cpu (Stat st, int cpu)
 {
-	stat *sd = per_cpu_ptr (st->sd, cpu);
+	stat_data *sd = per_cpu_ptr (st->sd, cpu);
 	STAT_LOCK(sd);
 	return sd;
 }
 
-static void _stp_stat_clear_data (Stat st, stat *sd)
+static void _stp_stat_clear_data (Stat st, stat_data *sd)
 {
         int j;
         sd->count = sd->sum = sd->min = sd->max = 0;
@@ -204,15 +204,15 @@ static void _stp_stat_clear_data (Stat st, stat *sd)
  * for polling.
  * @returns A pointer to a stat.
  */
-static stat *_stp_stat_get (Stat st, int clear)
+static stat_data *_stp_stat_get (Stat st, int clear)
 {
 	int i, j;
-	stat *agg = st->agg;
+	stat_data *agg = st->agg;
 	STAT_LOCK(agg);
 	_stp_stat_clear_data (st, agg);
 
 	for_each_possible_cpu(i) {
-		stat *sd = per_cpu_ptr (st->sd, i);
+		stat_data *sd = per_cpu_ptr (st->sd, i);
 		STAT_LOCK(sd);
 		if (sd->count) {
 			if (agg->count == 0) {
@@ -247,7 +247,7 @@ static void _stp_stat_clear (Stat st)
 {
 	int i;
 	for_each_possible_cpu(i) {
-		stat *sd = per_cpu_ptr (st->sd, i);
+		stat_data *sd = per_cpu_ptr (st->sd, i);
 		STAT_LOCK(sd);
 		_stp_stat_clear_data (st, sd);
 		STAT_UNLOCK(sd);

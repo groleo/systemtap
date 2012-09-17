@@ -38,7 +38,7 @@ struct stat_data {
 #endif
 	int64_t histogram[];
 };
-typedef struct stat_data stat;
+typedef struct stat_data stat_data;
 
 /** Information about the histogram data collected. This data 
     is global and not duplicated per-cpu. */

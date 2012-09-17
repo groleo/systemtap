@@ -21,7 +21,7 @@
 static int map_sizes[] = {
         sizeof(int64_t),
         MAP_STRING_LENGTH,
-        sizeof(stat),
+        sizeof(stat_data),
         0
 };
 
@@ -109,11 +109,11 @@ static char *_stp_get_str(struct map_node *m)
  * @param m pointer to the map_node.
  * @returns A pointer to the stats.  
  */
-static stat *_stp_get_stat(struct map_node *m)
+static stat_data *_stp_get_stat(struct map_node *m)
 {
 	if (!m || m->map->type != STAT)
 		return 0;
-	return (stat *)((long)m + m->map->data_offset);
+	return (stat_data *)((long)m + m->map->data_offset);
 }
 
 /** Return an int64 key from a map node.
@@ -459,8 +459,8 @@ static int _stp_cmp (struct list_head *a, struct list_head *b, int keynum, int d
 			a = _stp_key_get_int64(m1, keynum);
 			b = _stp_key_get_int64(m2, keynum);
 		} else if (keynum < 0) {
-			stat *sd1 = (stat *)((long)m1 + m1->map->data_offset);
-			stat *sd2 = (stat *)((long)m2 + m2->map->data_offset);
+			stat_data *sd1 = (stat_data *)((long)m1 + m1->map->data_offset);
+			stat_data *sd2 = (stat_data *)((long)m2 + m2->map->data_offset);
 			switch (keynum) {
 			case SORT_COUNT:
 				a = sd1->count;
@@ -660,8 +660,8 @@ static struct map_node *_stp_new_agg(MAP agg, struct hlist_head *ahead, struct m
 				 0);
 		break;
 	case STAT: {
-		stat *sd1 = (stat *)((long)aptr + agg->data_offset);
-		stat *sd2 = (stat *)((long)ptr + ptr->map->data_offset);
+		stat_data *sd1 = (stat_data *)((long)aptr + agg->data_offset);
+		stat_data *sd2 = (stat_data *)((long)ptr + ptr->map->data_offset);
 		Hist st = &agg->hist;
 		sd1->count = sd2->count;
 		sd1->sum = sd2->sum;
@@ -696,8 +696,8 @@ static void _stp_add_agg(struct map_node *aptr, struct map_node *ptr)
 				 1);
 		break;
 	case STAT: {
-		stat *sd1 = (stat *)((long)aptr + aptr->map->data_offset);
-		stat *sd2 = (stat *)((long)ptr + ptr->map->data_offset);
+		stat_data *sd1 = (stat_data *)((long)aptr + aptr->map->data_offset);
+		stat_data *sd2 = (stat_data *)((long)ptr + ptr->map->data_offset);
 		Hist st = &aptr->map->hist;
 		if (sd1->count == 0) {
 			sd1->count = sd2->count;
@@ -808,7 +808,7 @@ static void _new_map_clear_node (struct map_node *m)
 		break;
 	case STAT: 
 	{
-		stat *sd = (stat *)((long)m + m->map->data_offset);
+		stat_data *sd = (stat_data *)((long)m + m->map->data_offset);
 		Hist st = &m->map->hist;
 		sd->count = 0;
 		if (st->type != HIST_NONE) {
@@ -884,12 +884,12 @@ static int _new_map_set_str (MAP map, struct map_node *n, char *val, int add)
 
 static int _new_map_set_stat (MAP map, struct map_node *n, int64_t val, int add)
 {
-	stat *sd;
+	stat_data *sd;
 
 	if (map == NULL || n == NULL)
 		return -2;
 
-	sd = (stat *)((long)n + map->data_offset);
+	sd = (stat_data *)((long)n + map->data_offset);
 	if (!add) {
 		Hist st = &map->hist;
 		sd->count = 0;

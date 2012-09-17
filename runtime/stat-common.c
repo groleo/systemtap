@@ -132,7 +132,8 @@ static int _stp_val_to_bucket(int64_t val)
 #endif
 
 
-static void _stp_stat_print_histogram_buf(char *buf, size_t size, Hist st, stat *sd)
+static void _stp_stat_print_histogram_buf(char *buf, size_t size, Hist st,
+					  stat_data *sd)
 {
 	int scale, i, j, val_space, cnt_space;
 	int low_bucket = -1, high_bucket = 0, over = 0, under = 0;
@@ -279,13 +280,13 @@ static void _stp_stat_print_histogram_buf(char *buf, size_t size, Hist st, stat 
 #undef HIST_PRINTF
 }
 
-static void _stp_stat_print_histogram(Hist st, stat *sd)
+static void _stp_stat_print_histogram(Hist st, stat_data *sd)
 {
 	_stp_stat_print_histogram_buf(NULL, 0, st, sd);
 	_stp_print_flush();
 }
 
-static void __stp_stat_add(Hist st, stat *sd, int64_t val)
+static void __stp_stat_add(Hist st, stat_data *sd, int64_t val)
 {
 	int n;
 	if (sd->count == 0) {

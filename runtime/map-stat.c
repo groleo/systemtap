@@ -14,7 +14,7 @@
 
 #include "stat-common.c"
 
-static void _stp_map_print_histogram (MAP map, stat *sd)
+static void _stp_map_print_histogram (MAP map, stat_data *sd)
 {
 	_stp_stat_print_histogram (&map->hist, sd);
 }
@@ -22,7 +22,7 @@ static void _stp_map_print_histogram (MAP map, stat *sd)
 static MAP _stp_map_new_hstat_log (unsigned max_entries, int key_size)
 {
 	/* add size for buckets */
-	int size = HIST_LOG_BUCKETS * sizeof(int64_t) + sizeof(stat);
+	int size = HIST_LOG_BUCKETS * sizeof(int64_t) + sizeof(stat_data);
 	MAP m = _stp_map_new (max_entries, STAT, key_size, size);
 	if (m) {
 		m->hist.type = HIST_LOG;
@@ -40,7 +40,7 @@ static MAP _stp_map_new_hstat_linear (unsigned max_entries, int ksize, int start
 		return NULL;
 	
         /* add size for buckets */
-	size = buckets * sizeof(int64_t) + sizeof(stat);
+	size = buckets * sizeof(int64_t) + sizeof(stat_data);
 	
 	m = _stp_map_new (max_entries, STAT, ksize, size);
 	if (m) {
@@ -62,7 +62,7 @@ static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int ksize, int sta
 		return NULL;
 
         /* add size for buckets */
-	size = buckets * sizeof(int64_t) + sizeof(stat);
+	size = buckets * sizeof(int64_t) + sizeof(stat_data);
 
 	pmap = _stp_pmap_new (max_entries, STAT, ksize, size);
 	if (pmap) {
@@ -90,7 +90,7 @@ static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int ksize, int sta
 static PMAP _stp_pmap_new_hstat_log (unsigned max_entries, int key_size)
 {
 	/* add size for buckets */
-	int size = HIST_LOG_BUCKETS * sizeof(int64_t) + sizeof(stat);
+	int size = HIST_LOG_BUCKETS * sizeof(int64_t) + sizeof(stat_data);
 	PMAP pmap = _stp_pmap_new (max_entries, STAT, key_size, size);
 	if (pmap) {
 		int i;

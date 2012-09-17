@@ -58,13 +58,13 @@
 #define MAP_GET_VAL(n) _stp_get_int64(n)
 #define NULLRET (int64_t)0
 #elif VALUE_TYPE == STAT
-#define VALTYPE stat*
+#define VALTYPE stat_data*
 #define VSTYPE int64_t
-#define VALNAME stat
+#define VALNAME stat_data
 #define VALN x
 #define MAP_SET_VAL(a,b,c,d) _new_map_set_stat(a,b,c,d)
 #define MAP_GET_VAL(n) _stp_get_stat(n)
-#define NULLRET (stat*)0
+#define NULLRET (stat_data*)0
 #else
 #error Need to define VALUE_TYPE as STRING, STAT, or INT64
 #endif /* VALUE_TYPE */
