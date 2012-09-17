@@ -188,6 +188,11 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline() << "c->cycles_base = 0;";
   s.op->newline() << "#endif";
   */
+
+  s.op->newline() << "#if defined(STP_NEED_UNWIND_DATA)";
+  s.op->newline() << "c->uwcache_user.state = uwcache_uninitialized;";
+  s.op->newline() << "c->uwcache_kernel.state = uwcache_uninitialized;";
+  s.op->newline() << "#endif";
 }
 
 

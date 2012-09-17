@@ -118,5 +118,8 @@ cycles_t cycles_sum;
 
 /* Current state of the unwinder (as used in the unwind.c dwarf unwinder). */
 #if defined(STP_NEED_UNWIND_DATA)
-struct unwind_context uwcontext;
+struct unwind_cache uwcache_user;
+struct unwind_cache uwcache_kernel;
+struct unwind_context uwcontext_user;
+struct unwind_context uwcontext_kernel;
 #endif

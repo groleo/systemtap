@@ -12,13 +12,24 @@
 //processor.
 // </tapsetdescription>
 
+function __stack_raw (n:long) %{ /* pragma:unwind */
+         /* basic sanity check for bounds: */
+         if (unlikely(STAP_ARG_n < 0 || STAP_ARG_n >= MAXBACKTRACE))
+                  STAP_RETVALUE = 0;
+         else
+                  STAP_RETVALUE = _stp_stack_kernel_get (CONTEXT, (unsigned)STAP_ARG_n);
+%}
 
 /**
  *  sfunction stack - return PC at stack unwind level n
  *  @n: number of levels to descend in the stack.
  */
 function stack:long (n:long) {
-         /* XXX this is the naive method */
+         if (n < 0 || n >= %{ MAXBACKTRACE %}) return 0
+         r = __stack_raw(n);
+         if (r != 0) return r
+
+         /* fallback: parse backtrace() to go deeper in the stack */
          b = backtrace (); orig_n = n;
          sym = tokenize (b, " ");
          if (sym == "") @__context_unwind_error(orig_n);
