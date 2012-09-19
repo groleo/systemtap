@@ -85,16 +85,20 @@ function usymdata:string (addr: long) %{
  *  name  of the function containing the address, and an estimate of
  *  its position within that function.  Return nothing.
  */
-function print_ustack(stk:string) %{
-/* myproc-unprivileged */ /* pragma:vma */ /* pragma:symbols */
-        char *ptr = STAP_ARG_stk;
-        char *tok = strsep(&ptr, " ");
-        while (tok && *tok) {
-                _stp_print_addr(simple_strtol(tok, NULL, 16),
-				_STP_SYM_FULL, current);
-                tok = strsep(&ptr, " ");
-        }
-%}
+function print_ustack(stk:string) { upsyms(stk) }
+
+/**
+ * sfunction upsyms - print usymdata() for all addresses in callers
+ *
+ * @callers: String with list of hexadecimal (user) addresses
+ */
+function upsyms (callers:string) {
+         sym = tokenize (callers, " ");
+         while (sym != "") {
+               println (usymdata (strtol(sym,16)));
+               sym = tokenize ("", " ");
+         }
+}
 
 /**
  * sfunction sprint_ustack - Return stack for the current task from string.
@@ -114,23 +118,25 @@ function print_ustack(stk:string) %{
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
  * print_ustack.
  */
-function sprint_ustack:string(stk:string) %{ /* pure */ /* pragma:symbols */
-	char *ptr = STAP_ARG_stk;
-	char *tok = strsep(&ptr, " ");
-	char *str = STAP_RETVALUE;
-	size_t len = MAXSTRINGLEN - 1;
-	while (tok && *tok && len > 0) {
-		int s = _stp_snprint_addr(str, len,
-					  simple_strtol(tok, NULL, 16),
-					  _STP_SYM_SIMPLE, current);
-		len -= s;
-		str += s;
-		tok = strsep(&ptr, " ");
-	}
+function sprint_ustack:string(stk:string) { uspsyms(stk) }
 
-	str--;
-	if (len > 0)
-		str[0] = '\0';
-	else
-		STAP_RETVALUE[MAXSTRINGLEN - 1] = '\0';
-%}
+/**
+ * sfunction uspsyms - return usymdata() for all addresses in callers
+ *
+ * @callers: String with list of hexadecimal (user) addresses
+ *
+ * Note that the output will be truncated to MAXSTRINGLEN.
+ * A full stack can be dumped using upsyms().
+ */
+function uspsyms (callers:string) {
+         sym = tokenize (callers, " ");
+         foo = ""; l = 0
+         while (sym != "") {
+               // cleanly handle overflow instead of printing partial line:
+               line = usymdata (strtol(sym, 16)) . "\n"; l += strlen(line)
+               if (l > %{ MAXSTRINGLEN %}) break
+               foo .= line
+               sym = tokenize ("", " ")
+         }
+         return foo
+}

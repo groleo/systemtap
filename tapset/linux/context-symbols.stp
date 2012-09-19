@@ -54,15 +54,7 @@ function stack:long (n:long) {
  *  name  of the function containing the address, and an estimate of
  *  its position within that function.  Return nothing.
  */
-function print_stack(stk:string) %{ /* pragma:symbols */
-	char *ptr = STAP_ARG_stk;
-	char *tok = strsep(&ptr, " ");
-	while (tok && *tok) {
-		_stp_print_addr (simple_strtol(tok, NULL, 16),
-				 _STP_SYM_FULL, NULL);
-		tok = strsep(&ptr, " ");
-	}
-%}
+function print_stack(stk:string) { psyms(stk) }
 
 /**
  * sfunction sprint_stack - Return stack for kernel addresses from string
@@ -81,26 +73,7 @@ function print_stack(stk:string) %{ /* pragma:symbols */
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
  * print_stack.
  */
-function sprint_stack:string(stk:string) %{ /* pure */ /* pragma:symbols */
-	char *ptr = STAP_ARG_stk;
-	char *tok = strsep(&ptr, " ");
-	char *str = STAP_RETVALUE;
-	size_t len = MAXSTRINGLEN - 1;
-	while (tok && *tok && len > 0) {
-		int s = _stp_snprint_addr(str, len,
-					  simple_strtol(tok, NULL, 16),
-					  _STP_SYM_SIMPLE, NULL);
-		len -= s;
-		str += s;
-		tok = strsep(&ptr, " ");
-	}
-
-        str--;
-        if (len > 0)
-                str[0] = '\0';
-        else
-                STAP_RETVALUE[MAXSTRINGLEN - 1] = '\0';
-%}
+function sprint_stack:string(stk:string) { return spsyms(stk) }
 
 /**
  * sfunction probefunc - Return the probe point's function name, if known
