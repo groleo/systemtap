@@ -208,12 +208,19 @@ compile_dyninst (systemtap_session& s)
   cmd.push_back("-O2");
   cmd.push_back("-I" + s.runtime_path);
   cmd.push_back("-D__DYNINST__");
+  for (size_t i = 0; i < s.c_macros.size(); ++i)
+    cmd.push_back("-D" + s.c_macros[i]);
   cmd.push_back(s.translated_source);
   cmd.push_back("-pthread");
   cmd.push_back("-fPIC");
   cmd.push_back("-shared");
   cmd.push_back("-o");
   cmd.push_back(module);
+  if (s.verbose > 3)
+    {
+      cmd.push_back("-ftime-report");
+      cmd.push_back("-Q");
+    }
 
   bool quiet = (s.verbose < 2);
   int rc = stap_system (s.verbose, cmd, quiet, quiet);
