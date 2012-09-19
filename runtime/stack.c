@@ -210,12 +210,23 @@ static struct pt_regs *_stp_get_uregs(struct context *c)
 	      dbug_unwind(1, "Trying to recover... searching for 0x%lx\n",
 			  REG_IP(c->uregs));
 
-	      /* XXX temporary safety dance: mark uwcontext_kernel
-		 as morally suspect for ongoing population of cache,
-		 due to additional unwinding.
+	      /* Mark the kernel unwind cache as invalid
+		 (uwcache_kernel.depth is no longer consistent with
+		 the actual current depth of the unwind).
 
-	         Should be fixed by just having this unwind populate
-		 the kernel cache using the PCs it finds. */
+		 We don't save PCs in the cache at this point because
+		 this kernel unwind procedure does not fetch the top
+		 level PC, so uwcache_kernel.pc[0] would be left
+		 unpopulated. We would have to either fetch the
+		 current PC here, or specially represent this state of
+		 the cache, something we don't bother with at this
+		 stage.
+
+	         XXX: this can create (tolerable amounts of) inefficiency
+	         if the probe intersperses user and kernel unwind calls,
+	         since the other unwind code can clear uregs, triggering
+	         a redundant unwind the next time we need them. */
+	      dbug_unwind(1, "clearing kernel unwind cache\n");
 	      c->uwcache_kernel.state = uwcache_uninitialized;
 	    }
 
