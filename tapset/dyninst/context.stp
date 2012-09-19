@@ -9,6 +9,7 @@
 // NB: functionally equivalent to linux/context.stp
 
 %{
+#include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -16,7 +17,14 @@
 
 // TODO function print_regs ()
 
-// TODO function execname:string ()
+function execname:string ()
+%{
+	/* Need a 16-byte buffer, which will be 0-terminated only if shorter.
+	 * Use 17 bytes to make sure we always have termination.  */
+	char arg2[17] = {0};
+	if (prctl(PR_GET_NAME, (unsigned long)arg2, 0, 0, 0) == 0)
+		strlcpy (STAP_RETVALUE, arg2, MAXSTRINGLEN);
+%}
 
 function pid:long ()
 %{ /* pure */ /* unprivileged */
