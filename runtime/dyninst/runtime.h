@@ -73,6 +73,7 @@ static inline void preempt_enable_no_resched(void)
 
 #define MODULE_DESCRIPTION(str)
 #define MODULE_LICENSE(str)
+#define MODULE_INFO(tag,info)
 
 /* XXX for now, act like uniprocessor... */
 #define NR_CPUS 1
