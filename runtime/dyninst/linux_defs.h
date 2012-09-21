@@ -3,6 +3,7 @@
 #ifndef _STAPDYN_LINUX_DEFS_H_
 #define _STAPDYN_LINUX_DEFS_H_
 
+#include <stddef.h>
 #include <unistd.h>
 
 #include "linux_hash.h"
@@ -40,6 +41,10 @@
 
 #define likely(x)      __builtin_expect(!!(x), 1)
 #define unlikely(x)    __builtin_expect(!!(x), 0)
+
+#define container_of(ptr, type, member) ({			\
+	const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
+	(type *)( (char *)__mptr - offsetof(type,member) );})
 
 #define __must_be_array(arr) 0
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
@@ -294,9 +299,23 @@ static inline int list_empty(const struct list_head *head)
 	return head->next == head;
 }
 
+#define list_entry(ptr, type, member) \
+	container_of(ptr, type, member)
+
 #define list_for_each_safe(pos, n, head) \
 	for (pos = (head)->next, n = pos->next; pos != (head); \
 		pos = n, n = pos->next)
+
+#define list_for_each_entry(pos, head, member)				\
+	for (pos = list_entry((head)->next, typeof(*pos), member);	\
+	     &pos->member != (head); 	\
+	     pos = list_entry(pos->member.next, typeof(*pos), member))
+
+#define list_for_each_entry_safe(pos, n, head, member)			\
+	for (pos = list_entry((head)->next, typeof(*pos), member),	\
+		n = list_entry(pos->member.next, typeof(*pos), member);	\
+	     &pos->member != (head); 					\
+	     pos = n, n = list_entry(n->member.next, typeof(*n), member))
 
 static inline void INIT_HLIST_NODE(struct hlist_node *h)
 {

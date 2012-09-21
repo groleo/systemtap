@@ -1,6 +1,6 @@
 /* -*- linux-c -*- 
  * Map Functions
- * Copyright (C) 2005-2009 Red Hat Inc.
+ * Copyright (C) 2005-2009, 2012 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -17,6 +17,19 @@
 
 #include "stat-common.c"
 #include "map-stat.c"
+
+#if NEED_MAP_LOCKS
+#ifdef __KERNEL__
+#define MAP_LOCK(m)	spin_lock(&(m)->lock)
+#define MAP_UNLOCK(m)	spin_unlock(&(m)->lock)
+#else
+#define MAP_LOCK(m)	pthread_mutex_lock(&(m)->lock)
+#define MAP_UNLOCK(m)	pthread_mutex_unlock(&(m)->lock)
+#endif
+#else
+#define MAP_LOCK(m)	do {} while (0)
+#define MAP_UNLOCK(m)	do {} while (0)
+#endif
 
 static int map_sizes[] = {
         sizeof(int64_t),
@@ -209,8 +222,10 @@ static int _stp_map_init(MAP m, unsigned max_entries, int type, int key_size, in
 			else
 				tmp = _stp_kmalloc_node_gfp(size, cpu_to_node(cpu), STP_ALLOC_SLEEP_FLAGS);
 		
-			if (!tmp)
+			if (!tmp) {
+				_stp_error("error allocating map entry\n");
 				return -1;
+			}
 			
 //			dbug ("allocated %lx\n", (long)tmp);
 			list_add((struct list_head *)tmp, &m->pool);
@@ -239,6 +254,50 @@ static MAP _stp_map_new(unsigned max_entries, int type, int key_size, int data_s
 	return m;
 }
 
+#ifndef __KERNEL__
+static int _stp_map_tls_object_init(struct tls_data_object_t *obj)
+{
+	MAP m = container_of(obj, struct map_root, object);
+	PMAP p = container_of(obj->container, struct pmap, container);
+
+	INIT_LIST_HEAD(&m->pool);
+	INIT_LIST_HEAD(&m->head);
+	m->hashes = NULL;
+
+#if NEED_MAP_LOCKS
+	{
+		int rc;
+		if ((rc = pthread_mutex_init(&m->lock, NULL)) != 0) {
+			_stp_error("Couldn't initialize map mutex: %d\n", rc);
+			return -1;
+		}
+	}
+#endif
+
+	/* To get the correct parameters for _stp_map_init(), get them
+	 * from the cached values in PMAP. */
+	if (_stp_map_init(m, p->max_entries, p->type, p->key_size,
+			  p->data_size, -1) != 0) {
+		__stp_map_del(m);
+#if NEED_MAP_LOCKS
+		(void)pthread_mutex_destroy(&m->lock);
+#endif
+		return -1;
+	}
+
+	return 0;
+}
+
+static void _stp_map_tls_object_free(struct tls_data_object_t *obj)
+{
+	MAP m = container_of(obj, struct map_root, object);
+	__stp_map_del(m);
+#if NEED_MAP_LOCKS
+	(void)pthread_mutex_destroy(&m->lock);
+#endif
+}
+#endif
+
 static PMAP _stp_pmap_new(unsigned max_entries, int type, int key_size, int data_size)
 {
 	int i;
@@ -249,10 +308,19 @@ static PMAP _stp_pmap_new(unsigned max_entries, int type, int key_size, int data
 	if (pmap == NULL)
 		return NULL;
 
+#ifdef __KERNEL__
 	pmap->map = map = (MAP) _stp_alloc_percpu (sizeof(struct map_root));
 	if (map == NULL) 
 		goto err;
+#else
+	if (_stp_tls_data_container_init(&pmap->container,
+					 sizeof(struct map_root),
+					 &_stp_map_tls_object_init,
+					 &_stp_map_tls_object_free) != 0)
+		goto err;
+#endif
 
+#ifdef __KERNEL__
 	/* initialize the memory lists first so if allocations fail */
         /* at some point, it is easy to clean up. */
 	for_each_possible_cpu(i) {
@@ -260,15 +328,24 @@ static PMAP _stp_pmap_new(unsigned max_entries, int type, int key_size, int data
 		INIT_LIST_HEAD(&m->pool);
 		INIT_LIST_HEAD(&m->head);
 	}
+#endif
 	INIT_LIST_HEAD(&pmap->agg.pool);
 	INIT_LIST_HEAD(&pmap->agg.head);
 
+#ifdef __KERNEL__
 	for_each_possible_cpu(i) {
 		m = per_cpu_ptr (map, i);
 		if (_stp_map_init(m, max_entries, type, key_size, data_size, i)) {
 			goto err1;
 		}
 	}
+#else
+	/* Cache values for use by _stp_map_tls_object_init(). */
+	pmap->max_entries = max_entries;
+	pmap->type = type;
+	pmap->key_size = key_size;
+	pmap->data_size = data_size;
+#endif
 
 	if (_stp_map_init(&pmap->agg, max_entries, type, key_size, data_size, -1))
 		goto err1;
@@ -276,11 +353,15 @@ static PMAP _stp_pmap_new(unsigned max_entries, int type, int key_size, int data
 	return pmap;
 
 err1:
+#ifdef __KERNEL__
 	for_each_possible_cpu(i) {
 		m = per_cpu_ptr (map, i);
 		__stp_map_del(m);
 	}
 	_stp_free_percpu(map);
+#else
+	_stp_tls_data_container_cleanup(&pmap->container);
+#endif
 err:
 	_stp_kfree(pmap);
 	return NULL;
@@ -363,16 +444,28 @@ static void _stp_pmap_clear(PMAP pmap)
 	if (pmap == NULL)
 		return;
 
+#ifdef __KERNEL__
 	for_each_possible_cpu(i) {
 		MAP m = per_cpu_ptr (pmap->map, i);
-#if NEED_MAP_LOCKS
-		spin_lock(&m->lock);
-#endif
+
+		MAP_LOCK(m);
 		_stp_map_clear(m);
-#if NEED_MAP_LOCKS
-		spin_unlock(&m->lock);
-#endif
+		MAP_UNLOCK(m);
 	}
+#else
+	{
+		struct tls_data_object_t *obj;
+		TLS_DATA_CONTAINER_LOCK(&pmap->container);
+		for_each_tls_data(obj, &pmap->container) {
+			MAP m = container_of(obj, struct map_root, object);
+
+			MAP_LOCK(m);
+			_stp_map_clear(m);
+			MAP_UNLOCK(m);
+		}
+		TLS_DATA_CONTAINER_UNLOCK(&pmap->container);
+	}
+#endif
 	_stp_map_clear(&pmap->agg);
 }
 
@@ -417,11 +510,15 @@ static void _stp_pmap_del(PMAP pmap)
 	if (pmap == NULL)
 		return;
 
+#ifdef __KERNEL__
 	for_each_possible_cpu(i) {
 		MAP m = per_cpu_ptr (pmap->map, i);
 		__stp_map_del(m);
 	}
 	_stp_free_percpu(pmap->map);
+#else
+	_stp_tls_data_container_cleanup(&pmap->container);
+#endif
 
 	/* free agg map elements */
 	__stp_map_del(&pmap->agg);
@@ -740,6 +837,9 @@ static MAP _stp_pmap_agg (PMAP pmap)
 	struct map_node *ptr, *aptr = NULL;
 	struct hlist_head *head, *ahead;
 	struct hlist_node *e, *f;
+#ifndef __KERNEL__
+	struct tls_data_object_t *obj;
+#endif
 
 	agg = &pmap->agg;
 	
@@ -747,11 +847,15 @@ static MAP _stp_pmap_agg (PMAP pmap)
 	/* every time we aggregate. which would be best? */
 	_stp_map_clear (agg);
 
+#ifdef __KERNEL__
 	for_each_possible_cpu(i) {
 		m = per_cpu_ptr (pmap->map, i);
-#if NEED_MAP_LOCKS
-		spin_lock(&m->lock);
+#else
+	TLS_DATA_CONTAINER_LOCK(&pmap->container);
+	for_each_tls_data(obj, &pmap->container) {
+		m = container_of(obj, struct map_root, object);
 #endif
+		MAP_LOCK(m);
 		/* walk the hash chains. */
 		for (hash = 0; hash < HASH_TABLE_SIZE; hash++) {
 			head = &m->hashes[hash];
@@ -770,18 +874,17 @@ static MAP _stp_pmap_agg (PMAP pmap)
 					_stp_add_agg(aptr, ptr);
 				else {
 					if (!_stp_new_agg(agg, ahead, ptr)) {
-#if NEED_MAP_LOCKS
-						spin_unlock(&m->lock);
-#endif
+						MAP_UNLOCK(m);
 						return NULL;
 					}
 				}
 			}
 		}
-#if NEED_MAP_LOCKS
-		spin_unlock(&m->lock);
-#endif
+		MAP_UNLOCK(m);
 	}
+#ifndef __KERNEL__
+	TLS_DATA_CONTAINER_UNLOCK(&pmap->container);
+#endif
 	return agg;
 }
 
@@ -923,10 +1026,20 @@ static int _stp_pmap_size (PMAP pmap)
 {
 	int i, num = 0;
 
+#ifdef __KERNEL__
 	for_each_possible_cpu(i) {
 		MAP m = per_cpu_ptr (pmap->map, i);
 		num += m->num;
 	}
+#else
+	struct tls_data_object_t *obj;
+	TLS_DATA_CONTAINER_LOCK(&pmap->container);
+	for_each_tls_data(obj, &pmap->container) {
+		MAP m = container_of(obj, struct map_root, object);
+		num += m->num;
+	}
+	TLS_DATA_CONTAINER_UNLOCK(&pmap->container);
+#endif
 	return num;
 }
 #endif /* _MAP_C_ */

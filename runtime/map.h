@@ -1,6 +1,6 @@
 /* -*- linux-c -*- 
  * Map Header File
- * Copyright (C) 2005 Red Hat Inc.
+ * Copyright (C) 2005, 2012 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -15,6 +15,7 @@
 #include <linux/log2.h>
 #elif defined(__DYNINST__)
 #include "dyninst/ilog2.h"
+#include "dyninst/tls_data.c"
 #endif
 
 /** @file map.h
@@ -94,6 +95,11 @@ struct map_node {
  * It is allocated once when _stp_map_new() is called. 
  */
 struct map_root {
+#ifndef __KERNEL__
+	/* Note that the tls_data_object_t must be first in struct
+	 * map_root. */
+	struct tls_data_object_t object;
+#endif
 	/* type of the value stored in the array */
 	int type;
 	
@@ -143,7 +149,17 @@ struct map_root {
 typedef struct map_root *MAP;
 
 struct pmap {
+#ifdef __KERNEL__
 	MAP map;		/* per-cpu maps */
+#else
+	struct tls_data_container_t container;
+
+	/* Cached _stp_map_init() values. */
+	unsigned max_entries;
+	int type;
+	int key_size;
+	int data_size;
+#endif
 	struct map_root agg;	/* aggregation map */
 };
 typedef struct pmap *PMAP;

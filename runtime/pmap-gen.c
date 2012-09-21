@@ -1,6 +1,6 @@
 /* -*- linux-c -*- 
  * pmap API generator
- * Copyright (C) 2005-2008 Red Hat Inc.
+ * Copyright (C) 2005-2008, 2012 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -653,6 +653,24 @@ static unsigned int KEYSYM(phash) (ALLKEYSD(key))
 	return (unsigned int) (hash % HASH_TABLE_SIZE);
 }
 
+#ifndef __KERNEL__
+static int _stp_map_tls_object_init(struct tls_data_object_t *obj);
+static void _stp_map_tls_object_free(struct tls_data_object_t *obj);
+
+static int KEYSYM(_stp_pmap_tls_object_init)(struct tls_data_object_t *obj)
+{
+	MAP m = container_of(obj, struct map_root, object);
+	PMAP p = container_of(obj->container, struct pmap, container);
+
+	if (_stp_map_tls_object_init(obj) != 0)
+		return -1;
+
+	m->get_key = KEYSYM(pmap_get_key);
+	m->copy = KEYSYM(pmap_copy_keys);
+	m->cmp = KEYSYM(pmap_key_cmp);
+	return 0;
+}
+#endif
 
 #if VALUE_TYPE == INT64 || VALUE_TYPE == STRING
 static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries)
@@ -714,6 +732,7 @@ static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries, int htype, ...)
 	if (pmap) {
 		int i;
 		MAP m;
+#ifdef __KERNEL__
 		for_each_possible_cpu(i) {
 			m = per_cpu_ptr (pmap->map, i);
 			m->get_key = KEYSYM(pmap_get_key);
@@ -723,6 +742,13 @@ static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries, int htype, ...)
 			spin_lock_init(m->lock);
 #endif
 		}
+#else
+		/* Override the tls data object init function with one
+		 * that knows how to handle pmaps. */
+		_stp_tls_data_container_update(&pmap->container,
+					       &KEYSYM(_stp_pmap_tls_object_init),
+					       &_stp_map_tls_object_free);
+#endif
 		m = &pmap->agg;
 		m->get_key = KEYSYM(pmap_get_key);
 		m->copy = KEYSYM(pmap_copy_keys);
@@ -792,7 +818,17 @@ static int KEYSYM(__stp_pmap_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 static int KEYSYM(_stp_pmap_set) (PMAP pmap, ALLKEYSD(key), VSTYPE val)
 {
 	int res;
+#ifdef __KERNEL__
 	MAP m = per_cpu_ptr (pmap->map, MAP_GET_CPU ());
+#else
+	struct tls_data_object_t *obj;
+	MAP m;
+
+	obj = _stp_tls_get_per_thread_ptr(&pmap->container);
+	if (!obj)
+		return -ENOMEM;
+	m = container_of(obj, struct map_root, object);
+#endif
 #if NEED_MAP_LOCKS
 	if (!spin_trylock(&m->lock))
 		return -3;
@@ -808,7 +844,17 @@ static int KEYSYM(_stp_pmap_set) (PMAP pmap, ALLKEYSD(key), VSTYPE val)
 static int KEYSYM(_stp_pmap_add) (PMAP pmap, ALLKEYSD(key), VSTYPE val)
 {
 	int res;
-	MAP m = per_cpu_ptr (pmap->map, MAP_GET_CPU());
+#ifdef __KERNEL__
+	MAP m = per_cpu_ptr (pmap->map, MAP_GET_CPU ());
+#else
+	struct tls_data_object_t *obj;
+	MAP m;
+
+	obj = _stp_tls_get_per_thread_ptr(&pmap->container);
+	if (!obj)
+		return -ENOMEM;
+	m = container_of(obj, struct map_root, object);
+#endif
 #if NEED_MAP_LOCKS
 	if (!spin_trylock(&m->lock))
 		return -3;
@@ -830,11 +876,21 @@ static VALTYPE KEYSYM(_stp_pmap_get_cpu) (PMAP pmap, ALLKEYSD(key))
 	struct KEYSYM(pmap_node) *n;
 	VALTYPE res;
 	MAP map;
+#ifndef __KERNEL__
+	struct tls_data_object_t *obj;
+#endif
 
 	if (pmap == NULL)
 		return NULLRET;
 
+#ifdef __KERNEL__
 	map = per_cpu_ptr (pmap->map, MAP_GET_CPU ());
+#else
+	obj = _stp_tls_get_per_thread_ptr(&pmap->container);
+	if (!obj)
+		return NULLRET;
+	map = container_of(obj, struct map_root, object);
+#endif
 
 	hv = KEYSYM(phash) (ALLKEYS(key));
 	head = &map->hashes[hv];
@@ -896,6 +952,9 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 	struct KEYSYM(pmap_node) *n;
 	struct map_node *anode = NULL;
 	MAP map, agg;
+#ifndef __KERNEL__
+	struct tls_data_object_t *obj;
+#endif
 
 	if (pmap == NULL)
 		return NULLRET;
@@ -940,8 +999,14 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 	}
 
 	/* now total each cpu */
+#ifdef __KERNEL__
 	for_each_possible_cpu(cpu) {
 		map = per_cpu_ptr (pmap->map, cpu);
+#else
+	TLS_DATA_CONTAINER_LOCK(&pmap->container);
+	for_each_tls_data(obj, &pmap->container) {
+		map = container_of(obj, struct map_root, object);
+#endif
 		head = &map->hashes[hv];
 
 #if NEED_MAP_LOCKS
@@ -992,6 +1057,9 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 		spin_unlock(&map->lock);
 #endif
 	}
+#ifndef __KERNEL__
+	TLS_DATA_CONTAINER_UNLOCK(&pmap->container);
+#endif
 	if (anode && !clear_agg) 
 		return MAP_GET_VAL(anode);
 
@@ -1055,7 +1123,17 @@ static int KEYSYM(__stp_pmap_del) (MAP map, ALLKEYSD(key))
 static int KEYSYM(_stp_pmap_del) (PMAP pmap, ALLKEYSD(key))
 {
 	int res;
+#ifdef __KERNEL__
 	MAP m = per_cpu_ptr (pmap->map, MAP_GET_CPU ());
+#else
+	struct tls_data_object_t *obj;
+	MAP m;
+
+	obj = _stp_tls_get_per_thread_ptr(&pmap->container);
+	if (!obj)
+		return -ENOMEM;
+	m = container_of(obj, struct map_root, object);
+#endif
 #if NEED_MAP_LOCKS
 	if (!spin_trylock(&m->lock))
 		return -1;
