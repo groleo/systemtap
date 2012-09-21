@@ -250,7 +250,7 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
 
       common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING",
 				     "spp->read_probe",
-				     "_STP_PROBE_HANDLER_PROCFS");
+				     "stp_probe_type_procfs");
 
       s.op->newline() << "pdata.buffer = spp->buffer;";
       s.op->newline() << "pdata.bufsize = spp->bufsize;";
@@ -296,7 +296,7 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
 
       common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING",
 				     "spp->write_probe",
-				     "_STP_PROBE_HANDLER_PROCFS");
+				     "stp_probe_type_procfs");
 
       // We've got 2 problems here.  The data count could be greater
       // than MAXSTRINGLEN or greater than the bufsize (if the same

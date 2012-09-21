@@ -242,8 +242,8 @@ function user_mode:long ()
  */
 function is_return:long ()
 %{ /* pure */
-	if (CONTEXT->probe_type == _STP_PROBE_HANDLER_KRETPROBE
-	    || CONTEXT->probe_type == _STP_PROBE_HANDLER_URETPROBE)
+	if (CONTEXT->probe_type == stp_probe_type_kretprobe
+	    || CONTEXT->probe_type == stp_probe_handler_uretprobe)
 		STAP_RETVALUE = 1;
 	else
 		STAP_RETVALUE = 0;

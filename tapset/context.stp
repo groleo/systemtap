@@ -39,55 +39,55 @@ function probe_type:string()
 %{ /* pure */ /* unprivileged */
   switch (CONTEXT->probe_type)
   {
-    case _STP_PROBE_HANDLER_BEEN:
+    case stp_probe_type_been:
       strlcpy (STAP_RETVALUE, "begin_end", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_ITRACE:
+    case stp_probe_type_itrace:
       strlcpy (STAP_RETVALUE, "itrace", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_MARKER:
+    case stp_probe_type_marker:
       strlcpy (STAP_RETVALUE, "kernel_marker", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_PERF:
+    case stp_probe_type_perf:
       strlcpy (STAP_RETVALUE, "perf_event", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_PROCFS:
+    case stp_probe_type_procfs:
       strlcpy (STAP_RETVALUE, "procfs", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_TIMER:
+    case stp_probe_type_timer:
       strlcpy (STAP_RETVALUE, "timer", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_HRTIMER:
+    case stp_probe_type_hrtimer:
       strlcpy (STAP_RETVALUE, "hrtimer", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_PROFILE_TIMER:
+    case stp_probe_type_profile_timer:
       strlcpy (STAP_RETVALUE, "profile_timer", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_NETFILTER:
+    case stp_probe_type_netfilter:
       strlcpy (STAP_RETVALUE, "netfilter", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_UTRACE:
+    case stp_probe_type_utrace:
       strlcpy (STAP_RETVALUE, "utrace", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_UTRACE_SYSCALL:
+    case stp_probe_type_utrace_syscall:
       strlcpy (STAP_RETVALUE, "utrace_syscall", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_KPROBE:
+    case stp_probe_type_kprobe:
       strlcpy (STAP_RETVALUE, "kprobe", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_KRETPROBE:
+    case stp_probe_type_kretprobe:
       strlcpy (STAP_RETVALUE, "kretprobe", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_UPROBE:
+    case stp_probe_type_uprobe:
       strlcpy (STAP_RETVALUE, "uprobe", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_URETPROBE:
+    case stp_probe_type_uretprobe:
       strlcpy (STAP_RETVALUE, "uretprobe", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_HWBKPT:
+    case stp_probe_type_hwbkpt:
       strlcpy (STAP_RETVALUE, "hardware_data_breakpoint", MAXSTRINGLEN);
       break;
-    case _STP_PROBE_HANDLER_TRACEPOINT:
+    case stp_probe_type_tracepoint:
       strlcpy (STAP_RETVALUE, "kernel_tracepoint", MAXSTRINGLEN);
       break;
     default:

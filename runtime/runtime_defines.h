@@ -69,43 +69,45 @@ typedef char string_t[MAXSTRINGLEN];
 #define STP_OVERLOAD
 #endif
 
-/* Defines for CONTEXT probe_type. */
+/* Used for CONTEXT probe_type. */
+enum stp_probe_type {
 /* begin, end or never probe, triggered by stap module itself. */
-#define _STP_PROBE_HANDLER_BEEN            1
+	stp_probe_type_been,
 /* user space instruction probe, trigger by utrace signal report. */
-#define _STP_PROBE_HANDLER_ITRACE          2
+	stp_probe_type_itrace,
 /* kernel marker probe, triggered by old marker_probe (removed in 2.6.32). */
-#define _STP_PROBE_HANDLER_MARKER          3
+	stp_probe_type_marker,
 /* perf event probe, triggered by perf event counter.
    Note that although this is defined in tapset-perfmon.cxx, this has
    nothing to do with the (old and now removed) perfmon probes. */
-#define _STP_PROBE_HANDLER_PERF            4
+	stp_probe_type_perf,
 /* read or write of stap module proc file. Triggers on manipulation of
    the /proc/systemtap/MODNAME created through a procfs probe. */
-#define _STP_PROBE_HANDLER_PROCFS          5
+	stp_probe_type_procfs,
 /* timer probe, triggered by standard kernel init_timer interface. */
-#define _STP_PROBE_HANDLER_TIMER           6
+	stp_probe_type_timer,
 /* high resolution timer probes, triggered by hrtimer firing. */
-#define _STP_PROBE_HANDLER_HRTIMER         7
+	stp_probe_type_hrtimer,
 /* profile timer probe, triggered by kernel profile timer (either in
    kernel or user space). */
-#define _STP_PROBE_HANDLER_PROFILE_TIMER   8
+	stp_probe_type_profile_timer,
 /* utrace thread start/end probe, triggered by utrace quiesce event for
    associated thread. */
-#define _STP_PROBE_HANDLER_UTRACE          9
+	stp_probe_type_utrace,
 /* utrace syscall enter/exit probe, triggered by utrace syscall event. */
-#define _STP_PROBE_HANDLER_UTRACE_SYSCALL 10
+	stp_probe_type_utrace_syscall,
 /* kprobe event, triggered for dwarf or dwarfless kprobes. */
-#define _STP_PROBE_HANDLER_KPROBE         11
+	stp_probe_type_kprobe,
 /* kretprobe event, triggered for dwarf or dwarfless kretprobes. */
-#define _STP_PROBE_HANDLER_KRETPROBE      12
+	stp_probe_type_kretprobe,
 /* uprobe event, triggered by hitting a uprobe. */
-#define _STP_PROBE_HANDLER_UPROBE         13
+	stp_probe_type_uprobe,
 /* uretprobe event, triggered by hitting a uretprobe. */
-#define _STP_PROBE_HANDLER_URETPROBE      14
+	stp_probe_type_uretprobe,
 /* hardware data watch break point, triggered by kernel data read/write. */
-#define _STP_PROBE_HANDLER_HWBKPT         15
+	stp_probe_type_hwbkpt,
 /* kernel tracepoint probe, triggered by tracepoint event call. */
-#define _STP_PROBE_HANDLER_TRACEPOINT     16
+	stp_probe_type_tracepoint,
 /* netfilter probe, triggered on network trafic */
-#define _STP_PROBE_HANDLER_NETFILTER        17
+	stp_probe_type_netfilter,
+};

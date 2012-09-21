@@ -191,7 +191,7 @@ itrace_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->indent(1);
 
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "p->probe",
-				 "_STP_PROBE_HANDLER_ITRACE");
+				 "stp_probe_type_itrace");
   s.op->newline() << "c->uregs = regs;";
   s.op->newline() << "c->user_mode_p = 1;";
 

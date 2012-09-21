@@ -280,7 +280,7 @@ static unsigned long _stp_stack_unwind_one_kernel(struct context *c, unsigned de
 			 * _stp_stack_kernel_print() and do their own
 			 * tokenization of the result. */
 			return 0;
-		} else if (c->probe_type == _STP_PROBE_HANDLER_KRETPROBE
+		} else if (c->probe_type == stp_probe_type_kretprobe
 			   && c->ips.krp.pi) {
 			return (unsigned long)_stp_ret_addr_r(c->ips.krp.pi);
 		} else {
@@ -403,7 +403,7 @@ static void _stp_stack_kernel_print(struct context *c, int sym_flags)
 	}
 
 	/* print the current address */
-	if (c->probe_type == _STP_PROBE_HANDLER_KRETPROBE && c->ips.krp.pi
+	if (c->probe_type == stp_probe_type_kretprobe && c->ips.krp.pi
 	    && (sym_flags & _STP_SYM_FULL) == _STP_SYM_FULL) {
 		_stp_print("Returning from: ");
 		_stp_print_addr((unsigned long)_stp_probe_addr_r(c->ips.krp.pi),
@@ -441,10 +441,10 @@ static unsigned long _stp_stack_unwind_one_user(struct context *c, unsigned dept
 	unsigned long maybe_pc;
 #endif
 
-	if (c->probe_type == _STP_PROBE_HANDLER_URETPROBE)
+	if (c->probe_type == stp_probe_type_uretprobe)
 		ri = c->ips.ri;
 #ifdef STAPCONF_UPROBE_GET_PC
-	else if (c->probe_type == _STP_PROBE_HANDLER_UPROBE)
+	else if (c->probe_type == stp_probe_type_uprobe)
 		ri = GET_PC_URETPROBE_NONE;
 #endif
 
@@ -460,7 +460,7 @@ static unsigned long _stp_stack_unwind_one_user(struct context *c, unsigned dept
 		dbug_unwind(1, "STARTING user unwind\n");
 
 #ifdef STAPCONF_UPROBE_GET_PC
-		if (c->probe_type == _STP_PROBE_HANDLER_URETPROBE && ri) {
+		if (c->probe_type == stp_probe_type_uretprobe && ri) {
 			return ri->ret_addr;
 		} else {
 			return REG_IP(regs);
@@ -551,10 +551,10 @@ static void _stp_stack_user_print(struct context *c, int sym_flags)
 	struct uretprobe_instance *ri = NULL;
 	unsigned n; unsigned long l;
 
-	if (c->probe_type == _STP_PROBE_HANDLER_URETPROBE)
+	if (c->probe_type == stp_probe_type_uretprobe)
 		ri = c->ips.ri;
 #ifdef STAPCONF_UPROBE_GET_PC
-	else if (c->probe_type == _STP_PROBE_HANDLER_UPROBE)
+	else if (c->probe_type == stp_probe_type_uprobe)
 		ri = GET_PC_URETPROBE_NONE;
 #endif
 
@@ -571,7 +571,7 @@ static void _stp_stack_user_print(struct context *c, int sym_flags)
 
 	/* print the current address */
 #ifdef STAPCONF_UPROBE_GET_PC
-	if (c->probe_type == _STP_PROBE_HANDLER_URETPROBE && ri) {
+	if (c->probe_type == stp_probe_type_uretprobe && ri) {
 		if ((sym_flags & _STP_SYM_FULL) == _STP_SYM_FULL) {
 			_stp_print("Returning from: ");
 			/* ... otherwise this dereference fails */

@@ -129,7 +129,7 @@ timer_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline(-1) << "{";
   s.op->indent(1);
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "stp->probe",
-				 "_STP_PROBE_HANDLER_TIMER");
+				 "stp_probe_type_timer");
   s.op->newline() << "(*stp->probe->ph) (c);";
   common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
   s.op->newline(-1) << "}";
@@ -316,7 +316,7 @@ hrtimer_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "{";
   s.op->indent(1);
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "stp->probe",
-				 "_STP_PROBE_HANDLER_HRTIMER");
+				 "stp_probe_type_hrtimer");
   s.op->newline() << "(*stp->probe->ph) (c);";
   common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
   s.op->newline(-1) << "}";
@@ -432,7 +432,7 @@ profile_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline(1) << "struct stap_probe * probe = "
                    << common_probe_init (probes[0]) << ";";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "probe",
-				 "_STP_PROBE_HANDLER_PROFILE_TIMER");
+				 "stp_probe_type_profile_timer");
   // Timer interrupts save all registers, so if the interrupt happened
   // in user space we can rely on it being the full user pt_regs.
   s.op->newline() << "if (user_mode(regs)) {";

@@ -4829,7 +4829,7 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
   // XXX: it would be nice to give a more verbose error though; BUG_ON later?
   s.op->line() << "];";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sdp->probe",
-				 "_STP_PROBE_HANDLER_KPROBE");
+				 "stp_probe_type_kprobe");
   s.op->newline() << "c->kregs = regs;";
 
   // Make it look like the IP is set as it wouldn't have been replaced
@@ -4866,7 +4866,7 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "if (sp) {";
   s.op->indent(1);
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sp",
-				 "_STP_PROBE_HANDLER_KRETPROBE");
+				 "stp_probe_type_kretprobe");
   s.op->newline() << "c->kregs = regs;";
 
   // for assisting runtime's backtrace logic and accessing kretprobe data packets
@@ -7397,7 +7397,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline(1) << "struct stap_uprobe *sup = container_of(inst, struct stap_uprobe, up);";
   s.op->newline() << "const struct stap_uprobe_spec *sups = &stap_uprobe_specs [sup->spec_index];";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sups->probe",
-				 "_STP_PROBE_HANDLER_UPROBE");
+				 "stp_probe_type_uprobe");
   s.op->newline() << "if (sup->spec_index < 0 || "
                   << "sup->spec_index >= " << probes.size() << ") {";
   s.op->newline(1) << "_stp_error (\"bad spec_index %d (max " << probes.size()
@@ -7426,7 +7426,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline(1) << "struct stap_uprobe *sup = container_of(inst->rp, struct stap_uprobe, urp);";
   s.op->newline() << "const struct stap_uprobe_spec *sups = &stap_uprobe_specs [sup->spec_index];";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sups->probe",
-				 "_STP_PROBE_HANDLER_URETPROBE");
+				 "stp_probe_type_uretprobe");
   s.op->newline() << "c->ips.ri = inst;";
   s.op->newline() << "if (sup->spec_index < 0 || "
                   << "sup->spec_index >= " << probes.size() << ") {";
@@ -7581,7 +7581,7 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
   s.op->newline(1) << "struct stapiu_consumer *sup = "
                    << "container_of(inst, struct stapiu_consumer, consumer);";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
-                                 "_STP_PROBE_HANDLER_UPROBE");
+                                 "stp_probe_type_uprobe");
   s.op->newline() << "c->uregs = regs;";
   s.op->newline() << "c->user_mode_p = 1;";
   // Make it look like the IP is set as it would in the actual user
@@ -7745,7 +7745,7 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
   s.op->newline(1) << "struct stapdu_consumer *sup = "
                    << "&stap_dyninst_uprobe_consumers[index];";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
-                                 "_STP_PROBE_HANDLER_UPROBE");
+                                 "stp_probe_type_uprobe");
   s.op->newline() << "c->uregs = regs;";
   s.op->newline() << "c->user_mode_p = 1;";
   // XXX: once we have regs, check how dyninst sets the IP
@@ -8114,7 +8114,7 @@ kprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
   // XXX: it would be nice to give a more verbose error though; BUG_ON later?
   s.op->line() << "];";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sdp->probe",
-				 "_STP_PROBE_HANDLER_KPROBE");
+				 "stp_probe_type_kprobe");
   s.op->newline() << "c->kregs = regs;";
 
   // Make it look like the IP is set as it wouldn't have been replaced
@@ -8148,7 +8148,7 @@ kprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->line() << "];";
 
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sdp->probe",
-				 "_STP_PROBE_HANDLER_KRETPROBE");
+				 "stp_probe_type_kretprobe");
   s.op->newline() << "c->kregs = regs;";
   s.op->newline() << "c->ips.krp.pi = inst;"; // for assisting runtime's backtrace logic
 
@@ -8754,7 +8754,7 @@ hwbkpt_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "if (bp->attr.bp_addr==hp->bp_addr && bp->attr.bp_type==hp->bp_type && bp->attr.bp_len==hp->bp_len) {";
   s.op->newline(1) << "struct stap_hwbkpt_probe *sdp = &stap_hwbkpt_probes[i];";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sdp->probe",
-				 "_STP_PROBE_HANDLER_HWBKPT");
+				 "stp_probe_type_hwbkpt");
   s.op->newline() << "if (user_mode(regs)) {";
   s.op->newline(1)<< "c->user_mode_p = 1;";
   s.op->newline() << "c->uregs = regs;";
@@ -9515,7 +9515,7 @@ tracepoint_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline(1) << "struct stap_probe * const probe = "
                        << common_probe_init (p) << ";";
       common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "probe",
-				     "_STP_PROBE_HANDLER_TRACEPOINT");
+				     "stp_probe_type_tracepoint");
       s.op->newline() << "c->ips.tracepoint_name = "
                       << lex_cast_qstring (p->tracepoint_name)
                       << ";";

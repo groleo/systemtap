@@ -23,11 +23,11 @@ const char *probe_point;
 const char *probe_name;
 #endif
 
-/* The kind of probe this is.  One of the _STP_PROBE_HANDLER_ constants.
+/* The kind of probe this is.  One of the stp_probe_type constants.
    Used to determined what other fields are setup and how.  Often the
    probe context fields depend on how the probe handler is triggered
    and what information it gets passed.  */
-int probe_type;
+enum stp_probe_type probe_type;
 
 /* Common status flags of probe.  */
 unsigned user_mode_p:1;
