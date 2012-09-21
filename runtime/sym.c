@@ -351,7 +351,7 @@ static int _stp_module_check(void)
           }
 
           if (notes_addr <= base_addr) { /* shouldn't happen */
-              _stp_warn ("build-id address %lx < base %lx\n",
+              _stp_warn ("build-id address %lx <= base %lx\n",
                   notes_addr, base_addr);
               continue;
           }
