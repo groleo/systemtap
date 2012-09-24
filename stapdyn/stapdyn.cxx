@@ -59,12 +59,6 @@ call_inferior_function(BPatch_process *app, const string& name)
     }
 }
 
-static void
-exit_hook(BPatch_thread *thread, BPatch_exitType)
-{
-  call_inferior_function(thread->getProcess(), "stp_dummy_exit");
-}
-
 // XXX: copied from runtime/dyninst/uprobes-dyninst.c
 struct stapdu_target {
 	char filename[240];
@@ -248,12 +242,15 @@ main(int argc, char * const argv[])
 
   find_uprobes(app, module);
 
-  call_inferior_function(app, "stp_dummy_init");
-  patch.registerExitCallback(exit_hook);
+  call_inferior_function(app, "stp_dyninst_session_init");
 
   app->continueExecution();
   while (!app->isTerminated())
     patch.waitForStatusChange();
+
+  /* When we get process detaching (rather than just exiting), need:
+   *   call_inferior_function(app, "stp_dyninst_session_exit");
+   */
 
   return 0;
 }

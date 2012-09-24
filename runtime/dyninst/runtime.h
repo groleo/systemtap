@@ -119,23 +119,71 @@ static unsigned long stap_hash_seed; /* Init during module startup */
 
 static int _stp_mem_fd = -1;
 
-int stp_dummy_init(void)
+
+/*
+ * For stapdyn to work in a multiprocess environment, the module must be
+ * prepared to be loaded multiple times in different processes.  Thus, we have
+ * to distinguish between process-level resource initialization and
+ * "session"-level (like probe begin/end/error).
+ *
+ * So stp_dyninst_ctor/dtor are the process-level functions, using gcc
+ * attributes to get called at the right time.
+ *
+ * The session-level resources have to be started by the stapdyn mutator, since
+ * only it knows which process is the "master" mutatee, so it can call
+ * stp_dyninst_session_init only in the right one.  That process will run the
+ * session exit in the dtor, since dyninst doesn't have a suitable exit hook.
+ * It may still be invoked manually from stapdyn for detaching though.
+ *
+ * The stp_dyninst_master is set as a PID, so it can be checked and made not to
+ * inherit across forks.
+ *
+ * XXX Once we have a shared-memory area (which will be necessary anyway for a
+ * multiprocess session to share globals), then a process refcount may be
+ * better for begin/end than this "master" designation.
+ *
+ * XXX Functions like _exit() which bypass destructors are a problem...
+ */
+
+static pid_t stp_dyninst_master = 0;
+
+__attribute__((constructor))
+static void stp_dyninst_ctor(void)
 {
     stap_hash_seed = _stp_random_u ((unsigned long)-1);
     _stp_mem_fd = open("/proc/self/mem", O_RDWR /*| O_LARGEFILE*/);
+}
+
+int stp_dyninst_session_init(void)
+{
+    /* We don't have a chance to indicate errors in the ctor, so do it here. */
     if (_stp_mem_fd < 0) {
 	return -errno;
     }
-    return systemtap_module_init();
+
+    int rc = systemtap_module_init();
+    if (rc == 0) {
+	stp_dyninst_master = getpid();
+    }
+    return rc;
 }
 
-int stp_dummy_exit(void)
+void stp_dyninst_session_exit(void)
 {
-    systemtap_module_exit();
+    if (stp_dyninst_master == getpid()) {
+	systemtap_module_exit();
+	stp_dyninst_master = 0;
+    }
+}
+
+__attribute__((destructor))
+static void stp_dyninst_dtor(void)
+{
+    stp_dyninst_session_exit();
+
     if (_stp_mem_fd != -1) {
 	close (_stp_mem_fd);
     }
-    return 0;
 }
 
 #endif /* _STAPDYN_RUNTIME_H_ */
