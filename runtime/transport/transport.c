@@ -115,8 +115,11 @@ static void _stp_handle_start(struct _stp_msg_start *st)
 	if (handle_startup) {
 		dbug_trans(1, "stp_handle_start\n");
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23) // linux commit #5f4352fb
+#if LINUX_VERSION_CODE <  KERNEL_VERSION(2,6,29) // linux commit #9be260a6
 #ifdef STAPCONF_VM_AREA
 		{ /* PR9740: workaround for kernel valloc bug. */
+                  /* PR14611: not required except within above kernel range. */
 			void *dummy;
 #ifdef STAPCONF_VM_AREA_PTE
 			dummy = alloc_vm_area (PAGE_SIZE, NULL);
@@ -125,6 +128,8 @@ static void _stp_handle_start(struct _stp_msg_start *st)
 #endif
 			free_vm_area (dummy);
 		}
+#endif
+#endif
 #endif
 
 		_stp_target = st->target;
