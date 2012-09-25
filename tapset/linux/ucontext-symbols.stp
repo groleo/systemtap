@@ -22,8 +22,13 @@ function __ustack_raw (n:long) %{ /* pragma:unwind */
 %}
 
 /**
- *  sfunction ustack - return PC at user-space stack unwind level n
+ *  sfunction ustack - Return address at given depth of user stack backtrace
  *  @n: number of levels to descend in the stack.
+ *
+ *  Description: Performs a simple (user space) backtrace, and returns the
+ *  element at the specified position. The results of the backtrace itself
+ *  are cached, so that the backtrace computation is performed at most once
+ *  no matter how many times ustack() is called, or in what order.
  */
 function ustack:long (n:long) {
          r = __ustack_raw(n);
@@ -88,9 +93,18 @@ function usymdata:string (addr: long) %{
 function print_ustack(stk:string) { upsyms(stk) }
 
 /**
- * sfunction upsyms - print usymdata() for all addresses in callers
- *
+ * sfunction upsyms - Print out user stack from string
  * @callers: String with list of hexadecimal (user) addresses
+ *
+ *  Description: This function performs a symbolic lookup of the addresses
+ *  in the given string,
+ *  which are assumed to be the result of prior calls to ustack(),
+ *  ucallers(), and similar functions.
+ * 
+ *  Prints one line per address, including the address, the
+ *  name of the function containing the address, and an estimate of
+ *  its position within that function, as obtained by usymdata().
+ *  Returns nothing.
  */
 function upsyms (callers:string) {
          sym = tokenize (callers, " ");
@@ -121,12 +135,23 @@ function upsyms (callers:string) {
 function sprint_ustack:string(stk:string) { uspsyms(stk) }
 
 /**
- * sfunction uspsyms - return usymdata() for all addresses in callers
+ * sfunction uspsyms - Return stack for user addresses from string
  *
  * @callers: String with list of hexadecimal (user) addresses
  *
- * Note that the output will be truncated to MAXSTRINGLEN.
- * A full stack can be dumped using upsyms().
+ * Perform a symbolic lookup of the addresses in the given string,
+ * which are assumed to be the result of a prior calls to ustack(),
+ * ucallers(), and similar functions.
+ *
+ * Returns a simple backtrace from the given hex string. One line per
+ * address. Includes the symbol name (or hex address if symbol
+ * couldn't be resolved) and module name (if found), as obtained from
+ * usymdata(). Includes the offset from the start of the function if
+ * found, otherwise the offset will be added to the module (if found, between
+ * brackets). Returns the backtrace as string (each line terminated by
+ * a newline character).  Note that the returned stack will be
+ * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
+ * upsyms().
  */
 function uspsyms (callers:string) {
          sym = tokenize (callers, " ");
