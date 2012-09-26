@@ -3,4 +3,4 @@
 # PR11405: with -W, bad tapsets should still be an error
 
 TAPSET=`dirname $0`/bad_tapset/
-stap -p1 -e 'probe begin {}' -I $TAPSET -W
+stap $@ -p1 -e 'probe begin {}' -I $TAPSET -W

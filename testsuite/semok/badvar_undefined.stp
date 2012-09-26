@@ -3,5 +3,5 @@
 # PR11346: We shouldn't even see a warning when a would-be skip-badvars
 # replacement is masked by a @defined condition.
 
-stap -W -p2 --skip-badvars -e 'probe kernel.function("sys_getxattr")
+stap $@ -W -p2 --skip-badvars -e 'probe kernel.function("sys_getxattr")
 { printf("%s\n", user_string(@defined($pathname) ? $pathname : $path)) }'

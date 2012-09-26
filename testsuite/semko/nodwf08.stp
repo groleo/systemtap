@@ -2,7 +2,7 @@
 #
 # The regular blacklist should thwart this.
 
-stap -p2 --ignore-vmlinux --kmap=/proc/kallsyms -e '
+stap $@ -p2 --ignore-vmlinux --kmap=/proc/kallsyms -e '
 probe kernel.function("register_kprobe") {
 	printf("%s called\n", probefunc())
 	exit()

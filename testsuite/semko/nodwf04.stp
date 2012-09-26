@@ -2,7 +2,7 @@
 #
 # The symbol table doesn't give us enough info to probe inline functions.
 
-stap -p2 --ignore-vmlinux --kmap=/proc/kallsyms -e '
+stap $@ -p2 --ignore-vmlinux --kmap=/proc/kallsyms -e '
 probe kernel.function("list_empty").inline {
 	printf("%s called\n", probefunc())
 	exit()

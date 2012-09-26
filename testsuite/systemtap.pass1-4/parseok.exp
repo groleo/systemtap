@@ -1,7 +1,33 @@
 set self parseok
-foreach file [lsort [glob -nocomplain $srcdir/$self/*.stp]] {
-    set test $self/[file tail $file]
-    verbose -log "Running $file"
-    set rc [stap_run_batch $file]
-    if {$rc == 0} { pass $test } else { fail $test }
+
+proc dyninst_kfails {test} {
+    # Use setup_kfail <pr number> <target triplet> for known bugs.
+    #
+    # (Note that tcl doesn't like comments directly inside the switch
+    # statement, but comments can go in sub-blocks.)
+    switch $test {
+	parseok/deprecated01.stp {
+	    # Use setup_kfail DYNINST <target triplet> for known
+	    # failures when running with the dyninst runtime (scripts
+	    # that use kernel features or kernel-only tapset
+	    # functions).
+	    setup_kfail DYNINST *-*-*
+	}
+    }
+}
+
+foreach runtime [get_runtime_list] {
+    foreach file [lsort [glob -nocomplain $srcdir/$self/*.stp]] {
+	set test $self/[file tail $file]
+	if {$runtime != ""} {
+	    verbose -log "Running $file ($runtime)"
+	    set rc [stap_run_batch $file --runtime=$runtime]
+	    if {$rc != 0} { ${runtime}_kfails $test }
+	    lappend test "($runtime)"
+	} else {
+	    verbose -log "Running $file"
+	    set rc [stap_run_batch $file]
+	}
+	if {$rc == 0} { pass $test } else { fail $test }
+    }
 }

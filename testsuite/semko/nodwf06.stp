@@ -2,7 +2,7 @@
 #
 # The symbol table doesn't give us enough info to probe statements.
 
-stap -p2 --ignore-vmlinux --kmap=/proc/kallsyms -e '
+stap $@ -p2 --ignore-vmlinux --kmap=/proc/kallsyms -e '
 probe kernel.statement("*@kernel/printk.c:639") {
 	printf("probe hit: %s\n", pp())
 	exit()

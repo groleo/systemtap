@@ -20,5 +20,5 @@ main (void)
 }
 ' | gcc -g -o $TESTBIN -xc - || clean_exit $?
 
-stap -L 'process("'$TESTBIN'").function("foo")' | grep '\$p:struct point'
+stap $@ -L 'process("'$TESTBIN'").function("foo")' | grep '\$p:struct point'
 clean_exit $?

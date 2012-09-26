@@ -3,4 +3,4 @@
 # A module name must be specified when using '-m' - the module name
 # can't be empty
 
-stap -p1 -m "" -e 'probe begin { exit() }'
+stap $@ -p1 -m "" -e 'probe begin { exit() }'

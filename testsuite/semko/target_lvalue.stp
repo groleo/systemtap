@@ -7,16 +7,16 @@
 # Since this is a semko, we exit 1 if they all fail correctly,
 # else we exit 0 for success or crash.
 
-stap -e 'probe syscall.read { ++$fd }' -p2 -g
+stap $@ -e 'probe syscall.read { ++$fd }' -p2 -g
 [ $? -eq 1 ] || exit 0
 
-stap -e 'probe syscall.read { $fd++ }' -p2 -g
+stap $@ -e 'probe syscall.read { $fd++ }' -p2 -g
 [ $? -eq 1 ] || exit 0
 
-stap -e 'probe syscall.read { delete $fd }' -p2 -g
+stap $@ -e 'probe syscall.read { delete $fd }' -p2 -g
 [ $? -eq 1 ] || exit 0
 
-stap -e 'probe syscall.read { ++$fd = 42 }' -p2 -g
+stap $@ -e 'probe syscall.read { ++$fd = 42 }' -p2 -g
 [ $? -eq 1 ] || exit 0
 
 exit 1

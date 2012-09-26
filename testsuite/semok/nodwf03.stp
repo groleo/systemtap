@@ -2,7 +2,7 @@
 #
 # Test function-name wildcard.
 
-stap -p2 --ignore-vmlinux --kmap=/proc/kallsyms -e '
+stap $@ -p2 --ignore-vmlinux --kmap=/proc/kallsyms -e '
 global ncall
 
 probe kernel.function("sys_*") {

@@ -4,4 +4,4 @@
 #
 # -c CMD     start the probes, run CMD, and exit when it finishes
 # -x PID     sets target() to PID
-stap -p1 -c /bin/ls -x 100 -e 'probe begin { exit() }'
+stap $@ -p1 -c /bin/ls -x 100 -e 'probe begin { exit() }'

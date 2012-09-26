@@ -8,7 +8,7 @@ export TMPDIR
 
 mkdir "$TMPDIR" || exit 0  # "success" signals a problem for parseko
 
-stap -p1 -e 'probe begin { exit() }'
+stap $@ -p1 -e 'probe begin { exit() }'
 RC=$?
 
 rmdir "$TMPDIR" || exit 0

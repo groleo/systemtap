@@ -2,7 +2,7 @@
 #
 # Like nodwf01.stp, but extract the symbol table from vmlinux.
 
-stap -p2 --ignore-dwarf --kelf -e '
+stap $@ -p2 --ignore-dwarf --kelf -e '
 global nret
 
 probe syscall.*.return {
