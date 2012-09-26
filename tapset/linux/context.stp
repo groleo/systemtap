@@ -243,7 +243,7 @@ function user_mode:long ()
 function is_return:long ()
 %{ /* pure */
 	if (CONTEXT->probe_type == stp_probe_type_kretprobe
-	    || CONTEXT->probe_type == stp_probe_handler_uretprobe)
+	    || CONTEXT->probe_type == stp_probe_type_uretprobe)
 		STAP_RETVALUE = 1;
 	else
 		STAP_RETVALUE = 0;
