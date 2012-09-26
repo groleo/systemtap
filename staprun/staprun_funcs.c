@@ -602,7 +602,7 @@ static privilege_t get_module_required_credentials (
      module. It may have some future privilege level higher than stapsys, which we don't know about.
      We are forced to assume that requires the highest privilege level. */
   if (verbose >= 1) {
-    err ("Unable to determine the privilege level required for the module %s. Assuming %s.",
+    err ("Unable to determine the privilege level required for the module %s. Assuming %s.\n",
 	 module_path, pr_name (pr_highest));
   }
   return pr_highest;
@@ -636,7 +636,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Error getting section header from section %s in module %s.\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
@@ -646,7 +646,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Section header from section %s in module %s has no items\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
@@ -656,7 +656,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Error getting data from section %s in module %s\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
@@ -666,7 +666,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Data in section %s is in module %s not the correct size\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
@@ -684,7 +684,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Unknown privilege data, 0x%x in section %s in module %s\n",
 	   (int)privilege, STAP_PRIVILEGE_SECTION, module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
