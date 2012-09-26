@@ -109,7 +109,7 @@ function print_ustack(stk:string) { upsyms(stk) }
 function upsyms (callers:string) {
          sym = tokenize (callers, " ");
          while (sym != "") {
-               println (usymdata (strtol(sym,16)));
+               printf (" %s : %s\n", sym, usymdata (strtol(sym,16)));
                sym = tokenize ("", " ");
          }
 }
@@ -158,7 +158,8 @@ function uspsyms (callers:string) {
          foo = ""; l = 0
          while (sym != "") {
                // cleanly handle overflow instead of printing partial line:
-               line = usymdata (strtol(sym, 16)) . "\n"; l += strlen(line)
+               line = sprintf (" %s : %s\n", sym, usymdata (strtol(sym,16)));
+               l += strlen(line)
                if (l > %{ MAXSTRINGLEN %}) break
                foo .= line
                sym = tokenize ("", " ")
