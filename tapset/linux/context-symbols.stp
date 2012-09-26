@@ -93,7 +93,7 @@ function sprint_stack:string(stk:string) { return spsyms(stk) }
  * name from the probe point string as returned by pp(), and used the
  * current address as a fallback.
  */
-function probefunc:string () %( systemtap_v <= "1.8" %?
+function probefunc:string () %( systemtap_v < "2.0" %?
 %{ /* pure */ /* pragma:symbols */
 	char *ptr, *start;
 
