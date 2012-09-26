@@ -83,13 +83,18 @@ function sprint_stack:string(stk:string) { return spsyms(stk) }
 /**
  * sfunction probefunc - Return the probe point's function name, if known
  *
- * Description: This function returns the name of the function being probed.
- * It will do this based on the probe point string as returned by pp().
- * Please note: this function is deprecated, please use symname() and/or
- * usymname(). This function might return a function name based on the
- * current address if the probe point context couldn't be parsed.
+ * Description: This function returns the name of the function being probed
+ * based on the current address, as computed by symname(stack(0)) or
+ * usymname(ustack(0)) depending on probe context (whether the probe is
+ * a user probe or a kernel probe).
+ *
+ * Please note: this function's behaviour differs between SystemTap 2.0
+ * and earlier versions. Prior to 2.0, probefunc() obtained the function
+ * name from the probe point string as returned by pp(), and used the
+ * current address as a fallback.
  */
-function probefunc:string () %{ /* pure */ /* pragma:symbols */
+function probefunc:string () %( systemtap_v <= "2.0" %?
+%{ /* pure */ /* pragma:symbols */
 	char *ptr, *start;
 
 	STAP_RETVALUE[0] = '\0';
@@ -119,6 +124,11 @@ function probefunc:string () %{ /* pure */ /* pragma:symbols */
 		}
 	}
 %}
+%:
+{
+	return user_mode() ? symname(stack(0)) : usymname(ustack(0))
+}
+%)
 
 /**
  * sfunction probemod - Return the probe point's kernel module name
