@@ -13,7 +13,7 @@
 // the function symbol of an address.
 // </tapsetdescription>
 
-function __ustack_raw (n:long) %{ /* pragma:unwind */
+function __ustack_raw (n:long) %{ /* pragma:unwind */ /* pure */ /* myproc-unprivileged */
          /* basic sanity check for bounds: */
          if (unlikely(STAP_ARG_n < 0 || STAP_ARG_n >= MAXBACKTRACE))
                   STAP_RETVALUE = 0;
