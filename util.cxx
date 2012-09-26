@@ -401,8 +401,14 @@ tokenize_cxx(const string& str, vector<string>& tokens)
 // same policy as execvp().  A program name not containing a slash
 // will be searched along the $PATH.
 
+string find_executable(const string& name)
+{
+  const map<string, string> sysenv;
+  return find_executable(name, "", sysenv);
+}
+
 string find_executable(const string& name, const string& sysroot,
-		       map<string, string>& sysenv,
+		       const map<string, string>& sysenv,
 		       const string& env_path)
 {
   string retpath;
@@ -418,9 +424,9 @@ string find_executable(const string& name, const string& sysroot,
     }
   else // Nope, search $PATH.
     {
-      char *path;
+      const char *path;
       if (sysenv.count(env_path) != 0)
-        path = (char *)sysenv[env_path].c_str();
+        path = sysenv.find(env_path)->second.c_str();
       else
         path = getenv(env_path.c_str());
       if (path)

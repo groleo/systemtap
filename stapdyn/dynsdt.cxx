@@ -25,6 +25,7 @@ extern "C" {
 #include <BPatch_point.h>
 
 #include "dynutil.h"
+#include "../util.h"
 
 
 using namespace std;
@@ -36,31 +37,6 @@ struct sdt_point {
     GElf_Addr pc_offset;
     GElf_Addr sem_offset;
 };
-
-
-string
-resolve_path(const string& name)
-{
-  if (name.find('/') != string::npos)
-    return name;
-
-  char *env_path = getenv("PATH");
-  if (!env_path)
-    return name;
-
-  vector<string> paths;
-  char *ppath, path[strlen(env_path)];
-  strcpy(path, env_path);
-  ppath = strtok(path, ":");
-  while (ppath)
-    {
-      string fullpath = string(ppath) + "/" + name;
-      if (!access(fullpath.c_str(), X_OK))
-        return fullpath;
-      ppath = strtok(NULL, ":");
-    }
-  return name;
-}
 
 
 static vector<pair<int, string> >
@@ -364,7 +340,7 @@ main(int argc, const char* argv[])
   BPatch patch;
 
   warnx("creating the process");
-  string fullpath = resolve_path(argv[1]);
+  string fullpath = find_executable(argv[1]);
   BPatch_process *app = patch.processCreate(fullpath.c_str(), &argv[1]);
   BPatch_image *image = app->getImage();
 

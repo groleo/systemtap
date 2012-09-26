@@ -23,6 +23,7 @@ extern "C" {
 #include "../version.h"
 
 #include "dynutil.h"
+#include "../util.h"
 
 
 #define _STRINGIFY(s) #s
@@ -236,7 +237,8 @@ main(int argc, char * const argv[])
       exit(rc);
     }
 
-  BPatch_process *app = patch.processCreate(child_argv[0], child_argv);
+  string fullpath = find_executable(child_argv[0]);
+  BPatch_process *app = patch.processCreate(fullpath.c_str(), child_argv);
 
   app->loadLibrary(module);
 
