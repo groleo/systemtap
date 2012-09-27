@@ -151,7 +151,7 @@ __attribute__((constructor))
 static void stp_dyninst_ctor(void)
 {
     stap_hash_seed = _stp_random_u ((unsigned long)-1);
-    _stp_mem_fd = open("/proc/self/mem", O_RDWR /*| O_LARGEFILE*/);
+    _stp_mem_fd = open("/proc/self/mem", O_RDWR | O_CLOEXEC /*| O_LARGEFILE*/);
 }
 
 int stp_dyninst_session_init(void)
