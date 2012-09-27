@@ -154,6 +154,10 @@ get_base_hash (systemtap_session& s)
 
   // Hash runtime path (that gets added in as "-R path").
   h.add_path("Runtime ", s.runtime_path);
+  h.add_path("Runtime transport ", s.runtime_path + "/transport");
+  h.add_path("Runtime unwind ", s.runtime_path + "/unwind");
+  h.add_path("Runtime sub ", s.runtime_path +
+             (s.is_usermode() ? "/dyninst" : "/linux"));
 
   // Hash compiler path, size, and mtime.  We're just going to assume
   // we'll be using gcc. XXX: getting kbuild to spit out out would be
@@ -375,8 +379,8 @@ find_uprobes_hash (systemtap_session& s)
   stap_hash h(get_base_hash(s));
 
   // Hash runtime uprobes paths
-  h.add_path("Uprobes Runtime Path /uprobes ", s.runtime_path + "/uprobes");
-  h.add_path("Uprobes Runtime Path /uprobes2 ", s.runtime_path + "/uprobes2");
+  h.add_path("Uprobes Runtime Path /uprobes ", s.runtime_path + "/linux/uprobes");
+  h.add_path("Uprobes Runtime Path /uprobes2 ", s.runtime_path + "/linux/uprobes2");
 
   // Add any custom kbuild flags
   for (unsigned i = 0; i < s.kbuildflags.size(); i++)
