@@ -2538,9 +2538,13 @@ c_emit_location (FILE *out, struct location *loc, int indent,
   bool deref = false;
   *max_stack = 0;
 
-  if (loc->frame_base != NULL)
-    emit_loc_value (out, loc->frame_base, indent, "frame_base", true,
-		    &deref, max_stack);
+  for (l = loc; l != NULL; l = l->next)
+    if (l->frame_base != NULL)
+      {
+	emit_loc_value (out, l->frame_base, indent, "frame_base", true,
+			&deref, max_stack);
+	break;
+      }
 
   for (; loc->next != NULL; loc = loc->next)
     switch (loc->type)
