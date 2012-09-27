@@ -25,6 +25,7 @@
 #include <fcntl.h>
 
 #include "loc2c-runtime.h"
+#include "stapdyn.h"
 
 #if __WORDSIZE == 64
 #define CONFIG_64BIT 1

@@ -30,7 +30,7 @@ noinst_PROGRAMS += dynsdt
 stapdyn_SOURCES = stapdyn.cxx dynutil.cxx ../util.cxx
 stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@
 stapdyn_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
-stapdyn_LDADD = -lelf $(dyninst_LIBS)
+stapdyn_LDADD = -ldl -lelf $(dyninst_LIBS)
 
 dynsdt_SOURCES = dynsdt.cxx dynutil.cxx ../util.cxx
 dynsdt_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@

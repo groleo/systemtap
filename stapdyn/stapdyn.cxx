@@ -4,10 +4,12 @@
 #include <vector>
 
 extern "C" {
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <gelf.h>
 #include <libelf.h>
+#include <libgen.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -25,6 +27,7 @@ extern "C" {
 #include "dynutil.h"
 #include "../util.h"
 
+#include "../runtime/dyninst/stapdyn.h"
 
 #define _STRINGIFY(s) #s
 #define STRINGIFY(s) _STRINGIFY(s)
@@ -35,6 +38,8 @@ extern "C" {
 
 
 using namespace std;
+
+static const char* program = "stapdyn";
 
 static void __attribute__ ((noreturn))
 usage (int rc)
@@ -182,6 +187,42 @@ out:
   ;
 }
 
+static int
+run_simple_module(void* module)
+{
+  typedef typeof(stp_dyninst_session_init) init_t;
+  typedef typeof(stp_dyninst_session_exit) exit_t;
+
+  const char* err = dlerror(); // clear previous errors
+  init_t *session_init = (init_t*)dlsym(module, "stp_dyninst_session_init");
+  if ((err = dlerror()))
+    {
+      clog << program << ": dlsym " << err << endl;
+      return 1;
+    }
+
+  exit_t *session_exit = (exit_t*)dlsym(module, "stp_dyninst_session_exit");
+  if ((err = dlerror()))
+    {
+      clog << program << ": dlsym " << err << endl;
+      return 1;
+    }
+
+  int rc = session_init();
+  if (rc)
+    {
+      clog << program << ": stp_dyninst_session_init returned " << rc << endl;
+      return 1;
+    }
+
+  // XXX TODO we really ought to wait for a signal before exiting, or for a
+  // script requested exit (e.g. from a timer probe, which doesn't exist yet...)
+
+  session_exit();
+
+  return 0;
+}
+
 int
 main(int argc, char * const argv[])
 {
@@ -212,8 +253,21 @@ main(int argc, char * const argv[])
   if (optind == argc - 1)
     module = argv[optind];
 
-  if (!module || !command)
+  if (!module)
     usage (1);
+
+  program = basename(argv[0]);
+
+  (void)dlerror(); // clear previous errors
+  void* dlmodule = dlopen(module, RTLD_NOW);
+  if (!dlmodule)
+    {
+      clog << program << ": dlopen " << dlerror() << endl;
+      return 1;
+    }
+
+  if (!command)
+    return run_simple_module(dlmodule);
 
   if (!check_dyninst_rt())
     return 1;
