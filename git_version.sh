@@ -89,7 +89,7 @@ do
                     : # keep default ifndef_symbol
                 else
                     newdir=$(mktemp -t -d git_version_XXXXXX)
-                    outfilenew="$newdir/$1.new"
+                    outfilenew="$newdir/`basename $outfile`.new"
                     ifndef_symbol=`basename "$outfile" | $SED 's|\.|_|g; s|[^A-Za-z0-9_]||g' | tr a-z A-Z`
                 fi
             else
