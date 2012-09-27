@@ -31,7 +31,7 @@ LOCAL_LDLIBS += -lpthread
 LOCAL_MODULE_CLASS := EXECUTABLES
 intermediates := $(call local-intermediates-dir)
 GEN:=$(addprefix $(intermediates)/,git_version.h)
-$(GEN) : PRIVATE_CUSTOM_TOOL = external/systemtap/git_version.sh -k -s external/systemtap -o git_version.h ; mv git_version.h $@
+$(GEN) : PRIVATE_CUSTOM_TOOL = external/systemtap/git_version.sh -k -s external/systemtap -o $@
 $(GEN) : PRIVATE_PATH := $(STAP_ROOT_PATH)
 $(GEN) :
 	$(transform-generated-source)
