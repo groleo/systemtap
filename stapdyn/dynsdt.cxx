@@ -368,7 +368,7 @@ main(int argc, const char* argv[])
   }
 
   warnx("done!");
-  return 0;
+  return check_dyninst_exit(app) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */

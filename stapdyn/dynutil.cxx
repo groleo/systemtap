@@ -112,4 +112,30 @@ check_dyninst_sebools(void)
 }
 
 
+// Check whether a process exited cleanly
+bool
+check_dyninst_exit(BPatch_process *process)
+{
+  int code;
+  switch (process->terminationStatus())
+    {
+    case ExitedNormally:
+      code = process->getExitCode();
+      if (code == EXIT_SUCCESS)
+        return true;
+      warnx("Warning: child process exited with status %d", code);
+      return false;
+
+    case ExitedViaSignal:
+      code = process->getExitSignal();
+      warnx("Warning: child process exited with signal %d (%s)",
+            code, strsignal(code));
+      return false;
+
+    default:
+      return false;
+    }
+}
+
+
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */

@@ -344,7 +344,7 @@ main(int argc, char * const argv[])
    *   call_inferior_function(app, "stp_dyninst_session_exit");
    */
 
-  return 0;
+  return check_dyninst_exit(app) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */
