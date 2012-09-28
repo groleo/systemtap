@@ -1,6 +1,6 @@
 /* -*- linux-c -*- 
  * Copy from user space functions
- * Copyright (C) 2005-2008 Red Hat Inc.
+ * Copyright (C) 2005-2012 Red Hat Inc.
  * Copyright (C) 2005 Intel Corporation.
  *
  * This file is part of systemtap, and is free software.  You can
@@ -35,12 +35,16 @@
  *                  USER_DS for userspace.
  */
 
+/* XXX: see also kread/uread in loc2c-runtime.h */
+/* XXX: add bad_addr check */
 #define _stp_read_address(x, ptr, segment)    \
 	({				      \
 		long ret;		      \
 		mm_segment_t ofs = get_fs();  \
 		set_fs(segment);	      \
+                pagefault_disable();          \
 		ret = __stp_get_user(x, ptr); \
+                pagefault_enable();           \
 		set_fs(ofs);		      \
 		ret;   			      \
 	})
@@ -144,11 +148,17 @@ do {									   \
  * <i>count</i> bytes and returns <i>count</i>.
  */
 
+/* XXX: see also kread/uread in loc2c-runtime.h */
 static long _stp_strncpy_from_user(char *dst, const char __user *src, long count)
 {
 	long res = -EFAULT;
-	if (access_ok(VERIFY_READ, src, count))
+        mm_segment_t _oldfs = get_fs();
+        set_fs(USER_DS);
+        pagefault_disable();
+	if (access_ok(VERIFY_READ, src, count)) /* XXX: bad_addr? */
 		__stp_strncpy_from_user(dst, src, count, res);
+        pagefault_enable();
+        set_fs(_oldfs);
 	return res;
 }
 

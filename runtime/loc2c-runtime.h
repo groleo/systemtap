@@ -1,6 +1,6 @@
 /* target operations
  * Copyright (C) 2005-2012 Red Hat Inc.
- * Copyright (C) 2005, 2006, 2007 Intel Corporation.
+ * Copyright (C) 2005-2007 Intel Corporation.
  * Copyright (C) 2007 Quentin Barnes.
  *
  * This file is part of systemtap, and is free software.  You can
@@ -18,6 +18,11 @@
 #include <linux/types.h>
 #define intptr_t long
 #define uintptr_t unsigned long
+#endif
+
+#ifndef STAPCONF_PAGEFAULT_DISABLE  /* before linux commit a866374a */
+#define pagefault_disable() preempt_disable()
+#define pagefault_enable() preempt_enable_no_resched()
 #endif
 
 
@@ -522,29 +527,36 @@ extern void __store_deref_bad(void);
 
 #if defined __i386__
 
-#define uderef(size, addr)						      \
+#define _stp_deref(size, addr, seg)                                           \
   ({									      \
     int _bad = 0;							      \
-    u8 _b; u16 _w; u32 _l;	                                              \
     intptr_t _v = 0;							      \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
     if (lookup_bad_addr((unsigned long)addr, size))			      \
       _bad = 1;                                                               \
     else                                                                      \
       switch (size)                                                           \
         {                                                                     \
-        case 1: __get_user_asm(_b,addr,_bad,"b","b","=q",1); _v = _b; break;  \
-        case 2: __get_user_asm(_w,addr,_bad,"w","w","=r",1); _v = _w; break;  \
-        case 4: __get_user_asm(_l,addr,_bad,"l","","=r",1); _v = _l; break;   \
+        case 1: { u8 _b; __get_user_asm(_b,addr,_bad,"b","b","=q",1); _v = _b; } break; \
+        case 2: { u16 _w; __get_user_asm(_w,addr,_bad,"w","w","=r",1); _v = _w; } break; \
+        case 4: { u32 _l; __get_user_asm(_l,addr,_bad,"l","","=r",1); _v = _l; } break; \
         default: _v = __get_user_bad();                                       \
         }                                                                     \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
     if (_bad)                                                                 \
       DEREF_FAULT(addr);						      \
     _v;									      \
   })
 
-#define store_uderef(size, addr, value)					      \
+#define _stp_store_deref(size, addr, value, seg)                              \
   ({									      \
     int _bad = 0;							      \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
     if (lookup_bad_addr((unsigned long)addr, size))			      \
       _bad = 1;                                                               \
     else                                                                      \
@@ -555,6 +567,8 @@ extern void __store_deref_bad(void);
         case 4: __put_user_asm(((u32)(value)),addr,_bad,"l","k","ir",1); break;\
         default: __put_user_bad();                                            \
         }                                                                     \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
     if (_bad)                                                                 \
       STORE_DEREF_FAULT(addr);                                                \
   })
@@ -562,30 +576,37 @@ extern void __store_deref_bad(void);
 
 #elif defined __x86_64__
 
-#define uderef(size, addr)						      \
+#define _stp_deref(size, addr, seg)                                           \
   ({									      \
     int _bad = 0;							      \
-    u8 _b; u16 _w; u32 _l; u64 _q;					      \
     intptr_t _v = 0;							      \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
     if (lookup_bad_addr((unsigned long)addr, size))			      \
       _bad = 1;                                                               \
     else                                                                      \
       switch (size)                                                           \
         {                                                                     \
-        case 1: __get_user_asm(_b,(unsigned long)addr,_bad,"b","b","=q",1); _v = _b; break;  \
-        case 2: __get_user_asm(_w,(unsigned long)addr,_bad,"w","w","=r",1); _v = _w; break;  \
-        case 4: __get_user_asm(_l,(unsigned long)addr,_bad,"l","","=r",1); _v = _l; break;   \
-        case 8: __get_user_asm(_q,(unsigned long)addr,_bad,"q","","=r",1); _v = _q; break;   \
+        case 1: { u8 _b; __get_user_asm(_b,(unsigned long)addr,_bad,"b","b","=q",1); _v = _b; } break; \
+        case 2: { u16 _w; __get_user_asm(_w,(unsigned long)addr,_bad,"w","w","=r",1); _v = _w; } break; \
+        case 4: { u32 _l; __get_user_asm(_l,(unsigned long)addr,_bad,"l","","=r",1); _v = _l; } break; \
+        case 8: { u64 _q; __get_user_asm(_q,(unsigned long)addr,_bad,"q","","=r",1); _v = _q; } break; \
         default: _v = __get_user_bad();                                       \
         }                                                                     \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
     if (_bad)								      \
-      DEREF_FAULT(addr);							      \
+      DEREF_FAULT(addr);						      \
     _v;									      \
   })
 
-#define store_uderef(size, addr, value)					      \
+#define _stp_store_deref(size, addr, value, seg)                              \
   ({									      \
     int _bad = 0;							      \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
     if (lookup_bad_addr((unsigned long)addr, size))			      \
       _bad = 1;                                                               \
     else                                                                      \
@@ -597,47 +618,45 @@ extern void __store_deref_bad(void);
         case 8: __put_user_asm(((u64)(value)),addr,_bad,"q","","Zr",1); break; \
         default: __put_user_bad();                                      \
         }                                                               \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
     if (_bad)								      \
-      STORE_DEREF_FAULT(addr);							      \
+      STORE_DEREF_FAULT(addr);						      \
   })
 
 #elif defined __ia64__
-#define uderef(size, addr)						\
+
+#define _stp_deref(size, addr, seg)					\
   ({									\
      int _bad = 0;							\
      intptr_t _v=0;							\
+     mm_segment_t _oldfs = get_fs();                                    \
+     set_fs(seg);                                                       \
+     pagefault_disable();                                               \
      if (lookup_bad_addr((unsigned long)addr, size))			\
        _bad = 1;                                                        \
      else {								\
-       if (in_atomic() || irqs_disabled()) {				\
-	 pagefault_disable();						\
-	 switch (size) {						\
+       switch (size) {                                                  \
 	 case 1: __get_user_size(_v, addr, 1, _bad); break; 		\
 	 case 2: __get_user_size(_v, addr, 2, _bad); break;  		\
 	 case 4: __get_user_size(_v, addr, 4, _bad); break;  		\
 	 case 8: __get_user_size(_v, addr, 8, _bad); break;  		\
 	 default: __get_user_unknown(); break;				\
-	 }								\
-	 pagefault_enable();						\
-       }								\
-       else {								\
-	 switch (size) {						\
-	 case 1: __get_user_size(_v, addr, 1, _bad); break; 		\
-	 case 2: __get_user_size(_v, addr, 2, _bad); break;  		\
-	 case 4: __get_user_size(_v, addr, 4, _bad); break;  		\
-	 case 8: __get_user_size(_v, addr, 8, _bad); break;  		\
-	 default: __get_user_unknown(); break;				\
-	 }								\
-       }								\
+	  }								\
      }									\
+     pagefault_enable();                                                \
+     set_fs(_oldfs);                                                    \
      if (_bad) 								\
        DEREF_FAULT(addr);						\
      _v;								\
    })
 
-#define store_uderef(size, addr, value)					\
+#define _stp_store_deref(size, addr, value, seg)                        \
   ({									\
     int _bad=0;								\
+    mm_segment_t _oldfs = get_fs();                                     \
+    set_fs(seg);                                                        \
+    pagefault_disable();                                                \
     if (lookup_bad_addr((unsigned long)addr, size))			\
       _bad = 1;                                                         \
     else                                                                \
@@ -648,8 +667,10 @@ extern void __store_deref_bad(void);
       case 8: __put_user_size(value, addr, 8, _bad); break;		\
       default: __put_user_unknown(); break;				\
       }                                                                 \
+    pagefault_enable();                                                 \
+    set_fs(_oldfs);                                                     \
     if (_bad)								\
-	   STORE_DEREF_FAULT(addr);						\
+	   STORE_DEREF_FAULT(addr);					\
    })
 
 #elif defined __powerpc__ || defined __powerpc64__
@@ -666,10 +687,13 @@ extern void __store_deref_bad(void);
 		__put_user_size(x, ptr, size, retval, -EFAULT)
 #endif
 
-#define uderef(size, addr)						      \
+#define _stp_deref(size, addr, seg)                                           \
   ({									      \
     int _bad = 0;							      \
     intptr_t _v = 0;							      \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
     if (lookup_bad_addr((unsigned long)addr, size))			      \
       _bad = 1;                                                               \
     else                                                                      \
@@ -681,14 +705,19 @@ extern void __store_deref_bad(void);
 	case 8: __stp_get_user_size(_v, addr, 8, _bad); break;                \
         default: _v = __get_user_bad();                                       \
         }                                                                     \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
     if (_bad)								      \
       DEREF_FAULT(addr);						      \
     _v;									      \
   })
 
-#define store_uderef(size, addr, value)					      \
+#define _stp_store_deref(size, addr, value, seg)                              \
   ({									      \
     int _bad = 0;							      \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
     if (lookup_bad_addr((unsigned long)addr, size))			      \
       _bad = 1;                                                               \
     else                                                                      \
@@ -700,6 +729,8 @@ extern void __store_deref_bad(void);
 	case 8: __stp_put_user_size(((u64)(value)), addr, 8, _bad); break;    \
         default: __put_user_bad();                                            \
         }                                                                     \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
     if (_bad)								      \
       STORE_DEREF_FAULT(addr);						      \
   })
@@ -813,27 +844,35 @@ extern void __store_deref_bad(void);
 	: "r" (x), "r" (__pu_addr), "i" (-EFAULT)		\
 	: "cc")
 
-#define uderef(size, addr)						\
+#define _stp_deref(size, addr, seg)					\
   ({									\
      int _bad = 0;							\
      intptr_t _v=0;							\
+     mm_segment_t _oldfs = get_fs();                                    \
+     set_fs(seg);                                                       \
+     pagefault_disable();                                               \
      if (lookup_bad_addr((unsigned long)addr, size))			\
       _bad = 1;                                                         \
-    else                                                                \
+     else                                                               \
       switch (size){							\
       case 1: __stp_get_user_asm_byte(_v, addr, _bad); break;           \
       case 2: __stp_get_user_asm_half(_v, addr, _bad); break;           \
       case 4: __stp_get_user_asm_word(_v, addr, _bad); break;           \
       default: __get_user_bad(); break;                                 \
       }                                                                 \
+    pagefault_enable();                                                 \
+    set_fs(_oldfs);                                                     \
     if (_bad)  								\
 	DEREF_FAULT(addr);						\
      _v;								\
    })
 
-#define store_uderef(size, addr, value)					\
+#define _stp_store_deref(size, addr, value, seg)                        \
   ({									\
     int _bad=0;								\
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
     if (lookup_bad_addr((unsigned long)addr, size))			\
       _bad = 1;                                                         \
     else                                                                \
@@ -843,6 +882,8 @@ extern void __store_deref_bad(void);
       case 4: __stp_put_user_asm_word(value, addr, _bad); break;	\
       default: __put_user_bad(); break;                                 \
       }                                                                 \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
     if (_bad)								\
 	   STORE_DEREF_FAULT(addr);						\
    })
@@ -852,13 +893,14 @@ extern void __store_deref_bad(void);
 /* Use same __get_user() and __put_user() for both user and kernel
    addresses, but make sure set_fs() is called appropriately first. */
 
-#define uderef(size, addr) ({ \
+#define _stp_deref(size, addr, seg) ({ \
     u8 _b; u16 _w; u32 _l; u64 _q; \
     uintptr_t _a = (uintptr_t) addr; \
     intptr_t _v = 0; \
     int _bad = 0; \
-    mm_segment_t _oldfs = get_fs(); \
-    set_fs (USER_DS); \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
     switch (size) { \
       case 1: _bad = __get_user(_b, (u8 *)(_a)); _v = _b; break; \
       case 2: _bad = __get_user(_w, (u16 *)(_a)); _v = _w; break; \
@@ -866,16 +908,18 @@ extern void __store_deref_bad(void);
       case 8: _bad = __get_user(_q, (u64 *)(_a)); _v = _q; break; \
       default: __get_user_bad(); \
     } \
-    set_fs (_oldfs); \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
     if (_bad) \
       DEREF_FAULT(addr); \
     _v; \
   })
 
-#define store_uderef(size, addr, value) ({ \
+#define _stp_store_deref(size, addr, value, seg) ({ \
     int _bad = 0; \
-    mm_segment_t _oldfs = get_fs(); \
-    set_fs (USER_DS); \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
     switch (size) {		 \
       case 1: _bad = __put_user(((u8)(value)), ((u8 *)(addr))); break; \
       case 2: _bad = __put_user(((u16)(value)), ((u16 *)(addr))); break; \
@@ -883,57 +927,34 @@ extern void __store_deref_bad(void);
       case 8: _bad = __put_user(((u64)(value)), ((u64 *)(addr))); break; \
       default: __put_user_bad(); \
     } \
-    set_fs (_oldfs); \
-    if (_bad) \
-	STORE_DEREF_FAULT(addr); \
-  })
-
-#define kderef(size, addr) ({ \
-    u8 _b; u16 _w; u32 _l; u64 _q; \
-    uintptr_t _a = (uintptr_t) addr; \
-    intptr_t _v = 0; \
-    int _bad = 0; \
-    mm_segment_t _oldfs = get_fs(); \
-    set_fs (KERNEL_DS); \
-    switch (size) { \
-      case 1: _bad = __get_user(_b, (u8 *)(_a)); _v = _b; break; \
-      case 2: _bad = __get_user(_w, (u16 *)(_a)); _v = _w; break; \
-      case 4: _bad = __get_user(_l, (u32 *)(_a)); _v = _l; break; \
-      case 8: _bad = __get_user(_q, (u64 *)(_a)); _v = _q; break; \
-      default: __get_user_bad(); \
-    } \
-    set_fs (_oldfs); \
-    if (_bad) \
-      DEREF_FAULT(addr); \
-    _v; \
-  })
-
-#define store_kderef(size, addr, value) ({ \
-    int _bad = 0; \
-    mm_segment_t _oldfs = get_fs(); \
-    set_fs (KERNEL_DS); \
-    switch (size) { \
-      case 1: _bad = __put_user(((u8)(value)), ((u8 *)(addr))); break; \
-      case 2: _bad = __put_user(((u16)(value)), ((u16 *)(addr))); break; \
-      case 4: _bad = __put_user(((u32)(value)), ((u32 *)(addr))); break; \
-      case 8: _bad = __put_user(((u64)(value)), ((u64 *)(addr))); break; \
-      default: __put_user_bad(); \
-    } \
-    set_fs (_oldfs); \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
     if (_bad) \
 	STORE_DEREF_FAULT(addr); \
   })
 
 #endif /* (s390) || (s390x) */
 
-/* Normally we can use uderef and store_uderef also for kernel space. */
+
+/* Map kderef/uderef to the generic segment-aware deref macros. */ 
+
 #ifndef kderef
-#define kderef uderef
+#define kderef(s,a) _stp_deref(s,a,KERNEL_DS)
 #endif
 
 #ifndef store_kderef
-#define store_kderef store_uderef
+#define store_kderef(s,a,v) _stp_store_deref(s,a,v,KERNEL_DS)
 #endif
+
+#ifndef uderef
+#define uderef(s,a) _stp_deref(s,a,USER_DS)
+#endif
+
+#ifndef store_uderef
+#define store_uderef(s,a,v) _stp_store_deref(s,a,v,USER_DS)
+#endif
+
+
 
 #if defined (__i386__) || defined (__arm__)
 

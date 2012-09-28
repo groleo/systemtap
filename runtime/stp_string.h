@@ -1,5 +1,5 @@
 /* -*- linux-c -*-
- * Copyright (C) 2005, 2007, 2009 Red Hat Inc.
+ * Copyright (C) 2005-2012 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -11,6 +11,9 @@
 
 #define to_oct_digit(c) ((c) + '0')
 static void _stp_text_str(char *out, char *in, int len, int quoted, int user);
+
+/* XXX: duplication with loc2c-runtime.h */
+/* XXX: probably needs the same set_fs / pagefault_* / bad_addr checks */
 
 #if defined(__KERNEL__)
 
@@ -31,13 +34,9 @@ static void _stp_text_str(char *out, char *in, int len, int quoted, int user);
 #define __stp_get_user(x, ptr)						\
   ({									\
      int __res;								\
-     if (in_atomic() || irqs_disabled()) {				\
-       pagefault_disable();						\
-       __res = __get_user(x, ptr);					\
-       pagefault_enable();						\
-     }									\
-     else								\
-       __res = __get_user(x, ptr);					\
+     pagefault_disable();						\
+     __res = __get_user(x, ptr);					\
+     pagefault_enable();						\
      __res;								\
   })
 #else /* !defined(__powerpc__) && !defined(__ia64) */
