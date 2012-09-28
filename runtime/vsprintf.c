@@ -26,7 +26,8 @@ static int skip_atoi(const char **s)
  * Changes to number() will require a corresponding change to number_size below,
  * to ensure proper buffer allocation for _stp_printf.
  */
-static char * number(char * buf, char * end, uint64_t num, int base, int size, int precision, enum print_flag type)
+noinline static char * 
+number(char * buf, char * end, uint64_t num, int base, int size, int precision, enum print_flag type)
 {
 	char c,sign,tmp[66];
 	const char *digits;
@@ -124,7 +125,8 @@ static char * number(char * buf, char * end, uint64_t num, int base, int size, i
  * number() requires a corresponding change here, and vice versa, to ensure the 
  * calculated size and printed size match.
  */
-static int number_size(uint64_t num, int base, int size, int precision, enum print_flag type) {
+noinline static int
+number_size(uint64_t num, int base, int size, int precision, enum print_flag type) {
     char c,sign,tmp[66];
     const char *digits;
     static const char small_digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -204,7 +206,7 @@ static int number_size(uint64_t num, int base, int size, int precision, enum pri
  * straight copy, padded left or right up to 'width', but if the user
  * gave the '#' flag then we need to escape special characters.
  */
-static char *
+noinline static char *
 _stp_vsprint_char(char * str, char * end, char c,
 		  int width, enum print_flag flags)
 {
@@ -294,7 +296,7 @@ _stp_vsprint_char(char * str, char * end, char c,
  * just 1 (padded up to 'width'), but if the user gave the '#' flag then
  * we need to escape special characters.
  */
-static int
+noinline static int
 _stp_vsprint_char_size(char c, int width, enum print_flag flags)
 {
 	int size = 1;
@@ -325,7 +327,7 @@ _stp_vsprint_char_size(char c, int width, enum print_flag flags)
 }
 
 
-static char *
+noinline static char *
 _stp_vsprint_memory(char * str, char * end, const char * ptr,
 		    int width, int precision,
 		    char format, enum print_flag flags)
@@ -352,7 +354,7 @@ _stp_vsprint_memory(char * str, char * end, const char * ptr,
 	}
 
 	if (format == 'M') { /* stolen from kernel: trace_seq_putmem_hex() */
-		const char _stp_hex_asc[] = "0123456789abcdef";
+		static const char _stp_hex_asc[] = "0123456789abcdef";
 
 #ifdef __KERNEL__
 		c = contexts[smp_processor_id()];
@@ -400,7 +402,7 @@ deref_fault:
 	return NULL;
 }
 
-static int
+noinline static int
 _stp_vsprint_memory_size(const char * ptr, int width, int precision,
 			 char format, enum print_flag flags)
 {
@@ -443,7 +445,7 @@ static int check_binary_precision (int precision) {
   return precision;
 }
 
-static char *
+noinline static char *
 _stp_vsprint_binary(char * str, char * end, int64_t num,
 		    int width, int precision, enum print_flag flags)
 {
@@ -500,7 +502,7 @@ _stp_vsprint_binary(char * str, char * end, int64_t num,
 	return str;
 }
 
-static int
+noinline static int
 _stp_vsprint_binary_size(int64_t num, int width, int precision)
 {
 	/* Only certain values are valid for the precision.  */
@@ -526,7 +528,8 @@ _stp_vsprint_binary_size(int64_t num, int width, int precision)
 	return max(precision, width);
 }
 
-static int _stp_vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
+noinline static int
+_stp_vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 {
 	int len;
 	uint64_t num;
