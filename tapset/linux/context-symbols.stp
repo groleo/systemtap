@@ -30,7 +30,6 @@ function __stack_raw (n:long) %{ /* pragma:unwind */ /* pure */
  *  no matter how many times stack() is called, or in what order.
  */
 function stack:long (n:long) {
-         if (n < 0 || n >= %{ MAXBACKTRACE %}) return 0
          r = __stack_raw(n);
          if (r != 0) return r
 
