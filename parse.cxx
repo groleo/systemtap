@@ -784,6 +784,7 @@ parser::parse_library_macros ()
 // where CONDITION is: kernel_v[r] COMPARISON-OP "version-string"
 //                 or: arch COMPARISON-OP "arch-string"
 //                 or: systemtap_v COMPARISON-OP "version-string"
+//                 or: systemtap_privilege COMPARISON-OP "privilege-string"
 //                 or: CONFIG_foo COMPARISON-OP "config-string"
 //                 or: CONFIG_foo COMPARISON-OP number
 //                 or: CONFIG_foo COMPARISON-OP CONFIG_bar
@@ -857,6 +858,31 @@ bool eval_pp_conditional (systemtap_session& s,
           if (rvc_result > 0) rvc_result = 1;
           return (rvc_result == rvc_ok1 || rvc_result == rvc_ok2);
         }
+    }
+  else if (l->type == tok_identifier && l->content == "systemtap_privilege")
+    {
+      string target_privilege =
+	pr_contains(s.privilege, pr_stapdev) ? "privileged"
+	: ( pr_contains(s.privilege, pr_stapusr)
+	    || pr_contains(s.privilege, pr_stapsys) ) ? "unprivileged"
+	: "none"; /* should be impossible -- s.privilege always one of above */
+      assert(target_privilege != "none");
+
+      if (! (r->type == tok_string))
+        throw parse_error (_("expected string literal"), r);
+      string query_privilege = r->content;
+
+      bool nomatch = (target_privilege != query_privilege);
+
+      bool result;
+      if (op->type == tok_operator && op->content == "==")
+        result = !nomatch;
+      else if (op->type == tok_operator && op->content == "!=")
+        result = nomatch;
+      else
+        throw parse_error (_("expected '==' or '!='"), op);
+
+      return result;
     }
   else if (l->type == tok_identifier && l->content == "arch")
     {
