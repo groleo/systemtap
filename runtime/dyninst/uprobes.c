@@ -13,22 +13,52 @@
 
 /* STAPDU: SystemTap Dyninst Uprobes */
 
-/* A target has the dyninst view of what we want to probe.
+/* These functions implement the ABI in stapdyn.h
  *
- * NB: This becomes an ABI in the module with stapdyn, so be cautious.  It
- * might be better to go with a more flexible format - perhaps JSON?
+ * NB: tapsets.cxx will generate two arrays used here:
+ *   struct stapdu_target stapdu_targets[];
+ *   struct stapdu_probe stapdu_probes[];
  */
-struct stapdu_target {
-	char filename[240];
-	uint64_t offset; /* the probe offset within the file */
-	uint64_t sdt_sem_offset; /* the semaphore offset from process->base */
-};
 
 
-/* A consumer has the runtime information for a probe.  */
-struct stapdu_consumer {
-	struct stap_probe * const probe;
-};
+uint64_t stp_dyninst_target_count(void)
+{
+	return ARRAY_SIZE(stapdu_targets);
+}
+
+const char* stp_dyninst_target_path(uint64_t index)
+{
+	if (index >= stp_dyninst_target_count())
+		return NULL;
+	return stapdu_targets[index].path;
+}
+
+
+uint64_t stp_dyninst_probe_count(void)
+{
+	return ARRAY_SIZE(stapdu_probes);
+}
+
+uint64_t stp_dyninst_probe_target(uint64_t index)
+{
+	if (index >= stp_dyninst_probe_count())
+		return (uint64_t)-1;
+	return stapdu_probes[index].target;
+}
+
+uint64_t stp_dyninst_probe_offset(uint64_t index)
+{
+	if (index >= stp_dyninst_probe_count())
+		return (uint64_t)-1;
+	return stapdu_probes[index].offset;
+}
+
+uint64_t stp_dyninst_probe_semaphore(uint64_t index)
+{
+	if (index >= stp_dyninst_probe_count())
+		return (uint64_t)-1;
+	return stapdu_probes[index].semaphore;
+}
 
 
 #endif /* _UPROBES_DYNINST_C_ */

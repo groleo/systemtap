@@ -7,8 +7,6 @@ extern "C" {
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <gelf.h>
-#include <libelf.h>
 #include <libgen.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -41,6 +39,36 @@ using namespace std;
 
 static const char* program = "stapdyn";
 
+
+struct stapdyn_uprobe_probe {
+    uint64_t index, offset, semaphore;
+    stapdyn_uprobe_probe(uint64_t index, uint64_t offset, uint64_t semaphore):
+      index(index), offset(offset), semaphore(semaphore) {}
+};
+
+
+struct stapdyn_uprobe_target {
+    string path;
+    vector<stapdyn_uprobe_probe> probes;
+    stapdyn_uprobe_target(const char* path): path(path) {}
+};
+
+
+template <typename T> void
+set_dlsym(T*& pointer, void* handle, const char* symbol, bool required=true)
+{
+  const char* err = dlerror(); // clear previous errors
+  pointer = reinterpret_cast<T*>(dlsym(handle, symbol));
+  if (required)
+    {
+      if ((err = dlerror()))
+        throw runtime_error(err);
+      if (pointer == NULL)
+        throw runtime_error(string(symbol) + " is NULL");
+    }
+}
+
+
 static void __attribute__ ((noreturn))
 usage (int rc)
 {
@@ -65,24 +93,16 @@ call_inferior_function(BPatch_process *app, const string& name)
     }
 }
 
-// XXX: copied from runtime/dyninst/uprobes-dyninst.c
-struct stapdu_target {
-	char filename[240];
-	uint64_t offset; /* the probe offset within the file */
-	uint64_t sdt_sem_offset; /* the semaphore offset from process->base */
-};
-
 static void
-instrument_uprobes(BPatch_process *app, Elf_Data* data)
+instrument_uprobes(BPatch_process *app,
+                   const vector<stapdyn_uprobe_target>& targets)
 {
-  if (!app || !data) return;
+  if (!app || targets.empty())
+    return;
 
   BPatch_image* image = app->getImage();
-  if (!image) return;
-
-  const stapdu_target* targets = static_cast<const stapdu_target*>(data->d_buf);
-  size_t ntargets = data->d_size / sizeof(stapdu_target);
-  if (!ntargets) return;
+  if (!image)
+    return;
 
   map<string, BPatch_object*> file_objects;
   vector<BPatch_object *> objects;
@@ -101,110 +121,126 @@ instrument_uprobes(BPatch_process *app, Elf_Data* data)
   BPatch_function& enter_function = *functions[0];
 
   app->beginInsertionSet();
-  for (size_t i = 0; i < ntargets; ++i)
+  for (uint64_t i = 0; i < targets.size(); ++i)
     {
-      const stapdu_target* target = &targets[i];
-      clog << "found target " << target->filename
-           << " 0x" << hex << target->offset << dec << endl;
+      const stapdyn_uprobe_target& target = targets[i];
 
-      BPatch_object* object = file_objects[target->filename];
+      BPatch_object* object = file_objects[target.path];
       if (!object)
         {
-          clog << "no object named " << target->filename << endl;
+          clog << "no object named " << target.path << endl;
           continue;
         }
+      clog << "found target " << target.path << ", inserting "
+           << target.probes.size() << " probes" << endl;
 
-      Dyninst::Address address = object->fileOffsetToAddr(target->offset);
-      if (address == BPatch_object::E_OUT_OF_BOUNDS)
+      for (uint64_t j = 0; j < target.probes.size(); ++j)
         {
-          clog << "couldn't convert 0x" << hex << target->offset << dec
-               << " in " << target->filename << " to an address" << endl;
-          continue;
+          const stapdyn_uprobe_probe& probe = target.probes[j];
+
+          Dyninst::Address address = object->fileOffsetToAddr(probe.offset);
+          if (address == BPatch_object::E_OUT_OF_BOUNDS)
+            {
+              clog << "couldn't convert " << lex_cast_hex(probe.offset)
+                   << " in " << target.path << " to an address" << endl;
+              continue;
+            }
+
+          vector<BPatch_point*> points;
+          object->findPoints(address, points);
+          if (points.empty())
+            {
+              clog << "couldn't find instrumentation point for address "
+                   << lex_cast_hex(address) << " at offset "
+                   << lex_cast_hex(probe.offset) << " in " << target.path << endl;
+              continue;
+            }
+
+          BPatch_Vector<BPatch_snippet *> args;
+          args.push_back(new BPatch_constExpr((int64_t)probe.index));
+          args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
+          BPatch_funcCallExpr call(enter_function, args);
+          app->insertSnippet(call, points);
+
+          // XXX write the semaphore too!
         }
-
-      vector<BPatch_point*> points;
-      object->findPoints(address, points);
-      if (points.empty())
-        {
-          clog << "couldn't find instrumentation point 0x" << hex << target->offset << dec
-               << " in " << target->filename << endl;
-          continue;
-        }
-
-      BPatch_Vector<BPatch_snippet *> args;
-      args.push_back(new BPatch_constExpr((int64_t)i)); // probe index
-      args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
-      BPatch_funcCallExpr call(enter_function, args);
-      app->insertSnippet(call, points);
-
-      // XXX write the semaphore too!
     }
   app->finalizeInsertionSet(false);
 }
 
-static void
-find_uprobes(BPatch_process *app, const string& module)
+static vector<stapdyn_uprobe_target>
+find_uprobes(void* module)
 {
-  int fd = -1;
-  size_t shstrndx;
-  Elf* elf = NULL;
-  Elf_Scn* scn = NULL;
+  vector<stapdyn_uprobe_target> targets;
 
-  fd = open(module.c_str(), O_RDONLY);
-  if (fd < 0)
+  typeof(&stp_dyninst_target_count) target_count = NULL;
+  typeof(&stp_dyninst_target_path) target_path = NULL;
+
+  typeof(&stp_dyninst_probe_count) probe_count = NULL;
+  typeof(&stp_dyninst_probe_target) probe_target = NULL;
+  typeof(&stp_dyninst_probe_offset) probe_offset = NULL;
+  typeof(&stp_dyninst_probe_semaphore) probe_semaphore = NULL;
+
+  set_dlsym(target_count, module, "stp_dyninst_target_count", false);
+  if (target_count == NULL) // no uprobes
+    return targets;
+
+  try
     {
-      clog << "can't open " << module << endl;
-      goto out;
+      // if target_count exists, the rest of these should too
+      set_dlsym(target_path, module, "stp_dyninst_target_path");
+      set_dlsym(probe_count, module, "stp_dyninst_probe_count");
+      set_dlsym(probe_target, module, "stp_dyninst_probe_target");
+      set_dlsym(probe_offset, module, "stp_dyninst_probe_offset");
+      set_dlsym(probe_semaphore, module, "stp_dyninst_probe_semaphore");
+    }
+  catch (runtime_error& e)
+    {
+      clog << program << ": dlsym " << e.what() << endl;
+      return targets;
     }
 
-  elf = elf_begin(fd, ELF_C_READ_MMAP, NULL);
-  if (!elf)
+  const uint64_t ntargets = target_count();
+  for (uint64_t i = 0; i < ntargets; ++i)
+    targets.push_back(stapdyn_uprobe_target(target_path(i)));
+
+  const uint64_t nprobes = probe_count();
+  for (uint64_t i = 0; i < nprobes; ++i)
     {
-      clog << "can't read elf " << module << endl;
-      goto out_fd;
+      uint64_t ti = probe_target(i);
+      stapdyn_uprobe_probe p(i, probe_offset(i), probe_semaphore(i));
+      if (ti < ntargets)
+        targets[ti].probes.push_back(p);
     }
 
-  elf_getshdrstrndx (elf, &shstrndx);
-
-  scn = NULL;
-  while ((scn = elf_nextscn(elf, scn)))
+#if 0 // verbose debug
+  for (uint64_t i = 0; i < ntargets; ++i)
     {
-      GElf_Shdr shdr;
-      if (gelf_getshdr (scn, &shdr) == NULL)
-	continue;
-      if (shdr.sh_type != SHT_PROGBITS)
-	continue;
-      if (!(shdr.sh_flags & SHF_ALLOC))
-	continue;
-      if (!strcmp(".stap_dyninst", elf_strptr(elf, shstrndx, shdr.sh_name)))
-        instrument_uprobes(app, elf_rawdata(scn, NULL));
+      stapdyn_uprobe_target& t = targets[i];
+      clog << "target " << t.path << " has "
+        << t.probes.size() << " probes" << endl;
+      for (uint64_t j = 0; j < t.probes.size(); ++j)
+        clog << "  offset:" << (void*)t.probes[i].offset
+          << " semaphore:" << t.probes[i].semaphore << endl;
     }
+#endif
 
-  elf_end(elf);
-out_fd:
-  close(fd);
-out:
-  ;
+  return targets;
 }
 
 static int
 run_simple_module(void* module)
 {
-  typedef typeof(stp_dyninst_session_init) init_t;
-  typedef typeof(stp_dyninst_session_exit) exit_t;
-
-  const char* err = dlerror(); // clear previous errors
-  init_t *session_init = (init_t*)dlsym(module, "stp_dyninst_session_init");
-  if ((err = dlerror()))
+  typeof(&stp_dyninst_session_init) session_init = NULL;
+  typeof(&stp_dyninst_session_exit) session_exit = NULL;
+  try
     {
-      clog << program << ": dlsym " << err << endl;
-      return 1;
+      set_dlsym(session_init, module, "stp_dyninst_session_init");
+      set_dlsym(session_exit, module, "stp_dyninst_session_exit");
     }
-
-  exit_t *session_exit = (exit_t*)dlsym(module, "stp_dyninst_session_exit");
-  if ((err = dlerror()))
+  catch (runtime_error& e)
     {
-      clog << program << ": dlsym " << err << endl;
+      clog << program << ": dlsym " << e.what() << endl;
       return 1;
     }
 
@@ -296,7 +332,7 @@ main(int argc, char * const argv[])
 
   app->loadLibrary(module);
 
-  find_uprobes(app, module);
+  instrument_uprobes(app, find_uprobes(dlmodule));
 
   call_inferior_function(app, "stp_dyninst_session_init");
 

@@ -7701,49 +7701,61 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
   if (probes.empty()) return;
   s.op->newline() << "/* ---- dyninst uprobes ---- */";
   emit_module_maxuprobes (s);
-  s.op->newline() << "#include \"dyninst/uprobes.c\"";
+  s.op->newline() << "#include \"dyninst/uprobes.h\"";
 
-  // Discover and declare targets for dyninst to use
-  s.op->newline() << "const struct stapdu_target "
-                  << "stap_dyninst_uprobe_targets[] "
-                  << "__attribute__ ((section (\".stap_dyninst\"))) "
-                  << "= {";
+  // Assign "task-finder" numbers as we build up the stapdu_target table.
+  // This means we process probes[] in two passes.
+  map <string,unsigned> module_index;
+  unsigned module_index_ctr = 0;
+
+  // Discover and declare file targets
+  s.op->newline() << "static const struct stapdu_target stapdu_targets[] = {";
   s.op->indent(1);
   for (unsigned i=0; i<probes.size(); i++)
     {
       uprobe_derived_probe *p = probes[i];
-      s.op->newline() << "{";
-      // XXX pid/procname filtering?
-      s.op->line() << " .filename=" << lex_cast_qstring(p->module) << ",";
-      s.op->line() << " .offset=(loff_t)0x" << hex << p->addr << dec << "ULL,";
-      if (p->sdt_semaphore_addr)
-        s.op->line() << " .sdt_sem_offset=(loff_t)0x"
-                     << hex << p->sdt_semaphore_addr << dec << "ULL,";
-      s.op->line() << " },";
+      string pbmkey = make_pbm_key (p);
+      if (module_index.find (pbmkey) == module_index.end())
+        {
+          module_index[pbmkey] = module_index_ctr++;
+
+          s.op->newline() << "{";
+          // NB: it's essential that make_pbm_key() use all of and
+          // only the same fields as we're about to emit.
+          s.op->line() << " .path=" << lex_cast_qstring(p->module) << ",";
+          // XXX pid/procname filtering?
+          s.op->line() << " },";
+        }
     }
   s.op->newline(-1) << "};";
   s.op->assert_0_indent();
 
-  // Declare the actual probes for the runtime to use
-  s.op->newline() << "static struct stapdu_consumer "
-                  << "stap_dyninst_uprobe_consumers[] = {";
+  // Declare the individual probes
+  s.op->newline() << "static struct stapdu_probe stapdu_probes[] = {";
   s.op->indent(1);
   for (unsigned i=0; i<probes.size(); i++)
     {
       uprobe_derived_probe *p = probes[i];
+      unsigned index = module_index[make_pbm_key(p)];
       s.op->newline() << "{";
+      s.op->line() << " .target=" << index << ",";
+      s.op->line() << " .offset=" << lex_cast_hex(p->addr) << "ULL,";
+      if (p->sdt_semaphore_addr)
+        s.op->line() << " .semaphore="
+                     << lex_cast_hex(p->sdt_semaphore_addr) << "ULL,";
       s.op->line() << " .probe=" << common_probe_init (p) << ",";
       s.op->line() << " },";
     }
   s.op->newline(-1) << "};";
   s.op->assert_0_indent();
 
+  s.op->newline() << "#include \"dyninst/uprobes.c\"";
+
   // Write the probe handler.
   // NB: not static, so dyninst can find it
   s.op->newline() << "int enter_dyninst_uprobe "
                   << "(uint64_t index, struct pt_regs *regs) {";
-  s.op->newline(1) << "struct stapdu_consumer *sup = "
-                   << "&stap_dyninst_uprobe_consumers[index];";
+  s.op->newline(1) << "struct stapdu_probe *sup = &stapdu_probes[index];";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
                                  "stp_probe_type_uprobe");
   s.op->newline() << "c->uregs = regs;";
