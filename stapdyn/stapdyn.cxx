@@ -5,9 +5,9 @@
 
 extern "C" {
 #include <dlfcn.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <libgen.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -36,8 +36,6 @@ extern "C" {
 
 
 using namespace std;
-
-static const char* program = "stapdyn";
 
 
 struct stapdyn_uprobe_probe {
@@ -196,7 +194,8 @@ find_uprobes(void* module)
     }
   catch (runtime_error& e)
     {
-      clog << program << ": dlsym " << e.what() << endl;
+      clog << program_invocation_short_name
+           << ": dlsym " << e.what() << endl;
       return targets;
     }
 
@@ -240,14 +239,16 @@ run_simple_module(void* module)
     }
   catch (runtime_error& e)
     {
-      clog << program << ": dlsym " << e.what() << endl;
+      clog << program_invocation_short_name
+           << ": dlsym " << e.what() << endl;
       return 1;
     }
 
   int rc = session_init();
   if (rc)
     {
-      clog << program << ": stp_dyninst_session_init returned " << rc << endl;
+      clog << program_invocation_short_name
+           << ": stp_dyninst_session_init returned " << rc << endl;
       return 1;
     }
 
@@ -301,13 +302,12 @@ main(int argc, char * const argv[])
   if (!module)
     usage (1);
 
-  program = basename(argv[0]);
-
   (void)dlerror(); // clear previous errors
   void* dlmodule = dlopen(module, RTLD_NOW);
   if (!dlmodule)
     {
-      clog << program << ": dlopen " << dlerror() << endl;
+      clog << program_invocation_short_name
+           << ": dlopen " << dlerror() << endl;
       return 1;
     }
 
