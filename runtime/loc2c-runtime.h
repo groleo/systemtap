@@ -901,7 +901,9 @@ extern void __store_deref_bad(void);
     mm_segment_t _oldfs = get_fs();                                           \
     set_fs(seg);                                                              \
     pagefault_disable();                                                      \
-    switch (size) { \
+    if (lookup_bad_addr((unsigned long)addr, size))			\
+      _bad = 1;                                                         \
+    else switch (size) { \
       case 1: _bad = __get_user(_b, (u8 *)(_a)); _v = _b; break; \
       case 2: _bad = __get_user(_w, (u16 *)(_a)); _v = _w; break; \
       case 4: _bad = __get_user(_l, (u32 *)(_a)); _v = _l; break; \
@@ -920,7 +922,9 @@ extern void __store_deref_bad(void);
     mm_segment_t _oldfs = get_fs();                                           \
     set_fs(seg);                                                              \
     pagefault_disable();                                                      \
-    switch (size) {		 \
+    if (lookup_bad_addr((unsigned long)addr, size))			\
+      _bad = 1;                                                         \
+    else switch (size) {		                                \
       case 1: _bad = __put_user(((u8)(value)), ((u8 *)(addr))); break; \
       case 2: _bad = __put_user(((u16)(value)), ((u16 *)(addr))); break; \
       case 4: _bad = __put_user(((u32)(value)), ((u32 *)(addr))); break; \
