@@ -328,7 +328,7 @@ static unsigned long _stp_stack_unwind_one_kernel(struct context *c, unsigned de
 
 static unsigned long _stp_stack_kernel_get(struct context *c, unsigned depth)
 {
-	unsigned long pc;
+	unsigned long pc = 0;
 
 	if (c->uwcache_kernel.state == uwcache_uninitialized) {
 		c->uwcache_kernel.depth = 0;
@@ -513,7 +513,7 @@ static unsigned long _stp_stack_unwind_one_user(struct context *c, unsigned dept
 
 static unsigned long _stp_stack_user_get(struct context *c, unsigned depth)
 {
-	unsigned long pc;
+	unsigned long pc = 0;
 
 	if (c->uwcache_user.state == uwcache_uninitialized) {
 		c->uwcache_user.depth = 0;
