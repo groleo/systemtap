@@ -168,9 +168,8 @@ get_base_hash (systemtap_session& s)
   // but when developing systemtap that doesn't work well (since you
   // can compile systemtap multiple times in 1 day).  Since we don't
   // know exactly where we're getting run from, we'll use
-  // /proc/self/exe.
-  // XXX well almost exactly -- valgrind throws this off
-  h.add_path("Systemtap ", "/proc/self/exe");
+  // /proc/self/exe (and we resolve it ourselves to help valgrind).
+  h.add_path("Systemtap ", get_self_path());
 
   return h;
 }

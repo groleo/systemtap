@@ -83,6 +83,7 @@ std::string kernel_release_from_build_tree (const std::string &kernel_build_tree
 std::string normalize_machine(const std::string& machine);
 std::string autosprintf(const char* format, ...) __attribute__ ((format (printf, 1, 2)));
 const std::set<std::string>& localization_variables();
+std::string get_self_path();
 
 // stringification generics
 

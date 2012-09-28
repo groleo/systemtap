@@ -1042,4 +1042,20 @@ std::string autosprintf(const char* format, ...)
   return s; /* by copy */
 }
 
+std::string
+get_self_path()
+{
+  char buf[1024]; // This really should be enough for anybody...
+  const char *file = "/proc/self/exe";
+  ssize_t len = readlink(file, buf, sizeof(buf) - 1);
+  if (len > 0)
+    {
+      buf[len] = '\0';
+      file = buf;
+    }
+  // otherwise the path is ridiculously large, fall back to /proc/self/exe.
+  //
+  return std::string(buf);
+}
+
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */
