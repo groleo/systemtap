@@ -722,6 +722,17 @@ flag.  The comparison operator is as is for
 and the right operand is a version string.  See also the DEPRECATION
 section below.
 .PP
+If the first part is the identifier
+.BR systemtap_privilege ,
+the test refers to the privilege level that the systemtap script is
+compiled with. Here the second part is
+.BR == " or " != ,
+and the third part is a string literal, either "privileged" or "unprivileged". The former case corresponds to both the
+.BI \-\-privilege==stapusr
+and
+.BI \-\-privilege==stapsys
+options.
+.PP
 Otherwise, the CONDITION is expected to be a comparison between two string
 literals or two numeric literals.  In this case, the arguments are the only
 variables usable.

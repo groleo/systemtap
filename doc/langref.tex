@@ -2011,6 +2011,20 @@ literal for matching it. This comparison is a simple string equality or inequali
 The currently supported architecture strings are i386, i686, x86\_64, ia64,
 s390, and powerpc.
 
+\subsubsection{Conditions based on privilege level: systemtap\_privilege}
+\index{systemtap\_privilege}
+If the first part of the conditional expression is the identifier
+\texttt{systemtap\_privilege} which refers to the privilege level the
+systemtap script is being compiled with, then the second part is a
+string comparison operator ''=='' or ''!='', and the third part is a
+string literal for matching it. This comparison is a simple string
+equality or inequality.  The currently supported privilege strings are
+privileged and unprivileged. The privileged case corresponds to both
+\verb+--privilege=stapdev+ and \verb+--privilege=stapsys+ cases.
+
+This condition can be used to write scripts that can be run in both
+privileged and unprivileged modes, with additional functionality made
+available in the privileged case.
 
 \subsubsection{True and False Tokens}
 \index{tokens}
