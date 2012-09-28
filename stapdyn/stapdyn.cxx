@@ -286,8 +286,17 @@ main(int argc, char * const argv[])
         }
     }
 
+  string module_str;
   if (optind == argc - 1)
-    module = argv[optind];
+    {
+      module_str = argv[optind];
+
+      // dlopen does a library-path search if the filename doesn't have any
+      // path components.  We never want that, so give it a minimal ./ path.
+      if (module_str.find('/') == string::npos)
+        module_str.insert(0, "./");
+      module = module_str.c_str();
+    }
 
   if (!module)
     usage (1);
