@@ -628,6 +628,12 @@ make_dyninst_run_command (systemtap_session& s, const string& remotedir,
 {
   vector<string> cmd;
   cmd.push_back(getenv("SYSTEMTAP_STAPDYN") ?: BINDIR "/stapdyn");
+  if (s.verbose > 1)
+    cmd.push_back("-v");
+  if (s.verbose > 2)
+    cmd.push_back("-v");
+  if (s.suppress_warnings)
+    cmd.push_back("-w");
 
   if (!s.cmd.empty())
     {

@@ -16,7 +16,12 @@ extern "C" {
 }
 
 #include <BPatch.h>
+#include <BPatch_function.h>
+#include <BPatch_image.h>
 #include <BPatch_object.h>
+#include <BPatch_point.h>
+#include <BPatch_process.h>
+#include <BPatch_snippet.h>
 
 #include "config.h"
 #include "../git_version.h"
@@ -52,6 +57,34 @@ struct stapdyn_uprobe_target {
 };
 
 
+// no buffer -> badbit -> quietly suppressed output
+static ostream nullstream(NULL);
+
+static unsigned stapdyn_log_level = 0;
+static ostream&
+staplog(unsigned level=0)
+{
+  if (level > stapdyn_log_level)
+    return nullstream;
+  return clog << program_invocation_short_name << ": ";
+}
+
+static bool stapdyn_supress_warnings = false;
+static ostream&
+stapwarn(void)
+{
+  if (stapdyn_supress_warnings)
+    return nullstream;
+  return clog << program_invocation_short_name << ": WARNING: ";
+}
+
+static ostream&
+staperror(void)
+{
+  return clog << program_invocation_short_name << ": ERROR: ";
+}
+
+
 template <typename T> void
 set_dlsym(T*& pointer, void* handle, const char* symbol, bool required=true)
 {
@@ -60,9 +93,9 @@ set_dlsym(T*& pointer, void* handle, const char* symbol, bool required=true)
   if (required)
     {
       if ((err = dlerror()))
-        throw runtime_error(err);
+        throw runtime_error("dlsym " + string(err));
       if (pointer == NULL)
-        throw runtime_error(string(symbol) + " is NULL");
+        throw runtime_error("dlsym " + string(symbol) + " is NULL");
     }
 }
 
@@ -70,7 +103,8 @@ set_dlsym(T*& pointer, void* handle, const char* symbol, bool required=true)
 static void __attribute__ ((noreturn))
 usage (int rc)
 {
-  clog << "Usage: stapdyn -c CMD MODULE" << endl;
+  clog << "Usage: " << program_invocation_short_name
+       << " MODULE -c CMD" << endl;
   exit (rc);
 }
 
@@ -79,12 +113,12 @@ call_inferior_function(BPatch_process *app, const string& name)
 {
   BPatch_image *image = app->getImage();
 
-  BPatch_Vector<BPatch_function *> functions;
+  vector<BPatch_function *> functions;
   image->findFunction(name.c_str(), functions);
 
   for (size_t i = 0; i < functions.size(); ++i)
     {
-      BPatch_Vector<BPatch_snippet *> args;
+      vector<BPatch_snippet *> args;
       BPatch_funcCallExpr call(*functions[i], args);
       app->oneTimeCode(call);
       app->continueExecution();
@@ -113,34 +147,38 @@ instrument_uprobes(BPatch_process *app,
         file_objects[resolved_path] = objects[i];
     }
 
-  BPatch_Vector<BPatch_function *> functions;
+  vector<BPatch_function *> functions;
   image->findFunction("enter_dyninst_uprobe", functions);
   if (functions.empty()) return;
   BPatch_function& enter_function = *functions[0];
 
   app->beginInsertionSet();
-  for (uint64_t i = 0; i < targets.size(); ++i)
+  for (size_t i = 0; i < targets.size(); ++i)
     {
       const stapdyn_uprobe_target& target = targets[i];
 
       BPatch_object* object = file_objects[target.path];
       if (!object)
         {
-          clog << "no object named " << target.path << endl;
+          // If we didn't find it now, it might be dlopen'ed later.
+          // It may even be an object in a child process, or never seen
+          // at all for that matter.
+          staplog(2) << "no initial object named " << target.path << endl;
           continue;
         }
-      clog << "found target " << target.path << ", inserting "
-           << target.probes.size() << " probes" << endl;
 
-      for (uint64_t j = 0; j < target.probes.size(); ++j)
+      staplog(1) << "found target " << target.path << ", inserting "
+                 << target.probes.size() << " probes" << endl;
+
+      for (size_t j = 0; j < target.probes.size(); ++j)
         {
           const stapdyn_uprobe_probe& probe = target.probes[j];
 
           Dyninst::Address address = object->fileOffsetToAddr(probe.offset);
           if (address == BPatch_object::E_OUT_OF_BOUNDS)
             {
-              clog << "couldn't convert " << lex_cast_hex(probe.offset)
-                   << " in " << target.path << " to an address" << endl;
+              stapwarn() << "couldn't convert " << target.path << "+"
+                         << lex_cast_hex(probe.offset) << " to an address" << endl;
               continue;
             }
 
@@ -148,13 +186,15 @@ instrument_uprobes(BPatch_process *app,
           object->findPoints(address, points);
           if (points.empty())
             {
-              clog << "couldn't find instrumentation point for address "
-                   << lex_cast_hex(address) << " at offset "
-                   << lex_cast_hex(probe.offset) << " in " << target.path << endl;
+              stapwarn() << "couldn't find an instrumentation point at "
+                         << lex_cast_hex(address) << ", " << target.path
+                         << "+" << lex_cast_hex(probe.offset) << endl;
               continue;
             }
 
-          BPatch_Vector<BPatch_snippet *> args;
+          // TODO check each point->getFunction()->isInstrumentable()
+
+          vector<BPatch_snippet *> args;
           args.push_back(new BPatch_constExpr((int64_t)probe.index));
           args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
           BPatch_funcCallExpr call(enter_function, args);
@@ -183,21 +223,12 @@ find_uprobes(void* module)
   if (target_count == NULL) // no uprobes
     return targets;
 
-  try
-    {
-      // if target_count exists, the rest of these should too
-      set_dlsym(target_path, module, "stp_dyninst_target_path");
-      set_dlsym(probe_count, module, "stp_dyninst_probe_count");
-      set_dlsym(probe_target, module, "stp_dyninst_probe_target");
-      set_dlsym(probe_offset, module, "stp_dyninst_probe_offset");
-      set_dlsym(probe_semaphore, module, "stp_dyninst_probe_semaphore");
-    }
-  catch (runtime_error& e)
-    {
-      clog << program_invocation_short_name
-           << ": dlsym " << e.what() << endl;
-      return targets;
-    }
+  // if target_count exists, the rest of these should too
+  set_dlsym(target_path, module, "stp_dyninst_target_path");
+  set_dlsym(probe_count, module, "stp_dyninst_probe_count");
+  set_dlsym(probe_target, module, "stp_dyninst_probe_target");
+  set_dlsym(probe_offset, module, "stp_dyninst_probe_offset");
+  set_dlsym(probe_semaphore, module, "stp_dyninst_probe_semaphore");
 
   const uint64_t ntargets = target_count();
   for (uint64_t i = 0; i < ntargets; ++i)
@@ -212,17 +243,15 @@ find_uprobes(void* module)
         targets[ti].probes.push_back(p);
     }
 
-#if 0 // verbose debug
   for (uint64_t i = 0; i < ntargets; ++i)
     {
       stapdyn_uprobe_target& t = targets[i];
-      clog << "target " << t.path << " has "
-        << t.probes.size() << " probes" << endl;
+      staplog(3) << "target " << t.path << " has "
+                 << t.probes.size() << " probes" << endl;
       for (uint64_t j = 0; j < t.probes.size(); ++j)
-        clog << "  offset:" << (void*)t.probes[i].offset
-          << " semaphore:" << t.probes[i].semaphore << endl;
+        staplog(3) << "  offset:" << (void*)t.probes[i].offset
+                   << " semaphore:" << t.probes[i].semaphore << endl;
     }
-#endif
 
   return targets;
 }
@@ -239,16 +268,14 @@ run_simple_module(void* module)
     }
   catch (runtime_error& e)
     {
-      clog << program_invocation_short_name
-           << ": dlsym " << e.what() << endl;
+      staperror() << e.what() << endl;
       return 1;
     }
 
   int rc = session_init();
   if (rc)
     {
-      clog << program_invocation_short_name
-           << ": stp_dyninst_session_init returned " << rc << endl;
+      stapwarn() << "stp_dyninst_session_init returned " << rc << endl;
       return 1;
     }
 
@@ -267,12 +294,20 @@ main(int argc, char * const argv[])
   const char* module = NULL;
 
   int opt;
-  while ((opt = getopt (argc, argv, "c:V")) != -1)
+  while ((opt = getopt (argc, argv, "c:vwV")) != -1)
     {
       switch (opt)
         {
         case 'c':
           command = optarg;
+          break;
+
+        case 'v':
+          ++stapdyn_log_level;
+          break;
+
+        case 'w':
+          stapdyn_supress_warnings = true;
           break;
 
         case 'V':
@@ -306,8 +341,7 @@ main(int argc, char * const argv[])
   void* dlmodule = dlopen(module, RTLD_NOW);
   if (!dlmodule)
     {
-      clog << program_invocation_short_name
-           << ": dlopen " << dlerror() << endl;
+      staperror() << "dlopen " << dlerror() << endl;
       return 1;
     }
 
@@ -332,8 +366,8 @@ main(int argc, char * const argv[])
     child_argv = sh_argv;
   else
     {
-      clog << "wordexp: parsing error (" << rc << ")" << endl;
-      exit(rc);
+      staperror() << "wordexp parsing error (" << rc << ")" << endl;
+      return 1;
     }
 
   string fullpath = find_executable(child_argv[0]);
@@ -341,7 +375,18 @@ main(int argc, char * const argv[])
 
   app->loadLibrary(module);
 
-  instrument_uprobes(app, find_uprobes(dlmodule));
+  vector<stapdyn_uprobe_target> targets;
+  try
+    {
+      targets = find_uprobes(dlmodule);
+    }
+  catch (runtime_error& e)
+    {
+      staperror() << e.what() << endl;
+      return 1;
+    }
+
+  instrument_uprobes(app, targets);
 
   call_inferior_function(app, "stp_dyninst_session_init");
 
