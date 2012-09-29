@@ -2108,7 +2108,10 @@ parser::parse_global (vector <vardecl*>& globals, vector<probe*>&)
 	}
 
       if (t && t->type == tok_operator && t->content == ";") // termination
+	{
 	  swallow ();
+	  break;
+	}
 
       if (t && t->type == tok_operator && t->content == ",") // next global
 	{
