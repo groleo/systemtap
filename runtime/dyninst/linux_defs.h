@@ -49,6 +49,8 @@
 #define __must_be_array(arr) 0
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
 
+#define  noinline			__attribute__((noinline))
+
 #define ATOMIC_INIT(i)  { (i) }
 
 static inline void atomic_inc(atomic_t *v)
