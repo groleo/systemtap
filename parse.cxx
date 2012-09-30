@@ -2308,14 +2308,14 @@ parser::parse_probe_point ()
         {
           swallow ();
           t = peek ();
-          if (t && ! (t->type == tok_operator && t->content == "("))
+          if (!(t && t->type == tok_operator && t->content == "("))
             throw parse_error (_("expected '('"));
           swallow ();
 
           pl->condition = parse_expression ();
 
           t = peek ();
-          if (t && ! (t->type == tok_operator && t->content == ")"))
+          if (!(t && t->type == tok_operator && t->content == ")"))
             throw parse_error (_("expected ')'"));
           swallow ();
           t = peek ();
