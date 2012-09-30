@@ -10,6 +10,8 @@ probe syscall.nanosleep.return, syscall.compat_nanosleep.return ?
 	printf("%s %s\n", name, retstr)
 }
 
+# nfsservctl was removed in kernel 3.0/2.6.40.
+%( kernel_v < "2.6.40" && CONFIG_NFSD == "[ym]" %?
 probe syscall.nfsservctl ?
 {
 	printf("%s(%s)\n", name, argstr)
@@ -19,6 +21,7 @@ probe syscall.nfsservctl.return ?
 {
 	printf("%s %s\n", name, retstr)
 }
+%)
 
 probe syscall.nice ?
 {

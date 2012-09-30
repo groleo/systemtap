@@ -553,7 +553,9 @@ function _itimer_which_str(which) {
 
 /*
  * Return the command name for nfsservctl()
+ * nfsservctl was removed in kernel 3.0/2.6.40.
  */
+%( kernel_v < "2.6.40" && CONFIG_NFSD == "[ym]" %?
 function _nfsctl_cmd_str(cmd) {
 	if(cmd == 0) return "NFSCTL_SVC"
 	if(cmd == 1) return "NFSCTL_ADDCLIENT"
@@ -566,6 +568,7 @@ function _nfsctl_cmd_str(cmd) {
 	if(cmd == 8) return "NFSCTL_GETFS"
 	return sprintf("UNRECOGNIZED VALUE: %d", cmd)
 }
+%)
 
 /*
  * Return  the  symbolic   string  representation

@@ -59,7 +59,8 @@ probe syscall.compat_nanosleep.return = kernel.function("compat_sys_nanosleep").
 # long compat_sys_nfsservctl(int cmd, struct compat_nfsctl_arg __user *arg,
 #					union compat_nfsctl_res __user *res)
 #
-%( CONFIG_NFSD == "[ym]" || CONFIG_COMPAT == "y" %?
+# nfsservctl was removed in kernel 3.0/2.6.40.
+%( kernel_v < "2.6.40" && CONFIG_NFSD == "[ym]" %?
 probe syscall.nfsservctl = kernel.function("sys_nfsservctl").call ?,
                            kernel.function("compat_sys_nfsservctl").call ?
 {
