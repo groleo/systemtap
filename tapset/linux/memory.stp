@@ -179,7 +179,7 @@ probe vm.write_shared_copy =  kernel.function("cow_user_page") ?,
  * Context:
  *  The process calling mmap.
  */
-probe vm.mmap = kernel.function("do_mmap"), kernel.function("do_mmap2") ?
+probe vm.mmap = kernel.function("vm_mmap")?, kernel.function("do_mmap")?, kernel.function("do_mmap2")?
 {
     name = "mmap"
     address = $addr
