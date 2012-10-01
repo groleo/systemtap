@@ -90,10 +90,10 @@ function usymdata:string (addr: long) %{
  *  name  of the function containing the address, and an estimate of
  *  its position within that function.  Return nothing.
  */
-function print_ustack(stk:string) { upsyms(stk) }
+function print_ustack(stk:string) { print_usyms(stk) }
 
 /**
- * sfunction upsyms - Print out user stack from string
+ * sfunction print_usyms - Print out user stack from string
  * @callers: String with list of hexadecimal (user) addresses
  *
  *  Description: This function performs a symbolic lookup of the addresses
@@ -106,7 +106,7 @@ function print_ustack(stk:string) { upsyms(stk) }
  *  its position within that function, as obtained by usymdata().
  *  Returns nothing.
  */
-function upsyms (callers:string) {
+function print_usyms (callers:string) {
          sym = tokenize (callers, " ");
          while (sym != "") {
                printf (" %s : %s\n", sym, usymdata (strtol(sym,16)));
@@ -132,10 +132,10 @@ function upsyms (callers:string) {
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
  * print_ustack.
  */
-function sprint_ustack:string(stk:string) { uspsyms(stk) }
+function sprint_ustack:string(stk:string) { sprint_usyms(stk) }
 
 /**
- * sfunction uspsyms - Return stack for user addresses from string
+ * sfunction sprint_usyms - Return stack for user addresses from string
  *
  * @callers: String with list of hexadecimal (user) addresses
  *
@@ -151,9 +151,9 @@ function sprint_ustack:string(stk:string) { uspsyms(stk) }
  * brackets). Returns the backtrace as string (each line terminated by
  * a newline character).  Note that the returned stack will be
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
- * upsyms().
+ * print_usyms().
  */
-function uspsyms (callers:string) {
+function sprint_usyms (callers:string) {
          sym = tokenize (callers, " ");
          foo = ""; l = 0
          while (sym != "") {

@@ -58,7 +58,7 @@ function stack:long (n:long) {
  *  name  of the function containing the address, and an estimate of
  *  its position within that function.  Return nothing.
  */
-function print_stack(stk:string) { psyms(stk) }
+function print_stack(stk:string) { print_syms(stk) }
 
 /**
  * sfunction sprint_stack - Return stack for kernel addresses from string
@@ -77,7 +77,7 @@ function print_stack(stk:string) { psyms(stk) }
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
  * print_stack.
  */
-function sprint_stack:string(stk:string) { return spsyms(stk) }
+function sprint_stack:string(stk:string) { return sprint_syms(stk) }
 
 /**
  * sfunction probefunc - Return the probe point's function name, if known
@@ -229,7 +229,7 @@ function symdata:string (addr: long) %{ /* pure */ /* pragma:symbols */
 %}
 
 /**
- * sfunction psyms - Print out kernel stack from string
+ * sfunction print_syms - Print out kernel stack from string
  * @callers: String with list of hexadecimal (kernel) addresses
  *
  *  Description: This function performs a symbolic lookup of the addresses
@@ -242,7 +242,7 @@ function symdata:string (addr: long) %{ /* pure */ /* pragma:symbols */
  *  its position within that function, as obtained by symdata().
  *  Returns nothing.
  */
-function psyms (callers:string) {
+function print_syms (callers:string) {
          sym = tokenize (callers, " ");
          while (sym != "") {
                printf (" %s : %s\n", sym, symdata (strtol(sym,16)));
@@ -251,7 +251,7 @@ function psyms (callers:string) {
 }
 
 /**
- * sfunction spsyms - Return stack for kernel addresses from string
+ * sfunction sprint_syms - Return stack for kernel addresses from string
  *
  * @callers: String with list of hexadecimal (kernel) addresses
  *
@@ -267,9 +267,9 @@ function psyms (callers:string) {
  * brackets). Returns the backtrace as string (each line terminated by
  * a newline character).  Note that the returned stack will be
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
- * psyms().
+ * print_syms().
  */
-function spsyms (callers:string) {
+function sprint_syms (callers:string) {
          sym = tokenize (callers, " ");
          foo = ""; l = 0
          while (sym != "") {
