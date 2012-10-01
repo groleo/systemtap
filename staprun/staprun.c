@@ -23,6 +23,7 @@
 #define _BSD_SOURCE
 #include "staprun.h"
 #include "../privilege.h"
+#include "../runtime/k_syms.h"
 #include <string.h>
 #include <sys/uio.h>
 #include <glob.h>
@@ -472,12 +473,6 @@ int send_a_relocation (const char* module, const char* reloc, unsigned long long
   return rc;
 }
 
-
-#ifdef __powerpc64__
-#define KERNEL_RELOC_SYMBOL ".__start"
-#else
-#define KERNEL_RELOC_SYMBOL "_stext"
-#endif
 
 int send_relocation_kernel ()
 {

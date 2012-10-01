@@ -18,6 +18,7 @@
 #include "dwarf_wrappers.h"
 #include "setupdwfl.h"
 #include "task_finder.h"
+#include "runtime/k_syms.h"
 #include "dwflpp.h"
 
 #include <cstdlib>
@@ -5727,7 +5728,7 @@ dump_symbol_tables (Dwfl_Module *m,
 	      // there may have been no kernel probes set.  We could
 	      // use tapsets.cxx:lookup_symbol_address(), but then
 	      // we're already iterating over the same data here...
-	      if (! strcmp(name, "_stext"))
+	      if (! strcmp(name, KERNEL_RELOC_SYMBOL))
 		{
 		  int ki;
 		  extra_offset = sym_addr;
