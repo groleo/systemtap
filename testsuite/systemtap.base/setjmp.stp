@@ -70,7 +70,7 @@ probe process("/lib*/libc.so.*").mark("longjmp_target")
   bt = callers();
   if (bt != jmp_backtrace[tid()])
     printf("longjmp_target backtrace does not match setjmp:\n\t%s\nvs\t%s",
-	   sprint_ustack(jmp_backtrace[tid()]), sprint_ustack(bt));
+	   sprint_usyms(jmp_backtrace[tid()]), sprint_usyms(bt));
 
   printf("hit longjmp_target\n");
 }

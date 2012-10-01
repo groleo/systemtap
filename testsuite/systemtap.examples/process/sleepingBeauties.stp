@@ -50,7 +50,7 @@ probe timer.profile {
     if (patience >= boredom) {
       printf ("thread %d (%s) impatient after %d %s\n",
               tid, name[tid], patience, time_name)
-      print_stack (back[tid])
+      print_syms (back[tid])
       printf ("\n")
       bored[tid] = 1 # defer further reports to wakeup
     }

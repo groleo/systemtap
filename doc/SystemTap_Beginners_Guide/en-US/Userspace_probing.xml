@@ -318,7 +318,7 @@ FIXME description of how to use the stack backtracing
 </para>
 
 <screen>stap -d /bin/ls --ldd \
--e 'probe process("ls").function("xmalloc") {print_ustack(ubacktrace())}' \
+-e 'probe process("ls").function("xmalloc") {print_usyms(ubacktrace())}' \
 -c "ls /"</screen>
 
 <para>

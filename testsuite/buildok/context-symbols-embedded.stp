@@ -1,8 +1,8 @@
 #! stap -p4
 
 probe begin {
-	print_stack(backtrace())
-	log(sprint_stack(backtrace()))
+	print_syms(backtrace())
+	log(sprint_syms(backtrace()))
 	log(probefunc())
 	log(probemod())
 	log(modname(0))

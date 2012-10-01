@@ -6,10 +6,10 @@ probe begin {
 
 	# This is really nonsense.  In real use you'd do something
 	# like:
-	#  print_ustack(ubacktrace())
+	#  print_usyms(ubacktrace())
 	#
 	# On platforms without uprobes, this will fail.  But,
 	# buildok.exp will kfail this test.
-	print_ustack("")
-	log(sprint_ustack(""))
+	print_usyms("")
+	log(sprint_usyms(""))
 }

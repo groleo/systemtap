@@ -49,8 +49,8 @@ probe process(@1).function("main_func")
     }
   else if (hits == 1)
     {
-      log("print_ustack exe 1");
-      print_ustack(ubacktrace());
+      log("print_usyms exe 1");
+      print_usyms(ubacktrace());
       hits++;
     }
 }
@@ -65,8 +65,8 @@ probe process(@2).function("lib_func")
     }
   else if (hits == 3)
     {
-      log("print_ustack lib 3");
-      print_ustack(ubacktrace());
+      log("print_usyms lib 3");
+      print_usyms(ubacktrace());
       hits++;
     }
 }

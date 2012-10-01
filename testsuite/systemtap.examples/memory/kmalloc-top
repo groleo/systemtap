@@ -74,7 +74,7 @@ probe timer.ms(100), end
 {
   foreach (stack in kmalloc_stack) {
     printf(\"<hashkey>\\n\")
-    print_stack(stack) 
+    print_syms(stack) 
     printf(\"</hashkey>\\n\")
     printf(\"<hashval>%d</hashval>\\n\", kmalloc_stack[stack])
   }
