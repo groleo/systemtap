@@ -1894,121 +1894,40 @@ SYSTEMTAP_DEBUGINFO_PATH
 .ESAMPLE
 
 .SS TAPSET RESTRICTIONS
-The following built-in tapset functions are unconditionally available to all users:
-.SAMPLE
+In general, tapset functions are only available for members of the
+group stapusr when they do not gather information that an ordinary
+program running with that user's privileges would be denied access to.
 
-_ehostunreach:long ()
-_enetunreach:long ()
-_icmp_dest_unreach:long ()
-_icmp_exc_fragtime:long ()
-_icmp_prot_unreach:long ()
-_icmp_time_exceeded:long ()
-_MM_ANONPAGES:long()
-_MM_FILEPAGES:long()
-_net_rx_drop:long ()
-_rtn_broadcast:long ()
-_rtn_multicast:long ()
-_rtn_unspec:long ()
-_sys_pipe2_flag_str:string (f:long)
-AF_INET:long()
+There are two categories of unprivileged tapset functions. The first
+category consists of utility functions that are unconditionally
+available to all users; these include such things as:
+.SAMPLE
 cpu:long ()
-cputime_to_msecs:long (cputime:long)
-egid:long ()
-error (msg:string)
-euid:long ()
-execname:string ()
 exit ()
-get_cycles:long ()
-gettimeofday_ns:long ()
-GFP_KERNEL:long()
-gid:long ()
-HZ:long ()
-is_myproc:long ()
-isdigit:long(str:string)
-isinstr:long(s1:string,s2:string)
-jiffies:long ()
-log (msg:string)
-mem_page_size:long ()
-module_name:string ()
-pexecname:string ()
-pgrp:long ()
-pid:long ()
-pn:string ()
-pp:string ()
-ppid:long ()
-randint:long(n:long) 
-registers_valid:long ()
-sid:long ()
 str_replace:string (prnt_str:string, srch_str:string, rplc_str:string)
-stringat:long(str:string, pos:long)
-strlen:long(s:string)
-strtol:long(str:string, base:long)
-substr:string(str:string,start:long, length:long)
-target:long ()
-task_utime:long ()
-task_stime:long ()
-text_str:string(input:string) 
-text_strn:string(input:string, len:long, quoted:long)
-tid:long ()
-tokenize:string(input:string, delim:string)
-tz_gmtoff() {
-tz_name() {
-uid:long ()
-user_mode:long ()
-warn (msg:string)
 .ESAMPLE
 
-The following built-in tapset functions are available to
-members of only the group stapusr
-within their own processes. Scripts written by these users must test the
-result of the tapset function \fIis_myproc\fR and only call these functions if
-the result is 1. The script will exit immediately if any of these functions is
-called by an unprivileged user within a probe within a process which is not
-owned by that user.
+The second category consists of so-called
+.I myproc-unprivileged
+functions that can only gather information within their own
+processes. Scripts that wish to use these functions must test the
+result of the tapset function \fIis_myproc\fR and only call these
+functions if the result is 1. The script will exit immediately if any
+of these functions are called by an unprivileged user within a probe
+within a process which is not owned by that user. Examples of
+.I myproc-unprivileged
+functions include:
 .SAMPLE
-
-_utrace_syscall_nr:long ()
-_utrace_syscall_arg:long (n:long)
-_utrace_syscall_return:long ()
-print_ubacktrace ()
-print_ubacktrace_brief ()
 print_usyms (stk:string)
-sprint_usyms:string (stk:string)
-sprint_ubacktrace:string ()
-uaddr:long ()
-ubacktrace:string ()
-ucallers:string ()
-umodname:string (addr:long)
-user_char:long (addr:long)
-user_char_warn:long (addr:long)
 user_int:long (addr:long)
-user_int_warn:long (addr:long)
-user_int16:long (addr:long)
-user_int32:long (addr:long)
-user_int64:long (addr:long)
-user_int8:long (addr:long)
-user_long:long (addr:long)
-user_long_warn:long (addr:long)
-user_short:long (addr:long)
-user_short_warn:long (addr:long)
-user_string_quoted:string (addr:long)
-user_string_n_quoted:string (addr:long, n:long)
-user_string_n_warn:string (addr:long, n:long)
-user_string_n2:string (addr:long, n:long, err_msg:string)
-user_string_warn:string (addr:long)
-user_string2:string (addr:long, err_msg:string)
-user_uint16:long (addr:long)
-user_uint32:long (addr:long)
-user_uint8:long (addr:long)
-user_ushort:long (addr:long)
-user_ushort_warn:long (addr:long)
-ustack:long (n:long)
-usymdata:string (addr: long)
-usymname:string (addr: long)
+usymname:string (addr:long)
 .ESAMPLE
 
-No other built-in tapset functions may be used by
-members of only the group stapusr.
+A compile error is triggered when any function not in either of the
+above categories is used by members of only the group stapusr.
+
+No other built-in tapset functions may be used by members of only the
+group stapusr.
 
 .\" PR6864: disable temporarily 
 .\".SH MAKING DO WITH SYMBOL TABLES
