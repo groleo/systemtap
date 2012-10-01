@@ -1055,7 +1055,7 @@ get_self_path()
     }
   // otherwise the path is ridiculously large, fall back to /proc/self/exe.
   //
-  return std::string(buf);
+  return std::string(file);
 }
 
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */
