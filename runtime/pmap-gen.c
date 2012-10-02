@@ -665,6 +665,14 @@ static int KEYSYM(_stp_pmap_tls_object_init)(struct tls_data_object_t *obj)
 	if (_stp_map_tls_object_init(obj) != 0)
 		return -1;
 
+	/* Copy the hist params from the agg. We need to do this in
+	   case this pmap contains an hstat. */
+	m->hist.type = p->agg.hist.type;
+	m->hist.start = p->agg.hist.start;
+	m->hist.stop = p->agg.hist.stop;
+	m->hist.interval = p->agg.hist.interval;
+	m->hist.buckets = p->agg.hist.buckets;
+
 	m->get_key = KEYSYM(pmap_get_key);
 	m->copy = KEYSYM(pmap_copy_keys);
 	m->cmp = KEYSYM(pmap_key_cmp);
@@ -680,6 +688,7 @@ static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries, int wrap)
 	if (pmap) {
 		int i;
 		MAP m;
+#ifdef __KERNEL__
 		for_each_possible_cpu(i) {
 			m = (MAP)per_cpu_ptr (pmap->map, i);
 			m->get_key = KEYSYM(pmap_get_key);
@@ -689,6 +698,13 @@ static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries, int wrap)
 			spin_lock_init(m->lock);
 #endif
 		}
+#else
+		/* Override the tls data object init function with one
+		 * that knows how to handle pmaps. */
+		_stp_tls_data_container_update(&pmap->container,
+					       &KEYSYM(_stp_pmap_tls_object_init),
+					       &_stp_map_tls_object_free);
+#endif
 		m = &pmap->agg;
 		m->get_key = KEYSYM(pmap_get_key);
 		m->copy = KEYSYM(pmap_copy_keys);
