@@ -1258,7 +1258,7 @@ probe foo {
 probe end {
   printf ("avg %d = sum %d / count %d\\n",
           @avg(x), @sum(x), @count(x))
-  print (@hist_log(v))
+  print (@hist_log(x))
 }
 .ESAMPLE
 
