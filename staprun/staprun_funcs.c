@@ -599,13 +599,19 @@ static privilege_t get_module_required_credentials (
 {
 #ifndef HAVE_ELF_GETSHDRSTRNDX
   /* Without the proper ELF support, we can't determine the credentials required to run this
-     module. It may have some future privilege level higher than stapsys, which we don't know about.
-     We are forced to assume that requires the highest privilege level. */
+     module. However, we know that it has been correctly signed (we only check privilege
+     credentials for correctly signed modules). It is therefore either
+       a) a dual-privilege-level era module compiled with stapusr privileges enforced or,
+       b) a multi-privilege-level era module with built-in privilege level checking.
+     In either case, we can load it for stapusr level users and above. In case a, it requires
+     exactly that privilege level. In case b, the module will self check against the user's
+     actual privilege level.
+  */
   if (verbose >= 1) {
     err ("Unable to determine the privilege level required for the module %s. Assuming %s.\n",
-	 module_path, pr_name (pr_highest));
+	 module_path, pr_name (pr_stapusr));
   }
-  return pr_highest;
+  return pr_stapusr;
 #else
   Elf_Scn *scn = 0;
   Elf_Data *data = 0;
@@ -623,9 +629,9 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Section name \"%s\" not found in module %s.\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.\n", pr_name (pr_unprivileged));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_stapusr));
     }
-    return pr_unprivileged;
+    return pr_stapusr;
   }
 
   /* From here on if there is an error in the data, then it is most likely caused by a newer
