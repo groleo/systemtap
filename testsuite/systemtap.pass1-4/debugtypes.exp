@@ -7,8 +7,14 @@ if {[target_compile $srcdir/$subdir/$test.cxx $test.exe executable \
 }
 pass "compiling $test.cxx"
 
-if {[stap_run_batch $srcdir/$subdir/$test.stp] == 0} {
-  pass "compiling $test.stp"
-} else {
-  fail "compiling $test.stp"
+foreach runtime [get_runtime_list] {
+    set testname "compiling $test.stp"
+    if {$runtime != ""} {
+	set rc [stap_run_batch $srcdir/$subdir/$test.stp --runtime=$runtime]
+	lappend testname "($runtime)"
+    } else {
+	set rc [stap_run_batch $srcdir/$subdir/$test.stp]
+    }
+
+    if {$rc == 0} { pass $testname } else { fail $testname }
 }

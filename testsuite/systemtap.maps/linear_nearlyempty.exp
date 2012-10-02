@@ -20,6 +20,10 @@ value |-------------------------------------------------- count
  1050 |                                                   0
 }
 
-stap_run2 $srcdir/$subdir/$test.stp
-
-
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test.stp --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test.stp
+    }
+}

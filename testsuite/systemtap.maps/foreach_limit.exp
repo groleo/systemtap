@@ -96,6 +96,10 @@ loop had 71 iterations
 
 Done.}
 
-stap_run2 $srcdir/$subdir/$test.stp
-
-
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test.stp --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test.stp
+    }
+}
