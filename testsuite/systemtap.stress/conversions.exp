@@ -13,7 +13,7 @@ proc run_conv_test {filename} {
 
 	# Turn off the duplication elimination to get an accurate
 	# count (PR12168)
-	spawn stap -vv -DMAXERRORS=40 $filename $value
+	spawn stap -vv -DMAXSKIPPED=99999 -DMAXERRORS=40 $filename $value
 	set errs 0
 	verbose -log "exp $test $errs"
 	expect {
