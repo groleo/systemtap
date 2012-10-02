@@ -7730,6 +7730,10 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
   s.op->newline(-1) << "};";
   s.op->assert_0_indent();
 
+  // loc2c-generated code assumes pt_regs are available, so use this to make
+  // sure we always have *something* for it to dereference...
+  s.op->newline() << "static struct pt_regs stapdu_dummy_uregs = {0};";
+
   // Declare the individual probes
   s.op->newline() << "static struct stapdu_probe stapdu_probes[] = {";
   s.op->indent(1);
@@ -7758,7 +7762,7 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
   s.op->newline(1) << "struct stapdu_probe *sup = &stapdu_probes[index];";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
                                  "stp_probe_type_uprobe");
-  s.op->newline() << "c->uregs = regs;";
+  s.op->newline() << "c->uregs = regs ?: &stapdu_dummy_uregs;";
   s.op->newline() << "c->user_mode_p = 1;";
   // XXX: once we have regs, check how dyninst sets the IP
   // XXX: the way that dyninst rewrites stuff is probably going to be
