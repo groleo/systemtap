@@ -1,0 +1,13 @@
+#! stap -p4
+
+%( systemtap_privilege == "privileged" %?
+probe begin { printf("begin!") } 
+%:
+**ERROR**
+%)
+
+%( systemtap_privilege == "unprivileged" %?
+**ERROR**
+%:
+probe end { printf("end!") } 
+%)
