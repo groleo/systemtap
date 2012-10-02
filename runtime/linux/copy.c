@@ -24,31 +24,6 @@
  * @{
  */
 
-/** Safely read from userspace or kernelspace.
- * On success, returns 0. Returns -EFAULT on error.
- *
- * This uses __get_user() to read from userspace or
- * kernelspace.  Will not sleep or cause pagefaults when
- * called from within a kprobe context.
- *
- * @param segment . KERNEL_DS for kernel access
- *                  USER_DS for userspace.
- */
-
-/* XXX: see also kread/uread in loc2c-runtime.h */
-/* XXX: add bad_addr check */
-#define _stp_read_address(x, ptr, segment)    \
-	({				      \
-		long ret;		      \
-		mm_segment_t ofs = get_fs();  \
-		set_fs(segment);	      \
-                pagefault_disable();          \
-		ret = __stp_get_user(x, ptr); \
-                pagefault_enable();           \
-		set_fs(ofs);		      \
-		ret;   			      \
-	})
-
 
 static long __stp_strncpy_from_user(char *dst, const char __user *src, long count);
 
@@ -121,17 +96,10 @@ do {									   \
 	do { res = strncpy_from_user(dst, src, count); } while(0)
 #elif defined (__ia64__)
 #define __stp_strncpy_from_user(dst,src,count,res)		\
-	do {							\
-	    if (in_atomic() || irqs_disabled()) {		\
-		pagefault_disable();				\
-		res = __strncpy_from_user(dst, src, count);	\
-		pagefault_enable();				\
-	    }							\
-	    else						\
-		res = __strncpy_from_user(dst, src, count);	\
-	} while(0)
+	do { res = __strncpy_from_user(dst, src, count); } while(0)
 #endif
 #endif	/* !CONFIG_GENERIC_STRNCPY_FROM_USER */
+
 
 /** Copy a NULL-terminated string from userspace.
  * On success, returns the length of the string (not including the trailing
@@ -175,13 +143,19 @@ static long _stp_strncpy_from_user(char *dst, const char __user *src, long count
  *
  */
 
+/* XXX: see also kread/uread in loc2c-runtime.h */
 static unsigned long _stp_copy_from_user(char *dst, const char __user *src, unsigned long count)
 {
 	if (count) {
+                mm_segment_t _oldfs = get_fs();
+                set_fs(USER_DS);
+                pagefault_disable();
 		if (access_ok(VERIFY_READ, src, count))
 			count = __copy_from_user_inatomic(dst, src, count);
 		else
 			memset(dst, 0, count);
+                pagefault_enable();
+                set_fs(_oldfs);
 	}
 	return count;
 }

@@ -66,7 +66,7 @@ static int _stp_vscnprintf(char *buf, size_t size, const char *fmt, va_list args
  */
 static void _stp_text_str(char *outstr, char *in, int len, int quoted, int user)
 {
-	char c, *out = outstr;
+	char c = '\0', *out = outstr;
 
 	if (len <= 0 || len > MAXSTRINGLEN-1)
 		len = MAXSTRINGLEN-1;
@@ -76,9 +76,7 @@ static void _stp_text_str(char *outstr, char *in, int len, int quoted, int user)
 	}
 
 	if (user) {
-		if (!access_ok(VERIFY_READ, (char __user *)in, 1))
-			goto bad;
-		if (__stp_get_user(c, in))
+		if (_stp_read_address(c, in, USER_DS))
 			goto bad;
 	} else
 		c = *in;
@@ -148,7 +146,7 @@ static void _stp_text_str(char *outstr, char *in, int len, int quoted, int user)
 		len -= num;
 		in++;
 		if (user) {
-			if (__stp_get_user(c, in))
+			if (_stp_read_address(c, in, USER_DS))
 				goto bad;
 		} else
 			c = *in;
