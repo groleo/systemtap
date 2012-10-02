@@ -222,8 +222,7 @@ compile_dyninst (systemtap_session& s)
       cmd.push_back("-Q");
     }
 
-  bool quiet = (s.verbose < 2);
-  int rc = stap_system (s.verbose, cmd, quiet, quiet);
+  int rc = stap_system (s.verbose, cmd);
   if (rc)
     s.set_try_server ();
   return rc;
