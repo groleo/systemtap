@@ -59,6 +59,12 @@
     print_stack/print_ustack
     sprint_stack/sprint_ustack
 
+- The probefunc() tapset function is now myproc-unprivileged, and can
+  now be used in unprivileged scripts for such things as profiling in
+  userspace programs. For instance, try running
+  systemtap.examples/general/para-callgraph.stp in unprivileged mode
+  with a stapusr-permitted probe.
+
 - To ease migration to the embedded-C locals syntax introduced in 1.8
   (namely, STAP_ARG_* and STAP_RETVALUE), the old syntax can now be
   re-enabled on a per-function basis using the /* unmangled */ pragma:
