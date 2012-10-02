@@ -24,10 +24,10 @@ static void _stp_print_kernel_info(char *vstr, int ctx, int num_probes)
 
 static inline void _stp_print_flush(void)
 {
-	fflush(stderr);
+	fflush(_stp_err);
 	if (_stp_print_buf_used) {
-		fwrite(_stp_print_buf, _stp_print_buf_used, 1, stdout);
-		fflush(stdout);
+		fwrite(_stp_print_buf, _stp_print_buf_used, 1, _stp_out);
+		fflush(_stp_out);
 		_stp_print_buf_used = 0;
 	}
 }

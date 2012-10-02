@@ -165,6 +165,13 @@ static void stp_dyninst_ctor(void)
     if (_stp_mem_fd != -1) {
         fcntl(_stp_mem_fd, F_SETFD, FD_CLOEXEC);
     }
+
+    /* XXX We don't really want to be using the target's stdio. (PR14491)
+     * But while we are, clone our own FILE handles so we're not affected by
+     * the target's actions, liking closing stdout early.
+     */
+    _stp_out = _stp_clone_file(stdout);
+    _stp_err = _stp_clone_file(stderr);
 }
 
 int stp_dyninst_session_init(void)
@@ -196,6 +203,16 @@ static void stp_dyninst_dtor(void)
 
     if (_stp_mem_fd != -1) {
 	close (_stp_mem_fd);
+    }
+
+    if (_stp_out && _stp_out != stdout) {
+	fclose(_stp_out);
+	_stp_out = stdout;
+    }
+
+    if (_stp_err && _stp_err != stderr) {
+	fclose(_stp_err);
+	_stp_err = stderr;
     }
 }
 
