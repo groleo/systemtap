@@ -46,6 +46,19 @@
   certain tapset probe aliases, by writing e.g.
     probe syscall.open.return.maxactive(5) { ... }
 
+- The backtrace/unwind tapsets have been expanded to allow random
+  access to individual elements of the backtrace. (A caching mechanism
+  ensures that the backtrace computation run at most once for each
+  time a probe fires, regardless of how many times or what order the
+  query functions are called in.) New tapset functions are:
+    stack/ustack - return n'th element of backtrace
+    callers/ucallers - return first n elements of backtrace
+    print_syms/print_usyms - print full information on a list of symbols
+    sprint_syms/sprint_usyms - as above, but return info as a string
+  The following existing functions will eventually be deprecated:
+    print_stack/print_ustack
+    sprint_stack/sprint_ustack
+
 - To ease migration to the embedded-C locals syntax introduced in 1.8
   (namely, STAP_ARG_* and STAP_RETVALUE), the old syntax can now be
   re-enabled on a per-function basis using the /* unmangled */ pragma:
