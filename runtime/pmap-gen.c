@@ -673,9 +673,10 @@ static int KEYSYM(_stp_pmap_tls_object_init)(struct tls_data_object_t *obj)
 #endif
 
 #if VALUE_TYPE == INT64 || VALUE_TYPE == STRING
-static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries)
+static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries, int wrap)
 {
-	PMAP pmap = _stp_pmap_new (max_entries, VALUE_TYPE, sizeof(struct KEYSYM(pmap_node)), 0);
+	PMAP pmap = _stp_pmap_new (max_entries, wrap, VALUE_TYPE,
+				   sizeof(struct KEYSYM(pmap_node)), 0);
 	if (pmap) {
 		int i;
 		MAP m;
@@ -696,17 +697,19 @@ static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries)
 	return pmap;
 }
 #else
-/* _stp_pmap_new_key1_key2...val (num, HIST_LINEAR, start, end, interval) */
-/* _stp_pmap_new_key1_key2...val (num, HIST_LOG) */ 
-
-static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries, int htype, ...)
+/*
+ * _stp_pmap_new_key1_key2...val (num, wrap, HIST_LINEAR, start, end, interval) 
+ * _stp_pmap_new_key1_key2...val (num, wrap, HIST_LOG)
+ */
+static PMAP
+KEYSYM(_stp_pmap_new) (unsigned max_entries, int wrap, int htype, ...)
 {
 	int start=0, stop=0, interval=0;
 	PMAP pmap;
 
 	if (htype == HIST_LINEAR) {
 		va_list ap;
-		va_start (ap, htype);		
+		va_start (ap, htype);
 		start = va_arg(ap, int);
 		stop = va_arg(ap, int);
 		interval = va_arg(ap, int);
@@ -715,14 +718,17 @@ static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries, int htype, ...)
 
 	switch (htype) {
 	case HIST_NONE:
-		pmap = _stp_pmap_new (max_entries, STAT, sizeof(struct KEYSYM(pmap_node)), 0);
+		pmap = _stp_pmap_new (max_entries, wrap, STAT,
+				      sizeof(struct KEYSYM(pmap_node)), 0);
 		break;
 	case HIST_LOG:
-		pmap = _stp_pmap_new_hstat_log (max_entries, sizeof(struct KEYSYM(pmap_node)));
+		pmap = _stp_pmap_new_hstat_log (max_entries, wrap,
+						sizeof(struct KEYSYM(pmap_node)));
 		break;
 	case HIST_LINEAR:
-		pmap = _stp_pmap_new_hstat_linear (max_entries, sizeof(struct KEYSYM(pmap_node)),
-					       start, stop, interval);
+		pmap = _stp_pmap_new_hstat_linear (max_entries, wrap,
+						   sizeof(struct KEYSYM(pmap_node)),
+						   start, stop, interval);
 		break;
 	default:
 		_stp_warn ("Unknown histogram type %d\n", htype);

@@ -748,21 +748,15 @@ struct mapvar
   string init () const
   {
     string mtype = is_parallel() ? "pmap" : "map";
-    string prefix = value() + " = _stp_" + mtype + "_new_" + keysym() + " (" +
-      (maxsize > 0 ? lex_cast(maxsize) : "MAXMAPENTRIES") ;
+    string prefix = value() + " = _stp_" + mtype + "_new_" + keysym() + " ("
+      + (maxsize > 0 ? lex_cast(maxsize) : "MAXMAPENTRIES")
+      + ((wrap == true) ? ", 1" : ", 0");
 
     // See also var::init().
 
     // Check for errors during allocation.
     string suffix = "if (" + value () + " == NULL) rc = -ENOMEM;";
 
-    if(wrap == true)
-      {
-        if(mtype == "pmap")
-          suffix = suffix + " else { for_each_possible_cpu(cpu) { MAP mp = per_cpu_ptr(" + value() + "->map, cpu); mp->wrap = 1; }} ";
-        else
-          suffix = suffix + " else " + value() + "->wrap = 1;";
-      }
     if (type() == pe_stats)
       {
 	switch (sdecl().type)

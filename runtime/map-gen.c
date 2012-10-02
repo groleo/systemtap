@@ -551,25 +551,28 @@ static unsigned int KEYSYM(hash) (ALLKEYSD(key))
 
 
 #if VALUE_TYPE == INT64 || VALUE_TYPE == STRING
-static MAP KEYSYM(_stp_map_new) (unsigned max_entries)
+static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap)
 {
-	MAP m = _stp_map_new (max_entries, VALUE_TYPE, sizeof(struct KEYSYM(map_node)), 0);
+	MAP m = _stp_map_new (max_entries, wrap, VALUE_TYPE,
+			      sizeof(struct KEYSYM(map_node)), 0);
 	if (m)
 		m->get_key = KEYSYM(map_get_key);
 	return m;
 }
 #else
-/* _stp_map_new_key1_key2...val (num, HIST_LINEAR, start, end, interval) */
-/* _stp_map_new_key1_key2...val (num, HIST_LOG) */ 
 
-static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int htype, ...)
+/*
+ * _stp_map_new_key1_key2...val (num, wrap, HIST_LINEAR, start, end, interval)
+ * _stp_map_new_key1_key2...val (num, wrap, HIST_LOG)
+ */ 
+static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap, int htype, ...)
 {
 	int start=0, stop=0, interval=0;
 	MAP m;
 
 	if (htype == HIST_LINEAR) {
 		va_list ap;
-		va_start (ap, htype);		
+		va_start (ap, htype);
 		start = va_arg(ap, int);
 		stop = va_arg(ap, int);
 		interval = va_arg(ap, int);
@@ -578,13 +581,16 @@ static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int htype, ...)
 
 	switch (htype) {
 	case HIST_NONE:
-		m = _stp_map_new (max_entries, STAT, sizeof(struct KEYSYM(map_node)), 0);
+		m = _stp_map_new (max_entries, wrap, STAT,
+				  sizeof(struct KEYSYM(map_node)), 0);
 		break;
 	case HIST_LOG:
-		m = _stp_map_new_hstat_log (max_entries, sizeof(struct KEYSYM(map_node)));
+		m = _stp_map_new_hstat_log (max_entries, wrap,
+					    sizeof(struct KEYSYM(map_node)));
 		break;
 	case HIST_LINEAR:
-		m = _stp_map_new_hstat_linear (max_entries, sizeof(struct KEYSYM(map_node)),
+		m = _stp_map_new_hstat_linear (max_entries, wrap,
+					       sizeof(struct KEYSYM(map_node)),
 					       start, stop, interval);
 		break;
 	default:

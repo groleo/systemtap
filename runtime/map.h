@@ -156,6 +156,7 @@ struct pmap {
 
 	/* Cached _stp_map_init() values. */
 	unsigned max_entries;
+	int wrap;
 	int type;
 	int key_size;
 	int data_size;
@@ -209,11 +210,14 @@ static int64_t _stp_get_int64(struct map_node *m);
 static char * _stp_get_str(struct map_node *m);
 static stat_data *_stp_get_stat(struct map_node *m);
 static unsigned int str_hash(const char *key1);
-static MAP _stp_map_new(unsigned max_entries, int type, int key_size, int data_size);
-static PMAP _stp_pmap_new(unsigned max_entries, int type, int key_size, int data_size);
+static MAP _stp_map_new(unsigned max_entries, int wrap, int type, int key_size,
+			int data_size);
+static PMAP _stp_pmap_new(unsigned max_entries, int wrap, int type,
+			  int key_size, int data_size);
 static int msb64(int64_t x);
-static MAP _stp_map_new_hstat_log(unsigned max_entries, int key_size);
-static MAP _stp_map_new_hstat_linear(unsigned max_entries, int ksize, int start, int stop, int interval);
+static MAP _stp_map_new_hstat_log(unsigned max_entries, int wrap, int key_size);
+static MAP _stp_map_new_hstat_linear(unsigned max_entries, int wrap, int ksize,
+				     int start, int stop, int interval);
 static void _stp_map_print_histogram(MAP map, stat_data *s);
 static struct map_node * _stp_map_start(MAP map);
 static struct map_node * _stp_map_iter(MAP map, struct map_node *m);
@@ -226,8 +230,11 @@ static int _new_map_set_int64 (MAP map, struct map_node *n, int64_t val, int add
 static int _new_map_set_str (MAP map, struct map_node *n, char *val, int add);
 static void _new_map_clear_node (struct map_node *);
 static void _new_map_del_node (MAP map, struct map_node *n);
-static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int ksize, int start, int stop, int interval);
-static PMAP _stp_pmap_new_hstat_log (unsigned max_entries, int key_size);
+static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap,
+					int ksize, int start, int stop,
+					int interval);
+static PMAP _stp_pmap_new_hstat_log (unsigned max_entries, int wrap,
+				     int key_size);
 static void _stp_add_agg(struct map_node *aptr, struct map_node *ptr);
 static struct map_node *_stp_new_agg(MAP agg, struct hlist_head *ahead, struct map_node *ptr);
 static void __stp_map_del(MAP map);

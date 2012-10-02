@@ -182,7 +182,9 @@ static char *_stp_key_get_str (struct map_node *mn, int n)
  * @ingroup map_create
  */
 
-static int _stp_map_init(MAP m, unsigned max_entries, int type, int key_size, int data_size, int cpu)
+static int
+_stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
+	      int data_size, int cpu)
 {
 	int size;
 	size_t hash_size = sizeof(struct hlist_head) * HASH_TABLE_SIZE;
@@ -197,6 +199,7 @@ static int _stp_map_init(MAP m, unsigned max_entries, int type, int key_size, in
 	memset(m->hashes, 0, hash_size);
 	m->maxnum = max_entries;
 	m->type = type;
+	m->wrap = wrap;
 	if (type >= END) {
 		_stp_error("unknown map type %d\n", type);
 		return -1;
@@ -238,16 +241,20 @@ static int _stp_map_init(MAP m, unsigned max_entries, int type, int key_size, in
 }
 
 
-static MAP _stp_map_new(unsigned max_entries, int type, int key_size, int data_size)
+static MAP
+_stp_map_new(unsigned max_entries, int wrap, int type, int key_size,
+	     int data_size)
 {
 	/* Called from module_init, so user context, may sleep alloc. */
-	MAP m = (MAP) _stp_kzalloc_gfp(sizeof(struct map_root), STP_ALLOC_SLEEP_FLAGS);
+	MAP m = (MAP) _stp_kzalloc_gfp(sizeof(struct map_root),
+				       STP_ALLOC_SLEEP_FLAGS);
 	if (m == NULL)
 		return NULL;
 
 	INIT_LIST_HEAD(&m->pool);
 	INIT_LIST_HEAD(&m->head);
-	if (_stp_map_init(m, max_entries, type, key_size, data_size, -1)) {
+	if (_stp_map_init(m, max_entries, wrap, type, key_size, data_size,
+			  -1)) {
 		_stp_map_del(m);
 		return NULL;
 	}
@@ -276,7 +283,7 @@ static int _stp_map_tls_object_init(struct tls_data_object_t *obj)
 
 	/* To get the correct parameters for _stp_map_init(), get them
 	 * from the cached values in PMAP. */
-	if (_stp_map_init(m, p->max_entries, p->type, p->key_size,
+	if (_stp_map_init(m, p->max_entries, p->wrap, p->type, p->key_size,
 			  p->data_size, -1) != 0) {
 		__stp_map_del(m);
 #if NEED_MAP_LOCKS
@@ -298,7 +305,9 @@ static void _stp_map_tls_object_free(struct tls_data_object_t *obj)
 }
 #endif
 
-static PMAP _stp_pmap_new(unsigned max_entries, int type, int key_size, int data_size)
+static PMAP
+_stp_pmap_new(unsigned max_entries, int wrap, int type, int key_size,
+	      int data_size)
 {
 	int i;
 	MAP map, m;
@@ -335,7 +344,8 @@ static PMAP _stp_pmap_new(unsigned max_entries, int type, int key_size, int data
 #ifdef __KERNEL__
 	for_each_possible_cpu(i) {
 		m = per_cpu_ptr (map, i);
-		if (_stp_map_init(m, max_entries, type, key_size, data_size, i)) {
+		if (_stp_map_init(m, max_entries, wrap, type, key_size,
+				  data_size, i)) {
 			goto err1;
 		}
 	}
@@ -345,9 +355,11 @@ static PMAP _stp_pmap_new(unsigned max_entries, int type, int key_size, int data
 	pmap->type = type;
 	pmap->key_size = key_size;
 	pmap->data_size = data_size;
+	pmap->wrap = wrap;
 #endif
 
-	if (_stp_map_init(&pmap->agg, max_entries, type, key_size, data_size, -1))
+	if (_stp_map_init(&pmap->agg, max_entries, wrap, type, key_size,
+			  data_size, -1))
 		goto err1;
 	
 	return pmap;

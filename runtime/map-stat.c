@@ -19,11 +19,11 @@ static void _stp_map_print_histogram (MAP map, stat_data *sd)
 	_stp_stat_print_histogram (&map->hist, sd);
 }
 
-static MAP _stp_map_new_hstat_log (unsigned max_entries, int key_size)
+static MAP _stp_map_new_hstat_log (unsigned max_entries, int wrap, int key_size)
 {
 	/* add size for buckets */
 	int size = HIST_LOG_BUCKETS * sizeof(int64_t) + sizeof(stat_data);
-	MAP m = _stp_map_new (max_entries, STAT, key_size, size);
+	MAP m = _stp_map_new (max_entries, wrap, STAT, key_size, size);
 	if (m) {
 		m->hist.type = HIST_LOG;
 		m->hist.buckets = HIST_LOG_BUCKETS;
@@ -31,7 +31,9 @@ static MAP _stp_map_new_hstat_log (unsigned max_entries, int key_size)
 	return m;
 }
 
-static MAP _stp_map_new_hstat_linear (unsigned max_entries, int ksize, int start, int stop, int interval)
+static MAP
+_stp_map_new_hstat_linear (unsigned max_entries, int wrap, int ksize,
+			   int start, int stop, int interval)
 {
 	MAP m;
 	int size;
@@ -42,7 +44,7 @@ static MAP _stp_map_new_hstat_linear (unsigned max_entries, int ksize, int start
         /* add size for buckets */
 	size = buckets * sizeof(int64_t) + sizeof(stat_data);
 	
-	m = _stp_map_new (max_entries, STAT, ksize, size);
+	m = _stp_map_new (max_entries, wrap, STAT, ksize, size);
 	if (m) {
 		m->hist.type = HIST_LINEAR;
 		m->hist.start = start;
@@ -75,7 +77,9 @@ static int _stp_hstat_tls_object_init(struct tls_data_object_t *obj)
 }
 #endif
 
-static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int ksize, int start, int stop, int interval)
+static PMAP
+_stp_pmap_new_hstat_linear (unsigned max_entries, int wrap, int ksize,
+			    int start, int stop, int interval)
 {
 	PMAP pmap;
 	int size;
@@ -86,7 +90,7 @@ static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int ksize, int sta
         /* add size for buckets */
 	size = buckets * sizeof(int64_t) + sizeof(stat_data);
 
-	pmap = _stp_pmap_new (max_entries, STAT, ksize, size);
+	pmap = _stp_pmap_new (max_entries, wrap, STAT, ksize, size);
 	if (pmap) {
 		int i;
 		MAP m;
@@ -117,11 +121,12 @@ static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int ksize, int sta
 	return pmap;
 }
 
-static PMAP _stp_pmap_new_hstat_log (unsigned max_entries, int key_size)
+static PMAP
+_stp_pmap_new_hstat_log (unsigned max_entries, int wrap, int key_size)
 {
 	/* add size for buckets */
 	int size = HIST_LOG_BUCKETS * sizeof(int64_t) + sizeof(stat_data);
-	PMAP pmap = _stp_pmap_new (max_entries, STAT, key_size, size);
+	PMAP pmap = _stp_pmap_new (max_entries, wrap, STAT, key_size, size);
 	if (pmap) {
 		int i;
 		MAP m;
