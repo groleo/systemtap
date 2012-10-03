@@ -276,8 +276,9 @@ void disable_kprobes_optimization()
         int rc, fd;
         struct utsname uts;
 
-        /* PR13814; disable this facility for new enough kernels */
-        if ((uname (&uts) == 0) && (strverscmp (uts.release, "3.4") > 0))
+        /* PR13814; disable this facility for new enough kernels, containing
+         * these fix commits: 86b4ce31 46484688 3f33ab1c */
+        if ((uname (&uts) == 0) && (strverscmp (uts.release, "3.4") >= 0))
                 return;
 
         if (getenv ("STAP_PR13193_OVERRIDE"))
