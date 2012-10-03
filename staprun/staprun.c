@@ -29,6 +29,7 @@
 #include <glob.h>
 #include <time.h>
 #include <sys/prctl.h>
+#include <sys/utsname.h>
 
 /* used in dbug, _err and _perr */
 char *__name__ = "staprun";
@@ -273,6 +274,11 @@ void disable_kprobes_optimization()
         const char* proc_kprobes = "/proc/sys/debug/kprobes-optimization";
         char prev;
         int rc, fd;
+        struct utsname uts;
+
+        /* PR13814; disable this facility for new enough kernels */
+        if ((uname (&uts) == 0) && (strverscmp (uts.release, "3.4") > 0))
+                return;
 
         if (getenv ("STAP_PR13193_OVERRIDE"))
                 return;
