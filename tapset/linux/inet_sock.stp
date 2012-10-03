@@ -32,7 +32,7 @@ function inet_get_ip_source:string(sock:long)
     return format_ipaddr(__ip_sock_daddr(sock), __ip_sock_family(sock))
 }
 
-%(systemtap_v <= "1.8" %?
+%(systemtap_v < "2.0" %?
 // Turns a daddr as found in an inet_sock into a dotted ip string.
 function daddr_to_string:string(daddr:long)
 {
