@@ -56,18 +56,18 @@
     print_syms/print_usyms - print full information on a list of symbols
     sprint_syms/sprint_usyms - as above, but return info as a string
 
+  The following existing functions have been superseded by print_syms()
+  et al.; new scripts are recommended to avoid using them:
+      print_stack()
+      print_ustack()
+      sprint_stack()
+      sprint_ustack()
+
 - The probefunc() tapset function is now myproc-unprivileged, and can
   now be used in unprivileged scripts for such things as profiling in
   userspace programs. For instance, try running
   systemtap.examples/general/para-callgraph.stp in unprivileged mode
   with a stapusr-permitted probe.
-
-- The following tapset functions are deprecated in release 2.0 and will be
-  removed in release 2.1:
-      print_stack()
-      print_ustack()
-      sprint_stack()
-      sprint_ustack()
 
 - Preprocessor conditional for script privilege level:
   stapdev, stapsys -- %( systemtap_privilege == "privileged" %? ... %)

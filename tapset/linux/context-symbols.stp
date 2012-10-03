@@ -45,7 +45,6 @@ function stack:long (n:long) {
          return strtol(sym, 16)
 }
 
-%( systemtap_v <= "2.0" %?
 /**
  *  sfunction print_stack - Print out kernel stack from string
  *  @stk: String with list of hexadecimal addresses
@@ -58,11 +57,11 @@ function stack:long (n:long) {
  *  Print one line per address, including the address, the
  *  name  of the function containing the address, and an estimate of
  *  its position within that function.  Return nothing.
+ *
+ * NOTE: it is recommended to use print_syms() instead of this function.
  */
 function print_stack(stk:string) { print_syms(stk) }
-%)
 
-%( systemtap_v <= "2.0" %?
 /**
  * sfunction sprint_stack - Return stack for kernel addresses from string
  * @stk: String with list of hexadecimal (kernel) addresses
@@ -79,9 +78,10 @@ function print_stack(stk:string) { print_syms(stk) }
  * a newline character).  Note that the returned stack will be
  * truncated to MAXSTRINGLEN, to print fuller and richer stacks use
  * print_stack.
+ *
+ * NOTE: it is recommended to use sprint_syms() instead of this function.
  */
 function sprint_stack:string(stk:string) { return sprint_syms(stk) }
-%)
 
 /**
  * sfunction probefunc - Return the probe point's function name, if known
