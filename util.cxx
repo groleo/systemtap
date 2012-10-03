@@ -821,9 +821,14 @@ stap_system(int verbose, const string& description,
       ret = pid;
       if (pid > 0){
         ret = stap_waitpid(verbose, pid);
-        if(ret)
-          // XXX PR13274 needs-session to use print_warning()
-          clog << _F("WARNING: %s exited with status: %d", description.c_str(), ret) << endl;
+
+        // XXX PR13274 needs-session to use print_warning()
+        if (ret > 128)
+          clog << _F("WARNING: %s exited with signal: %d (%s)",
+                     description.c_str(), ret - 128, strsignal(ret - 128)) << endl;
+        else if (ret > 0)
+          clog << _F("WARNING: %s exited with status: %d",
+                     description.c_str(), ret) << endl;
       }
     }
 

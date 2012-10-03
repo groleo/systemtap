@@ -102,8 +102,13 @@ class direct : public remote {
           return 1;
 
         int ret = stap_waitpid(s->verbose, child);
-        if(ret)
-          s->print_warning(_F("%s exited with status: %d", args.front().c_str(), ret));
+        if (ret > 128)
+          s->print_warning(_F("%s exited with signal: %d (%s)",
+                              args.front().c_str(), ret - 128,
+                              strsignal(ret - 128)));
+        else if (ret > 0)
+          s->print_warning(_F("%s exited with status: %d",
+                              args.front().c_str(), ret));
         child = 0;
         return ret;
       }
