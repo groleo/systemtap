@@ -78,6 +78,7 @@ function usymdata:string (addr: long) %{
 			   _STP_SYM_DATA, current);
 %}
 
+%( systemtap_v <= "2.0" %?
 /**
  * sfunction print_ustack - Print out stack for the current task from string.
  * @stk: String with list of hexadecimal addresses for the current task.
@@ -91,6 +92,7 @@ function usymdata:string (addr: long) %{
  *  its position within that function.  Return nothing.
  */
 function print_ustack(stk:string) { print_usyms(stk) }
+%)
 
 /**
  * sfunction print_usyms - Print out user stack from string
@@ -114,6 +116,7 @@ function print_usyms (callers:string) {
          }
 }
 
+%( systemtap_v <= "2.0" %?
 /**
  * sfunction sprint_ustack - Return stack for the current task from string.
  * @stk: String with list of hexadecimal addresses for the current task.
@@ -133,6 +136,7 @@ function print_usyms (callers:string) {
  * print_ustack.
  */
 function sprint_ustack:string(stk:string) { sprint_usyms(stk) }
+%)
 
 /**
  * sfunction sprint_usyms - Return stack for user addresses from string

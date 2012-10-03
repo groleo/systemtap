@@ -2103,6 +2103,11 @@ process(string).library(string).function(number).inline
 \-\-compatible=1.8
 The daddr_to_string() tapset function has been deprecated in favor of
 the new format_ipaddr() tapset function.
+.TP
+\-\-compatible=2.0
+The backtrace tapset functions print_stack(), sprint_stack(),
+print_ustack() and sprint_ustack() have been deprecated and renamed to
+print_syms(), sprint_syms(), print_usyms(), sprint_usyms() respectively.
 .\" e.g. tapset_function()
 .\" e.g. post-incrementing a frobozz in a while loop
 
