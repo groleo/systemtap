@@ -23,6 +23,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stddef.h>
+#include <unistd.h>
+
 
 #include "loc2c-runtime.h"
 #include "stapdyn.h"
@@ -125,8 +128,6 @@ static int systemtap_module_init(void);
 static void systemtap_module_exit(void);
 
 static unsigned long stap_hash_seed; /* Init during module startup */
-
-static int _stp_mem_fd = -1;
 
 
 /*

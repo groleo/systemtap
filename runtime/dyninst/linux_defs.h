@@ -3,9 +3,6 @@
 #ifndef _STAPDYN_LINUX_DEFS_H_
 #define _STAPDYN_LINUX_DEFS_H_
 
-#include <stddef.h>
-#include <unistd.h>
-
 #include "linux_hash.h"
 
 #define min(x, y) ({				\
@@ -160,24 +157,8 @@ static inline size_t strlcat(char *dest, const char *src, size_t count)
 	__gu_err;						\
 })
 
-static int _stp_mem_fd;
-
 static inline __must_check long __copy_from_user(void *to,
-		const void __user * from, unsigned long n)
-{
-	int rc = 0;
-
-	/*
-	 * The pread syscall is faster than lseek()/read() (since it
-	 * is only one syscall). Also, if we used lseek()/read() we
-	 * couldn't use a cached fd - since 2 threads might hit this
-	 * code at the same time and the 2nd lseek() might finish
-	 * before the 1st read()...
-	 */
-	if (pread(_stp_mem_fd, to, n, (off_t)from) != n)
-		rc = -EFAULT;
-	return rc;
-}
+		const void __user * from, unsigned long n);
 
 static inline int __get_user_fn(size_t size, const void __user *ptr, void *x)
 {
@@ -224,18 +205,7 @@ extern int __get_user_bad(void) __attribute__((noreturn));
 })
 
 static inline __must_check long __copy_to_user(void *to, const void *from,
-					       unsigned long n)
-{
-	int rc = 0;
-
-	/*
-	 * The pwrite syscall is faster than lseek()/write() (since it
-	 * is only one syscall).
-	 */
-	if (pwrite(_stp_mem_fd, to, n, (off_t)from) != n)
-		rc = -EFAULT;
-	return rc;
-}
+					       unsigned long n);
 
 static inline int __put_user_fn(size_t size, const void __user *ptr, void *x)
 {
