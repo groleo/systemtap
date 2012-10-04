@@ -15,6 +15,10 @@
     stap --runtime=dyninst -c 'stap -V' \
       -e 'probe process.function("main") { println("hi from dyninst!") }'
 
+- To aid diagnosis, when a kernel panic occurs systemtap now uses
+  the panic_notifier_list facility to dump a summary of its trace
+  buffers to the serial console.
+
 - The systemtap preprocessor now has a simple macro facility as follows:
 
     @define add(a,b) %( ((@a)+(@b)) %)
