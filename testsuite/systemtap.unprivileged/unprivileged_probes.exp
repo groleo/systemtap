@@ -330,6 +330,18 @@ proc test_unrestricted_probes { privilege } {
 	    {
 		setup_kfail GCC *-*-*
 	    }
+	    process.function(number).return -
+	    process.function(string).return -
+	    process.library(string).function(number).return -
+	    process.library(string).function(string).return -
+	    process(number).statement(number).absolute.return -
+	    process(string).function(number).return -
+	    process(string).function(string).return -
+	    process(string).library(string).function(number).return -
+	    process(string).library(string).function(string).return
+	    {
+		setup_kfail UPROBES *-*-*
+	    }
 	}
 
 	# Test the probe type. If successful, the stap rc will be 0.
