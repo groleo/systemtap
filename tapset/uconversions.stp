@@ -7,14 +7,14 @@
 // Public License (GPL); either version 2, or (at your option) any
 // later version.
 
-// implement in terms of runtime/loc2c-runtime.h macro uderef()
+// implement in terms of runtime/loc2c-runtime.h macro uread()
 %{
 #define __STP_GET_USER(t, warn)						\
 	do {								\
 		__label__ deref_fault;					\
 		t *_ptr = (t*) (intptr_t) STAP_ARG_addr;		\
-                STAP_RETVALUE = (t) uderef (sizeof(t), _ptr);           \
-                if (0) {                                                \
+		STAP_RETVALUE = uread (_ptr);				\
+		if (0) {						\
 		deref_fault:						\
 			STAP_RETVALUE = 0;				\
 			CONTEXT->last_error = NULL;			\
@@ -526,22 +526,7 @@ function user_uint32:long (addr:long) %{ /* pure */ /* myproc-unprivileged */
  * address.  Returns zero when user space data is not accessible.
  */
 function user_int64:long (addr:long) %{ /* pure */ /* myproc-unprivileged */
-#if defined (__i386__) || defined (__arm__)
-	/* As with kread() on i386 and arm, we must split 64-bit in two.
-	 * STP_GET_USER isn't well designed for that, but I don't
-	 * want to complicate all the other callers. */
-	uint32_t value[2];
-	STP_GET_USER(uint32_t);
-	value[0] = STAP_RETVALUE;
-	if (!CONTEXT->last_error) {
-		STAP_ARG_addr += 4;
-		STP_GET_USER(uint32_t);
-		value[1] = STAP_RETVALUE;
-		STAP_RETVALUE = *(int64_t*)value;
-	}
-#else
 	STP_GET_USER(int64_t);
-#endif
 %}
 
 /**
