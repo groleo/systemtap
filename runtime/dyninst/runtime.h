@@ -44,6 +44,9 @@ typedef uint64_t u64;
 #include "linux_types.h"
 
 
+#define simple_strtol strtol
+
+
 // segments don't matter in dyninst...
 #define USER_DS (1)
 #define KERNEL_DS (-1)
