@@ -238,7 +238,7 @@ expect {
 	-re {^erreur d'analyse syntaxique : Ne peut trouver la guillemet fermante\r\n} {
 		exp_continue
 	}
-	-re {^[ \t]*à : string 'Bonjour\); exit\(\);\}' at <input>:1:20\r\n} {
+	-re {^[ \t]*à : junk 'Bonjour\); exit\(\);\}' at <input>:1:20\r\n} {
 		exp_continue
 	}
 	-re {^[ \t]*source : probe begin\{printf\("Bonjour\); exit\(\);\}\r\n} {
@@ -297,7 +297,7 @@ expect {
 	-re {^parse error: Could not find matching closing quote\r\n} {
 		exp_continue		
 	}
-	-re {^[ \t]*at: string 'Hello\); exit\(\);\}' at <input>:1:20\r\n} {
+	-re {^[ \t]*at: junk 'Hello\); exit\(\);\}' at <input>:1:20\r\n} {
 		exp_continue		
 	}
 	-re {^[ \t]*source: probe begin\{printf\("Hello\); exit\(\);\}\r\n} {
@@ -441,7 +441,7 @@ expect {
 	-re {^erreur d'analyse syntaxique : Ne peut trouver la guillemet fermante\r\n} {
 		exp_continue
 	}
-	-re {^[ \t]*à : string 'Bonjour\); exit\(\);\}' at <input>:1:20\r\n} {
+	-re {^[ \t]*à : junk 'Bonjour\); exit\(\);\}' at <input>:1:20\r\n} {
 
 		exp_continue	
 	}
@@ -505,7 +505,7 @@ expect {
 	-re {^parse error: Could not find matching closing quote\r\n} {
 		exp_continue		
 	}
-	-re {^[ \t]*at: string 'Hello\); exit\(\);\}' at <input>:1:20\r\n} {
+	-re {^[ \t]*at: junk 'Hello\); exit\(\);\}' at <input>:1:20\r\n} {
 		exp_continue		
 	}
 	-re {^[ \t]*source: probe begin\{printf\("Hello\); exit\(\);\}\r\n} {
@@ -649,7 +649,7 @@ expect {
 	-re {^erreur d'analyse syntaxique : Ne peut trouver la guillemet fermante\r\n} {
 		exp_continue
 	}
-	-re {^[ \t]*à : string 'Bonjour\); exit\(\);\}' at <input>:1:20\r\n} {
+	-re {^[ \t]*à : junk 'Bonjour\); exit\(\);\}' at <input>:1:20\r\n} {
 		exp_continue
 	}
 	-re {^[ \t]*source : probe begin\{printf\("Bonjour\); exit\(\);\}\r\n} {
@@ -708,7 +708,7 @@ expect {
 	-re {^parse error: Could not find matching closing quote\r\n} {
 		exp_continue		
 	}
-	-re {^[ \t]*at: string 'Hello\); exit\(\);\}' at <input>:1:20\r\n} {
+	-re {^[ \t]*at: junk 'Hello\); exit\(\);\}' at <input>:1:20\r\n} {
 		exp_continue		
 	}
 	-re {^[ \t]*source: probe begin\{printf\("Hello\); exit\(\);\}\r\n} {
@@ -853,7 +853,7 @@ expect {
 	-re {^erreur d'analyse syntaxique : Ne peut trouver la guillemet fermante\r\n} {
 		exp_continue
 	}
-	-re {^[ \t]*à : string 'Bonjour\); exit\(\);\}' at <input>:1:20\r\n} {
+	-re {^[ \t]*à : junk 'Bonjour\); exit\(\);\}' at <input>:1:20\r\n} {
 
 		exp_continue	
 	}
@@ -918,7 +918,7 @@ expect {
 	-re {^parse error: Could not find matching closing quote\r\n} {
 		exp_continue		
 	}
-	-re {^[ \t]*at: string 'Hello\); exit\(\);\}' at <input>:1:20\r\n} {
+	-re {^[ \t]*at: junk 'Hello\); exit\(\);\}' at <input>:1:20\r\n} {
 		exp_continue		
 	}
 	-re {^[ \t]*source: probe begin\{printf\("Hello\); exit\(\);\}\r\n} {
