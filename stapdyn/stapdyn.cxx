@@ -126,6 +126,50 @@ call_inferior_function(BPatch_process *app, const string& name)
 }
 
 static void
+get_dwarf_registers(BPatch_process *app,
+                    vector<BPatch_snippet*>& registers)
+{
+#if defined(__i386__)
+  static const char* const names[] = {
+      "eax", "ecx", "edx", "ebx",
+      "esp", "ebp", "esi", "edi",
+      NULL };
+#elif defined(__x86_64__)
+  static const char* const names[] = {
+      "rax", "rdx", "rcx", "rbx",
+      "rsi", "rdi", "rbp", "rsp",
+      "r8",  "r9",  "r10", "r11",
+      "r12", "r13", "r14", "r15",
+      NULL };
+#else
+  static const char* const names[] = { NULL };
+#endif
+
+  registers.push_back(new BPatch_originalAddressExpr());
+
+  BPatch_Vector<BPatch_register> bpregs;
+  app->getRegisters(bpregs);
+
+  // O(n^2) loop, but neither is very large
+  for (const char* const* name = names; *name; ++name)
+    {
+      // XXX Dyninst is currently limited in how many individual function
+      // arguments it can pass, so we'll have to cut this short...
+      if (registers.size() > 8) break;
+
+      size_t i;
+      for (i = 0; i < bpregs.size(); ++i)
+        if (bpregs[i].name() == *name)
+          {
+            registers.push_back(new BPatch_registerExpr(bpregs[i]));
+            break;
+          }
+      if (i >= bpregs.size())
+        registers.push_back(new BPatch_constExpr((unsigned long)0));
+    }
+}
+
+static void
 instrument_uprobes(BPatch_process *app,
                    const vector<stapdyn_uprobe_target>& targets)
 {
@@ -147,10 +191,25 @@ instrument_uprobes(BPatch_process *app,
         file_objects[resolved_path] = objects[i];
     }
 
+  BPatch_function* enter_function = NULL;
   vector<BPatch_function *> functions;
-  image->findFunction("enter_dyninst_uprobe", functions);
-  if (functions.empty()) return;
-  BPatch_function& enter_function = *functions[0];
+  vector<BPatch_snippet *> enter_args;
+
+  image->findFunction("enter_dyninst_uprobe_regs", functions);
+  if (!functions.empty())
+    {
+      get_dwarf_registers(app, enter_args);
+      if (!enter_args.empty())
+        enter_function = functions[0];
+    }
+
+  if (!enter_function)
+    {
+      image->findFunction("enter_dyninst_uprobe", functions);
+      if (functions.empty())
+        return;
+      enter_function = functions[0];
+    }
 
   app->beginInsertionSet();
   for (size_t i = 0; i < targets.size(); ++i)
@@ -196,8 +255,14 @@ instrument_uprobes(BPatch_process *app,
 
           vector<BPatch_snippet *> args;
           args.push_back(new BPatch_constExpr((int64_t)probe.index));
-          args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
-          BPatch_funcCallExpr call(enter_function, args);
+          if (enter_args.empty())
+            args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
+          else
+            {
+              args.push_back(new BPatch_constExpr((unsigned long)enter_args.size()));
+              args.insert(args.end(), enter_args.begin(), enter_args.end());
+            }
+          BPatch_funcCallExpr call(*enter_function, args);
           app->insertSnippet(call, points);
 
           // XXX write the semaphore too!

@@ -40,6 +40,11 @@ extern uint64_t stp_dyninst_probe_semaphore(uint64_t index);
 
 extern int enter_dyninst_uprobe(uint64_t index, struct pt_regs *regs);
 
+/* This is somewhat of a hack until we can figure out how to build a pt_regs
+ * struct directly with stapdyn.  The varargs are all unsigned long, giving
+ * first the original PC, then DWARF-ordered registers.  */
+extern int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...);
+
 
 /* STAP 2.x : */
 

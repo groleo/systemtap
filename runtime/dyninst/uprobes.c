@@ -60,6 +60,49 @@ uint64_t stp_dyninst_probe_semaphore(uint64_t index)
 	return stapdu_probes[index].semaphore;
 }
 
+int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...)
+{
+	struct pt_regs regs = {0};
+
+	va_list varegs;
+	va_start(varegs, nregs);
+
+	if (nregs > 0)
+		SET_REG_IP((&regs), va_arg(varegs, unsigned long));
+
+	/* NB: pt_regs_store_register() expects literal register numbers to
+	 * paste as CPP tokens, so unfortunately this has to be unrolled.  */
+#define SET_REG(n) if (n < nregs - 1) \
+			pt_regs_store_register((&regs), n, \
+					va_arg(varegs, unsigned long))
+#if defined(__i386__) || defined(__x86_64__)
+	SET_REG(0);
+	SET_REG(1);
+	SET_REG(2);
+	SET_REG(3);
+	SET_REG(4);
+	SET_REG(5);
+	SET_REG(6);
+	SET_REG(7);
+#endif
+#if defined(__x86_64__)
+	SET_REG(8);
+	SET_REG(9);
+	SET_REG(10);
+	SET_REG(11);
+	SET_REG(12);
+	SET_REG(13);
+	SET_REG(14);
+	SET_REG(15);
+#endif
+#undef SET_REG
+
+	va_end(varegs);
+
+
+	return enter_dyninst_uprobe(index, &regs);
+}
+
 
 #endif /* _UPROBES_DYNINST_C_ */
 

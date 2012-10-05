@@ -24,6 +24,12 @@
 #define u_store_register(regno, value) \
   pt_regs_store_register(c->uregs, regno, value)
 
+#if defined(__i386__)
+// The kernel's way of getting esp doesn't work as an lvalue
+#undef pt_dwarf_register_4
+#define pt_dwarf_register_4(regs)	regs->esp
+#endif
+
 
 #define uread(ptr) ({ \
 	typeof(*(ptr)) _v = 0; \
