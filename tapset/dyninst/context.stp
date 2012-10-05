@@ -9,6 +9,7 @@
 // NB: functionally equivalent to linux/context.stp
 
 %{
+#include <sched.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
@@ -78,9 +79,16 @@ function euid:long ()
 // TODO function is_myproc:long ()
 // NB: dyninst by nature is myproc-only, *except if you're root*
 
-// TODO function cpu:long ()
+function cpu:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = sched_getcpu();
+%}
 
-// TODO function registers_valid:long ()
+
+function registers_valid:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = (CONTEXT->uregs != NULL);
+%}
 
 function user_mode:long ()
 {
@@ -105,9 +113,15 @@ function user_mode:long ()
 
 // TODO function stack_unused:long ()
 
-// TODO function addr:long ()
+function addr:long ()
+{
+	return uaddr()
+}
 
-// TODO function uaddr:long ()
+function uaddr:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = (intptr_t)(CONTEXT->uregs ? REG_IP(CONTEXT->uregs) : 0);
+%}
 
 // TODO function cmdline_args:string(n:long, m:long, delim:string)
 
