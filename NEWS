@@ -10,7 +10,8 @@
   necessary to disable conflicting selinux checks; systemtap will advise.
 
   Select this new backend with the stap option --runtime=dyninst and a
-  -c or -x target process, along with normal options.  For example:
+  -c target process, along with normal options. (-x target processes
+  are not supported in this prototype version.) For example:
 
     stap --runtime=dyninst -c 'stap -V' \
       -e 'probe process.function("main") { println("hi from dyninst!") }'
