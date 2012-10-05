@@ -57,6 +57,13 @@ struct stapdyn_uprobe_target {
 };
 
 
+// We will have to use at least some globals like these, because all of the
+// Dyninst are anonymous (i.e. no user data pointer).  We should probably
+// bundle them into a session object when I'm less lazy...
+static BPatch_process * g_child_process = NULL; // the process we started
+static vector<stapdyn_uprobe_target> g_targets; // the probe targets in our module
+
+
 // no buffer -> badbit -> quietly suppressed output
 static ostream nullstream(NULL);
 
@@ -121,7 +128,6 @@ call_inferior_function(BPatch_process *app, const string& name)
       vector<BPatch_snippet *> args;
       BPatch_funcCallExpr call(*functions[i], args);
       app->oneTimeCode(call);
-      app->continueExecution();
     }
 }
 
@@ -170,26 +176,15 @@ get_dwarf_registers(BPatch_process *app,
 }
 
 static void
-instrument_uprobes(BPatch_process *app,
-                   const vector<stapdyn_uprobe_target>& targets)
+instrument_uprobe_target(BPatch_process *app, BPatch_object* object,
+                         const stapdyn_uprobe_target& target)
 {
-  if (!app || targets.empty())
+  if (!app || !object)
     return;
 
   BPatch_image* image = app->getImage();
   if (!image)
     return;
-
-  map<string, BPatch_object*> file_objects;
-  vector<BPatch_object *> objects;
-  image->getObjects(objects);
-  for (size_t i = 0; i < objects.size(); ++i)
-    {
-      string path = objects[i]->pathName();
-      char resolved_path[PATH_MAX];
-      if (realpath(path.c_str(), resolved_path))
-        file_objects[resolved_path] = objects[i];
-    }
 
   BPatch_function* enter_function = NULL;
   vector<BPatch_function *> functions;
@@ -211,6 +206,74 @@ instrument_uprobes(BPatch_process *app,
       enter_function = functions[0];
     }
 
+  staplog(1) << "found target " << target.path << ", inserting "
+             << target.probes.size() << " probes" << endl;
+
+  for (size_t j = 0; j < target.probes.size(); ++j)
+    {
+      const stapdyn_uprobe_probe& probe = target.probes[j];
+
+      Dyninst::Address address = object->fileOffsetToAddr(probe.offset);
+      if (address == BPatch_object::E_OUT_OF_BOUNDS)
+        {
+          stapwarn() << "couldn't convert " << target.path << "+"
+                     << lex_cast_hex(probe.offset) << " to an address" << endl;
+          continue;
+        }
+
+      vector<BPatch_point*> points;
+      object->findPoints(address, points);
+      if (points.empty())
+        {
+          stapwarn() << "couldn't find an instrumentation point at "
+                     << lex_cast_hex(address) << ", " << target.path
+                     << "+" << lex_cast_hex(probe.offset) << endl;
+          continue;
+        }
+
+      // TODO check each point->getFunction()->isInstrumentable()
+
+      vector<BPatch_snippet *> args;
+      args.push_back(new BPatch_constExpr((int64_t)probe.index));
+      if (enter_args.empty())
+        args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
+      else
+        {
+          args.push_back(new BPatch_constExpr((unsigned long)enter_args.size()));
+          args.insert(args.end(), enter_args.begin(), enter_args.end());
+        }
+      BPatch_funcCallExpr call(*enter_function, args);
+      app->insertSnippet(call, points);
+
+      // XXX write the semaphore too!
+    }
+}
+
+static void
+instrument_uprobes(BPatch_process *app,
+                   const vector<stapdyn_uprobe_target>& targets)
+{
+  if (!app || targets.empty())
+    return;
+
+  BPatch_image* image = app->getImage();
+  if (!image)
+    return;
+
+  map<string, BPatch_object*> file_objects;
+  vector<BPatch_object *> objects;
+  image->getObjects(objects);
+  for (size_t i = 0; i < objects.size(); ++i)
+    {
+      string path = objects[i]->pathName();
+      char resolved_path[PATH_MAX];
+      if (realpath(path.c_str(), resolved_path))
+        {
+          staplog(2) << "found object " << resolved_path << endl;
+          file_objects[resolved_path] = objects[i];
+        }
+    }
+
   app->beginInsertionSet();
   for (size_t i = 0; i < targets.size(); ++i)
     {
@@ -226,56 +289,47 @@ instrument_uprobes(BPatch_process *app,
           continue;
         }
 
-      staplog(1) << "found target " << target.path << ", inserting "
-                 << target.probes.size() << " probes" << endl;
-
-      for (size_t j = 0; j < target.probes.size(); ++j)
-        {
-          const stapdyn_uprobe_probe& probe = target.probes[j];
-
-          Dyninst::Address address = object->fileOffsetToAddr(probe.offset);
-          if (address == BPatch_object::E_OUT_OF_BOUNDS)
-            {
-              stapwarn() << "couldn't convert " << target.path << "+"
-                         << lex_cast_hex(probe.offset) << " to an address" << endl;
-              continue;
-            }
-
-          vector<BPatch_point*> points;
-          object->findPoints(address, points);
-          if (points.empty())
-            {
-              stapwarn() << "couldn't find an instrumentation point at "
-                         << lex_cast_hex(address) << ", " << target.path
-                         << "+" << lex_cast_hex(probe.offset) << endl;
-              continue;
-            }
-
-          // TODO check each point->getFunction()->isInstrumentable()
-
-          vector<BPatch_snippet *> args;
-          args.push_back(new BPatch_constExpr((int64_t)probe.index));
-          if (enter_args.empty())
-            args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
-          else
-            {
-              args.push_back(new BPatch_constExpr((unsigned long)enter_args.size()));
-              args.insert(args.end(), enter_args.begin(), enter_args.end());
-            }
-          BPatch_funcCallExpr call(*enter_function, args);
-          app->insertSnippet(call, points);
-
-          // XXX write the semaphore too!
-        }
+      instrument_uprobe_target(app, object, target);
     }
   app->finalizeInsertionSet(false);
 }
 
-static vector<stapdyn_uprobe_target>
-find_uprobes(void* module)
+static void
+dynamic_library_callback(BPatch_thread *thread,
+                         BPatch_module *module,
+                         bool load)
 {
-  vector<stapdyn_uprobe_target> targets;
+  if (!thread || !module || !load)
+    return;
 
+  BPatch_process* app = thread->getProcess();
+  if (!app || app != g_child_process)
+    return;
+
+  BPatch_object* object = module->getObject();
+  if (!object)
+    return;
+
+  string path = object->pathName();
+  char resolved_path[PATH_MAX];
+  if (!realpath(path.c_str(), resolved_path))
+    return;
+
+  staplog(2) << "found dynamic object " << resolved_path << endl;
+
+  app->beginInsertionSet();
+  for (size_t i = 0; i < g_targets.size(); ++i)
+    {
+      const stapdyn_uprobe_target& target = g_targets[i];
+      if (target.path == resolved_path)
+        instrument_uprobe_target(app, object, target);
+    }
+  app->finalizeInsertionSet(false);
+}
+
+static int
+find_uprobes(void* module, vector<stapdyn_uprobe_target>& targets)
+{
   typeof(&stp_dyninst_target_count) target_count = NULL;
   typeof(&stp_dyninst_target_path) target_path = NULL;
 
@@ -286,14 +340,22 @@ find_uprobes(void* module)
 
   set_dlsym(target_count, module, "stp_dyninst_target_count", false);
   if (target_count == NULL) // no uprobes
-    return targets;
+    return 0;
 
-  // if target_count exists, the rest of these should too
-  set_dlsym(target_path, module, "stp_dyninst_target_path");
-  set_dlsym(probe_count, module, "stp_dyninst_probe_count");
-  set_dlsym(probe_target, module, "stp_dyninst_probe_target");
-  set_dlsym(probe_offset, module, "stp_dyninst_probe_offset");
-  set_dlsym(probe_semaphore, module, "stp_dyninst_probe_semaphore");
+  try
+    {
+      // if target_count exists, the rest of these should too
+      set_dlsym(target_path, module, "stp_dyninst_target_path");
+      set_dlsym(probe_count, module, "stp_dyninst_probe_count");
+      set_dlsym(probe_target, module, "stp_dyninst_probe_target");
+      set_dlsym(probe_offset, module, "stp_dyninst_probe_offset");
+      set_dlsym(probe_semaphore, module, "stp_dyninst_probe_semaphore");
+    }
+  catch (runtime_error& e)
+    {
+      staperror() << e.what() << endl;
+      return 1;
+    }
 
   const uint64_t ntargets = target_count();
   for (uint64_t i = 0; i < ntargets; ++i)
@@ -318,7 +380,7 @@ find_uprobes(void* module)
                    << " semaphore:" << t.probes[i].semaphore << endl;
     }
 
-  return targets;
+  return 0;
 }
 
 static int
@@ -436,22 +498,23 @@ main(int argc, char * const argv[])
     }
 
   string fullpath = find_executable(child_argv[0]);
-  BPatch_process *app = patch.processCreate(fullpath.c_str(), child_argv);
-
-  app->loadLibrary(module);
-
-  vector<stapdyn_uprobe_target> targets;
-  try
+  BPatch_process* app = patch.processCreate(fullpath.c_str(), child_argv);
+  if (!app)
     {
-      targets = find_uprobes(dlmodule);
-    }
-  catch (runtime_error& e)
-    {
-      staperror() << e.what() << endl;
+      staperror() << "Couldn't create the target process" << endl;
       return 1;
     }
 
-  instrument_uprobes(app, targets);
+  g_child_process = app;
+  app->loadLibrary(module);
+
+  if ((rc = find_uprobes(dlmodule, g_targets)))
+    return rc;
+  if (!g_targets.empty())
+    {
+      patch.registerDynLibraryCallback(dynamic_library_callback);
+      instrument_uprobes(app, g_targets);
+    }
 
   call_inferior_function(app, "stp_dyninst_session_init");
 
