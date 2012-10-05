@@ -13,17 +13,17 @@
 /**
  * sfunction tokenize - Return the next non-empty token in a string
  *
- * @input: string to tokenize. If NULL, returns the next non-empty token
+ * @input: string to tokenize. If empty, returns the next non-empty token
  * in the string passed in the previous call to tokenize().
  * @delim: set of characters that delimit the tokens
  * 
- * Description: This function returns the next non-empty token in the 
+ * Description: This function returns the next non-empty token in the
  * given input string, where the tokens are delimited by characters in
- * the delim string.  If the input string is non-NULL, it returns the 
- * first token.  If the input string is NULL, it returns the next
+ * the delim string.  If the input string is non-empty, it returns the
+ * first token.  If the input string is empty, it returns the next
  * token in the string passed in the previous call to tokenize.
  * If no delimiter is found, the entire remaining input string is 
- * returned. It returns NULL when no more tokens are available.
+ * returned. It returns empty when no more tokens are available.
  */
 function tokenize:string(input:string, delim:string)
 %{ /* unprivileged */
