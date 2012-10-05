@@ -516,7 +516,26 @@ sprintf("{.a=%i, .b=%u, .c={.x=%p, .y=%c}, .d=[%i, ...]}",
         $EXPR\->a, $EXPR\->b, $EXPR\->c\->x, $EXPR\->c\->y, $EXPR\->d[0])
 .ESAMPLE
 
-.SS CONTEXT VARIABLES IN RETURN PROBES
+.SS MORE ON RETURN PROBES
+
+.PP
+For the kernel ".return" probes, only a certain fixed number of
+returns may be outstanding.  The default is a relatively small number,
+on the order of a few times the number of physical CPUs.  If many
+different threads concurrently call the same blocking function, such
+as futex(2) or read(2), this limit could be exceeded, and skipped
+"kretprobes" would be reported by "stap -t".  To work around this,
+specify a
+.SAMPLE
+probe FOO.return.maxactive(NNN)
+.ESAMPLE
+suffix, with a large enough NNN to cover all expected concurrently blocked
+threads.  Alternately, use the
+.SAMPLE
+stap -DKRETACTIVE=NNNN
+.ESAMPLE
+stap command line macro setting to override the default for all
+".return" probes.
 
 .PP
 For ".return" probes, context variables other than the "$return" may
