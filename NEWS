@@ -13,7 +13,7 @@
   -c target process, along with normal options. (-x target processes
   are not supported in this prototype version.) For example:
 
-    stap --runtime=dyninst -c 'stap -V' \
+    stap --runtime=dyninst -c 'stap -l begin' \
       -e 'probe process.function("main") { println("hi from dyninst!") }'
 
 - To aid diagnosis, when a kernel panic occurs systemtap now uses
