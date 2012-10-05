@@ -73,12 +73,12 @@ static inline int pseudo_atomic_cmpxchg(atomic_t *v, int oldval, int newval)
 
 static pthread_mutex_t stapdyn_big_dumb_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static inline void preempt_disable(void)
+static inline void _stp_runtime_entryfn_prologue(void)
 {
 	pthread_mutex_lock(&stapdyn_big_dumb_lock);
 }
 
-static inline void preempt_enable_no_resched(void)
+static inline void _stp_runtime_entryfn_epilogue(void)
 {
 	pthread_mutex_unlock(&stapdyn_big_dumb_lock);
 }
@@ -101,6 +101,9 @@ static inline void preempt_enable_no_resched(void)
 #define yield() sched_yield()
 
 #define access_ok(type, addr, size) 1
+
+#define preempt_disable() 0
+#define preempt_enable_no_resched() 0
 
 /*
  * By definition, we can only debug our own processes with dyninst, so

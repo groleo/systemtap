@@ -152,6 +152,7 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline() << "atomic_dec (& c->busy);";
   s.op->newline() << "goto probe_epilogue;";
   s.op->newline(-1) << "}";
+  s.op->newline() << "_stp_runtime_entryfn_prologue();";
   s.op->newline();
   s.op->newline() << "c->last_stmt = 0;";
   s.op->newline() << "c->last_error = 0;";
@@ -284,6 +285,7 @@ common_probe_entryfn_epilogue (translator_output* o,
   o->newline(-1) << "}";
 
 
+  o->newline() << "_stp_runtime_entryfn_epilogue();";
   o->newline() << "atomic_dec (&c->busy);";
 
   o->newline(-1) << "probe_epilogue:"; // context is free
