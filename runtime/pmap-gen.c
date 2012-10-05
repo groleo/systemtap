@@ -1032,8 +1032,12 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 		head = &map->hashes[hv];
 
 #if NEED_MAP_LOCKS
-		if (!spin_trylock(&map->lock))
+		if (!spin_trylock(&map->lock)) {
+#ifndef __KERNEL__
+			TLS_DATA_CONTAINER_UNLOCK(&pmap->container);
+#endif
 			return NULLRET;
+		}
 #endif
 
 		hlist_for_each(e, head) {

@@ -852,6 +852,7 @@ static MAP _stp_pmap_agg (PMAP pmap)
 #ifndef __KERNEL__
 	struct tls_data_object_t *obj;
 #endif
+	int quit = 0;
 
 	agg = &pmap->agg;
 	
@@ -886,13 +887,16 @@ static MAP _stp_pmap_agg (PMAP pmap)
 					_stp_add_agg(aptr, ptr);
 				else {
 					if (!_stp_new_agg(agg, ahead, ptr)) {
-						MAP_UNLOCK(m);
-						return NULL;
+						quit = 1;
+						agg = NULL;
+						break;
 					}
 				}
 			}
 		}
 		MAP_UNLOCK(m);
+		if (quit)
+			break;
 	}
 #ifndef __KERNEL__
 	TLS_DATA_CONTAINER_UNLOCK(&pmap->container);

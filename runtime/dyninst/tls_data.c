@@ -20,7 +20,7 @@ struct tls_data_container_t {
 	pthread_key_t key;		/* key indexing TLS objects */
 	size_t size;			/* allocated size of a new TLS object */
 	struct list_head head;		/* list of tls_data_object_t structs */
-	pthread_mutex_t lock;		/* lock protecting list */
+	pthread_rwlock_t lock;		/* lock protecting list */
 	int (*init_function)(struct tls_data_object_t *);
 	void (*free_function)(struct tls_data_object_t *);
 };
@@ -30,8 +30,19 @@ struct tls_data_object_t {
 	struct tls_data_container_t *container;
 };
 
-#define TLS_DATA_CONTAINER_LOCK(con) pthread_mutex_lock(&(con)->lock)
-#define TLS_DATA_CONTAINER_UNLOCK(con) pthread_mutex_unlock(&(con)->lock)
+#ifdef STP_DEBUG_CONTAINER_LOCK
+#define TLS_DATA_CONTAINER_INIT(con) pthread_rwlock_init(&(con)->lock, NULL)
+#define TLS_DATA_CONTAINER_LOCK(con) {printf("%s:%d rd locking %p\n", __FUNCTION__, __LINE__, &(con)->lock); pthread_rwlock_rdlock(&(con)->lock);}
+#define TLS_DATA_CONTAINER_WRLOCK(con) {printf("%s:%d wr locking %p\n", __FUNCTION__, __LINE__, &(con)->lock); pthread_rwlock_wrlock(&(con)->lock);}
+#define TLS_DATA_CONTAINER_UNLOCK(con) {pthread_rwlock_unlock(&(con)->lock); printf("%s:%d unlocked %p\n", __FUNCTION__, __LINE__, &(con)->lock); }
+#define TLS_DATA_CONTAINER_DESTROY(con) (void)pthread_rwlock_destroy(&(con)->lock)
+#else
+#define TLS_DATA_CONTAINER_INIT(con) pthread_rwlock_init(&(con)->lock, NULL)
+#define TLS_DATA_CONTAINER_LOCK(con) pthread_rwlock_rdlock(&(con)->lock)
+#define TLS_DATA_CONTAINER_WRLOCK(con) pthread_rwlock_wrlock(&(con)->lock)
+#define TLS_DATA_CONTAINER_UNLOCK(con) pthread_rwlock_unlock(&(con)->lock)
+#define TLS_DATA_CONTAINER_DESTROY(con) (void)pthread_rwlock_destroy(&(con)->lock)
+#endif
 
 #define for_each_tls_data(obj, container) \
 	list_for_each_entry((obj), &(container)->head, list)
@@ -48,8 +59,9 @@ static void _stp_tls_free_per_thread_ptr(void *addr)
 
 		/* Remove this object from the container's list of objects */
 		if (container) {
-			pthread_mutex_lock(&container->lock);
+			TLS_DATA_CONTAINER_WRLOCK(container);
 			list_del(&obj->list);
+			TLS_DATA_CONTAINER_UNLOCK(container);
 
 			/* Give the code above us a chance to cleanup. */
 			if (container->free_function)
@@ -60,9 +72,6 @@ static void _stp_tls_free_per_thread_ptr(void *addr)
 		 * the struct tls_data_object is the first thing in
 		 * its containing structure. */
 		free(obj);
-
-		if (container)
-			pthread_mutex_unlock(&container->lock);
 	}
 }
 
@@ -98,15 +107,15 @@ _stp_tls_get_per_thread_ptr(struct tls_data_container_t *container)
 		}
 
 		/* Inform pthreads about this instance. */
-		pthread_mutex_lock(&container->lock);
+		TLS_DATA_CONTAINER_WRLOCK(container);
 		if ((rc = pthread_setspecific(container->key, obj)) == 0) {
 			/* Add obj to container's list of objs (for
 			 * use in looping over all threads). */
 			list_add(&obj->list, &container->head);
+			TLS_DATA_CONTAINER_UNLOCK(container);
 		}
 		else {
-			_stp_error("Couldn't setspecific on tls key: %d\n",
-				   rc);
+			TLS_DATA_CONTAINER_UNLOCK(container);
 
 			/* Give the code above us a chance to cleanup. */
 			if (container->free_function)
@@ -114,8 +123,9 @@ _stp_tls_get_per_thread_ptr(struct tls_data_container_t *container)
 
 			free(obj);
 			obj = NULL;
+			_stp_error("Couldn't setspecific on tls key: %d\n",
+				   rc);
 		}
-		pthread_mutex_unlock(&container->lock);
 	}
 exit:
 	return obj;
@@ -139,14 +149,14 @@ _stp_tls_data_container_init(struct tls_data_container_t *container,
 	int rc;
 
 	INIT_LIST_HEAD(&container->head);
-	if ((rc = pthread_mutex_init(&container->lock, NULL)) != 0) {
-	    _stp_error("Couldn't init tls mutex: %d\n", rc);
+	if ((rc = TLS_DATA_CONTAINER_INIT(container)) != 0) {
+	    _stp_error("Couldn't init tls lock: %d\n", rc);
 	    return 1;
 	}
 	if ((rc = pthread_key_create(&container->key,
 				     &_stp_tls_free_per_thread_ptr)) != 0) {
 		_stp_error("Couldn't create tls key: %d\n", rc);
-		(void)pthread_mutex_destroy(&container->lock);
+		TLS_DATA_CONTAINER_DESTROY(container);
 		return 1;
 	}
 
@@ -161,7 +171,7 @@ _stp_tls_data_container_cleanup(struct tls_data_container_t *container)
 {
 	struct tls_data_object_t *obj, *n;
 
-	TLS_DATA_CONTAINER_LOCK(container);
+	TLS_DATA_CONTAINER_WRLOCK(container);
 	(void) pthread_key_delete(container->key);
 	for_each_tls_data_safe(obj, n, container) {
 		list_del(&obj->list);
@@ -173,6 +183,6 @@ _stp_tls_data_container_cleanup(struct tls_data_container_t *container)
 		free(obj);
 	}
 	TLS_DATA_CONTAINER_UNLOCK(container);
-	(void)pthread_mutex_destroy(&container->lock);
+	TLS_DATA_CONTAINER_DESTROY(container);
 }
 #endif /* _TLS_DATA_C_ */
