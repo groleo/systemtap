@@ -60,6 +60,8 @@ struct stapdyn_uprobe_target {
 // We will have to use at least some globals like these, because all of the
 // Dyninst are anonymous (i.e. no user data pointer).  We should probably
 // bundle them into a session object when I'm less lazy...
+
+static BPatch_object *g_stap_dso = NULL;        // the module that we have loaded
 static BPatch_process * g_child_process = NULL; // the process we started
 static vector<stapdyn_uprobe_target> g_targets; // the probe targets in our module
 
@@ -116,12 +118,12 @@ usage (int rc)
 }
 
 static void
-call_inferior_function(BPatch_process *app, const string& name)
+call_inferior_function(BPatch_process *app,
+                       BPatch_object *object,
+                       const string& name)
 {
-  BPatch_image *image = app->getImage();
-
   vector<BPatch_function *> functions;
-  image->findFunction(name.c_str(), functions);
+  object->findFunction(name.c_str(), functions);
 
   for (size_t i = 0; i < functions.size(); ++i)
     {
@@ -176,21 +178,19 @@ get_dwarf_registers(BPatch_process *app,
 }
 
 static void
-instrument_uprobe_target(BPatch_process *app, BPatch_object* object,
+instrument_uprobe_target(BPatch_process* app,
+                         BPatch_object* stap_dso,
+                         BPatch_object* object,
                          const stapdyn_uprobe_target& target)
 {
-  if (!app || !object)
-    return;
-
-  BPatch_image* image = app->getImage();
-  if (!image)
+  if (!app || !stap_dso || !object)
     return;
 
   BPatch_function* enter_function = NULL;
   vector<BPatch_function *> functions;
   vector<BPatch_snippet *> enter_args;
 
-  image->findFunction("enter_dyninst_uprobe_regs", functions);
+  stap_dso->findFunction("enter_dyninst_uprobe_regs", functions);
   if (!functions.empty())
     {
       get_dwarf_registers(app, enter_args);
@@ -200,7 +200,7 @@ instrument_uprobe_target(BPatch_process *app, BPatch_object* object,
 
   if (!enter_function)
     {
-      image->findFunction("enter_dyninst_uprobe", functions);
+      stap_dso->findFunction("enter_dyninst_uprobe", functions);
       if (functions.empty())
         return;
       enter_function = functions[0];
@@ -250,10 +250,10 @@ instrument_uprobe_target(BPatch_process *app, BPatch_object* object,
 }
 
 static void
-instrument_uprobes(BPatch_process *app,
+instrument_uprobes(BPatch_process *app, BPatch_object* stap_dso,
                    const vector<stapdyn_uprobe_target>& targets)
 {
-  if (!app || targets.empty())
+  if (!app || !stap_dso || targets.empty())
     return;
 
   BPatch_image* image = app->getImage();
@@ -289,7 +289,7 @@ instrument_uprobes(BPatch_process *app,
           continue;
         }
 
-      instrument_uprobe_target(app, object, target);
+      instrument_uprobe_target(app, stap_dso, object, target);
     }
   app->finalizeInsertionSet(false);
 }
@@ -299,7 +299,7 @@ dynamic_library_callback(BPatch_thread *thread,
                          BPatch_module *module,
                          bool load)
 {
-  if (!thread || !module || !load)
+  if (!load || !g_stap_dso || !thread || !module)
     return;
 
   BPatch_process* app = thread->getProcess();
@@ -322,7 +322,7 @@ dynamic_library_callback(BPatch_thread *thread,
     {
       const stapdyn_uprobe_target& target = g_targets[i];
       if (target.path == resolved_path)
-        instrument_uprobe_target(app, object, target);
+        instrument_uprobe_target(app, g_stap_dso, object, target);
     }
   app->finalizeInsertionSet(false);
 }
@@ -506,24 +506,31 @@ main(int argc, char * const argv[])
     }
 
   g_child_process = app;
-  app->loadLibrary(module);
+  BPatch_module* stap_mod = app->loadLibrary(module);
+  if (!app)
+    {
+      staperror() << "Couldn't load " << module
+                  << " into the target process" << endl;
+      return 1;
+    }
+  g_stap_dso = stap_mod->getObject();
 
   if ((rc = find_uprobes(dlmodule, g_targets)))
     return rc;
   if (!g_targets.empty())
     {
       patch.registerDynLibraryCallback(dynamic_library_callback);
-      instrument_uprobes(app, g_targets);
+      instrument_uprobes(app, g_stap_dso, g_targets);
     }
 
-  call_inferior_function(app, "stp_dyninst_session_init");
+  call_inferior_function(app, g_stap_dso, "stp_dyninst_session_init");
 
   app->continueExecution();
   while (!app->isTerminated())
     patch.waitForStatusChange();
 
   /* When we get process detaching (rather than just exiting), need:
-   *   call_inferior_function(app, "stp_dyninst_session_exit");
+   *   call_inferior_function(app, g_stap_dso, "stp_dyninst_session_exit");
    */
 
   return check_dyninst_exit(app) ? EXIT_SUCCESS : EXIT_FAILURE;
