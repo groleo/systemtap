@@ -43,16 +43,20 @@ extern "C" {
 using namespace std;
 
 
+// The individual probes' info read from the stap module.
 struct stapdyn_uprobe_probe {
-    uint64_t index, offset, semaphore;
+    uint64_t index;     // The index as counted by the module.
+    uint64_t offset;    // The file offset of the probe's address.
+    uint64_t semaphore; // The file offset of the probe's semaphore.
     stapdyn_uprobe_probe(uint64_t index, uint64_t offset, uint64_t semaphore):
       index(index), offset(offset), semaphore(semaphore) {}
 };
 
 
+// The probe target info read from the stap module.
 struct stapdyn_uprobe_target {
-    string path;
-    vector<stapdyn_uprobe_probe> probes;
+    string path; // The fully resolved path to the file.
+    vector<stapdyn_uprobe_probe> probes; // All probes in this target.
     stapdyn_uprobe_target(const char* path): path(path) {}
 };
 
@@ -66,10 +70,21 @@ static BPatch_process * g_child_process = NULL; // the process we started
 static vector<stapdyn_uprobe_target> g_targets; // the probe targets in our module
 
 
-// no buffer -> badbit -> quietly suppressed output
+//
+// Logging, warnings, and errors, oh my!
+//
+
+// A null-sink output stream, similar to /dev/null
+// (no buffer -> badbit -> quietly suppressed output)
 static ostream nullstream(NULL);
 
+// verbosity, increased by -v
 static unsigned stapdyn_log_level = 0;
+
+// Whether to suppress warnings, set by -w
+static bool stapdyn_supress_warnings = false;
+
+// Return a stream for logging at the given verbosity level.
 static ostream&
 staplog(unsigned level=0)
 {
@@ -78,7 +93,7 @@ staplog(unsigned level=0)
   return clog << program_invocation_short_name << ": ";
 }
 
-static bool stapdyn_supress_warnings = false;
+// Return a stream for warning messages.
 static ostream&
 stapwarn(void)
 {
@@ -87,6 +102,7 @@ stapwarn(void)
   return clog << program_invocation_short_name << ": WARNING: ";
 }
 
+// Return a stream for error messages.
 static ostream&
 staperror(void)
 {
@@ -94,6 +110,8 @@ staperror(void)
 }
 
 
+// Set a typed function pointer by looking it up in a dlopened module.
+// If flagged as 'required', throw an exception if missing or NULL.
 template <typename T> void
 set_dlsym(T*& pointer, void* handle, const char* symbol, bool required=true)
 {
@@ -109,6 +127,7 @@ set_dlsym(T*& pointer, void* handle, const char* symbol, bool required=true)
 }
 
 
+// Print the obligatory usage message.
 static void __attribute__ ((noreturn))
 usage (int rc)
 {
@@ -117,6 +136,8 @@ usage (int rc)
   exit (rc);
 }
 
+
+// Look up a function by name in the target and invoke it without parameters.
 static void
 call_inferior_function(BPatch_process *app,
                        BPatch_object *object,
@@ -125,6 +146,8 @@ call_inferior_function(BPatch_process *app,
   vector<BPatch_function *> functions;
   object->findFunction(name.c_str(), functions);
 
+  // XXX Dyninst can return multiple results, but we're not really
+  // expecting that... should we really call them all anyway?
   for (size_t i = 0; i < functions.size(); ++i)
     {
       vector<BPatch_snippet *> args;
@@ -133,6 +156,9 @@ call_inferior_function(BPatch_process *app,
     }
 }
 
+
+// Create snippets for all the DWARF registers,
+// in their architecture-specific order.
 static void
 get_dwarf_registers(BPatch_process *app,
                     vector<BPatch_snippet*>& registers)
@@ -153,12 +179,15 @@ get_dwarf_registers(BPatch_process *app,
   static const char* const names[] = { NULL };
 #endif
 
+  // First push the original PC, before instrumentation mucked anything up.
+  // (There's also BPatch_actualAddressExpr for the instrumented result...)
   registers.push_back(new BPatch_originalAddressExpr());
 
   BPatch_Vector<BPatch_register> bpregs;
   app->getRegisters(bpregs);
 
-  // O(n^2) loop, but neither is very large
+  // Look for each DWARF register in BPatch's register set.
+  // O(m*n) loop, but neither array is very large
   for (const char* const* name = names; *name; ++name)
     {
       // XXX Dyninst is currently limited in how many individual function
@@ -169,14 +198,20 @@ get_dwarf_registers(BPatch_process *app,
       for (i = 0; i < bpregs.size(); ++i)
         if (bpregs[i].name() == *name)
           {
+            // Found it, add a snippet.
             registers.push_back(new BPatch_registerExpr(bpregs[i]));
             break;
           }
+
+      // If we didn't find it, put a zero in its place.
       if (i >= bpregs.size())
         registers.push_back(new BPatch_constExpr((unsigned long)0));
     }
 }
 
+
+// Given a target and the matchin object, instrument all of the target probes
+// with calls to the stap_dso's entry function.
 static void
 instrument_uprobe_target(BPatch_process* app,
                          BPatch_object* stap_dso,
@@ -190,14 +225,18 @@ instrument_uprobe_target(BPatch_process* app,
   vector<BPatch_function *> functions;
   vector<BPatch_snippet *> enter_args;
 
+  // XXX Until we know how to build pt_regs from here, we'll try the entry
+  // function for individual registers first.
   stap_dso->findFunction("enter_dyninst_uprobe_regs", functions);
   if (!functions.empty())
     {
       get_dwarf_registers(app, enter_args);
-      if (!enter_args.empty())
+      if (enter_args.empty())
         enter_function = functions[0];
     }
 
+  // If the other entry wasn't found, or we don't have registers for it anyway,
+  // try the form that takes pt_regs* and we'll just pass NULL.
   if (!enter_function)
     {
       stap_dso->findFunction("enter_dyninst_uprobe", functions);
@@ -213,6 +252,7 @@ instrument_uprobe_target(BPatch_process* app,
     {
       const stapdyn_uprobe_probe& probe = target.probes[j];
 
+      // Convert the file offset to a memory address.
       Dyninst::Address address = object->fileOffsetToAddr(probe.offset);
       if (address == BPatch_object::E_OUT_OF_BOUNDS)
         {
@@ -221,6 +261,9 @@ instrument_uprobe_target(BPatch_process* app,
           continue;
         }
 
+      // Turn the address into instrumentation points.
+      // NB: There may be multiple results if Dyninst determined that multiple
+      // concrete functions have overlapping ranges.  Rare, but possible.
       vector<BPatch_point*> points;
       object->findPoints(address, points);
       if (points.empty())
@@ -233,6 +276,8 @@ instrument_uprobe_target(BPatch_process* app,
 
       // TODO check each point->getFunction()->isInstrumentable()
 
+      // The entry function needs the index of this particular probe, then
+      // the registers in whatever form we chose above.
       vector<BPatch_snippet *> args;
       args.push_back(new BPatch_constExpr((int64_t)probe.index));
       if (enter_args.empty())
@@ -243,12 +288,17 @@ instrument_uprobe_target(BPatch_process* app,
           args.insert(args.end(), enter_args.begin(), enter_args.end());
         }
       BPatch_funcCallExpr call(*enter_function, args);
+
+      // Finally write the instrumentation for the probe!
       app->insertSnippet(call, points);
 
       // XXX write the semaphore too!
     }
 }
 
+
+// Look for all matches between objects in the process and targets
+// we want to probe, then do the instrumentation.
 static void
 instrument_uprobes(BPatch_process *app, BPatch_object* stap_dso,
                    const vector<stapdyn_uprobe_target>& targets)
@@ -260,11 +310,14 @@ instrument_uprobes(BPatch_process *app, BPatch_object* stap_dso,
   if (!image)
     return;
 
+  // Read all of the objects in the process.
   map<string, BPatch_object*> file_objects;
   vector<BPatch_object *> objects;
   image->getObjects(objects);
   for (size_t i = 0; i < objects.size(); ++i)
     {
+      // We want to map objects by their full path, but the pathName from
+      // Dyninst might be relative, so use realpath().
       string path = objects[i]->pathName();
       char resolved_path[PATH_MAX];
       if (realpath(path.c_str(), resolved_path))
@@ -274,6 +327,7 @@ instrument_uprobes(BPatch_process *app, BPatch_object* stap_dso,
         }
     }
 
+  // Match objects to our targets, and instrument matches.
   app->beginInsertionSet();
   for (size_t i = 0; i < targets.size(); ++i)
     {
@@ -289,11 +343,15 @@ instrument_uprobes(BPatch_process *app, BPatch_object* stap_dso,
           continue;
         }
 
+      // Do the real work...
       instrument_uprobe_target(app, stap_dso, object, target);
     }
   app->finalizeInsertionSet(false);
 }
 
+
+// Callback to respond to dynamically loaded libraries.
+// Check if it matches our targets, and instrument accordingly.
 static void
 dynamic_library_callback(BPatch_thread *thread,
                          BPatch_module *module,
@@ -310,6 +368,7 @@ dynamic_library_callback(BPatch_thread *thread,
   if (!object)
     return;
 
+  // Compare by full path, so relative differences don't throw us off.
   string path = object->pathName();
   char resolved_path[PATH_MAX];
   if (!realpath(path.c_str(), resolved_path))
@@ -317,6 +376,7 @@ dynamic_library_callback(BPatch_thread *thread,
 
   staplog(2) << "found dynamic object " << resolved_path << endl;
 
+  // Search all the targets for matches, and instrument them.
   app->beginInsertionSet();
   for (size_t i = 0; i < g_targets.size(); ++i)
     {
@@ -327,9 +387,13 @@ dynamic_library_callback(BPatch_thread *thread,
   app->finalizeInsertionSet(false);
 }
 
+
+// Look for "uprobes" in the stap module which need Dyninst instrumentation.
 static int
 find_uprobes(void* module, vector<stapdyn_uprobe_target>& targets)
 {
+  // We query for probes with a function interface, so first we have
+  // to get function pointers from the stap module.
   typeof(&stp_dyninst_target_count) target_count = NULL;
   typeof(&stp_dyninst_target_path) target_path = NULL;
 
@@ -338,13 +402,14 @@ find_uprobes(void* module, vector<stapdyn_uprobe_target>& targets)
   typeof(&stp_dyninst_probe_offset) probe_offset = NULL;
   typeof(&stp_dyninst_probe_semaphore) probe_semaphore = NULL;
 
+  // If we don't even have this, then there aren't any uprobes in the module.
   set_dlsym(target_count, module, "stp_dyninst_target_count", false);
-  if (target_count == NULL) // no uprobes
+  if (target_count == NULL)
     return 0;
 
   try
     {
-      // if target_count exists, the rest of these should too
+      // If target_count exists, the rest of these should too.
       set_dlsym(target_path, module, "stp_dyninst_target_path");
       set_dlsym(probe_count, module, "stp_dyninst_probe_count");
       set_dlsym(probe_target, module, "stp_dyninst_probe_target");
@@ -357,10 +422,13 @@ find_uprobes(void* module, vector<stapdyn_uprobe_target>& targets)
       return 1;
     }
 
+  // Construct all the targets in the module.
   const uint64_t ntargets = target_count();
   for (uint64_t i = 0; i < ntargets; ++i)
     targets.push_back(stapdyn_uprobe_target(target_path(i)));
 
+  // Construct all the probes in the module,
+  // and associate each with their target.
   const uint64_t nprobes = probe_count();
   for (uint64_t i = 0; i < nprobes; ++i)
     {
@@ -370,6 +438,7 @@ find_uprobes(void* module, vector<stapdyn_uprobe_target>& targets)
         targets[ti].probes.push_back(p);
     }
 
+  // For debugging, dump what we found.
   for (uint64_t i = 0; i < ntargets; ++i)
     {
       stapdyn_uprobe_target& t = targets[i];
@@ -383,6 +452,9 @@ find_uprobes(void* module, vector<stapdyn_uprobe_target>& targets)
   return 0;
 }
 
+
+// When there's no target command given,
+// just run the begin/end basics directly.
 static int
 run_simple_module(void* module)
 {
@@ -414,12 +486,15 @@ run_simple_module(void* module)
   return 0;
 }
 
+
+// This is main, the heart and soul of stapdyn, oh yeah!
 int
 main(int argc, char * const argv[])
 {
   const char* command = NULL;
   const char* module = NULL;
 
+  // First, option parsing.
   int opt;
   while ((opt = getopt (argc, argv, "c:vwV")) != -1)
     {
@@ -449,6 +524,7 @@ main(int argc, char * const argv[])
         }
     }
 
+  // The first non-option is our stap module, required.
   string module_str;
   if (optind == argc - 1)
     {
@@ -464,6 +540,7 @@ main(int argc, char * const argv[])
   if (!module)
     usage (1);
 
+  // Open the module directly, so we can query probes or run simple ones.
   (void)dlerror(); // clear previous errors
   void* dlmodule = dlopen(module, RTLD_NOW);
   if (!dlmodule)
@@ -472,17 +549,20 @@ main(int argc, char * const argv[])
       return 1;
     }
 
+  // With no command, just run it right away and quit.
   if (!command)
     return run_simple_module(dlmodule);
 
+  // Make sure that environment variables and selinux are set ok.
   if (!check_dyninst_rt())
     return 1;
-
   if (!check_dyninst_sebools())
     return 1;
 
   BPatch patch;
 
+  // Split the command into words.  If wordexp can't do it,
+  // we'll just run via "sh -c" instead.
   const char** child_argv;
   const char* sh_argv[] = { "/bin/sh", "-c", command, NULL };
   wordexp_t words;
@@ -497,6 +577,7 @@ main(int argc, char * const argv[])
       return 1;
     }
 
+  // Search the PATH if necessary, then create the target process!
   string fullpath = find_executable(child_argv[0]);
   BPatch_process* app = patch.processCreate(fullpath.c_str(), child_argv);
   if (!app)
@@ -505,6 +586,7 @@ main(int argc, char * const argv[])
       return 1;
     }
 
+  // Load the stap module into the target process.
   g_child_process = app;
   BPatch_module* stap_mod = app->loadLibrary(module);
   if (!app)
@@ -515,6 +597,7 @@ main(int argc, char * const argv[])
     }
   g_stap_dso = stap_mod->getObject();
 
+  // Find and instrument uprobes in the target
   if ((rc = find_uprobes(dlmodule, g_targets)))
     return rc;
   if (!g_targets.empty())
@@ -523,8 +606,10 @@ main(int argc, char * const argv[])
       instrument_uprobes(app, g_stap_dso, g_targets);
     }
 
+  // Get the stap module ready...
   call_inferior_function(app, g_stap_dso, "stp_dyninst_session_init");
 
+  // And away we go!
   app->continueExecution();
   while (!app->isTerminated())
     patch.waitForStatusChange();
