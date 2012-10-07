@@ -231,6 +231,8 @@ Requires: crash
 %endif
 %ifarch x86_64
 Requires: /usr/lib/libc.so
+# ... and /usr/lib/libgcc_s.so.*
+# ... and /usr/lib/libstdc++.so.*
 %endif
 
 %description testsuite
