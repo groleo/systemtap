@@ -1261,7 +1261,16 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
           if (optarg == string("kernel"))
             runtime_mode = kernel_runtime;
           else if (optarg == string("dyninst"))
-            runtime_mode = dyninst_runtime;
+            {
+              if (privilege_set && pr_unprivileged != privilege)
+                {
+                  cerr << _("ERROR: --runtime=dyninst implies unprivileged mode only") << endl;
+                  return 1;
+                }
+              privilege = pr_unprivileged;
+              privilege_set = true;
+              runtime_mode = dyninst_runtime;
+            }
           else
             {
               cerr << _F("ERROR: %s is an invalid argument for --runtime", optarg) << endl;
@@ -1409,12 +1418,16 @@ systemtap_session::check_options (int argc, char * const argv [])
       cerr << _F("You can't specify %s and %s together.", "-c", "-x") << endl;
       usage (1);
     }
-  if (! pr_contains (privilege, pr_stapdev) && guru_mode)
+
+  // NB: In user-mode runtimes (dyninst), we can allow guru mode any time, but we
+  // need to restrict guru by privilege level in the kernel runtime.
+  if (! is_usermode () && ! pr_contains (privilege, pr_stapdev) && guru_mode)
     {
       cerr << _F("You can't specify %s and --privilege=%s together.", "-g", pr_name (privilege))
 	   << endl;
       usage (1);
     }
+
   if (!kernel_symtab_path.empty())
     {
       if (consult_symtab)

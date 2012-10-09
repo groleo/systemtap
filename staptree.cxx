@@ -1942,8 +1942,10 @@ varuse_collecting_visitor::visit_embeddedcode (embeddedcode *s)
 
   // Don't allow embedded C functions in unprivileged mode unless
   // they are tagged with /* unprivileged */ or /* myproc-unprivileged */
+  // or we're in a usermode runtime.
   if (! pr_contains (session.privilege, pr_stapdev) &&
       ! pr_contains (session.privilege, pr_stapsys) &&
+      ! session.is_usermode () &&
       s->code.find ("/* unprivileged */") == string::npos &&
       s->code.find ("/* myproc-unprivileged */") == string::npos)
     throw semantic_error (_F("function may not be used when --privilege=%s is specified",
@@ -1981,9 +1983,11 @@ void
 varuse_collecting_visitor::visit_embedded_expr (embedded_expr *e)
 {
   // Don't allow embedded C expressions in unprivileged mode unless
-  // they are tagged with /* unprivileged */
+  // they are tagged with /* unprivileged */ or /* myproc-unprivileged */
+  // or we're in a usermode runtime.
   if (! pr_contains (session.privilege, pr_stapdev) &&
       ! pr_contains (session.privilege, pr_stapsys) &&
+      ! session.is_usermode () &&
       e->code.find ("/* unprivileged */") == string::npos &&
       e->code.find ("/* myproc-unprivileged */") == string::npos)
     throw semantic_error (_F("embedded expression may not be used when --privilege=%s is specified",
