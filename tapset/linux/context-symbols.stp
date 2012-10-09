@@ -129,7 +129,7 @@ function probefunc:string () %( systemtap_v < "2.0" %?
 %}
 %:
 {
-	%( systemtap_privilege == "privileged" %?
+	%( systemtap_privilege != "stapusr" %?
 	   return user_mode() ? usymname(ustack(0)) : symname(stack(0))
 	%:
 	   return user_mode() ? usymname(ustack(0))

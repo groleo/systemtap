@@ -862,9 +862,10 @@ bool eval_pp_conditional (systemtap_session& s,
   else if (l->type == tok_identifier && l->content == "systemtap_privilege")
     {
       string target_privilege =
-	( pr_contains(s.privilege, pr_stapdev)
-	  || pr_contains(s.privilege, pr_stapsys) ) ? "privileged"
-	: pr_contains(s.privilege, pr_stapusr) ? "unprivileged"
+	/* XXX perhaps include a "guru" state */
+	pr_contains(s.privilege, pr_stapdev) ? "stapdev"
+	: pr_contains(s.privilege, pr_stapsys) ? "stapsys"
+	: pr_contains(s.privilege, pr_stapusr) ? "stapusr"
 	: "none"; /* should be impossible -- s.privilege always one of above */
       assert(target_privilege != "none");
 
@@ -881,6 +882,7 @@ bool eval_pp_conditional (systemtap_session& s,
         result = nomatch;
       else
         throw parse_error (_("expected '==' or '!='"), op);
+      /* XXX perhaps allow <= >= and similar comparisons */
 
       return result;
     }
