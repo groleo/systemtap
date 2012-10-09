@@ -9,9 +9,9 @@
   fresh dyninst snapshot such as that in Fedora rawhide.  It may be
   necessary to disable conflicting selinux checks; systemtap will advise.
 
-  Select this new backend with the stap option --runtime=dyninst and a
-  -c target process, along with normal options. (-x target processes
-  are not supported in this prototype version.) For example:
+  Select this new backend with the new stap option --runtime=dyninst
+  and a -c target process, along with normal options. (-x target
+  processes are not supported in this prototype version.) For example:
 
     stap --runtime=dyninst -c 'stap -l begin' \
       -e 'probe process.function("main") { println("hi from dyninst!") }'
@@ -50,6 +50,11 @@
   In practical terms, this allows us to specify additional options to
   certain tapset probe aliases, by writing e.g.
     probe syscall.open.return.maxactive(5) { ... }
+
+- To support the possibility of separate kernel and dyninst backends,
+  the tapsets have been reorganized into separate folders according to
+  backend. Thus kernel-specific tapsets are located under linux/, the
+  dyninst-specific ones under dyninst/
 
 - The backtrace/unwind tapsets have been expanded to allow random
   access to individual elements of the backtrace. (A caching mechanism
