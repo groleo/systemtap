@@ -376,6 +376,7 @@ compile_pass (systemtap_session& s)
   output_exportconf(s, o, "task_work_add", "STAPCONF_TASK_WORK_ADD_EXPORTED");
 
   output_autoconf(s, o, "autoconf-pagefault_disable.c", "STAPCONF_PAGEFAULT_DISABLE", NULL);
+  output_exportconf(s, o, "kallsyms_lookup_name", "STAPCONF_KALLSYMS");
 
   o << module_cflags << " += -include $(STAPCONF_HEADER)" << endl;
 

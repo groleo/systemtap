@@ -644,5 +644,14 @@ static void _stp_kmodule_update_address(const char* module,
 }
 
 
+#ifndef STAPCONF_KALLSYMS
+unsigned long kallsyms_lookup_name (const char *name)
+{
+        _stp_error ("kallsyms_lookup_name unavailable for %s\n", name);
+        return 0;
+}
+#endif
+
+
 
 #endif /* _STP_SYM_C_ */
