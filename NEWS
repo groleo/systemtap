@@ -79,7 +79,7 @@
   systemtap.examples/general/para-callgraph.stp in unprivileged mode
   with a stapusr-permitted probe.
 
-- Preprocessor conditional for script privilege level:
+- Preprocessor conditional to vary code based on script privilege level:
   unprivileged -- %( systemtap_privilege == "stapusr" %? ... %)
   privileged   -- %( systemtap_privilege != "stapusr" %? ... %)
   or, alternately %( systemtap_privilege == "stapsys"
