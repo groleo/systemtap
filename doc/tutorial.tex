@@ -473,7 +473,7 @@ Figure~\ref{fig:inode-watch} demonstrates one way to monitor a
 particular file (identifed by device number and inode number).
 The script selects the appropriate variants of \verb+dev_nr+
 and\verb+inode_nr+ based on the kernel version.
-This example also demonstrates pasting numeric command-line arguments
+This example also demonstrates passing numeric command-line arguments
 (\verb+$1+ etc.) into scripts.
 %$
 
@@ -757,7 +757,7 @@ process CPU usage: which processes/users use how much of each CPU.
 
 \section{Tapsets}
 
-After writing enough analysis scripts for yourself, your may become
+After writing enough analysis scripts for yourself, you may become
 known as an expert to your colleagues, who will want to use your
 scripts.  Systemtap makes it possible to share in a controlled manner;
 to build libraries of scripts that build on each other.  In fact, all

@@ -128,7 +128,7 @@ Below is one such alias for the x86_64 Java hotspot JVM:
 <term>process.begin</term>
 <listitem>
 <para>User-space process is created.
-This can be limited to a a particular process ID or a full path to the
+This can be limited to a particular process ID or a full path to the
 executable.</para>
 </listitem>
 </varlistentry>
@@ -137,7 +137,7 @@ executable.</para>
 <term>process.thread.begin</term>
 <listitem>
 <para>User-space thread is created.
-This can be limited to a a particular process ID or a full path to the
+This can be limited to a particular process ID or a full path to the
 executable.</para>
 </listitem>
 </varlistentry>
@@ -146,7 +146,7 @@ executable.</para>
 <term>process.end</term>
 <listitem>
 <para>User-space process died.
-This can be limited to a a particular process ID or a full path to the
+This can be limited to a particular process ID or a full path to the
 executable.</para>
 </listitem>
 </varlistentry>
@@ -155,7 +155,7 @@ executable.</para>
 <term>process.thread.end</term>
 <listitem>
 <para>User-space thread is destroyed.
-This can be limited to a a particular process ID or a full path to the
+This can be limited to a particular process ID or a full path to the
 executable.</para>
 </listitem>
 </varlistentry>
@@ -169,7 +169,7 @@ the fist six arguments are available via $arg1 through $arg6.
 The ".return" suffix will place the probe at the return from the system call.
 For the "syscall.return" the return value is available through the
 $return context variable.
-This can be limited to a a particular process ID or a full path to the
+This can be limited to a particular process ID or a full path to the
 executable.</para>
 </listitem>
 </varlistentry>
