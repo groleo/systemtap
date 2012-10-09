@@ -109,7 +109,7 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline() << "local_irq_save (flags);";
   s.op->newline() << "#endif";
 
-  if (! s.is_usermode())
+  if (! s.runtime_usermode_p())
     {
       // Check for enough free enough stack space
       s.op->newline() << "if (unlikely ((((unsigned long) (& c)) & (THREAD_SIZE-1))"; // free space
@@ -129,7 +129,7 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline(1) << "goto probe_epilogue;";
   s.op->indent(-1);
 
-  if (! s.is_usermode())
+  if (! s.runtime_usermode_p())
     s.op->newline() << "c = contexts[smp_processor_id()];";
   else
     s.op->newline() << "c = &contexts;";
@@ -4244,7 +4244,7 @@ dwarf_derived_probe::dwarf_derived_probe(const string& funcname,
 
       // inode-uprobes needs an offset rather than an absolute VM address.
       // ditto for userspace runtimes (dyninst)
-      if ((kernel_supports_inode_uprobes(q.dw.sess) || q.dw.sess.is_usermode()) &&
+      if ((kernel_supports_inode_uprobes(q.dw.sess) || q.dw.sess.runtime_usermode_p()) &&
           section == ".absolute" && addr == dwfl_addr &&
           addr >= q.dw.module_start && addr < q.dw.module_end)
         this->addr = addr - q.dw.module_start;
@@ -7206,7 +7206,7 @@ uprobe_derived_probe::join_group (systemtap_session& s)
   if (! s.uprobe_derived_probes)
     s.uprobe_derived_probes = new uprobe_derived_probe_group ();
   s.uprobe_derived_probes->enroll (this);
-  if (!s.is_usermode())
+  if (!s.runtime_usermode_p())
     enable_task_finder(s);
 
   // Ask buildrun.cxx to build extra module if needed, and
@@ -7802,7 +7802,7 @@ uprobe_derived_probe_group::emit_module_dyninst_exit (systemtap_session& s)
 void
 uprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
 {
-  if (s.is_usermode())
+  if (s.runtime_usermode_p())
     emit_module_dyninst_decls (s);
   else if (kernel_supports_inode_uprobes (s))
     emit_module_inode_decls (s);
@@ -7814,7 +7814,7 @@ uprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
 void
 uprobe_derived_probe_group::emit_module_init (systemtap_session& s)
 {
-  if (s.is_usermode())
+  if (s.runtime_usermode_p())
     emit_module_dyninst_init (s);
   else if (kernel_supports_inode_uprobes (s))
     emit_module_inode_init (s);
@@ -7826,7 +7826,7 @@ uprobe_derived_probe_group::emit_module_init (systemtap_session& s)
 void
 uprobe_derived_probe_group::emit_module_exit (systemtap_session& s)
 {
-  if (s.is_usermode())
+  if (s.runtime_usermode_p())
     emit_module_dyninst_exit (s);
   else if (kernel_supports_inode_uprobes (s))
     emit_module_inode_exit (s);

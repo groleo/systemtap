@@ -1945,7 +1945,7 @@ varuse_collecting_visitor::visit_embeddedcode (embeddedcode *s)
   // or we're in a usermode runtime.
   if (! pr_contains (session.privilege, pr_stapdev) &&
       ! pr_contains (session.privilege, pr_stapsys) &&
-      ! session.is_usermode () &&
+      ! session.runtime_usermode_p () &&
       s->code.find ("/* unprivileged */") == string::npos &&
       s->code.find ("/* myproc-unprivileged */") == string::npos)
     throw semantic_error (_F("function may not be used when --privilege=%s is specified",
@@ -1987,7 +1987,7 @@ varuse_collecting_visitor::visit_embedded_expr (embedded_expr *e)
   // or we're in a usermode runtime.
   if (! pr_contains (session.privilege, pr_stapdev) &&
       ! pr_contains (session.privilege, pr_stapsys) &&
-      ! session.is_usermode () &&
+      ! session.runtime_usermode_p () &&
       e->code.find ("/* unprivileged */") == string::npos &&
       e->code.find ("/* myproc-unprivileged */") == string::npos)
     throw semantic_error (_F("embedded expression may not be used when --privilege=%s is specified",

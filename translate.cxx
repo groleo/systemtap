@@ -1107,7 +1107,7 @@ c_unparser::emit_common_header ()
   emit_compiled_printf_locals ();
 
   o->newline(-1) << "};\n";
-  if (!session->is_usermode())
+  if (!session->runtime_usermode_p())
     o->newline() << "static struct context *contexts[NR_CPUS] = { NULL };\n";
   else
     o->newline() << "static __thread struct context contexts;\n";
@@ -1472,7 +1472,7 @@ c_unparser::emit_global_param (vardecl *v)
   string vn = c_globalname (v->name);
 
   // XXX: No module parameters with dyninst.
-  if (session->is_usermode())
+  if (session->runtime_usermode_p())
     return;
 
   // NB: systemtap globals can collide with linux macros,
@@ -1563,7 +1563,7 @@ c_unparser::emit_module_init ()
   o->newline() << "const char *probe_point = \"\";";
 
   // NB: This block of initialization only makes sense in kernel
-  if (! session->is_usermode())
+  if (! session->runtime_usermode_p())
   {
       // XXX Plus, most of this code is completely static, so it probably should
       // move into the runtime, where kernel/dyninst is more easily separated.
@@ -1663,7 +1663,7 @@ c_unparser::emit_module_init ()
   // while to abort right away.  Currently running probes are allowed to
   // terminate.  These may set STAP_SESSION_ERROR!
 
-  if (!session->is_usermode()) {
+  if (!session->runtime_usermode_p()) {
     // per-cpu context
     o->newline() << "for_each_possible_cpu(cpu) {";
     o->indent(1);
@@ -1771,7 +1771,7 @@ c_unparser::emit_module_init ()
   o->newline() << "#endif";
 
   // Free up the context memory after an error too
-  if (!session->is_usermode()) {
+  if (!session->runtime_usermode_p()) {
     o->newline() << "for_each_possible_cpu(cpu) {";
     o->indent(1);
     o->newline() << "if (contexts[cpu] != NULL) {";
@@ -1809,7 +1809,7 @@ c_unparser::emit_module_exit ()
   o->newline() << "static void systemtap_module_exit (void) {";
   // rc?
   o->newline(1) << "int i=0, j=0;"; // for derived_probe_group use
-  if (! session->is_usermode())
+  if (! session->runtime_usermode_p())
     {
       o->newline() << "int holdon;";
       o->newline() << "int cpu;";
@@ -1857,7 +1857,7 @@ c_unparser::emit_module_exit ()
   // TLS (which the dyninst runtime code uses), there isn't an
   // easy/easily-found way to loop over all the current threads to get
   // each thread's data value.
-  if (! session->is_usermode())
+  if (! session->runtime_usermode_p())
     {
       o->newline() << "hold_start = jiffies;";
       o->newline() << "hold_index = -1;";
@@ -1925,7 +1925,7 @@ c_unparser::emit_module_exit ()
 	o->newline() << getvar (v).fini();
     }
 
-  if (! session->is_usermode())
+  if (! session->runtime_usermode_p())
     {
       o->newline() << "for_each_possible_cpu(cpu) {";
       o->indent(1);
@@ -2205,7 +2205,7 @@ c_unparser::emit_probe (derived_probe* v)
 
       // Emit runtime safety net for unprivileged mode.
       // NB: In usermode, the system restricts our privilege for us.
-      if (!session->is_usermode())
+      if (!session->runtime_usermode_p())
         v->emit_privilege_assertion (o);
 
       // emit probe local initialization block

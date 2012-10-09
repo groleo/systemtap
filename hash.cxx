@@ -157,7 +157,7 @@ get_base_hash (systemtap_session& s)
   h.add_path("Runtime transport ", s.runtime_path + "/transport");
   h.add_path("Runtime unwind ", s.runtime_path + "/unwind");
   h.add_path("Runtime sub ", s.runtime_path +
-             (s.is_usermode() ? "/dyninst" : "/linux"));
+             (s.runtime_usermode_p() ? "/dyninst" : "/linux"));
 
   // Hash compiler path, size, and mtime.  We're just going to assume
   // we'll be using gcc. XXX: getting kbuild to spit out out would be

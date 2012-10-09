@@ -189,7 +189,7 @@ public:
   bool suppress_handler_errors;
 
   enum { kernel_runtime, dyninst_runtime } runtime_mode;
-  bool is_usermode() const { return runtime_mode == dyninst_runtime; }
+  bool runtime_usermode_p() const { return runtime_mode == dyninst_runtime; }
 
   // NB: It is very important for all of the above (and below) fields
   // to be cleared in the systemtap_session ctor (session.cxx).

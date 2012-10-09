@@ -365,7 +365,7 @@ systemtap_session::~systemtap_session ()
 const string
 systemtap_session::module_filename() const
 {
-  if (is_usermode())
+  if (runtime_usermode_p())
     return module_name + ".so";
   return module_name + ".ko";
 }
@@ -1421,7 +1421,7 @@ systemtap_session::check_options (int argc, char * const argv [])
 
   // NB: In user-mode runtimes (dyninst), we can allow guru mode any time, but we
   // need to restrict guru by privilege level in the kernel runtime.
-  if (! is_usermode () && ! pr_contains (privilege, pr_stapdev) && guru_mode)
+  if (! runtime_usermode_p () && ! pr_contains (privilege, pr_stapdev) && guru_mode)
     {
       cerr << _F("You can't specify %s and --privilege=%s together.", "-g", pr_name (privilege))
 	   << endl;

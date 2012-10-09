@@ -232,7 +232,7 @@ compile_dyninst (systemtap_session& s)
 int
 compile_pass (systemtap_session& s)
 {
-  if (s.is_usermode())
+  if (s.runtime_usermode_p())
     return compile_dyninst (s);
 
   int rc = uprobes_pass (s);
@@ -480,7 +480,7 @@ compile_pass (systemtap_session& s)
 static bool
 kernel_built_uprobes (systemtap_session& s)
 {
-  if (s.is_usermode())
+  if (s.runtime_usermode_p())
     return true; // sort of, via dyninst
 
   // see also tapsets.cxx:kernel_supports_inode_uprobes()
@@ -650,7 +650,7 @@ vector<string>
 make_run_command (systemtap_session& s, const string& remotedir,
                   const string& version)
 {
-  if (s.is_usermode())
+  if (s.runtime_usermode_p())
     return make_dyninst_run_command(s, remotedir, version);
 
   // for now, just spawn staprun

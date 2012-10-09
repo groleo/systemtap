@@ -887,7 +887,7 @@ passes_0_4 (systemtap_session &s)
       // Update cache. Cache cleaning is kicked off at the beginning of this function.
       if (s.use_script_cache)
         add_script_to_cache(s);
-      if (s.use_cache && !s.is_usermode())
+      if (s.use_cache && !s.runtime_usermode_p())
         add_stapconf_to_cache(s);
 
       // We may need to save the module in $CWD if the cache was
