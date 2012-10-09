@@ -727,11 +727,8 @@ If the first part is the identifier
 the test refers to the privilege level that the systemtap script is
 compiled with. Here the second part is
 .BR == " or " != ,
-and the third part is a string literal, either "privileged" or "unprivileged". The former case corresponds to both the
-.BI \-\-privilege==stapusr
-and
-.BI \-\-privilege==stapsys
-options.
+and the third part is a string literal, either "stapusr" or "stapsys"
+or "stapdev".
 .PP
 Otherwise, the CONDITION is expected to be a comparison between two string
 literals or two numeric literals.  In this case, the arguments are the only
