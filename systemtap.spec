@@ -600,6 +600,9 @@ exit 0
 # ------------------------------------------------------------------------
 
 %changelog
+* Tue Oct 09 2012 Josh Stone <jistone@redhat.com> - 2.0-1
+- Upstream release.
+
 * Fri Jul 13 2012 Peter Robinson <pbrobinson@fedoraproject.org>
 - Fix ifarch statement
 - use file based requires for glibc-devel on x86_64 so that we work in koji
