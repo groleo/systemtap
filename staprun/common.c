@@ -38,6 +38,7 @@ off_t fsize_max;
 int fnum_max;
 int remote_id;
 const char *remote_uri;
+int relay_basedir_fd;
 
 /* module variables */
 char *modname = NULL;
@@ -132,8 +133,13 @@ void parse_args(int argc, char **argv)
 	fnum_max = 0;
         remote_id = -1;
         remote_uri = NULL;
+        relay_basedir_fd = -1;
 
-	while ((c = getopt(argc, argv, "ALu::vb:t:dc:o:x:S:DwRr:VT:")) != EOF) {
+	while ((c = getopt(argc, argv, "ALu::vb:t:dc:o:x:S:DwRr:VT:"
+#ifdef HAVE_OPENAT
+                           "F:"
+#endif
+                        )) != EOF) {
 		switch (c) {
 		case 'u':
 			need_uprobes = 1;
@@ -178,6 +184,13 @@ void parse_args(int argc, char **argv)
 			break;
 		case 'D':
 			daemon_mode = 1;
+			break;
+		case 'F':
+			relay_basedir_fd = atoi(optarg);
+			if (relay_basedir_fd < 0) {
+				err(_("Invalid file descriptor option '%s'.\n"), optarg);
+				usage(argv[0]);
+			}
 			break;
 		case 'S':
 			fsize_max = strtoul(optarg, &s, 10);
@@ -327,6 +340,9 @@ void usage(char *prog)
         "-T timeout      Specifies upper limit on amount of time reader thread\n"
         "                will wait for new full trace buffer. Value should be an\n"
         "                integer >= 1, which is timeout value in ms. Default 200ms.\n\n"
+#ifdef HAVE_OPENAT
+        "-F fd           Specifies file descriptor for module relay directory\n"
+#endif
 	"MODULE can be either a module name or a module path.  If a\n"
 	"module name is used, it is searched in the following directory:\n"));
         {

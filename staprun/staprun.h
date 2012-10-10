@@ -231,6 +231,7 @@ extern off_t fsize_max;
 extern int fnum_max;
 extern int remote_id;
 extern const char *remote_uri;
+extern int relay_basedir_fd;
 
 /* getopt variables */
 extern char *optarg;
