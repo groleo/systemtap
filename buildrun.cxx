@@ -657,9 +657,7 @@ make_run_command (systemtap_session& s, const string& remotedir,
   // for now, just spawn staprun
   vector<string> staprun_cmd;
   staprun_cmd.push_back(getenv("SYSTEMTAP_STAPRUN") ?: BINDIR "/staprun");
-  if (s.verbose>1)
-    staprun_cmd.push_back("-v");
-  if (s.verbose>2)
+  for (unsigned i=0; i<s.verbose; i++)
     staprun_cmd.push_back("-v");
   if (s.suppress_warnings)
     staprun_cmd.push_back("-w");
