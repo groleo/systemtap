@@ -60,8 +60,20 @@ static void _stp_do_relocation(const char __user *buf, size_t count)
   /* Detect actual kernel load address. */
   if (!strcmp ("kernel", msg.module)
       && !strcmp ("_stext", msg.reloc)) {
-    dbug_sym(2, "found kernel _stext load address: 0x%lx\n",
+      if (msg.address == 0) {
+      #ifdef CONFIG_KALLSYMS
+	    dbug_sym(1,"asking kernel for _stext load address");
+	    msg.address = kallsyms_lookup_name("_stext");
+	    if (msg.address == 0) {
+	    _stp_warn("kallsyms_lookup_name() does not returned a suitable load address for _stext");
+	} else {
+	    dbug_sym(1, "found kernel _stext load address: 0x%lx\n",
              (unsigned long) msg.address);
+	}
+     #else
+	_stp_warn("No load address for symbol _stext given. Stap will not be able to relocate the probe points!");
+     #endif
+    }
     if (_stp_kretprobe_trampoline != (unsigned long) -1)
       _stp_kretprobe_trampoline += (unsigned long) msg.address;
   }
