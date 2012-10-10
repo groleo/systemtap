@@ -71,11 +71,12 @@ The
 program is the front-end to the Systemtap tool.  It accepts probing
 instructions (written in a simple scripting language), translates
 those instructions into C code, compiles this C code, and loads the
-resulting kernel module into a running Linux kernel to perform the
-requested system trace/probe functions.  You can supply the script in
-a named file (FILENAME) from standard input (use \- instead of FILENAME),
-or from the command line (using \-e SCRIPT).  The program runs until it
-is interrupted by the user, or if the script voluntarily invokes the
+resulting module into a running Linux kernel or a DynInst user-space
+mutator, to perform the requested system trace/probe functions.  You
+can supply the script in a named file (FILENAME) from standard input
+(use \- instead of FILENAME), or from the command line (using \-e
+SCRIPT).  The program runs until it is interrupted by the user, or if
+the script voluntarily invokes the
 .I exit()
 function, or by sufficient number of soft errors.
 .PP
