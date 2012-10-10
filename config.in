@@ -65,6 +65,9 @@
 /* Define to 1 if you have the nss libraries. */
 #undef HAVE_NSS
 
+/* Define to 1 if you have the `openat' function. */
+#undef HAVE_OPENAT
+
 /* Define to 1 if you have the `ppoll' function. */
 #undef HAVE_PPOLL
 

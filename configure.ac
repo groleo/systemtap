@@ -32,6 +32,7 @@ AC_SYS_LARGEFILE
 AM_GNU_GETTEXT(external)
 AM_GNU_GETTEXT_VERSION(0.17)
 AC_CHECK_FUNCS(ppoll)
+AC_CHECK_FUNCS(openat)
 
 dnl Handle the prologues option.
 dnl

@@ -8864,6 +8864,17 @@ _ACEOF
 fi
 done
 
+for ac_func in openat
+do :
+  ac_fn_c_check_func "$LINENO" "openat" "ac_cv_func_openat"
+if test "x$ac_cv_func_openat" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_OPENAT 1
+_ACEOF
+
+fi
+done
+
 
 if test "${enable_prologues+set}" != set; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking to see if prologue searching should be the default" >&5
