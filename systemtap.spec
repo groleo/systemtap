@@ -15,7 +15,7 @@
 %{!?with_dyninst: %global with_dyninst 0%{?fedora} >= 18 || 0%{?rhel} >= 7}
 
 Name: systemtap
-Version: 2.0
+Version: 2.1
 Release: 1%{?dist}
 # for version, see also configure.ac
 
