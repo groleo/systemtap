@@ -507,6 +507,7 @@ exit 0
 %dir %attr(0755,stap-server,stap-server) %{_localstatedir}/log/stap-server
 %ghost %config(noreplace) %attr(0644,stap-server,stap-server) %{_localstatedir}/log/stap-server/log
 %ghost %attr(0755,stap-server,stap-server) %{_localstatedir}/run/stap-server
+%ghost %attr(0750,stap-server,stap-server) %{_localstatedir}/lib/stap-server
 %doc initscript/README.stap-server
 %doc README README.unprivileged AUTHORS NEWS COPYING
 
