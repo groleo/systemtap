@@ -628,9 +628,9 @@ make_dyninst_run_command (systemtap_session& s, const string& remotedir,
 {
   vector<string> cmd;
   cmd.push_back(getenv("SYSTEMTAP_STAPDYN") ?: BINDIR "/stapdyn");
-  if (s.verbose > 1)
-    cmd.push_back("-v");
-  if (s.verbose > 2)
+
+  // use slightly less verbosity
+  for (unsigned i=1; i<s.verbose; i++)
     cmd.push_back("-v");
   if (s.suppress_warnings)
     cmd.push_back("-w");
@@ -657,7 +657,9 @@ make_run_command (systemtap_session& s, const string& remotedir,
   // for now, just spawn staprun
   vector<string> staprun_cmd;
   staprun_cmd.push_back(getenv("SYSTEMTAP_STAPRUN") ?: BINDIR "/staprun");
-  for (unsigned i=0; i<s.verbose; i++)
+
+  // use slightly less verbosity
+  for (unsigned i=1; i<s.verbose; i++)
     staprun_cmd.push_back("-v");
   if (s.suppress_warnings)
     staprun_cmd.push_back("-w");
