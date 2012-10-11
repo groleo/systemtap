@@ -445,8 +445,8 @@ find_uprobes(void* module, vector<stapdyn_uprobe_target>& targets)
       staplog(3) << "target " << t.path << " has "
                  << t.probes.size() << " probes" << endl;
       for (uint64_t j = 0; j < t.probes.size(); ++j)
-        staplog(3) << "  offset:" << (void*)t.probes[i].offset
-                   << " semaphore:" << t.probes[i].semaphore << endl;
+        staplog(3) << "  offset:" << (void*)t.probes[j].offset
+                   << " semaphore:" << t.probes[j].semaphore << endl;
     }
 
   return 0;
