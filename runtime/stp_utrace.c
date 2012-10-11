@@ -809,11 +809,6 @@ int utrace_set_events(struct task_struct *target,
 	engine->flags = events | (engine->flags & ENGINE_STOP);
 	utrace->utrace_flags |= events;
 
-	/* FIXME: Hmm, unsure about calling set_tsk_thread_flag()... */
-	if ((events & UTRACE_EVENT_SYSCALL) &&
-	    !(old_utrace_flags & UTRACE_EVENT_SYSCALL))
-		set_tsk_thread_flag(target, TIF_SYSCALL_TRACE);
-
 	ret = 0;
 	if ((old_flags & ~events) && target != current &&
 	    !task_is_stopped_or_traced(target) && !target->exit_state) {
@@ -953,9 +948,6 @@ static bool utrace_reset(struct task_struct *task, struct utrace *utrace)
 		 */
 		BUG_ON(utrace->death);
 		flags &= UTRACE_EVENT(REAP);
-	} else if (!(flags & UTRACE_EVENT_SYSCALL) &&
-		   test_tsk_thread_flag(task, TIF_SYSCALL_TRACE)) {
-		clear_tsk_thread_flag(task, TIF_SYSCALL_TRACE);
 	}
 
 	if (!flags) {
