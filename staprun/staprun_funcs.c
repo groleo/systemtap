@@ -182,7 +182,7 @@ int insert_module(
         if (getenv ("SYSTEMTAP_SYNC") != NULL)
                 sync();
 
-        dbug(2,"Module %s inserted from file %s\n", modname, module_realpath);
+        dbug(1,"Module %s inserted from file %s\n", modname, module_realpath);
 	PROBE1(staprun, insert__module, (char*)module_realpath);
 	/* Actually insert the module */
 	ret = init_module(module_file, sbuf.st_size, opts);
