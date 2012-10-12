@@ -20,6 +20,7 @@ int init_ctl_channel(const char *name, int verb)
 	struct statfs st;
 	int old_transport = 0;
 
+        (void) verb;
         if (0) goto out; /* just to defeat gcc warnings */
 
 #ifdef HAVE_OPENAT
@@ -82,26 +83,21 @@ int init_ctl_channel(const char *name, int verb)
 	 * better safe than sorry.
 	 */
 #ifdef HAVE_OPENAT
-        if (relay_basedir_fd >= 0) {
+        if (control_channel >= 0 && relay_basedir_fd >= 0) {
                 if (faccessat (relay_basedir_fd, CTL_CHANNEL_NAME, R_OK|W_OK, 0) == 0)
                         goto out;
+                /* else fall through */
         }
 #endif
-	if (access(buf, R_OK|W_OK) != 0){
+	if (control_channel >= 0 && access(buf, R_OK|W_OK) != 0) {
 		close(control_channel);
-		err("ERROR: no access to debugfs; try \"chmod 0755 %s\" as root\n",
-                     DEBUGFSDIR);
 		return -5;
 	}
 
 out:
 	if (control_channel < 0) {
-		if (verb) {
-			if (attach_mod && errno == ENOENT)
-				err(_("ERROR: Can not attach. Module %s not running.\n"), name);
-			else
-				perr(_("Couldn't open control channel '%s'"), buf);
-		}
+                err(_("ERROR: Cannot attach to module %s control channel; not running?\n"), 
+                    name);
 		return -3;
 	}
 	if (set_clexec(control_channel) < 0)
