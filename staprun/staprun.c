@@ -319,7 +319,12 @@ int init_staprun(void)
 	rc = 0;
 	if (delete_mod)
 		exit(remove_module(modname, 1));
-	else if (!attach_mod) {
+        if (attach_mod) {
+                /* PR14245: prime the relay_basedir_fd pump. */
+		rc = init_ctl_channel (modname, 0);
+		if (rc >= 0)
+		  close_ctl_channel ();
+        } else /* if (!attach_mod) */ {
 		if (need_uprobes && enable_uprobes() != 0)
 			return -1;
 
