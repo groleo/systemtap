@@ -163,13 +163,13 @@ void *kallsyms_task_work_cancel;
 #include "copy.c"
 #include "regs.c"
 #include "regs-ia64.c"
+#include "sym.c"
 
 #if (defined(CONFIG_UTRACE) || defined(STAPCONF_UTRACE_VIA_TRACEPOINTS))
 #define HAVE_TASK_FINDER
 #include "task_finder.c"
 #endif
 
-#include "sym.c"
 #ifdef STP_PERFMON
 #include "perf.c"
 #endif

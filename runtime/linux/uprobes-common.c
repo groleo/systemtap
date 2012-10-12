@@ -77,13 +77,10 @@ static int stap_uprobe_change_plus (struct task_struct *tsk, unsigned long reloc
 
     sdt_sem_pid = (sups->return_p ? sup->urp.u.pid : sup->up.pid);
     if (sups->sdt_sem_offset && (sdt_sem_pid != tsk->tgid || sup->sdt_sem_address == 0)) {
-      /* If the probe is in the executable itself, the offset *is* the address. */
-      if (vm_flags & VM_EXECUTABLE) {
-        sup->sdt_sem_address = relocation + sups->sdt_sem_offset;
-      }
-      else {
-        sup->sdt_sem_address = (relocation - offset) + sups->sdt_sem_offset;
-      }
+      /* If the probe is in an ET_EXEC binary, then the sdt_sem_offset already
+       * is a real address.  But stap_uprobe_process_found calls us in this
+       * case with relocation=offset=0, so we don't have to worry about it.  */
+      sup->sdt_sem_address = (relocation - offset) + sups->sdt_sem_offset;
     } /* sdt_sem_offset */
     if (slotted_p) {
       struct stap_uprobe *sup = & stap_uprobes[i];

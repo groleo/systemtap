@@ -406,9 +406,14 @@ stapiu_change_plus(struct stapiu_target* target, struct task_struct *task,
 		if (!p->tgid) {
 			p->tgid = task->tgid;
 			p->relocation = relocation;
-			p->base = relocation;
-			if (!(vm_flags & VM_EXECUTABLE))
-				p->base -= offset;
+
+                        /* The base is used for relocating semaphores.  If the
+                         * probe is in an ET_EXEC binary, then that offset
+                         * already is a real address.  But stapiu_process_found
+                         * calls us in this case with relocation=offset=0, so
+                         * we don't have to worry about it.  */
+			p->base = relocation - offset;
+
 			list_add(&p->target_process, &target->processes);
 			break;
 		}
@@ -491,7 +496,7 @@ static struct inode *
 stapiu_get_task_inode(struct task_struct *task)
 {
 	struct mm_struct *mm;
-	struct vm_area_struct *vma;
+	struct file* vm_file;
 	struct inode *inode = NULL;
 
 	// Grab the inode associated with the task.
@@ -507,15 +512,9 @@ stapiu_get_task_inode(struct task_struct *task)
 	}
 
 	down_read(&mm->mmap_sem);
-	vma = mm->mmap;
-	while (vma) {
-		if ((vma->vm_flags & VM_EXECUTABLE) && vma->vm_file
-		    && vma->vm_file->f_path.dentry != NULL) {
-			inode = vma->vm_file->f_path.dentry->d_inode;
-			break;
-		}
-		vma = vma->vm_next;
-	}
+	vm_file = stap_find_exe_file(mm);
+	if (vm_file && vm_file->f_path.dentry)
+		inode = vm_file->f_path.dentry->d_inode;
 
 	up_read(&mm->mmap_sem);
 	return inode;

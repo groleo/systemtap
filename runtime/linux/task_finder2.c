@@ -425,7 +425,7 @@ __stp_task_finder_cleanup(void)
 static char *
 __stp_get_mm_path(struct mm_struct *mm, char *buf, int buflen)
 {
-	struct vm_area_struct *vma;
+	struct file *vm_file;
 	char *rc = NULL;
 
 	// The down_read() function can sleep, so we'll call
@@ -436,17 +436,12 @@ __stp_get_mm_path(struct mm_struct *mm, char *buf, int buflen)
 		return ERR_PTR(-ENOENT);
 	}
 
-	vma = mm->mmap;
-	while (vma) {
-		if ((vma->vm_flags & VM_EXECUTABLE) && vma->vm_file)
-			break;
-		vma = vma->vm_next;
-	}
-	if (vma) {
+	vm_file = stap_find_exe_file(mm);
+	if (vm_file) {
 #ifdef STAPCONF_DPATH_PATH
-		rc = d_path(&(vma->vm_file->f_path), buf, buflen);
+		rc = d_path(&(vm_file->f_path), buf, buflen);
 #else
-		rc = d_path(vma->vm_file->f_dentry, vma->vm_file->f_vfsmnt,
+		rc = d_path(vm_file->f_dentry, vm_file->f_vfsmnt,
 			    buf, buflen);
 #endif
 	}
