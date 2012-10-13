@@ -1007,35 +1007,11 @@ general syntax is as follows:
 .PP
 Events are specified in a special syntax called "probe points".  There
 are several varieties of probe points defined by the translator, and
-tapset scripts may define further ones using aliases.  These are
-listed in the
+tapset scripts may define further ones using aliases.  Probe points may
+be grouped, or listed in preference sequences, or declared optional.
+More details on probe point syntax and semantics are listed in the
 .IR stapprobes (3stap)
 manual pages.
-.PP
-All probe points must be resolvable by systemtap against the selected
-kernel/user-space software on the target machine for the script to
-run.  However, it is possible to express probe point preference or
-optionalness with modifying punctuation.
-.SAMPLE
-.BR probe " PROBEPOINT1 " !, " PROBEPOINT2 " { " [STMT ...] " }
-.ESAMPLE
-The
-.BR !
-sign after PROBEPOINT1 means that it is preferred, and if it
-is valid/resolvable, then all subsequent probe points in the list
-should be ignored.  This is useful if there exist multiple ways to
-identify similar events, but some are preferred to others
-(e.g., for reasons of flexibility or performance).
-.SAMPLE
-.BR probe " PROBEPOINT1 " ?, " PROBEPOINT2 " { " [STMT ...] " }
-.ESAMPLE
-The
-.BR ?
-sign after both PROBEPOINT1 indicates that the former is
-optional.  If systemtap cannot resolve that probe point (for
-example, because it names kernel functions or tracepoints that
-do not exist), then that probe point is ignored, and the rest of
-the script is processed.
 .PP
 The probe handler is interpreted relative to the context of each
 event.  For events associated with kernel code, this context may
