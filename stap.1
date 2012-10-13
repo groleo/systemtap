@@ -1007,11 +1007,12 @@ general syntax is as follows:
 .PP
 Events are specified in a special syntax called "probe points".  There
 are several varieties of probe points defined by the translator, and
-tapset scripts may define further ones using aliases.  Probe points may
-be grouped, or listed in preference sequences, or declared optional.
-More details on probe point syntax and semantics are listed in the
+tapset scripts may define further ones using aliases.  Probe points
+may be wildcarded, grouped, or listed in preference sequences, or
+declared optional.  More details on probe point syntax and semantics
+are listed on the
 .IR stapprobes (3stap)
-manual pages.
+manual page.
 .PP
 The probe handler is interpreted relative to the context of each
 event.  For events associated with kernel code, this context may

@@ -24,19 +24,30 @@ standard tapset scripts.  Many are individually documented in the
 manual section, with the
 .IR probe::
 prefix.
+
+.SH SYNTAX
+
 .PP
-The general probe point syntax is a dotted-symbol sequence.  This
-allows a breakdown of the event namespace into parts, somewhat like
-the Domain Name System does on the Internet.  Each component
-identifier may be parametrized by a string or number literal, with a
-syntax like a function call.  A component may include a "*" character,
-to expand to a set of matching probe points.  It may also include "**"
-to match multiple sequential components at once.  Probe aliases likewise
-expand to other probe points.
+.SAMPLE
+.BR probe " PROBEPOINT [" , " PROBEPOINT] " { " [STMT ...] " }
+.ESAMPLE
 .PP
-Probe aliases can be given on their own,
-or with a suffix. The suffix attaches to the underlying probe point
-that the alias is expanded to. For example,
+A probe declaration may list multiple comma-separated probe points in
+order to attach a handler to all of the named events.  Normally, the
+handler statements are run whenever any of events occur.
+.PP
+The syntax of a single probe point is a general dotted-symbol
+sequence.  This allows a breakdown of the event namespace into parts,
+somewhat like the Domain Name System does on the Internet.  Each
+component identifier may be parametrized by a string or number
+literal, with a syntax like a function call.  A component may include
+a "*" character, to expand to a set of matching probe points.  It may
+also include "**" to match multiple sequential components at once.
+Probe aliases likewise expand to other probe points.
+.PP
+Probe aliases can be given on their own, or with a suffix. The suffix
+attaches to the underlying probe point that the alias is expanded
+to. For example,
 .SAMPLE
 syscall.read.return.maxactive(10)
 .ESAMPLE
@@ -48,10 +59,10 @@ with the component
 .IR maxactive(10)
 being recognized as a suffix.
 .PP
-Each and every probe point resulting from expansion is
-normally resolved to some low-level system instrumentation facility
-(e.g., a kprobe address, marker, or a timer configuration), otherwise
-the elaboration phase will fail.
+Normally, each and every probe point resulting from wildcard- and
+alias-expansion must be resolved to some low-level system
+instrumentation facility (e.g., a kprobe address, marker, or a timer
+configuration), otherwise the elaboration phase will fail.
 .PP
 However, a probe point may be followed by a "?" character, to indicate
 that it is optional, and that no error should result if it fails to
@@ -68,8 +79,9 @@ order to enable/disable the probe point on-the-fly. With the "if" statement,
 if the "expr" is false when the probe point is hit, the whole probe body
 including alias's body is skipped. The condition is stacked up through
 all levels of alias/wildcard expansion. So the final condition becomes
-the logical-and of conditions of all expanded alias/wildcard.
-
+the logical-and of conditions of all expanded alias/wildcard.  The expressions
+are necessarily restricted to global variables.
+.PP
 These are all
 .B syntactically
 valid probe points.  (They are generally
