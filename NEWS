@@ -1,5 +1,9 @@
 * What's new in version 2.1
 
+- The foreach looping constuct can now sort aggregate arrays by the user's      
+  choice of aggregating function.  Previously, @count was implied.  e.g.:
+     foreach ([x,y] in array @sum +) { println(@sum(array[x,y] } 
+
 * What's new in version 2.0, 2012-10-09
 
 - Systemtap includes a new prototype backend, which uses Dyninst to instrument
