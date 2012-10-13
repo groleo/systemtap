@@ -26,6 +26,7 @@
 #include "syscall.h"
 #include "utrace_compatibility.h"
 #include "task_finder_map.c"
+#include "task_finder_vma.c"
 
 static LIST_HEAD(__stp_task_finder_list);
 

@@ -1,3 +1,6 @@
+#ifndef TASK_FINDER_VMA_C
+#define TASK_FINDER_VMA_C
+
 #include <linux/list.h>
 #include <linux/jhash.h>
 #include <linux/spinlock.h>
@@ -389,3 +392,5 @@ stap_find_exe_file(struct mm_struct* mm)
 	return mm->exe_file;
 #endif
 }
+
+#endif /* TASK_FINDER_VMA_C */
