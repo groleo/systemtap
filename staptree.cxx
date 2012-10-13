@@ -931,6 +931,10 @@ void stat_op::print (ostream& o) const
     case sc_max:
       o << "max(";
       break;
+
+    case sc_none:
+      assert (0); // should not happen, as sc_none is only used in foreach sorts
+      break;
     }
   stat->print(o);
   o << ")";
@@ -1037,7 +1041,21 @@ void foreach_loop::print (ostream& o) const
   o << "] in ";
   base->print_indexable (o);
   if (sort_direction != 0 && sort_column == 0)
-    o << (sort_direction > 0 ? "+" : "-");
+    {
+      switch (sort_aggr)
+        {
+        case sc_count: o << " @count"; break;
+        case sc_average: o << " @avg"; break;
+        case sc_min: o << " @min"; break;
+        case sc_max: o << " @max"; break;
+        case sc_sum: o << " @sum"; break;
+        case sc_none:
+        default: 
+          ;
+        }
+        
+      o << (sort_direction > 0 ? "+" : "-");
+    }
   if (limit)
     {
       o << " limit ";

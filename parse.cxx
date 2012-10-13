@@ -2625,6 +2625,7 @@ parser::parse_foreach_loop ()
   foreach_loop* s = new foreach_loop;
   s->tok = t;
   s->sort_direction = 0;
+  s->sort_aggr = sc_none;
   s->value = NULL;
   s->limit = NULL;
 
@@ -2733,6 +2734,23 @@ parser::parse_foreach_loop ()
   swallow ();
 
   s->base = parse_indexable();
+
+  // check for atword, see also expect_ident_or_atword,
+  t = peek ();
+  if (t && t->type == tok_operator && t->content[0] == '@')
+    {
+      if (t->content == "@avg") s->sort_aggr = sc_average;
+      else if (t->content == "@min") s->sort_aggr = sc_min;
+      else if (t->content == "@max") s->sort_aggr = sc_max;
+      else if (t->content == "@count") s->sort_aggr = sc_count;
+      else if (t->content == "@sum") s->sort_aggr = sc_sum;
+      else throw parse_error(_("expected statistical operation"));
+      swallow();
+
+      t = peek ();
+      if (! (t && t->type == tok_operator && (t->content == "+" || t->content == "-")))
+        throw parse_error(_("expected sort directive"));
+    } 
 
   t = peek ();
   if (t && t->type == tok_operator &&

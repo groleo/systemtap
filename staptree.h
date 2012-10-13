@@ -436,6 +436,7 @@ enum stat_component_type
     sc_sum,
     sc_min,
     sc_max,
+    sc_none,
   };
 
 struct stat_op: public expression
@@ -588,6 +589,7 @@ struct foreach_loop: public statement
   indexable *base;
   int sort_direction; // -1: decreasing, 0: none, 1: increasing
   unsigned sort_column; // 0: value, 1..N: index
+  enum stat_component_type sort_aggr; // for aggregate arrays, which aggregate to sort on
   symbol* value; // optional iteration value
   expression* limit; // optional iteration limit
 

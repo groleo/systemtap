@@ -4750,6 +4750,11 @@ typeresolution_info::visit_foreach_loop (foreach_loop* e)
         }
     }
 
+  /* Prevent @sum etc. aggregate sorting on non-statistics arrays. */
+  if (wanted_value != pe_unknown)
+    if (e->sort_aggr != sc_none && wanted_value != pe_stats)
+      invalid (array->tok, wanted_value);
+
   if (e->limit)
     {
       t = pe_long;

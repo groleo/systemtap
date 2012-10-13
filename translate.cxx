@@ -3327,15 +3327,21 @@ c_unparser::visit_foreach_loop (foreach_loop *s)
 	  // sort array if desired
 	  if (s->sort_direction)
 	    {
-	      int sort_column;
+	      string sort_column;
 
 	      // If the user wanted us to sort by value, we'll sort by
-	      // @count instead for aggregates.  '-5' tells the
-	      // runtime to sort by count.
+	      // @count or selected function instead for aggregates.  
+	      // See runtime/map.c
 	      if (s->sort_column == 0)
-		sort_column = -5; /* runtime/map.c SORT_COUNT */
+                switch (s->sort_aggr) {
+                default: case sc_none: case sc_count: sort_column = "SORT_COUNT"; break;
+                case sc_sum: sort_column = "SORT_SUM"; break;
+                case sc_min: sort_column = "SORT_MIN"; break;
+                case sc_max: sort_column = "SORT_MAX"; break;
+                case sc_average: sort_column = "SORT_AVG"; break;
+                }
 	      else
-		sort_column = s->sort_column;
+		sort_column = lex_cast(s->sort_column);
 
 	      o->newline() << "else"; // only sort if aggregation was ok
 	      if (s->limit)
@@ -5260,6 +5266,8 @@ c_unparser::visit_stat_op (stat_op* e)
         case sc_max:
           c_assign(res, agg.value() + "->max", e->tok);
           break;
+        case sc_none:
+          assert (0); // should not happen, as sc_none is only used in foreach sorts
         }
       o->indent(-1);
     }
