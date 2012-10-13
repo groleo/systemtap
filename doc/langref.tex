@@ -365,7 +365,8 @@ Events are specified in a special syntax called \emph{probe points}. There
 are several varieties of probe points defined by the translator, and tapset
 scripts may define others using aliases. The provided probe points are listed
 in the \texttt{stapprobes(3)}, \texttt{tapset::*(3stap)}, and
-\texttt{probe::*(3stap)} man pages.
+\texttt{probe::*(3stap)} man pages.  The STMT statement block is executed
+whenever {\i any} of the named PROBEPOINT events occurs.
 
 The probe handler is interpreted relative to the context of each event. For
 events associated with kernel code, this context may include variables defined
