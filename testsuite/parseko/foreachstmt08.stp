@@ -1,0 +1,6 @@
+#! stap -p1
+
+function decl()
+{
+    foreach (key in array @foobar +) ;
+}
