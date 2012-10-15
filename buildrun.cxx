@@ -212,6 +212,7 @@ compile_dyninst (systemtap_session& s)
     cmd.push_back("-D" + s.c_macros[i]);
   cmd.push_back(s.translated_source);
   cmd.push_back("-pthread");
+  cmd.push_back("-lrt");
   cmd.push_back("-fPIC");
   cmd.push_back("-shared");
   cmd.push_back("-o");

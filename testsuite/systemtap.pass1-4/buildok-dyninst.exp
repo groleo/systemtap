@@ -34,7 +34,10 @@ foreach file [lsort [glob -nocomplain $srcdir/$self/*.stp]] {
 	buildok/fortyfive.stp -
 	buildok/fortysix.stp -
 	buildok/fortytwo.stp -
+	buildok/fourteen-plus.stp -
+	buildok/fourteen.stp -
 	buildok/guru.stp -
+	buildok/histogram_operator_in.stp -
 	buildok/hwbkpt.stp -
 	buildok/inet_sock-embedded.stp -
 	buildok/ioblock-all-probes.stp -
@@ -47,6 +50,7 @@ foreach file [lsort [glob -nocomplain $srcdir/$self/*.stp]] {
 	buildok/ipmib-all-probes.stp -
 	buildok/ipmib-detailed.stp -
 	buildok/ipmib-embedded.stp -
+	buildok/iterate_histogram_buckets.stp -
 	buildok/kprocess-all-probes.stp -
 	buildok/kprocess-detailed.stp -
 	buildok/kprocess-embedded.stp -
@@ -85,6 +89,8 @@ foreach file [lsort [glob -nocomplain $srcdir/$self/*.stp]] {
 	buildok/pr10678.stp -
 	buildok/pr13284.stp -
 	buildok/pretty.stp -
+	buildok/print_histogram_entry.stp -
+	buildok/print_histograms.stp -
 	buildok/proc_mem-embedded.stp -
 	buildok/process_test.stp -
 	buildok/procfs01.stp -
@@ -98,6 +104,7 @@ foreach file [lsort [glob -nocomplain $srcdir/$self/*.stp]] {
 	buildok/scheduler-detailed.stp -
 	buildok/scheduler-embedded.stp -
 	buildok/scsi-all-probes.stp -
+	buildok/scsi-detailed.stp -
 	buildok/scsi-embedded.stp -
 	buildok/seven.stp -
 	buildok/seventeen.stp -
@@ -115,6 +122,7 @@ foreach file [lsort [glob -nocomplain $srcdir/$self/*.stp]] {
 	buildok/syscalls-arch-detailed.stp -
 	buildok/syscalls-detailed.stp -
 	buildok/syscalls2-detailed.stp -
+	buildok/systemtap_privilege.stp -
 	buildok/tcp-all-probes.stp -
 	buildok/tcp-detailed.stp -
 	buildok/tcp-embedded.stp -
@@ -154,19 +162,10 @@ foreach file [lsort [glob -nocomplain $srcdir/$self/*.stp]] {
     # - buildok/context-embedded.stp
     # - buildok/context-symbols-embedded.stp
     # - buildok/context-unwind-embedded.stp	
-    # - buildok/fourteen-plus.stp - no timer probes
-    # - buildok/fourteen.stp - no timer probes
     # - buildok/gtod_init.stp - no gettimeofday
     # - buildok/gtod_noinit.stp - ditto
-    # - buildok/histogram_operator_in.stp - no timer probes
-    # - buildok/indent.stp - missing 'execname'
-    # - buildok/iterate_histogram_buckets.stp - no timer probes
     # - buildok/per-process-syscall.stp - process.syscall
     #   probes implementable?
-    # - buildok/print_histogram_entry.stp - no timer probes
-    # - buildok/print_histograms.stp - no timer probes
-    # - buildok/printf.stp
-    # - buildok/stat_extract.stp - missing timer probes
     # - buildok/string-embedded.stp
     # - buildok/system-embedded.stp
     # - buildok/task-embedded.stp - should these functions

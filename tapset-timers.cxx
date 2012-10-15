@@ -217,7 +217,6 @@ struct hrtimer_derived_probe: public derived_probe
 
 struct hrtimer_derived_probe_group: public generic_dpg<hrtimer_derived_probe>
 {
-  void emit_interval (translator_output* o);
 public:
   void emit_module_decls (systemtap_session& s);
   void emit_module_init (systemtap_session& s);
@@ -235,43 +234,14 @@ hrtimer_derived_probe::join_group (systemtap_session& s)
 
 
 void
-hrtimer_derived_probe_group::emit_interval (translator_output* o)
-{
-  o->line() << "({";
-  o->newline(1) << "unsigned long nsecs;";
-  o->newline() << "uint64_t i = stp->intrv;";
-  o->newline() << "if (stp->rnd != 0) {";
-  // XXX: why not use stp_random_pm instead of this?
-  o->newline(1) << "int64_t r;";
-  o->newline() << "get_random_bytes(&r, sizeof(r));";
-  // ensure that r is positive
-  o->newline() << "r &= ((uint64_t)1 << (8*sizeof(r) - 1)) - 1;";
-  o->newline() << "r = _stp_mod64(NULL, r, (2*stp->rnd+1));";
-  o->newline() << "r -= stp->rnd;";
-  o->newline() << "i += r;";
-  o->newline(-1) << "}";
-  o->newline() << "if (unlikely(i < stap_hrtimer_resolution))";
-  o->newline(1) << "i = stap_hrtimer_resolution;";
-  o->indent(-1);
-  o->newline() << "nsecs = do_div(i, NSEC_PER_SEC);";
-  o->newline() << "ktime_set(i, nsecs);";
-  o->newline(-1) << "})";
-}
-
-
-void
 hrtimer_derived_probe_group::emit_module_decls (systemtap_session& s)
 {
   if (probes.empty()) return;
 
   s.op->newline() << "/* ---- hrtimer probes ---- */";
+  s.op->newline() << "#include \"timer.c\"";
+  s.op->newline() << "static struct stap_hrtimer_probe stap_hrtimer_probes [" << probes.size() << "] = {";
 
-  s.op->newline() << "static unsigned long stap_hrtimer_resolution;"; // init later
-  s.op->newline() << "static struct stap_hrtimer_probe {";
-  s.op->newline(1) << "struct hrtimer hrtimer;";
-  s.op->newline() << "struct stap_probe * const probe;";
-  s.op->newline() << "int64_t intrv, rnd;";
-  s.op->newline(-1) << "} stap_hrtimer_probes [" << probes.size() << "] = {";
   s.op->indent(1);
   for (unsigned i=0; i < probes.size(); i++)
     {
@@ -284,44 +254,57 @@ hrtimer_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline(-1) << "};";
   s.op->newline();
 
-  // autoconf: add get/set expires if missing (pre 2.6.28-rc1)
-  s.op->newline() << "#ifndef STAPCONF_HRTIMER_GETSET_EXPIRES";
-  s.op->newline() << "#define hrtimer_get_expires(timer) ((timer)->expires)";
-  s.op->newline() << "#define hrtimer_set_expires(timer, time) (void)((timer)->expires = (time))";
-  s.op->newline() << "#endif";
+  if (!s.runtime_usermode_p())
+    {
+      // The function signature changed in 2.6.21.
+      s.op->newline() << "#ifdef STAPCONF_HRTIMER_REL";
+      s.op->newline() << "static int ";
+      s.op->newline() << "#else";
+      s.op->newline() << "static enum hrtimer_restart ";
+      s.op->newline() << "#endif";
+      s.op->newline() << "_stp_hrtimer_notify_function (struct hrtimer *timer) {";
 
-  // autoconf: adapt to HRTIMER_REL -> HRTIMER_MODE_REL renaming near 2.6.21
-  s.op->newline() << "#ifdef STAPCONF_HRTIMER_REL";
-  s.op->newline() << "#define HRTIMER_MODE_REL HRTIMER_REL";
-  s.op->newline() << "#endif";
+      s.op->newline(1) << "int rc = HRTIMER_NORESTART;";
+      s.op->newline() << "struct stap_hrtimer_probe *stp = container_of(timer, struct stap_hrtimer_probe, hrtimer);";
 
-  // The function signature changed in 2.6.21.
-  s.op->newline() << "#ifdef STAPCONF_HRTIMER_REL";
-  s.op->newline() << "static int ";
-  s.op->newline() << "#else";
-  s.op->newline() << "static enum hrtimer_restart ";
-  s.op->newline() << "#endif";
-  s.op->newline() << "enter_hrtimer_probe (struct hrtimer *timer) {";
+      // Update the timer with the next trigger time
+      s.op->newline() << "if ((atomic_read (&session_state) == STAP_SESSION_STARTING) ||";
+      s.op->newline() << "    (atomic_read (&session_state) == STAP_SESSION_RUNNING)) {";
+      s.op->newline(1) << "_stp_hrtimer_update(stp);";
+      s.op->newline() << "rc = HRTIMER_RESTART;";
+      s.op->newline(-1) << "}";
 
-  s.op->newline(1) << "int rc = HRTIMER_NORESTART;";
-  s.op->newline() << "struct stap_hrtimer_probe *stp = container_of(timer, struct stap_hrtimer_probe, hrtimer);";
-  s.op->newline() << "if ((atomic_read (&session_state) == STAP_SESSION_STARTING) ||";
-  s.op->newline() << "    (atomic_read (&session_state) == STAP_SESSION_RUNNING)) {";
-  // Compute next trigger time
-  s.op->newline(1) << "hrtimer_set_expires(timer, ktime_add (hrtimer_get_expires(timer),";
-  emit_interval (s.op);
-  s.op->line() << "));";
-  s.op->newline() << "rc = HRTIMER_RESTART;";
-  s.op->newline(-1) << "}";
-  s.op->newline() << "{";
-  s.op->indent(1);
-  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "stp->probe",
-				 "stp_probe_type_hrtimer");
-  s.op->newline() << "(*stp->probe->ph) (c);";
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
-  s.op->newline(-1) << "}";
-  s.op->newline() << "return rc;";
-  s.op->newline(-1) << "}";
+      s.op->newline() << "{";
+      s.op->indent(1);
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "stp->probe",
+				     "stp_probe_type_hrtimer");
+      s.op->newline() << "(*stp->probe->ph) (c);";
+      common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+      s.op->newline(-1) << "}";
+      s.op->newline() << "return rc;";
+      s.op->newline(-1) << "}";
+    }
+  else
+    {
+      s.op->newline() << "void _stp_hrtimer_notify_function (sigval_t value)";
+      s.op->newline(1) << "{";
+      s.op->newline() << "struct stap_hrtimer_probe *stp = value.sival_ptr;";
+
+      // Update the timer with the next trigger time
+      s.op->newline() << "if ((atomic_read (&session_state) == STAP_SESSION_STARTING) ||";
+      s.op->newline() << "    (atomic_read (&session_state) == STAP_SESSION_RUNNING)) {";
+      s.op->newline(1) << "_stp_hrtimer_update(stp);";
+      s.op->newline(-1) << "}";
+
+      s.op->newline() << "{";
+      s.op->indent(1);
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "stp->probe",
+				     "stp_probe_type_hrtimer");
+      s.op->newline() << "(*stp->probe->ph) (c);";
+      common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+      s.op->newline(-1) << "}";
+      s.op->newline(-1) << "}";
+    }
 }
 
 
@@ -330,24 +313,22 @@ hrtimer_derived_probe_group::emit_module_init (systemtap_session& s)
 {
   if (probes.empty()) return;
 
-  s.op->newline() << "{";
-  s.op->newline(1) << "struct timespec res;";
-  s.op->newline() << "hrtimer_get_res (CLOCK_MONOTONIC, &res);";
-  s.op->newline() << "stap_hrtimer_resolution = timespec_to_ns (&res);";
-  s.op->newline(-1) << "}";
-
+  s.op->newline() << "_stp_hrtimer_init();";
   s.op->newline() << "for (i=0; i<" << probes.size() << "; i++) {";
   s.op->newline(1) << "struct stap_hrtimer_probe* stp = & stap_hrtimer_probes [i];";
   s.op->newline() << "probe_point = stp->probe->pp;";
-  s.op->newline() << "hrtimer_init (& stp->hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);";
-  s.op->newline() << "stp->hrtimer.function = & enter_hrtimer_probe;";
-  // There is no hrtimer field to identify *this* (i-th) probe handler
-  // callback.  So instead we'll deduce it at entry time.
-  s.op->newline() << "(void) hrtimer_start (& stp->hrtimer, ";
-  emit_interval (s.op);
-  s.op->line() << ", HRTIMER_MODE_REL);";
-  // Note: no partial failure rollback is needed: hrtimer_start only
-  // "fails" if the timer was already active, which cannot be.
+
+  // Note: no partial failure rollback is needed for kernel hrtimer
+  // probes (hrtimer_start only "fails" if the timer was already
+  // active, which cannot be). But, stapdyn timer probes need a
+  // rollback, and it won't hurt the kernel hrtimers.
+  s.op->newline() << "rc = _stp_hrtimer_create(stp, _stp_hrtimer_notify_function);";
+  s.op->newline() << "if (rc) {";
+  s.op->indent(1);
+  s.op->newline() << "for (j=i-1; j>=0; j--)"; // partial rollback
+  s.op->newline(1) << "_stp_hrtimer_cancel(& stap_hrtimer_probes[j]);";
+  s.op->newline(-1) << "break;"; // don't attempt to register any more
+  s.op->newline(-1) << "}";
   s.op->newline(-1) << "}"; // for loop
 }
 
@@ -358,7 +339,8 @@ hrtimer_derived_probe_group::emit_module_exit (systemtap_session& s)
   if (probes.empty()) return;
 
   s.op->newline() << "for (i=0; i<" << probes.size() << "; i++)";
-  s.op->newline(1) << "hrtimer_cancel (& stap_hrtimer_probes[i].hrtimer);";
+  s.op->indent(1);
+  s.op->newline() << "_stp_hrtimer_cancel(& stap_hrtimer_probes[i]);";
   s.op->indent(-1);
 }
 
@@ -536,6 +518,9 @@ timer_builder::build(systemtap_session & sess,
 
   if (has_null_param(parameters, "profile"))
     {
+      if (sess.runtime_usermode_p())
+	throw semantic_error (_("profile timer probes not available with the dyninst runtime"));
+
       sess.unwindsym_modules.insert ("kernel");
       finished_results.push_back
         (new profile_derived_probe(sess, base, location));
@@ -547,6 +532,9 @@ timer_builder::build(systemtap_session & sess,
 
   if (get_param(parameters, "jiffies", period))
     {
+      if (sess.runtime_usermode_p())
+	throw semantic_error (_("jiffies timer probes not available with the dyninst runtime"));
+
       // always use basic timers for jiffies
       finished_results.push_back
         (new timer_derived_probe(base, location, period, rand, false));
@@ -674,10 +662,23 @@ register_tapset_timers(systemtap_session& s)
     ->bind_privilege(pr_all)
     ->bind(builder);
 
-  // Not ok for unprivileged users, because register_timer_hook only allows a
-  // single attached callback.  No resource-sharing -> no unprivileged access.
-  root->bind("profile")
-    ->bind(builder);
+  // Not ok for unprivileged users, because register_timer_hook only
+  // allows a single attached callback.  No resource-sharing -> no
+  // unprivileged access.
+  //
+  // Sigh, but for dyninst users, we want a semantic error that
+  // profile probes aren't supported (which will come from
+  // timer_builder::build()), not a privilege error.  So, we'll fake
+  // it so that profile probes are allowed for all.
+  if (!s.runtime_usermode_p()) {
+    root->bind("profile")
+      ->bind(builder);
+  }
+  else {
+    root->bind("profile")
+      ->bind_privilege(pr_all)
+      ->bind(builder);
+  }
 }
 
 
