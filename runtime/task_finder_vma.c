@@ -381,7 +381,7 @@ static struct file*
 stap_find_exe_file(struct mm_struct* mm)
 {
 	/* VM_EXECUTABLE was killed in kernel commit e9714acf, but in kernels
-	 * that new we can just use mm->exe_file anyway.  (PR14172)  */
+	 * that new we can just use mm->exe_file anyway.  (PR14712)  */
 #ifdef VM_EXECUTABLE
 	struct vm_area_struct *vma;
 	for (vma = mm->mmap; vma; vma = vma->vm_next)
