@@ -86,6 +86,9 @@ am__DEPENDENCIES_1 =
 dynsdt_LINK = $(CXXLD) $(dynsdt_CXXFLAGS) $(CXXFLAGS) \
 	$(dynsdt_LDFLAGS) $(LDFLAGS) -o $@
 @HAVE_DYNINST_TRUE@am_stapdyn_OBJECTS = stapdyn-stapdyn.$(OBJEXT) \
+@HAVE_DYNINST_TRUE@	stapdyn-mutator.$(OBJEXT) \
+@HAVE_DYNINST_TRUE@	stapdyn-mutatee.$(OBJEXT) \
+@HAVE_DYNINST_TRUE@	stapdyn-dynprobe.$(OBJEXT) \
 @HAVE_DYNINST_TRUE@	stapdyn-dynutil.$(OBJEXT) \
 @HAVE_DYNINST_TRUE@	stapdyn-util.$(OBJEXT)
 stapdyn_OBJECTS = $(am_stapdyn_OBJECTS)
@@ -290,14 +293,16 @@ AM_LDFLAGS = @PIELDFLAGS@ $(am__append_2)
 @HAVE_DYNINST_TRUE@dyninst_LIBS = -ldwarf -lcommon -linstructionAPI -lparseAPI -lpatchAPI \
 @HAVE_DYNINST_TRUE@	       -lpcontrol -lstackwalk -lsymtabAPI -ldyninstAPI
 
-@HAVE_DYNINST_TRUE@stapdyn_SOURCES = stapdyn.cxx dynutil.cxx ../util.cxx
+@HAVE_DYNINST_TRUE@stapdyn_SOURCES = stapdyn.cxx mutator.cxx mutatee.cxx \
+@HAVE_DYNINST_TRUE@				  dynprobe.cxx dynutil.cxx ../util.cxx
+
 @HAVE_DYNINST_TRUE@stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@
 @HAVE_DYNINST_TRUE@stapdyn_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
 @HAVE_DYNINST_TRUE@stapdyn_LDADD = -ldl $(dyninst_LIBS)
 @HAVE_DYNINST_TRUE@dynsdt_SOURCES = dynsdt.cxx dynutil.cxx ../util.cxx
 @HAVE_DYNINST_TRUE@dynsdt_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@
 @HAVE_DYNINST_TRUE@dynsdt_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
-@HAVE_DYNINST_TRUE@dynsdt_LDADD = -lelf $(dyninst_LIBS)
+@HAVE_DYNINST_TRUE@dynsdt_LDADD = -ldl -lelf $(dyninst_LIBS)
 
 # Arrange for the top-level git_version.h to be regenerated at every "make".
 BUILT_SOURCES = git_version.stamp
@@ -395,7 +400,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynsdt-dynsdt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynsdt-dynutil.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynsdt-util.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stapdyn-dynprobe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stapdyn-dynutil.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stapdyn-mutatee.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stapdyn-mutator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stapdyn-stapdyn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stapdyn-util.Po@am__quote@
 
@@ -468,6 +476,48 @@ stapdyn-stapdyn.obj: stapdyn.cxx
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='stapdyn.cxx' object='stapdyn-stapdyn.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -c -o stapdyn-stapdyn.obj `if test -f 'stapdyn.cxx'; then $(CYGPATH_W) 'stapdyn.cxx'; else $(CYGPATH_W) '$(srcdir)/stapdyn.cxx'; fi`
+
+stapdyn-mutator.o: mutator.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -MT stapdyn-mutator.o -MD -MP -MF $(DEPDIR)/stapdyn-mutator.Tpo -c -o stapdyn-mutator.o `test -f 'mutator.cxx' || echo '$(srcdir)/'`mutator.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stapdyn-mutator.Tpo $(DEPDIR)/stapdyn-mutator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='mutator.cxx' object='stapdyn-mutator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -c -o stapdyn-mutator.o `test -f 'mutator.cxx' || echo '$(srcdir)/'`mutator.cxx
+
+stapdyn-mutator.obj: mutator.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -MT stapdyn-mutator.obj -MD -MP -MF $(DEPDIR)/stapdyn-mutator.Tpo -c -o stapdyn-mutator.obj `if test -f 'mutator.cxx'; then $(CYGPATH_W) 'mutator.cxx'; else $(CYGPATH_W) '$(srcdir)/mutator.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stapdyn-mutator.Tpo $(DEPDIR)/stapdyn-mutator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='mutator.cxx' object='stapdyn-mutator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -c -o stapdyn-mutator.obj `if test -f 'mutator.cxx'; then $(CYGPATH_W) 'mutator.cxx'; else $(CYGPATH_W) '$(srcdir)/mutator.cxx'; fi`
+
+stapdyn-mutatee.o: mutatee.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -MT stapdyn-mutatee.o -MD -MP -MF $(DEPDIR)/stapdyn-mutatee.Tpo -c -o stapdyn-mutatee.o `test -f 'mutatee.cxx' || echo '$(srcdir)/'`mutatee.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stapdyn-mutatee.Tpo $(DEPDIR)/stapdyn-mutatee.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='mutatee.cxx' object='stapdyn-mutatee.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -c -o stapdyn-mutatee.o `test -f 'mutatee.cxx' || echo '$(srcdir)/'`mutatee.cxx
+
+stapdyn-mutatee.obj: mutatee.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -MT stapdyn-mutatee.obj -MD -MP -MF $(DEPDIR)/stapdyn-mutatee.Tpo -c -o stapdyn-mutatee.obj `if test -f 'mutatee.cxx'; then $(CYGPATH_W) 'mutatee.cxx'; else $(CYGPATH_W) '$(srcdir)/mutatee.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stapdyn-mutatee.Tpo $(DEPDIR)/stapdyn-mutatee.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='mutatee.cxx' object='stapdyn-mutatee.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -c -o stapdyn-mutatee.obj `if test -f 'mutatee.cxx'; then $(CYGPATH_W) 'mutatee.cxx'; else $(CYGPATH_W) '$(srcdir)/mutatee.cxx'; fi`
+
+stapdyn-dynprobe.o: dynprobe.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -MT stapdyn-dynprobe.o -MD -MP -MF $(DEPDIR)/stapdyn-dynprobe.Tpo -c -o stapdyn-dynprobe.o `test -f 'dynprobe.cxx' || echo '$(srcdir)/'`dynprobe.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stapdyn-dynprobe.Tpo $(DEPDIR)/stapdyn-dynprobe.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='dynprobe.cxx' object='stapdyn-dynprobe.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -c -o stapdyn-dynprobe.o `test -f 'dynprobe.cxx' || echo '$(srcdir)/'`dynprobe.cxx
+
+stapdyn-dynprobe.obj: dynprobe.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -MT stapdyn-dynprobe.obj -MD -MP -MF $(DEPDIR)/stapdyn-dynprobe.Tpo -c -o stapdyn-dynprobe.obj `if test -f 'dynprobe.cxx'; then $(CYGPATH_W) 'dynprobe.cxx'; else $(CYGPATH_W) '$(srcdir)/dynprobe.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stapdyn-dynprobe.Tpo $(DEPDIR)/stapdyn-dynprobe.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='dynprobe.cxx' object='stapdyn-dynprobe.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -c -o stapdyn-dynprobe.obj `if test -f 'dynprobe.cxx'; then $(CYGPATH_W) 'dynprobe.cxx'; else $(CYGPATH_W) '$(srcdir)/dynprobe.cxx'; fi`
 
 stapdyn-dynutil.o: dynutil.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(stapdyn_CXXFLAGS) $(CXXFLAGS) -MT stapdyn-dynutil.o -MD -MP -MF $(DEPDIR)/stapdyn-dynutil.Tpo -c -o stapdyn-dynutil.o `test -f 'dynutil.cxx' || echo '$(srcdir)/'`dynutil.cxx

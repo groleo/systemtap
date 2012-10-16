@@ -2,6 +2,7 @@
 #define UTIL_H
 
 #include "config.h"
+#include <cstdlib>
 #include <cstring>
 #include <cerrno>
 #include <string>
@@ -268,6 +269,21 @@ struct stap_sigmasker {
         sigprocmask (SIG_SETMASK, &old, NULL);
       }
 };
+
+// Convert a possibly-relative path to a full path
+inline std::string
+resolve_path(const std::string& path)
+{
+  std::string result(path);
+  char* resolved_path = realpath(path.c_str(), NULL);
+  if (resolved_path)
+    {
+      result = resolved_path;
+      std::free(resolved_path);
+    }
+  return result;
+}
+
 
 #endif // UTIL_H
 

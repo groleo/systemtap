@@ -27,7 +27,8 @@ dyninst_LIBS = -ldwarf -lcommon -linstructionAPI -lparseAPI -lpatchAPI \
 bin_PROGRAMS += stapdyn
 noinst_PROGRAMS += dynsdt
 
-stapdyn_SOURCES = stapdyn.cxx dynutil.cxx ../util.cxx
+stapdyn_SOURCES = stapdyn.cxx mutator.cxx mutatee.cxx \
+				  dynprobe.cxx dynutil.cxx ../util.cxx
 stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@
 stapdyn_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
 stapdyn_LDADD = -ldl $(dyninst_LIBS)
@@ -35,7 +36,7 @@ stapdyn_LDADD = -ldl $(dyninst_LIBS)
 dynsdt_SOURCES = dynsdt.cxx dynutil.cxx ../util.cxx
 dynsdt_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@
 dynsdt_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
-dynsdt_LDADD = -lelf $(dyninst_LIBS)
+dynsdt_LDADD = -ldl -lelf $(dyninst_LIBS)
 
 endif # HAVE_DYNINST
 

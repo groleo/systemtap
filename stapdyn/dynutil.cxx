@@ -1,9 +1,19 @@
+// stapdyn utility functions
+// Copyright (C) 2012 Red Hat Inc.
+//
+// This file is part of systemtap, and is free software.  You can
+// redistribute it and/or modify it under the terms of the GNU General
+// Public License (GPL); either version 2, or (at your option) any
+// later version.
+
 #include "config.h"
 
+#include <iostream>
 #include <string>
 #include <cstdlib>
 
 extern "C" {
+#include <dlfcn.h>
 #include <err.h>
 #include <link.h>
 }
@@ -135,6 +145,64 @@ check_dyninst_exit(BPatch_process *process)
     default:
       return false;
     }
+}
+
+
+// Get an untyped symbol from a dlopened module.
+// If flagged as 'required', throw an exception if missing or NULL.
+void *
+get_dlsym(void* handle, const char* symbol, bool required)
+{
+  const char* err = dlerror(); // clear previous errors
+  void *pointer = dlsym(handle, symbol);
+  if (required)
+    {
+      if ((err = dlerror()))
+        throw std::runtime_error("dlsym " + std::string(err));
+      if (pointer == NULL)
+        throw std::runtime_error("dlsym " + std::string(symbol) + " is NULL");
+    }
+  return pointer;
+}
+
+
+//
+// Logging, warnings, and errors, oh my!
+//
+
+// A null-sink output stream, similar to /dev/null
+// (no buffer -> badbit -> quietly suppressed output)
+static ostream nullstream(NULL);
+
+// verbosity, increased by -v
+unsigned stapdyn_log_level = 0;
+
+// Whether to suppress warnings, set by -w
+bool stapdyn_supress_warnings = false;
+
+// Return a stream for logging at the given verbosity level.
+ostream&
+staplog(unsigned level)
+{
+  if (level > stapdyn_log_level)
+    return nullstream;
+  return clog << program_invocation_short_name << ": ";
+}
+
+// Return a stream for warning messages.
+ostream&
+stapwarn(void)
+{
+  if (stapdyn_supress_warnings)
+    return nullstream;
+  return clog << program_invocation_short_name << ": WARNING: ";
+}
+
+// Return a stream for error messages.
+ostream&
+staperror(void)
+{
+  return clog << program_invocation_short_name << ": ERROR: ";
 }
 
 
