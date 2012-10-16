@@ -1764,6 +1764,7 @@ void add_global_var_display (systemtap_session& s)
 	  foreach_loop* fe = new foreach_loop;
 	  fe->sort_direction = -1; // imply decreasing sort on value
 	  fe->sort_column = 0;     // as in   foreach ([a,b,c] in array-) { }
+	  fe->sort_aggr = sc_none; // as in default @count
 	  fe->value = NULL;
 	  fe->limit = NULL;
 	  fe->tok = l->tok;
