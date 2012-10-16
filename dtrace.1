@@ -67,11 +67,11 @@ struct astruct {int a; int b;};
 .fi
 .in
 .RE
-Then the command \fI"dtrace\ \-s\ test.d\ \-G"\fR
-will create the probe definition file \fItest.o\fR
-and the command \fI"dtrace\ \-s\ test.d\ \-h"\fR
-will create the probe header file \fItest.h\fR
-Subsequently the application can define probes using
+Then the command \fI"dtrace\ \-s\ test.d\ \-G"\fR will create the
+probe definition file \fItest.o\fR and the command \fI"dtrace\ \-s\
+test.d\ \-h"\fR will create the probe header file \fItest.h\fR
+Subsequently the application can use the generated macros this way:
+
 .in +2
 .nf
 #include "test.h"
@@ -80,11 +80,41 @@ struct astruct s;
  \.\.\.
 SDT_PROBES_TEST_0(value);
  \.\.\.
-SDT_PROBES_TEST_1(s);
+if (SDT_PROBES_TEST_1_ENABLED())
+    SDT_PROBES_TEST_1(expensive_function(s));
 .fi
 .in
 
-The application is linked with \fI"test.o"\fR when it is built.
+.SH SEMAPHORES
+
+Semaphores are flag variables used by probes as a way of bypassing
+potentially costly processing to prepare arguments for probes that may
+not even be active.  They are automatically set/cleared by systemtap
+when a relevant script is running, so the argument setup cost is only
+paid when necessary.  These semaphore variables are defined within the
+the \fI"test.o"\fR object file, which must therefore be linked into an
+application.
+.PP
+Sometimes, semaphore variables are not necessary nor helpful.  Skipping
+them can simplfy the build process, by omitting the extra \fI"test.o"\fR
+file.  To skip dependence upon semaphore variables, include \fI"<sys/sdt.h>"\fR
+within the application before \fI"test.h"\fR:
+
+.in +2
+.nf
+#include <sys/sdt.h>
+#include "test.h"
+ \.\.\.
+struct astruct s;
+ \.\.\.
+SDT_PROBES_TEST_0(value);
+ \.\.\.
+if (SDT_PROBES_TEST_1_ENABLED())
+   SDT_PROBES_TEST_1(cheap_function(s));
+.fi
+.in
+
+In this mode, the ENABLED() test is fixed at 1.
 
 .SH SEE ALSO
 
