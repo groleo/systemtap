@@ -70,6 +70,6 @@ LOCAL_CFLAGS += \
 	-Wformat=2
 
 LOCAL_LDLIBS += -lpthread -ldl
-LOCAL_STATIC_LIBRARIES := libdwflrh libdwrh libeblrh libelfrh
+LOCAL_SHARED_LIBRARIES := libdwflrh libdwrh libeblrh libelfrh
 
 include $(BUILD_HOST_EXECUTABLE)
