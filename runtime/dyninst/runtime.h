@@ -22,6 +22,7 @@
 #include <linux/ptrace.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <stddef.h>
 #include <unistd.h>
@@ -43,6 +44,20 @@ typedef uint64_t u64;
 
 #include "linux_types.h"
 
+
+#ifndef NSEC_PER_SEC
+#define NSEC_PER_SEC 1000000000L
+#endif
+
+#define _stp_timespec_sub(a, b, result)					      \
+  do {									      \
+    (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;			      \
+    (result)->tv_nsec = (a)->tv_nsec - (b)->tv_nsec;			      \
+    if ((result)->tv_nsec < 0) {					      \
+      --(result)->tv_sec;						      \
+      (result)->tv_nsec += NSEC_PER_SEC;				      \
+    }									      \
+  } while (0)
 
 #define simple_strtol strtol
 
@@ -128,6 +143,7 @@ static inline void _stp_runtime_entryfn_epilogue(void)
 #include "sym.c"
 #include "perf.c"
 #include "addr-map.c"
+#include "stat.c"
 #include "unwind.c"
 
 static int systemtap_module_init(void);

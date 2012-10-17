@@ -1114,9 +1114,6 @@ c_unparser::emit_common_header ()
 
   emit_map_type_instantiations ();
 
-  if (!session->stat_decls.empty())
-    o->newline() << "#include \"stat.c\"\n";
-
   o->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";
   o->newline() << "#include \"time.c\"";  // Don't we all need more?
   o->newline() << "#endif";
@@ -1964,7 +1961,9 @@ c_unparser::emit_module_exit ()
   o->newline(1) << "struct stat_data *stats = _stp_stat_get (p->timing, 0);";
   o->newline() << "if (stats->count) {";
   o->newline(1) << "int64_t avg = _stp_div64 (NULL, stats->sum, stats->count);";
-  o->newline() << "_stp_printf (\"%s, (%s), hits: %lld, cycles: %lldmin/%lldavg/%lldmax,%s\\n\",";
+  o->newline() << "_stp_printf (\"%s, (%s), hits: %lld, "
+	       << (!session->runtime_usermode_p() ? "cycles" : "nsecs")
+	       << ": %lldmin/%lldavg/%lldmax,%s\\n\",";
   o->newline(2) << "p->pp, p->location, (long long) stats->count,";
   o->newline() << "(long long) stats->min, (long long) avg, (long long) stats->max,";
   o->newline() << "p->derivation);";

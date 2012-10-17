@@ -142,7 +142,7 @@ be_derived_probe_group::emit_module_decls (systemtap_session& s)
   common_probe_entryfn_prologue (s, "stp->state", "stp->probe",
 				 "stp_probe_type_been", false);
   s.op->newline() << "(*stp->probe->ph) (c);";
-  common_probe_entryfn_epilogue (s.op, false, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, false);
   s.op->newline(-1) << "}";
 }
 

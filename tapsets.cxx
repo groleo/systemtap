@@ -92,15 +92,21 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline() << "unsigned long flags;";
   s.op->newline() << "#endif";
 
-  if (overload_processing)
+  s.op->newline() << "#ifdef STP_TIMING";
+  s.op->newline() << "Stat stat = " << probe << "->timing;";
+  s.op->newline() << "#endif";
+  if (overload_processing && !s.runtime_usermode_p())
     s.op->newline() << "#if defined(STP_TIMING) || defined(STP_OVERLOAD)";
   else
     s.op->newline() << "#ifdef STP_TIMING";
-  s.op->newline() << "cycles_t cycles_atstart = get_cycles ();";
-  s.op->newline() << "#endif";
 
-  s.op->newline() << "#ifdef STP_TIMING";
-  s.op->newline() << "Stat stat = " << probe << "->timing;";
+  if (! s.runtime_usermode_p())
+    s.op->newline() << "cycles_t cycles_atstart = get_cycles ();";
+  else
+    {
+    s.op->newline() << "struct timespec timespec_atstart;";
+    s.op->newline() << "(void)clock_gettime(CLOCK_MONOTONIC_RAW, &timespec_atstart);";
+    }
   s.op->newline() << "#endif";
 
   s.op->newline() << "#if INTERRUPTIBLE";
@@ -198,39 +204,51 @@ common_probe_entryfn_prologue (systemtap_session& s,
 
 
 void
-common_probe_entryfn_epilogue (translator_output* o,
-                               bool overload_processing,
-                               bool suppress_handler_errors)
+common_probe_entryfn_epilogue (systemtap_session& s,
+                               bool overload_processing)
 {
-  if (overload_processing)
-    o->newline() << "#if defined(STP_TIMING) || defined(STP_OVERLOAD)";
+  if (overload_processing && !s.runtime_usermode_p())
+    s.op->newline() << "#if defined(STP_TIMING) || defined(STP_OVERLOAD)";
   else
-    o->newline() << "#ifdef STP_TIMING";
-  o->newline() << "{";
-  o->newline(1) << "cycles_t cycles_atend = get_cycles ();";
-  // NB: we truncate cycles counts to 32 bits.  Perhaps it should be
-  // fewer, if the hardware counter rolls over really quickly.  We
-  // handle 32-bit wraparound here.
-  o->newline() << "int32_t cycles_elapsed = ((int32_t)cycles_atend > (int32_t)cycles_atstart)";
-  o->newline(1) << "? ((int32_t)cycles_atend - (int32_t)cycles_atstart)";
-  o->newline() << ": (~(int32_t)0) - (int32_t)cycles_atstart + (int32_t)cycles_atend + 1;";
-  o->indent(-1);
-
-  o->newline() << "#ifdef STP_TIMING";
-  o->newline() << "if (likely (stat)) _stp_stat_add(stat, cycles_elapsed);";
-  o->newline() << "#endif";
-
-  if (overload_processing)
+    s.op->newline() << "#ifdef STP_TIMING";
+  s.op->newline() << "{";
+  s.op->indent(1);
+  if (! s.runtime_usermode_p())
     {
-      o->newline() << "#ifdef STP_OVERLOAD";
-      o->newline() << "{";
+      s.op->newline() << "cycles_t cycles_atend = get_cycles ();";
+      // NB: we truncate cycles counts to 32 bits.  Perhaps it should be
+      // fewer, if the hardware counter rolls over really quickly.  We
+      // handle 32-bit wraparound here.
+      s.op->newline() << "int32_t cycles_elapsed = ((int32_t)cycles_atend > (int32_t)cycles_atstart)";
+      s.op->newline(1) << "? ((int32_t)cycles_atend - (int32_t)cycles_atstart)";
+      s.op->newline() << ": (~(int32_t)0) - (int32_t)cycles_atstart + (int32_t)cycles_atend + 1;";
+      s.op->indent(-1);
+    }
+  else
+    {
+      s.op->newline() << "struct timespec timespec_atend, timespec_elapsed;";
+      s.op->newline() << "long cycles_elapsed;";
+      s.op->newline() << "(void)clock_gettime(CLOCK_MONOTONIC_RAW, &timespec_atend);";
+      s.op->newline() << "_stp_timespec_sub(&timespec_atend, &timespec_atstart, &timespec_elapsed);";
+      // 'cycles_elapsed' is really elapsed nanoseconds
+      s.op->newline() << "cycles_elapsed = (timespec_elapsed.tv_sec * NSEC_PER_SEC) + timespec_elapsed.tv_nsec;";
+    }
+
+  s.op->newline() << "#ifdef STP_TIMING";
+  s.op->newline() << "if (likely (stat)) _stp_stat_add(stat, cycles_elapsed);";
+  s.op->newline() << "#endif";
+
+  if (overload_processing && !s.runtime_usermode_p())
+    {
+      s.op->newline() << "#ifdef STP_OVERLOAD";
+      s.op->newline() << "{";
       // If the cycle count has wrapped (cycles_atend > cycles_base),
       // let's go ahead and pretend the interval has been reached.
       // This should reset cycles_base and cycles_sum.
-      o->newline(1) << "cycles_t interval = (cycles_atend > c->cycles_base)";
-      o->newline(1) << "? (cycles_atend - c->cycles_base)";
-      o->newline() << ": (STP_OVERLOAD_INTERVAL + 1);";
-      o->newline(-1) << "c->cycles_sum += cycles_elapsed;";
+      s.op->newline(1) << "cycles_t interval = (cycles_atend > c->cycles_base)";
+      s.op->newline(1) << "? (cycles_atend - c->cycles_base)";
+      s.op->newline() << ": (STP_OVERLOAD_INTERVAL + 1);";
+      s.op->newline(-1) << "c->cycles_sum += cycles_elapsed;";
 
       // If we've spent more than STP_OVERLOAD_THRESHOLD cycles in a
       // probe during the last STP_OVERLOAD_INTERVAL cycles, the probe
@@ -238,75 +256,75 @@ common_probe_entryfn_epilogue (translator_output* o,
       // NB: this is not suppressible via --suppress-runtime-errors,
       // because this is a system safety metric that we cannot trust
       // unprivileged users to override.
-      o->newline() << "if (interval > STP_OVERLOAD_INTERVAL) {";
-      o->newline(1) << "if (c->cycles_sum > STP_OVERLOAD_THRESHOLD) {";
-      o->newline(1) << "_stp_error (\"probe overhead exceeded threshold\");";
-      o->newline() << "atomic_set (&session_state, STAP_SESSION_ERROR);";
-      o->newline() << "atomic_inc (&error_count);";
-      o->newline(-1) << "}";
+      s.op->newline() << "if (interval > STP_OVERLOAD_INTERVAL) {";
+      s.op->newline(1) << "if (c->cycles_sum > STP_OVERLOAD_THRESHOLD) {";
+      s.op->newline(1) << "_stp_error (\"probe overhead exceeded threshold\");";
+      s.op->newline() << "atomic_set (&session_state, STAP_SESSION_ERROR);";
+      s.op->newline() << "atomic_inc (&error_count);";
+      s.op->newline(-1) << "}";
 
-      o->newline() << "c->cycles_base = cycles_atend;";
-      o->newline() << "c->cycles_sum = 0;";
-      o->newline(-1) << "}";
-      o->newline(-1) << "}";
-      o->newline() << "#endif";
+      s.op->newline() << "c->cycles_base = cycles_atend;";
+      s.op->newline() << "c->cycles_sum = 0;";
+      s.op->newline(-1) << "}";
+      s.op->newline(-1) << "}";
+      s.op->newline() << "#endif";
     }
 
-  o->newline(-1) << "}";
-  o->newline() << "#endif";
+  s.op->newline(-1) << "}";
+  s.op->newline() << "#endif";
 
-  o->newline() << "c->probe_point = 0;"; // vacated
-  o->newline() << "#ifdef STP_NEED_PROBE_NAME";
-  o->newline() << "c->probe_name = 0;";
-  o->newline() << "#endif";
-  o->newline() << "c->probe_type = 0;";
+  s.op->newline() << "c->probe_point = 0;"; // vacated
+  s.op->newline() << "#ifdef STP_NEED_PROBE_NAME";
+  s.op->newline() << "c->probe_name = 0;";
+  s.op->newline() << "#endif";
+  s.op->newline() << "c->probe_type = 0;";
 
 
-  o->newline() << "if (unlikely (c->last_error && c->last_error[0])) {";
-  o->indent(1);
-  if (suppress_handler_errors) // PR 13306
+  s.op->newline() << "if (unlikely (c->last_error && c->last_error[0])) {";
+  s.op->indent(1);
+  if (s.suppress_handler_errors) // PR 13306
     { 
-      o->newline() << "atomic_inc (& error_count);";
+      s.op->newline() << "atomic_inc (& error_count);";
     }
   else
     {
-      o->newline() << "if (c->last_stmt != NULL)";
-      o->newline(1) << "_stp_softerror (\"%s near %s\", c->last_error, c->last_stmt);";
-      o->newline(-1) << "else";
-      o->newline(1) << "_stp_softerror (\"%s\", c->last_error);";
-      o->indent(-1);
-      o->newline() << "atomic_inc (& error_count);";
-      o->newline() << "if (atomic_read (& error_count) > MAXERRORS) {";
-      o->newline(1) << "atomic_set (& session_state, STAP_SESSION_ERROR);";
-      o->newline() << "_stp_exit ();";
-      o->newline(-1) << "}";
+      s.op->newline() << "if (c->last_stmt != NULL)";
+      s.op->newline(1) << "_stp_softerror (\"%s near %s\", c->last_error, c->last_stmt);";
+      s.op->newline(-1) << "else";
+      s.op->newline(1) << "_stp_softerror (\"%s\", c->last_error);";
+      s.op->indent(-1);
+      s.op->newline() << "atomic_inc (& error_count);";
+      s.op->newline() << "if (atomic_read (& error_count) > MAXERRORS) {";
+      s.op->newline(1) << "atomic_set (& session_state, STAP_SESSION_ERROR);";
+      s.op->newline() << "_stp_exit ();";
+      s.op->newline(-1) << "}";
     }
 
-  o->newline(-1) << "}";
+  s.op->newline(-1) << "}";
 
 
-  o->newline() << "_stp_runtime_entryfn_epilogue();";
-  o->newline() << "atomic_dec (&c->busy);";
+  s.op->newline() << "_stp_runtime_entryfn_epilogue();";
+  s.op->newline() << "atomic_dec (&c->busy);";
 
-  o->newline(-1) << "probe_epilogue:"; // context is free
-  o->indent(1);
+  s.op->newline(-1) << "probe_epilogue:"; // context is free
+  s.op->indent(1);
 
-  if (! suppress_handler_errors) // PR 13306
+  if (! s.suppress_handler_errors) // PR 13306
     {
       // Check for excessive skip counts.
-      o->newline() << "if (unlikely (atomic_read (& skipped_count) > MAXSKIPPED)) {";
-      o->newline(1) << "if (unlikely (pseudo_atomic_cmpxchg(& session_state, STAP_SESSION_RUNNING, STAP_SESSION_ERROR) == STAP_SESSION_RUNNING))";
-      o->newline() << "_stp_error (\"Skipped too many probes, check MAXSKIPPED or try again with stap -t for more details.\");";
-      o->newline(-1) << "}";
+      s.op->newline() << "if (unlikely (atomic_read (& skipped_count) > MAXSKIPPED)) {";
+      s.op->newline(1) << "if (unlikely (pseudo_atomic_cmpxchg(& session_state, STAP_SESSION_RUNNING, STAP_SESSION_ERROR) == STAP_SESSION_RUNNING))";
+      s.op->newline() << "_stp_error (\"Skipped too many probes, check MAXSKIPPED or try again with stap -t for more details.\");";
+      s.op->newline(-1) << "}";
     }
 
-  o->newline() << "#if INTERRUPTIBLE";
-  o->newline() << "preempt_enable_no_resched ();";
-  o->newline() << "#else";
-  o->newline() << "local_irq_restore (flags);";
-  o->newline() << "#endif";
+  s.op->newline() << "#if INTERRUPTIBLE";
+  s.op->newline() << "preempt_enable_no_resched ();";
+  s.op->newline() << "#else";
+  s.op->newline() << "local_irq_restore (flags);";
+  s.op->newline() << "#endif";
 
-  o->newline() << "#endif // STP_ALIBI";
+  s.op->newline() << "#endif // STP_ALIBI";
 }
 
 
@@ -4845,7 +4863,7 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "SET_REG_IP(regs, kprobes_ip);";
   s.op->newline(-1) << "}";
 
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline() << "return 0;";
   s.op->newline(-1) << "}";
 
@@ -4888,7 +4906,7 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "SET_REG_IP(regs, kprobes_ip);";
   s.op->newline(-1) << "}";
 
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline(-1) << "}";
   s.op->newline() << "return 0;";
   s.op->newline(-1) << "}";
@@ -7421,7 +7439,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline() << "SET_REG_IP(regs, uprobes_ip);";
   s.op->newline(-1) << "}";
 
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline(-1) << "}";
 
   s.op->newline() << "static void enter_uretprobe_probe (struct uretprobe_instance *inst, struct pt_regs *regs) {";
@@ -7452,7 +7470,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   s.op->newline() << "SET_REG_IP(regs, uprobes_ip);";
   s.op->newline(-1) << "}";
 
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline(-1) << "}";
 
   s.op->newline();
@@ -7597,7 +7615,7 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
   s.op->newline() << "SET_REG_IP(regs, uprobes_ip);";
   s.op->newline(-1) << "}";
 
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline() << "return 0;";
   s.op->newline(-1) << "}";
   s.op->assert_0_indent();
@@ -7770,7 +7788,7 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
   // XXX: the way that dyninst rewrites stuff is probably going to be
   // ...  very confusing to our backtracer (at least if we stay in process)
   s.op->newline() << "(*sup->probe->ph) (c);";
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline() << "return 0;";
   s.op->newline(-1) << "}";
   s.op->assert_0_indent();
@@ -8146,7 +8164,7 @@ kprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "SET_REG_IP(regs, kprobes_ip);";
   s.op->newline(-1) << "}";
 
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline() << "return 0;";
   s.op->newline(-1) << "}";
 
@@ -8181,7 +8199,7 @@ kprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "SET_REG_IP(regs, kprobes_ip);";
   s.op->newline(-1) << "}";
 
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline() << "return 0;";
   s.op->newline(-1) << "}";
 
@@ -8780,7 +8798,7 @@ hwbkpt_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline(1) << "c->kregs = regs;";
   s.op->newline(-1) << "}";
   s.op->newline() << "(*sdp->probe->ph) (c);";
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline(-1) << "}";
   s.op->newline(-1) << "}";
   s.op->newline() << "return 0;";
@@ -9544,7 +9562,7 @@ tracepoint_derived_probe_group::emit_module_decls (systemtap_session& s)
                           << " = __tracepoint_arg_" << used_args[j]->name << ";";
         }
       s.op->newline() << "(*probe->ph) (c);";
-      common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+      common_probe_entryfn_epilogue (s, true);
       s.op->newline(-1) << "}";
 
       // define the real tracepoint callback function
