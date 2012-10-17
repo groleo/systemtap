@@ -94,15 +94,15 @@ CROSS=i686-linux-android-
 
 # remove old files
 rm -rf $BASE_KO
-sudo rm -rf /tmp/stap*
+rm -rf /tmp/stap*
 
 # compile the stp file
 (
 # stap also looks into XDG_DATA_DIRS which can contain the
 # system-wide instalation of host systemtap tapsets
 unset XDG_DATA_DIRS
-sudo env PATH=$PATH KCFLAGS="-fno-pic -mfpmath=387" \
-    $STAP -k $V_FLAG $D_FLAG $P_FLAG -a i386 \
+env PATH=$PATH KCFLAGS="-fno-pic -mfpmath=387" \
+    $STAP -k $V_FLAG $D_FLAG $P_FLAG -a i386 -p4 \
     --sysroot=$SYSROOT -r $KERNEL -B CROSS_COMPILE=$CROSS \
     -R $STAP_SRC/runtime/ -I $STAP_SRC/tapset/ -m $BASE $PATH_STP
 )
@@ -131,7 +131,6 @@ STAPIO_target_pid=$(target_pid stapio)
 if [ "$STAPIO_target_pid" != "" ]; then
     run_echo adb shell "kill -9 $(target_pid stapio)"
 fi
-sudo chown $USER:$USER /tmp/stap*
 
 if [ "$(adb shell 'lsmod' | awk '{print $1}' | grep $BASE)" != "" ]; then
     run_echo adb shell "rmmod $BASE_KO"
