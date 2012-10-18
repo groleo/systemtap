@@ -417,6 +417,9 @@ keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-inde
 </li><li><a href="process/forktracker.stp">process/forktracker.stp</a> - Trace Creation of Processes<br>
 keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-index.html#SCHEDULER">SCHEDULER</a> <br>
 <p>The forktracker.stp script prints out a time-stamped entry showing each fork and exec operation on the machine. This can be useful to determine what process is creating a flurry of short-lived processes.<p><font size="-2"><pre># stap forktracker.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a href="process/ltrace.stp">process/ltrace.stp</a> - uprobes-based ltrace<br>
+keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <br>
+<p>The ltrace.stp script lists calls that the designated process makes through PLTs (procedure linkage tables), generally into shared libraries.<p><font size="-2"><pre># stap ltrace.stp -c ls || echo PR14738</pre></font></p>
 </li><li><a href="process/noptrace.stp">process/noptrace.stp</a> - Disable ptrace from Hierarchies of Processes<br>
 keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-index.html#SECURITY">SECURITY</a> <br>
 <p>Blocks ptrace(2) attempts from processes identified by stap -c/-x, as also specifiable from /proc/systemtap/stap_XXX/ control files.  Processes may be added or removed from the blocked list.<p><font size="-2"><pre># stap -g noptrace.stp -c &#39;strace ls || true&#39;</pre></font></p>

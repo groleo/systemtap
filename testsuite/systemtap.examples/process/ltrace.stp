@@ -1,0 +1,8 @@
+#! /usr/bin/env stap
+
+probe process.plt, process.library("*").plt
+{
+   printf("%s[%d] %s\n", execname(), tid(), $$name)
+}
+
+// XXX: With PR14737, include plt-return probes too.

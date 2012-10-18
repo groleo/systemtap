@@ -251,6 +251,9 @@ keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-inde
 </li><li><a name="process/futexes.stp"></a><a href="#process/futexes.stp">&para;</a> <a href="process/futexes.stp">process/futexes.stp</a> - System-Wide Futex Contention<br>
 keywords: <a href="keyword-index.html#SYSCALL">SYSCALL</a> <a href="keyword-index.html#LOCKING">LOCKING</a> <a href="keyword-index.html#FUTEX">FUTEX</a> <br>
 <p>The script watches the futex syscall on the system. On exit the futexes address, the number of contentions, and the average time for each contention on the futex are printed from lowest pid number to highest.<p><font size="-2"><pre># stap futexes.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a name="process/ltrace.stp"></a><a href="#process/ltrace.stp">&para;</a> <a href="process/ltrace.stp">process/ltrace.stp</a> - uprobes-based ltrace<br>
+keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <br>
+<p>The ltrace.stp script lists calls that the designated process makes through PLTs (procedure linkage tables), generally into shared libraries.<p><font size="-2"><pre># stap ltrace.stp -c ls || echo PR14738</pre></font></p>
 </li><li><a name="process/migrate.stp"></a><a href="#process/migrate.stp">&para;</a> <a href="process/migrate.stp">process/migrate.stp</a> - Track the Migration of Specific Executables<br>
 keywords: <a href="keyword-index.html#SCHEDULER">SCHEDULER</a> <br>
 <p>The migrate.stp script takes an argument which is the executable name of the task it should monitor. Each time a task with that executable name migrates between processors an entry is printed with the process id (pid), the executable name, the processor off loading the task, and the process taking the task. Note that the task may or may not be executing at the time of the migration.<p><font size="-2"><pre># stap migrate.stp -c &quot;sleep 0.2&quot; bash</pre></font></p>

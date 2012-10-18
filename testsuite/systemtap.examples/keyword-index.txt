@@ -1162,6 +1162,16 @@ keywords: process scheduler
   # stap forktracker.stp -c "sleep 0.2"
 
 
+process/ltrace.stp - uprobes-based ltrace
+keywords: process
+
+  The ltrace.stp script lists calls that the designated process makes
+  through PLTs (procedure linkage tables), generally into shared
+  libraries.
+
+  # stap ltrace.stp -c ls || echo PR14738
+
+
 process/noptrace.stp - Disable ptrace from Hierarchies of Processes
 keywords: process security
 
