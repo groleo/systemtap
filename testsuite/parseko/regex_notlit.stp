@@ -1,6 +1,6 @@
 #! stap -p4
 
-// invalid regex operator usage, but should be handled by semantic pass
+// invalid regex operator usage, currently should be rejected by parser
 probe begin {
       a = "this is regex"
       b = "but this is not match" =~ a // rhs must be literal regex
