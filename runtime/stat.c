@@ -189,7 +189,7 @@ static Stat _stp_stat_init (int type, ...)
 
 exit2:
 #ifdef __KERNEL__
-	_stp_kfree (sd);
+	_stp_free_percpu (sd);
 #else
 	_stp_tls_data_container_cleanup(&st->container);
 #endif
