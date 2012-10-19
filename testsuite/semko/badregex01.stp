@@ -1,4 +1,4 @@
-#! stap -p4
+#! stap -p2
 
 // invalid actual regexes
 probe begin {

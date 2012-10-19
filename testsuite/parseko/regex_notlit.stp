@@ -1,4 +1,4 @@
-#! stap -p4
+#! stap -p1
 
 // invalid regex operator usage, currently should be rejected by parser
 probe begin {
