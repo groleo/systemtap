@@ -1895,6 +1895,7 @@ semantic_pass (systemtap_session& s)
       if (rc == 0) rc = semantic_pass_conditions (s);
       if (rc == 0) rc = semantic_pass_optimize1 (s);
       if (rc == 0) rc = semantic_pass_types (s);
+      // TODOXXX if (rc == 0) generate regcomp table for surviving regexes (using a new visitor) -- or maybe piggyback on the type resolution stuff?
       if (rc == 0) add_global_var_display (s);
       if (rc == 0) rc = semantic_pass_optimize2 (s);
       if (rc == 0) rc = semantic_pass_vars (s);
@@ -2865,9 +2866,10 @@ struct void_statement_reducer: public update_visitor
   void visit_logical_and_expr (logical_and_expr* e);
   void visit_ternary_expression (ternary_expression* e);
 
-  // all of these can be reduced into simpler statements
+  // all of these can (usually) be reduced into simpler statements
   void visit_binary_expression (binary_expression* e);
   void visit_unary_expression (unary_expression* e);
+  void visit_regex_query (regex_query* e); // TODOXXX may or may not be reducible
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_functioncall (functioncall* e);
@@ -3054,6 +3056,28 @@ void_statement_reducer::visit_unary_expression (unary_expression* e)
 
   relaxed_p = false;
   e->operand->visit(this);
+}
+
+void
+void_statement_reducer::visit_regex_query (regex_query* e)
+{
+  // Whether we need to run a regex query depends on whether
+  // subexpression extraction is enabled, as in:
+  //
+  // str =~ "pat";
+  // println(matched(0)); // NOTE: not totally nice -- are we SURE it matched?
+  // TODOXXX it's debatable whether we should allow this, though
+
+  // TODOXXX since subexpression extraction is not yet implemented,
+  // just treat it as a unary expression wrt the left operand -- since
+  // the right hand side must be a literal (verified by the parses),
+  // evaluating it never has side effects.
+
+  if (session.verbose>2)
+    clog << _("Eliding regex query ") << *e->tok << endl;
+
+  relaxed_p = false;
+  e->left->visit(this);
 }
 
 void
@@ -3272,6 +3296,7 @@ struct const_folder: public update_visitor
   void visit_unary_expression (unary_expression* e);
   void visit_logical_or_expr (logical_or_expr* e);
   void visit_logical_and_expr (logical_and_expr* e);
+  // TODOXXX visit_regex_query could be done if we could run dfa at compiletime
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_ternary_expression (ternary_expression* e);
@@ -4113,6 +4138,25 @@ void
 typeresolution_info::visit_logical_and_expr (logical_and_expr *e)
 {
   visit_binary_expression (e);
+}
+
+void
+typeresolution_info::visit_regex_query (regex_query *e)
+{
+  // NB: result of regex query is an integer!
+  if (t == pe_stats || t == pe_string)
+    invalid (e->tok, t);
+
+  t = pe_string;
+  e->left->visit (this);
+  t = pe_string;
+  e->right->visit (this); // parser ensures this is a literal known at compile time
+
+  if (e->type == pe_unknown)
+    {
+      e->type = pe_long;
+      resolved (e->tok, e->type);
+    }
 }
 
 

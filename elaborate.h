@@ -111,6 +111,7 @@ struct typeresolution_info: public visitor
   void visit_logical_or_expr (logical_or_expr* e);
   void visit_logical_and_expr (logical_and_expr* e);
   void visit_array_in (array_in* e);
+  void visit_regex_query (regex_query* e);
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_ternary_expression (ternary_expression* e);

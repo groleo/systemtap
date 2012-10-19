@@ -158,6 +158,10 @@ struct array_in: public expression
   void visit (visitor* u);
 };
 
+struct regex_query: public binary_expression
+{
+  void visit (visitor* u);
+};
 
 struct comparison: public binary_expression
 {
@@ -780,6 +784,7 @@ struct visitor
   virtual void visit_logical_or_expr (logical_or_expr* e) = 0;
   virtual void visit_logical_and_expr (logical_and_expr* e) = 0;
   virtual void visit_array_in (array_in* e) = 0;
+  virtual void visit_regex_query (regex_query* e) = 0;
   virtual void visit_comparison (comparison* e) = 0;
   virtual void visit_concatenation (concatenation* e) = 0;
   virtual void visit_ternary_expression (ternary_expression* e) = 0;
@@ -826,6 +831,7 @@ struct traversing_visitor: public visitor
   void visit_logical_or_expr (logical_or_expr* e);
   void visit_logical_and_expr (logical_and_expr* e);
   void visit_array_in (array_in* e);
+  void visit_regex_query (regex_query* e);
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_ternary_expression (ternary_expression* e);
@@ -930,6 +936,7 @@ struct throwing_visitor: public visitor
   void visit_logical_or_expr (logical_or_expr* e);
   void visit_logical_and_expr (logical_and_expr* e);
   void visit_array_in (array_in* e);
+  void visit_regex_query (regex_query* e);
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_ternary_expression (ternary_expression* e);
@@ -1001,6 +1008,7 @@ struct update_visitor: public visitor
   virtual void visit_logical_or_expr (logical_or_expr* e);
   virtual void visit_logical_and_expr (logical_and_expr* e);
   virtual void visit_array_in (array_in* e);
+  virtual void visit_regex_query (regex_query* e);
   virtual void visit_comparison (comparison* e);
   virtual void visit_concatenation (concatenation* e);
   virtual void visit_ternary_expression (ternary_expression* e);
@@ -1061,6 +1069,7 @@ struct deep_copy_visitor: public update_visitor
   virtual void visit_logical_or_expr (logical_or_expr* e);
   virtual void visit_logical_and_expr (logical_and_expr* e);
   virtual void visit_array_in (array_in* e);
+  virtual void visit_regex_query (regex_query* e);
   virtual void visit_comparison (comparison* e);
   virtual void visit_concatenation (concatenation* e);
   virtual void visit_ternary_expression (ternary_expression* e);

@@ -1401,6 +1401,12 @@ array_in::visit (visitor* u)
 }
 
 void
+regex_query::visit (visitor* u)
+{
+  u->visit_regex_query (this);
+}
+
+void
 comparison::visit (visitor* u)
 {
   u->visit_comparison (this);
@@ -1827,6 +1833,13 @@ void
 traversing_visitor::visit_array_in (array_in* e)
 {
   e->operand->visit (this);
+}
+
+void
+traversing_visitor::visit_regex_query (regex_query* e)
+{
+  e->left->visit (this);
+  e->right->visit (this); // TODOXXX do we need to traverse the literal in RHS?
 }
 
 void
@@ -2486,6 +2499,12 @@ throwing_visitor::visit_array_in (array_in* e)
 }
 
 void
+throwing_visitor::visit_regex_query (regex_query* e)
+{
+  throwone (e->tok);
+}
+
+void
 throwing_visitor::visit_comparison (comparison* e)
 {
   throwone (e->tok);
@@ -2748,6 +2767,14 @@ void
 update_visitor::visit_array_in (array_in* e)
 {
   replace (e->operand);
+  provide (e);
+}
+
+void
+update_visitor::visit_regex_query (regex_query* e)
+{
+  replace (e->left);
+  replace (e->right); // TODOXXX do we need to replace literal in RHS?
   provide (e);
 }
 
@@ -3027,6 +3054,12 @@ void
 deep_copy_visitor::visit_array_in (array_in* e)
 {
   update_visitor::visit_array_in(new array_in(*e));
+}
+
+void
+deep_copy_visitor::visit_regex_query (regex_query* e)
+{
+  update_visitor::visit_regex_query(new regex_query(*e));
 }
 
 void

@@ -190,7 +190,7 @@ private: // nonterminals
   expression* parse_boolean_xor ();
   expression* parse_boolean_and ();
   expression* parse_array_in ();
-  expression* parse_comparison ();
+  expression* parse_comparison_or_regex_query ();
   expression* parse_shift ();
   expression* parse_concatenation ();
   expression* parse_additive ();
@@ -1698,6 +1698,8 @@ skip:
                (c == '!' && c2 == '=') ||
                (c == '<' && c2 == '=') ||
                (c == '>' && c2 == '=') ||
+               (c == '=' && c2 == '~') ||
+               (c == '!' && c2 == '~') ||
                (c == '+' && c2 == '=') ||
                (c == '-' && c2 == '=') ||
                (c == '*' && c2 == '=') ||
@@ -2979,7 +2981,7 @@ parser::parse_array_in ()
 
   while (1)
     {
-      expression* op1 = parse_comparison ();
+      expression* op1 = parse_comparison_or_regex_query ();
       indexes.push_back (op1);
 
       if (parenthesized)
@@ -3024,12 +3026,27 @@ parser::parse_array_in ()
 
 
 expression*
-parser::parse_comparison ()
+parser::parse_comparison_or_regex_query ()
 {
   expression* op1 = parse_shift ();
 
-  const token* t = peek ();
-  while (t && t->type == tok_operator
+  // TODOXXX for now, =~ is nonassociative
+  // TODOXXX maybe instead a =~ b == c =~ d --> (a =~ b) == (c =~ d) ??
+  const token *t = peek();
+  if (t && t->type == tok_operator
+      && (t->content == "=~" ||
+          t->content == "!~"))
+    {
+      regex_query* r = new regex_query;
+      r->left = op1;
+      r->op = t->content;
+      r->tok = t;
+      next ();
+      r->right = parse_literal(); // TODOXXX for now, RHS MUST be a literal; error should be fixed to say "expected literal string", NOT "string or number"
+      op1 = r;
+      t = peek ();
+    }
+  else while (t && t->type == tok_operator
       && (t->content == ">" ||
           t->content == "<" ||
           t->content == "==" ||

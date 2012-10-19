@@ -182,6 +182,7 @@ struct c_unparser: public unparser, public visitor
   void visit_logical_or_expr (logical_or_expr* e);
   void visit_logical_and_expr (logical_and_expr* e);
   void visit_array_in (array_in* e);
+  void visit_regex_query (regex_query* e);
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_ternary_expression (ternary_expression* e);
@@ -229,6 +230,7 @@ struct c_tmpcounter:
   // void visit_logical_or_expr (logical_or_expr* e);
   // void visit_logical_and_expr (logical_and_expr* e);
   void visit_array_in (array_in* e);
+  void visit_regex_query (regex_query* e);
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   // void visit_ternary_expression (ternary_expression* e);
@@ -3912,6 +3914,30 @@ c_unparser::visit_array_in (array_in* e)
     }
 }
 
+void
+c_tmpcounter::visit_regex_query (regex_query* e)
+{
+  // TODOXXX if e->right is always a literal, do we still need to do
+  // the 'save at least one in a tmpvar' trick as seen in
+  // visit_comparison?
+  e->left->visit(this);
+  e->right->visit(this);
+}
+
+void
+c_unparser::visit_regex_query (regex_query* e)
+{
+  // TODOXXX implement the actual matching code
+  o->line() << "({";
+  o->indent(1);
+  o->newline() << "_stp_printf(\"TODO: matching string %s to regex %s\\n\", ";
+  e->left->visit(this);
+  o->line() << ", ";
+  e->right->visit(this); // TODOXXX here we would refer to the appropriate regcomp table entry instead of computing the rhs
+  o->line() << ");";
+  o->line() << " 0;"; // TODOXXX stub feature -- we fail automatically
+  o->newline(-1) << "})";
+}
 
 void
 c_tmpcounter::visit_comparison (comparison* e)
@@ -3928,7 +3954,6 @@ c_tmpcounter::visit_comparison (comparison* e)
   e->left->visit (this);
   e->right->visit (this);
 }
-
 
 void
 c_unparser::visit_comparison (comparison* e)
