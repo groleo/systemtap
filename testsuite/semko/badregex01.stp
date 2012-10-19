@@ -1,0 +1,14 @@
+#! stap -p4
+
+// invalid actual regexes
+probe begin {
+      // TODOXXX write a series of tests where the script syntax is
+      // valid, but the syntax of the regexen is invalid
+
+      // this somewhat duplicates the 'compile fail' tests in the
+      // raw-regex testsuite, so there's no need to be comprehensive here;
+      // just test the ability of the regex infrastructure to pass
+      // error messages to the systemtap reporter cleanly
+
+      ...
+}

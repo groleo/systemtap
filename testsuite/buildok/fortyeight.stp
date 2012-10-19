@@ -1,0 +1,13 @@
+#! stap -p4
+
+// regex support, without match groups
+// TODOXXX include this if we want to test an optimization
+// where match groups are only extracted when necessary
+probe begin {
+      if ("flibilibilibibirty" =~ "(fl|sni)[r]ili(pi|bi)") {
+      	 printf ("match good\n")
+      } else {
+         printf("match fail\n")
+      }
+      exit()
+}

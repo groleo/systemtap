@@ -1,0 +1,11 @@
+#! stap -p4
+
+// regex support
+probe begin {
+      if ("flibilibilibibirty" =~ "(fl|sni)[r]ili(pi|bi)") {
+      	 printf ("%s %s %s", matched(0), matched(1), matched(2))
+      } else {
+         printf("match fail\n")
+      }
+      exit()
+}
