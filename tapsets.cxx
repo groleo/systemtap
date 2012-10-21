@@ -2844,7 +2844,7 @@ dwarf_pretty_print::recurse_struct_members (Dwarf_Die* type, target_symbol* e,
   deque<Dwarf_Die> inheritees(1, *type);
   for (; !inheritees.empty(); inheritees.pop_front())
     {
-      Dwarf_Die child, childtype;
+      Dwarf_Die child, childtype, import;
       if (dwarf_child (&inheritees.front(), &child) == 0)
         do
           {
@@ -2855,6 +2855,12 @@ dwarf_pretty_print::recurse_struct_members (Dwarf_Die* type, target_symbol* e,
               continue;
 
             int tag = dwarf_tag (&child);
+
+            /* Pretend imported units contain members by recursing into
+               struct_member printing with the same count. */
+            if (tag == DW_TAG_imported_unit
+                && dwarf_attr_die (&child, DW_AT_import, &import))
+              recurse_struct_members (&import, e2, pf, count);
 
             if (tag != DW_TAG_member && tag != DW_TAG_inheritance)
               continue;
@@ -3811,21 +3817,25 @@ dwarf_var_expanding_visitor::getcuscope(target_symbol *e)
       Dwarf_Die die_mem;
       Dwarf_Die *die;
       die = dwarf_offdie (dw, off + cuhl, &die_mem);
-      const char *die_name = dwarf_diename (die);
 
-      if (strcmp (die_name, e->cu_name.c_str()) == 0) // Perfect match.
+      /* We are not interested in partial units. */
+      if (dwarf_tag (die) == DW_TAG_compile_unit)
 	{
-	  cu_name = die_name;
-	  cu_off = off + cuhl;
-	  break;
-	}
+	  const char *die_name = dwarf_diename (die);
+	  if (strcmp (die_name, e->cu_name.c_str()) == 0) // Perfect match.
+	    {
+	      cu_name = die_name;
+	      cu_off = off + cuhl;
+	      break;
+	    }
 
-      if (fnmatch(prefixed_srcfile.c_str(), die_name, 0) == 0)
-	if (cu_name == NULL || strlen (die_name) < strlen (cu_name))
-	  {
-	    cu_name = die_name;
-	    cu_off = off + cuhl;
-	  }
+	  if (fnmatch(prefixed_srcfile.c_str(), die_name, 0) == 0)
+	    if (cu_name == NULL || strlen (die_name) < strlen (cu_name))
+	      {
+		cu_name = die_name;
+		cu_off = off + cuhl;
+	      }
+	}
       off = noff;
     }
 

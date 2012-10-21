@@ -426,7 +426,9 @@ dwflpp::iterate_over_cus (int (*callback)(Dwarf_Die * die, void * arg),
           Dwarf_Die die_mem;
           Dwarf_Die *die;
           die = dwarf_offdie (dw, off + cuhl, &die_mem);
-          v->push_back (*die); /* copy */
+          /* Skip partial units. */
+          if (dwarf_tag (die) == DW_TAG_compile_unit)
+            v->push_back (*die); /* copy */
           off = noff;
         }
     }
@@ -445,7 +447,9 @@ dwflpp::iterate_over_cus (int (*callback)(Dwarf_Die * die, void * arg),
           Dwarf_Die die_mem;
           Dwarf_Die *die;
           die = dwarf_offdie_types (dw, off + cuhl, &die_mem);
-          v->push_back (*die); /* copy */
+          /* Skip partial units. */
+          if (dwarf_tag (die) == DW_TAG_type_unit)
+            v->push_back (*die); /* copy */
           off = noff;
 	}
       module_tus_read.insert(dw);
@@ -797,7 +801,7 @@ cache_type_prefix(Dwarf_Die* type)
 static bool
 has_only_decl_members (Dwarf_Die *die)
 {
-  Dwarf_Die child;
+  Dwarf_Die child, import;
   if (dwarf_child(die, &child) != 0)
     return false; /* no members */
 
@@ -811,6 +815,13 @@ has_only_decl_members (Dwarf_Die *die)
            || tag == DW_TAG_class_type)
           && ! has_only_decl_members (&child))
 	return false; /* real grand child member found.  */
+
+      // Unlikely to ever happen, but if there is an imported unit
+      // then check its children as if they are children of this DIE.
+      if (tag == DW_TAG_imported_unit
+	  && dwarf_attr_die(&child, DW_AT_import, &import)
+	  && ! has_only_decl_members (&import))
+	return false;
     }
   while (dwarf_siblingof(&child, &child) == 0);
 
@@ -1081,7 +1092,13 @@ dwflpp::iterate_over_globals (Dwarf_Die *cu_die,
 {
   assert (cu_die);
   assert (dwarf_tag(cu_die) == DW_TAG_compile_unit
-	  || dwarf_tag(cu_die) == DW_TAG_type_unit);
+	  || dwarf_tag(cu_die) == DW_TAG_type_unit
+	  || dwarf_tag(cu_die) == DW_TAG_partial_unit);
+
+  // Ignore partial_unit, if they get imported by a real unit, then
+  // iterate_over_types will traverse them.
+  if (dwarf_tag(cu_die) == DW_TAG_partial_unit)
+    return DWARF_CB_OK;
 
   // If this is C++, recurse for any inner types
   bool has_inner_types = dwarf_srclang(cu_die) == DW_LANG_C_plus_plus;
@@ -1099,7 +1116,7 @@ dwflpp::iterate_over_types (Dwarf_Die *top_die,
                             void * data)
 {
   int rc = DWARF_CB_OK;
-  Dwarf_Die die;
+  Dwarf_Die die, import;
 
   assert (top_die);
 
@@ -1120,6 +1137,15 @@ dwflpp::iterate_over_types (Dwarf_Die *top_die,
       case DW_TAG_namespace:
         rc = (*callback)(&die, has_inner_types, prefix, data);
         break;
+
+      case DW_TAG_imported_unit:
+	// Follow the imported_unit and iterate over its contents
+	// (either a partial_unit or a full compile_unit), all its
+	// children should be treated as if they appear in this place.
+	if (dwarf_attr_die(&die, DW_AT_import, &import))
+	  rc = iterate_over_types(&import, has_inner_types, prefix,
+				  callback, data);
+	break;
       }
   while (rc == DWARF_CB_OK && dwarf_siblingof(&die, &die) == 0);
 
@@ -1677,7 +1703,7 @@ dwflpp::iterate_over_labels (Dwarf_Die *begin_die,
 {
   get_module_dwarf();
 
-  Dwarf_Die die;
+  Dwarf_Die die, import;
   const char *name;
   int res = dwarf_child (begin_die, &die);
   if (res != 0)
@@ -1727,6 +1753,13 @@ dwflpp::iterate_over_labels (Dwarf_Die *begin_die,
         case DW_TAG_inlined_subroutine:
           // Stay within our filtered function
           break;
+
+	case DW_TAG_imported_unit:
+	  // Iterate over the children of the imported unit as if they
+	  // were inserted in place.
+	  if (dwarf_attr_die(&die, DW_AT_import, &import))
+	    iterate_over_labels (&import, sym, function, q, callback);
+	  break;
 
         default:
           if (dwarf_haschildren (&die))
@@ -2032,12 +2065,27 @@ dwflpp::inner_die_containing_pc(Dwarf_Die& scope, Dwarf_Addr addr,
   if (!die_has_pc(scope, addr))
     return false;
 
-  Dwarf_Die child;
+  Dwarf_Die child, import;
   int rc = dwarf_child(&result, &child);
   while (rc == 0)
     {
       switch (dwarf_tag (&child))
         {
+	case DW_TAG_imported_unit:
+	  // The children of the imported unit need to be treated as if
+	  // they are inserted here. So look inside and set result if
+	  // found.
+	  if (dwarf_attr_die(&child, DW_AT_import, &import))
+	    {
+	      Dwarf_Die import_result;
+	      if (inner_die_containing_pc(import, addr, import_result))
+		{
+		  result = import_result;
+		  return true;
+		}
+	    }
+	  break;
+
         // lexical tags to recurse within the same starting scope
         // NB: this intentionally doesn't cross into inlines!
         case DW_TAG_lexical_block:
@@ -2152,9 +2200,15 @@ dwflpp::print_locals(vector<Dwarf_Die>& scopes, ostream &o)
 {
   // XXX Shouldn't this be walking up to outer scopes too?
 
+  print_locals_die(scopes[0], o);
+}
+
+void
+dwflpp::print_locals_die(Dwarf_Die& die, ostream &o)
+{
   // Try to get the first child of die.
-  Dwarf_Die child;
-  if (dwarf_child (&scopes[0], &child) == 0)
+  Dwarf_Die child, import;
+  if (dwarf_child (&die, &child) == 0)
     {
       do
         {
@@ -2169,6 +2223,12 @@ dwflpp::print_locals(vector<Dwarf_Die>& scopes, ostream &o)
               if (name)
                 o << " $" << name;
               break;
+	    case DW_TAG_imported_unit:
+	      // Treat the imported unit children as if they are
+	      // children of the given DIE.
+	      if (dwarf_attr_die(&child, DW_AT_import, &import))
+		print_locals_die (import, o);
+	      break;
             default:
               break;
             }
@@ -2242,6 +2302,9 @@ dwflpp::find_variable_and_frame_base (vector<Dwarf_Die>& scopes,
       if (dwarf_child(&scopes[declaring_scope], vardie) == 0)
 	do
 	  {
+	    // Note, not handling DW_TAG_imported_unit, assuming GCC
+	    // version is recent enough to not need this workaround if
+	    // we would see an imported unit.
 	    if (dwarf_tag (vardie) == DW_TAG_variable
 		&& strcmp (dwarf_diename (vardie), local.c_str ()) == 0
 		&& (dwarf_attr_integrate (vardie, DW_AT_external, &attr_mem)
@@ -2374,16 +2437,20 @@ dwflpp::print_members(Dwarf_Die *vardie, ostream &o, set<string> &dupes)
 {
   const int typetag = dwarf_tag (vardie);
 
+  /* compile and partial unit included for recursion through
+     imported_unit below. */
   if (typetag != DW_TAG_structure_type &&
       typetag != DW_TAG_class_type &&
-      typetag != DW_TAG_union_type)
+      typetag != DW_TAG_union_type &&
+      typetag != DW_TAG_compile_unit &&
+      typetag != DW_TAG_partial_unit)
     {
       o << _F(" Error: %s isn't a struct/class/union", dwarf_type_name(vardie).c_str());
       return;
     }
 
   // Try to get the first child of vardie.
-  Dwarf_Die die_mem;
+  Dwarf_Die die_mem, import;
   Dwarf_Die *die = &die_mem;
   switch (dwarf_child (vardie, die))
     {
@@ -2405,6 +2472,12 @@ dwflpp::print_members(Dwarf_Die *vardie, ostream &o, set<string> &dupes)
   do
     {
       int tag = dwarf_tag(die);
+
+      /* The children of an imported_unit should be treated as members too. */
+      if (tag == DW_TAG_imported_unit
+          && dwarf_attr_die(die, DW_AT_import, &import))
+        print_members(&import, o, dupes);
+
       if (tag != DW_TAG_member && tag != DW_TAG_inheritance)
         continue;
 
@@ -2469,6 +2542,13 @@ dwflpp::find_struct_member(const target_symbol::component& c,
       do
         {
           int tag = dwarf_tag(&die);
+          /* recurse into imported units as if they are anonymoust structs */
+          Dwarf_Die import;
+          if (tag == DW_TAG_imported_unit
+              && dwarf_attr_die(&die, DW_AT_import, &import)
+              && find_struct_member(c, &import, memberdie, dies, locs))
+            goto success;
+
           if (tag != DW_TAG_member && tag != DW_TAG_inheritance)
             continue;
 
