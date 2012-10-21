@@ -280,9 +280,11 @@ resolution will be arch-dependent.  In either case, if the "randomize"
 component is given, then the random value will be added to the interval
 before any rounding occurs.
 .PP
-Profiling timers are also available to provide probes that execute on all
-CPUs at the rate of the system tick (CONFIG_HZ).
-This probe takes no parameters.
+Profiling timers are also available to provide probes that execute on
+all CPUs at the rate of the system tick (CONFIG_HZ).  This probe takes
+no parameters.  On some kernels, this is a one-concurrent-user-only or
+disabled facility, resulting in error -16 (EBUSY) during probe
+registration.
 
 .SAMPLE
 timer.profile
