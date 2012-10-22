@@ -83,7 +83,8 @@
   now be used in unprivileged scripts for such things as profiling in
   userspace programs. For instance, try running
   systemtap.examples/general/para-callgraph.stp in unprivileged mode
-  with a stapusr-permitted probe.
+  with a stapusr-permitted probe.  The previous implementation of
+  probefunc() is available with "stap --compatible=1.8".
 
 - Preprocessor conditional to vary code based on script privilege level:
   unprivileged -- %( systemtap_privilege == "stapusr" %? ... %)
