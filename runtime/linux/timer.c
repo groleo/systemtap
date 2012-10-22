@@ -23,6 +23,14 @@ struct stap_hrtimer_probe {
 	int64_t rnd;
 };
 
+// The function signature changed in 2.6.21.
+#ifdef STAPCONF_HRTIMER_REL
+typedef int hrtimer_return_t;
+#else
+typedef enum hrtimer_restart hrtimer_return_t;
+#endif
+
+
 // autoconf: add get/set expires if missing (pre 2.6.28-rc1)
 #ifndef STAPCONF_HRTIMER_GETSET_EXPIRES
 #define hrtimer_get_expires(timer) ((timer)->expires)
@@ -82,7 +90,7 @@ static inline void _stp_hrtimer_update(struct stap_hrtimer_probe *stp)
 
 static int
 _stp_hrtimer_create(struct stap_hrtimer_probe *stp,
-		    enum hrtimer_restart (*function)(struct hrtimer *))
+		    hrtimer_return_t (*function)(struct hrtimer *))
 {
 	hrtimer_init(&stp->hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	stp->hrtimer.function = function;

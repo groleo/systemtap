@@ -256,13 +256,7 @@ hrtimer_derived_probe_group::emit_module_decls (systemtap_session& s)
 
   if (!s.runtime_usermode_p())
     {
-      // The function signature changed in 2.6.21.
-      s.op->newline() << "#ifdef STAPCONF_HRTIMER_REL";
-      s.op->newline() << "static int ";
-      s.op->newline() << "#else";
-      s.op->newline() << "static enum hrtimer_restart ";
-      s.op->newline() << "#endif";
-      s.op->newline() << "_stp_hrtimer_notify_function (struct hrtimer *timer) {";
+      s.op->newline() << "hrtimer_return_t _stp_hrtimer_notify_function (struct hrtimer *timer) {";
 
       s.op->newline(1) << "int rc = HRTIMER_NORESTART;";
       s.op->newline() << "struct stap_hrtimer_probe *stp = container_of(timer, struct stap_hrtimer_probe, hrtimer);";
