@@ -589,7 +589,7 @@ passes_0_4 (systemtap_session &s)
           unsigned next_s_library_files = s.library_files.size();
           if (s.verbose>1 && globbuf.gl_pathc > 0)
             //TRANSLATORS: Searching through directories, 'processed' means 'examined so far'
-            clog << _F("Searched for library macro files: \" %s \", found: %zu, processed: %u",
+            clog << _F("Searched for library macro files: \"%s\", found: %zu, processed: %u",
                        dir.c_str(), globbuf.gl_pathc,
                        (next_s_library_files-prev_s_library_files)) << endl;
 
@@ -652,7 +652,7 @@ passes_0_4 (systemtap_session &s)
           unsigned next_s_library_files = s.library_files.size();
           if (s.verbose>1 && globbuf.gl_pathc > 0)
             //TRANSLATORS: Searching through directories, 'processed' means 'examined so far'
-            clog << _F("Searched: \" %s \", found: %zu, processed: %u",
+            clog << _F("Searched: \"%s\", found: %zu, processed: %u",
                        dir.c_str(), globbuf.gl_pathc,
                        (next_s_library_files-prev_s_library_files)) << endl;
 
