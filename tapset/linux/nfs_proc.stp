@@ -59,9 +59,8 @@ function stap_NFS_CLIENT:long(inode:long)
 function NFS_PROTO:long(inode:long)
 {
     nfsserver = NFS_SERVER(inode)
-    return (@defined(@cast(nfsserver, "nfs_server", "kernel:nfs")->nfs_client)
-	    ? @cast(nfsserver, "nfs_server", "kernel:nfs")->nfs_client->rpc_ops
-	    : @cast(nfsserver, "nfs_server", "kernel:nfs")->rpc_ops)
+    return @choose_defined(@cast(nfsserver, "nfs_server", "kernel:nfs")->nfs_client->rpc_ops,
+	    @cast(nfsserver, "nfs_server", "kernel:nfs")->rpc_ops)
 }
 
 
@@ -929,7 +928,7 @@ probe nfs.proc2.write_setup = kernel.function("nfs_proc_write_setup") !,
 
         count = $data->args->count
         offset = $data->args->offset
-	how = (@defined($how) ? $how : $data->args->stable)
+	how = @choose_defined($how, $data->args->stable)
         bitmask0 = 0
         bitmask1 = 0
 
@@ -958,7 +957,7 @@ probe nfs.proc3.write_setup = kernel.function("nfs3_proc_write_setup") !,
 
         count = $data->args->count
         offset = $data->args->offset
-	how = (@defined($how) ? $how : $data->args->stable)
+	how = @choose_defined($how, $data->args->stable)
         bitmask0 = 0
         bitmask1 = 0
 
@@ -986,7 +985,7 @@ probe nfs.proc4.write_setup = kernel.function("nfs4_proc_write_setup") !,
 
         count = $data->args->count
         offset = $data->args->offset
-	how = (@defined($how) ? $how : $data->args->stable)
+	how = @choose_defined($how, $data->args->stable)
         bitmask0 = __nfsv4_bitmask($data->inode,0)
         bitmask1 = __nfsv4_bitmask($data->inode,1)
 	//timestamp = $jiffies

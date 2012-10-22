@@ -43,9 +43,7 @@ function __nfsi_ndirty:long (inode:long)
 {
     if (inode == 0)	
         return -1
-    return (@defined(@cast(NFS_I(inode), "nfs_inode", "kernel:nfs")->ndirty)
-	    ? @cast(NFS_I(inode), "nfs_inode", "kernel:nfs")->ndirty
-	    : -1)
+    return @choose_defined(@cast(NFS_I(inode), "nfs_inode", "kernel:nfs")->ndirty, -1)
 }
 
 /* Get rsize from struct inode */
@@ -137,9 +135,8 @@ function __p2sb_flag:long (page:long)
 function __file_inode:long (file:long)
 {
     dentry = file
-	? (@defined(@cast(file, "file", "kernel:nfs")->f_path->dentry)
-	   ? @cast(file, "file", "kernel:nfs")->f_path->dentry
-	   : @cast(file, "file", "kernel:nfs")->f_dentry)
+	? @choose_defined(@cast(file, "file", "kernel:nfs")->f_path->dentry,
+		@cast(file, "file", "kernel:nfs")->f_dentry)
 	: 0
     if (dentry == 0)
         return 0
@@ -165,9 +162,8 @@ function __file_mode:long (file:long)
 function __file_parentname:string (file:long)
 {
     dentry = file
-	? (@defined(@cast(file, "file", "kernel:nfs")->f_path->dentry)
-	   ? @cast(file, "file", "kernel:nfs")->f_path->dentry
-	   : @cast(file, "file", "kernel:nfs")->f_dentry)
+	? @choose_defined(@cast(file, "file", "kernel:nfs")->f_path->dentry,
+		@cast(file, "file", "kernel:nfs")->f_dentry)
 	: 0
     d_parent = dentry? @cast(dentry, "dentry", "kernel:nfs")->d_parent : 0
     if (d_parent == 0)

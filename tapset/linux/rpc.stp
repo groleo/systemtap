@@ -172,8 +172,7 @@ probe _sunrpc.clnt.create_client.rpc_new_client_inline =
 		authflavor = $args->authflavor
 
 		prot = $xprt->prot
-		port = (@defined($xprt->port)
-			? $xprt->port : port_from_xprt($xprt))
+		port = @choose_defined($xprt->port, port_from_xprt($xprt))
 	}
 	else {				# kernel > 2.6.18 (with bad debuginfo)
 %(systemtap_v <= "1.7" %?
@@ -204,8 +203,7 @@ probe _sunrpc.clnt.create_client.rpc_new_client =
 	authflavor = $flavor
 
 	prot = $xprt->prot
-	port = (@defined($xprt->port)
-		? $xprt->port : port_from_xprt($xprt))
+	port = @choose_defined($xprt->port, port_from_xprt($xprt))
 }
 
 probe _sunrpc.clnt.create_client.rpc_create_client =
@@ -227,8 +225,7 @@ probe _sunrpc.clnt.create_client.rpc_create_client =
 	}
 
 	prot = $xprt->prot
-	port = (@defined($xprt->port)
-		? $xprt->port : port_from_xprt($xprt))
+	port = @choose_defined($xprt->port, port_from_xprt($xprt))
 }
 
 /*
@@ -441,16 +438,12 @@ probe sunrpc.clnt.call_sync = kernel.function("rpc_call_sync") !,
 	prot = prot_from_clnt($clnt)
 	port = port_from_clnt($clnt)
 	xid  = xid_from_clnt($clnt)
-	dead = (@defined($clnt->cl_dead) ? $clnt->cl_dead
-		: (@defined(&$clnt->cl_kref->refcount)
-		   ? (atomic_read(&$clnt->cl_kref->refcount) == 0)
-		   : (atomic_read(&$clnt->cl_count) == 0)))
+	dead = @choose_defined($clnt->cl_dead,
+		atomic_read(@choose_defined(&$clnt->cl_kref->refcount,
+					    &$clnt->cl_count)) == 0)
 
 	proc = proc_from_msg($msg)
-	procname = (@defined($msg->rpc_proc->p_name)
-		    ? ($msg->rpc_proc->p_name
-		       ? kernel_string($msg->rpc_proc->p_name) : "NULL")
-		    : "NULL")
+	procname = kernel_string2(@choose_defined($msg->rpc_proc->p_name, 0), "NULL")
 	flags = $flags
 	
 	name = "sunrpc.clnt.call_sync"
@@ -490,16 +483,12 @@ probe sunrpc.clnt.call_async = kernel.function("rpc_call_async") !,
 	prot = prot_from_clnt($clnt)
 	port = port_from_clnt($clnt)
 	xid  = xid_from_clnt($clnt)
-	dead = (@defined($clnt->cl_dead) ? $clnt->cl_dead
-		: (@defined(&$clnt->cl_kref->refcount)
-		   ? (atomic_read(&$clnt->cl_kref->refcount) == 0)
-		   : (atomic_read(&$clnt->cl_count) == 0)))
+	dead = @choose_defined($clnt->cl_dead,
+		atomic_read(@choose_defined(&$clnt->cl_kref->refcount,
+					    &$clnt->cl_count)) == 0)
 
 	proc = proc_from_msg($msg)
-	procname = (@defined($msg->rpc_proc->p_name)
-		    ? ($msg->rpc_proc->p_name
-		       ? kernel_string($msg->rpc_proc->p_name) : "NULL")
-		    : "NULL")
+	procname = kernel_string2(@choose_defined($msg->rpc_proc->p_name, 0), "NULL")
 	flags = $flags
 	
 	name = "sunrpc.clnt.call_async"
@@ -1043,20 +1032,16 @@ function prog_from_clnt:long(clnt:long)
 {
 	if (clnt == 0)
 		return 0
-	if (@defined(@cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_prog))
-		return @cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_prog
-	else
-		return @cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_pmap->pm_prog
+	return @choose_defined(@cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_prog,
+		@cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_pmap->pm_prog)
 }
 
 function vers_from_clnt:long(clnt:long)
 {
 	if (clnt == 0)
 		return 0
-	if (@defined(@cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_vers))
-		return @cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_vers
-	else
-		return @cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_pmap->pm_vers
+	return @choose_defined(@cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_vers,
+		@cast(clnt, "rpc_clnt", "kernel:sunrpc")->cl_pmap->pm_vers)
 }
 
 function prot_from_clnt:long(clnt:long)

@@ -14,11 +14,9 @@
  */
 function inet_get_local_port:long(sock:long)
 {
-    return (@defined(@cast(sock, "inet_sock")->inet_num)
-	    ? @cast(sock, "inet_sock")->inet_num # kernel >= 2.6.33
-	    : (@defined(@cast(sock, "inet_sock")->num)
-	       ? @cast(sock, "inet_sock", "kernel")->num # kernel >= 2.6.11
-	       : @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->num))
+    return @choose_defined(@cast(sock, "inet_sock")->inet_num, # kernel >= 2.6.33
+            @choose_defined(@cast(sock, "inet_sock")->num, # kernel >= 2.6.11
+                @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->num))
 }
 
 /**

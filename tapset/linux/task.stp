@@ -40,10 +40,9 @@ function task_current:long () %{ /* pure */
  */
 function task_parent:long(task:long)
 {
-    return (@defined(@cast(task, "task_struct",
-			   "kernel<linux/sched.h>")->real_parent)
-	    ? @cast(task, "task_struct", "kernel<linux/sched.h>")->real_parent
-	    : @cast(task, "task_struct", "kernel<linux/sched.h>")->parent)
+    return @choose_defined(
+	    @cast(task, "task_struct", "kernel<linux/sched.h>")->real_parent,
+	    @cast(task, "task_struct", "kernel<linux/sched.h>")->parent)
 }
 
 /**
@@ -256,9 +255,8 @@ function task_nice:long (task:long) %{ /* pure */
  */
 function task_cpu:long (task:long)
 {
-    ti = (@defined(@cast(task, "task_struct", "kernel<linux/sched.h>")->stack)
-	  ? @cast(task, "task_struct", "kernel<linux/sched.h>")->stack
-	  : @cast(task, "task_struct", "kernel<linux/sched.h>")->thread_info);
+    ti = @choose_defined(@cast(task, "task_struct", "kernel<linux/sched.h>")->stack,
+	  @cast(task, "task_struct", "kernel<linux/sched.h>")->thread_info);
     return @cast(ti, "thread_info", "kernel<linux/sched.h>")->cpu
 }
 

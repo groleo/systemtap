@@ -77,11 +77,9 @@ function tcp_ts_get_info_state:long(sock:long)
 /* return the TCP destination port for a given sock */
 function __tcp_sock_dport:long (sock:long)
 {
-    return (@defined(@cast(sock, "inet_sock")->inet_dport)
-	    ? @cast(sock, "inet_sock")->inet_dport # kernel >= 2.6.33
-	    : (@defined(@cast(sock, "inet_sock")->dport)
-	       ? @cast(sock, "inet_sock", "kernel")->dport # kernel >= 2.6.11
-	       : @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->dport))
+    return @choose_defined(@cast(sock, "inet_sock")->inet_dport, # kernel >= 2.6.33
+	    @choose_defined(@cast(sock, "inet_sock", "kernel")->dport, # kernel >= 2.6.11
+		@cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->dport))
 }
 
 /* returns the TCP header for recent (<2.6.21) kernel */
@@ -159,11 +157,9 @@ function __tcp_skb_dport:long (tcphdr:long){
 /* return the TCP source port for a given sock */
 function __tcp_sock_sport:long (sock:long)
 {
-    return (@defined(@cast(sock, "inet_sock")->inet_sport)
-	    ? @cast(sock, "inet_sock")->inet_sport # kernel >= 2.6.33
-	    : (@defined(@cast(sock, "inet_sock")->sport)
-	       ? @cast(sock, "inet_sock", "kernel")->sport # kernel >= 2.6.11
-	       : @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->sport))
+    return @choose_defined(@cast(sock, "inet_sock")->inet_sport, # kernel >= 2.6.33
+	    @choose_defined(@cast(sock, "inet_sock", "kernel")->sport, # kernel >= 2.6.11
+		@cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->sport))
 }
 
 global sockstate[13], sockstate_init_p
@@ -686,7 +682,7 @@ probe tcp.ipv6.receive = kernel.function("tcp_v6_rcv")!,
 	module("ipv6").function("tcp_v6_rcv")
 {
 	name = "tcp.ipv6.receive"
-	iphdr = __get_skb_iphdr(@defined($skb) ? $skb : kernel_pointer($pskb))
+	iphdr = __get_skb_iphdr(@choose_defined($skb, kernel_pointer($pskb)))
 	# If we're here, by definition we're doing AF_INET6, not AF_INET.
 	family = %{ /* pure */ AF_INET6 %}
 	saddr = format_ipaddr(&@cast(iphdr, "ipv6hdr")->saddr,
@@ -699,7 +695,7 @@ probe tcp.ipv6.receive = kernel.function("tcp_v6_rcv")!,
 	# Procol ID (ETH_P_*), not an IP protocol ID (IPPROTO_*).
 	protocol = %{ /* pure */ IPPROTO_TCP %}
 
-	tcphdr = __get_skb_tcphdr(@defined($skb) ? $skb : kernel_pointer($pskb))
+	tcphdr = __get_skb_tcphdr(@choose_defined($skb, kernel_pointer($pskb)))
 	dport = __tcp_skb_dport(tcphdr)
 	sport = __tcp_skb_sport(tcphdr)
 	urg = __tcp_skb_urg(tcphdr)

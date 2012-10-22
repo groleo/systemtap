@@ -297,8 +297,8 @@ probe __scheduler.migrate.kp =
 	kernel.function("set_task_cpu") !,
 	kernel.function("pull_task") ?
 {
-	cpu_to = (@defined($new_cpu) ? $new_cpu
-		  : @defined($cpu) ? $cpu : $this_cpu)
+	cpu_to = @choose_defined($new_cpu,
+                @choose_defined($cpu, $this_cpu))
 }
 probe __scheduler.migrate.tp = kernel.trace("sched_migrate_task")
 {

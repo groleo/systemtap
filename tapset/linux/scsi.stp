@@ -64,7 +64,7 @@ probe scsi.ioentry.sr =
 
 probe scsi.ioentry = scsi.ioentry.* ?
 {
-        req_addr = @defined($req) ? $req : $rq;
+        req_addr = @choose_defined($req, $rq);
 	if(@cast(req_addr,"request")->rq_disk == 0)  {
 		disk_major = -1
 		disk_minor = -1
@@ -104,10 +104,10 @@ probe scsi.iodispatching
 	device_state_str = describe_device_state(device_state)
 	data_direction = $cmd->sc_data_direction
 	data_direction_str = describe_data_direction(data_direction)
-	request_buffer = (@defined($cmd->sdb->table->sgl)
-	    ? $cmd->sdb->table->sgl : $cmd->request_buffer)
-	request_bufflen = (@defined($cmd->sdb->length)
-	    ? $cmd->sdb->length : $cmd->request_bufflen)
+	request_buffer = @choose_defined($cmd->sdb->table->sgl,
+					 $cmd->request_buffer)
+	request_bufflen = @choose_defined($cmd->sdb->length,
+					  $cmd->request_bufflen)
 	req_addr = $cmd->request
 }
 
@@ -175,9 +175,8 @@ probe scsi.iocompleted
 
 function timer_pending:long(timer:long)
 {
-	return (@defined(@cast(timer, "timer_list")->entry->next)
-		? (@cast(timer, "timer_list")->entry->next != 0)
-		: (@cast(timer, "timer_list")->base != 0))
+	return (@choose_defined(@cast(timer, "timer_list")->entry->next,
+				@cast(timer, "timer_list")->base) != 0)
 }
 
 function scsi_timer_pending:long(cmd:long)

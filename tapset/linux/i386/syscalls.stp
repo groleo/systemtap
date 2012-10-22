@@ -139,8 +139,8 @@ probe syscall.sigaltstack = kernel.function("sys_sigaltstack")
 	ussp = %( kernel_vr < "2.6.25" %? $ebx %: %( kernel_vr < "2.6.30" %? $bx %: $regs->bx %) %)
 %)
 	if (@defined($regs)) {
-		uss_uaddr = (@defined($uss) ? $uss : $regs->bx)
-		uoss_uaddr = (@defined($uoss) ? $uoss : $regs->cx)
+		uss_uaddr = @choose_defined($uss, $regs->bx)
+		uoss_uaddr = @choose_defined($uoss, $regs->cx)
 		regs = $regs
 	}
 	else if (@defined($bx)) {	# kernels < "2.6.30"

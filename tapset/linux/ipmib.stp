@@ -335,7 +335,7 @@ probe ipmib.ForwDatagrams=kernel.function("ip_forward_finish")
 probe ipmib.OutRequests=kernel.function("ip_output"),
 			kernel.function("ip_mc_output")
 {
-	skb = @defined($skb) ? $skb : kernel_pointer($pskb);
+	skb = @choose_defined($skb, kernel_pointer($pskb));
 	op = 1;
 	SourceIsLocal = 1;
 	key = ipmib_filter_key(skb,op,SourceIsLocal);
@@ -429,20 +429,14 @@ function _rtn_unspec:long ()
 
 function _input_route_type:long (skb:long)
 {
-	rt = (@defined(@cast(skb, "sk_buff")->_skb_dst)
-	      ? @cast(skb, "sk_buff")->_skb_dst
-	      : (@defined(@cast(skb, "sk_buff")->rtable)
-	         ? @cast(skb, "sk_buff")->rtable
-		 : 0))
+	rt = @choose_defined(@cast(skb, "sk_buff")->_skb_dst,
+		@choose_defined(@cast(skb, "sk_buff")->rtable, 0))
 	return rt ? @cast(rt, "rtable")->rt_type : _rtn_unspec()
 }
 
 function _output_route_type:long (skb:long)
 {
-	rt = (@defined(@cast(skb, "sk_buff")->_skb_dst)
-	      ? @cast(skb, "sk_buff")->_skb_dst
-	      : (@defined(@cast(skb, "sk_buff")->dst)
-	         ? @cast(skb, "sk_buff")->dst
-		 : 0))
+	rt = @choose_defined(@cast(skb, "sk_buff")->_skb_dst,
+		@choose_defined(@cast(skb, "sk_buff")->dst, 0))
 	return rt ? @cast(rt, "rtable")->rt_type : _rtn_unspec()
 }

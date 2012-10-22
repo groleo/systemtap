@@ -557,7 +557,7 @@ probe syscall.dup2 = kernel.function("sys_dup3").call !,
 {
 	oldfd = $oldfd
 	newfd = $newfd
-	flags = @defined($flags) ? $flags : 0;
+	flags = @choose_defined($flags, 0);
 
 	# Corner case handled by dup2
 	if ($oldfd == $newfd && flags == 0) next
@@ -574,7 +574,7 @@ probe syscall.dup2 = kernel.function("sys_dup3").call !,
 probe syscall.dup2.return = kernel.function("sys_dup3").return !,
                             kernel.function("sys_dup2").return
 {
-	flags = @defined($flags) ? $flags : 0;
+	flags = @choose_defined($flags, 0);
 
 	# Corner case handled by dup2
 	if ($oldfd == $newfd && flags == 0) next
@@ -589,8 +589,8 @@ probe syscall.dup2.return = kernel.function("sys_dup3").return !,
 probe syscall.epoll_create = kernel.function("sys_epoll_create1").call !,
                              kernel.function("sys_epoll_create").call ?
 {
-	size = @defined($size) ? $size : 0;
-	flags = @defined($flags) ? $flags : 0;
+	size = @choose_defined($size, 0);
+	flags = @choose_defined($flags, 0);
 	if (flags == 0) {
 		name = "epoll_create";
 		argstr = sprint(size);
@@ -602,7 +602,7 @@ probe syscall.epoll_create = kernel.function("sys_epoll_create1").call !,
 probe syscall.epoll_create.return = kernel.function("sys_epoll_create1").return !,
                                     kernel.function("sys_epoll_create").return ?
 {
-	flags = @defined($flags) ? $flags : 0;
+	flags = @choose_defined($flags, 0);
 	name = (flags == 0) ? "epoll_create" : "epoll_create1";
 	retstr = return_str(1, $return)
 }
@@ -687,7 +687,7 @@ probe syscall.epoll_wait.return = kernel.function("compat_sys_epoll_wait").retur
 probe syscall.eventfd = kernel.function("sys_eventfd2").call !,
                         kernel.function("sys_eventfd").call ?
 {
-	flags = @defined($flags) ? $flags : 0
+	flags = @choose_defined($flags, 0)
 	if (flags == 0) {
 		name = "eventfd"
 		argstr = sprint($count)
@@ -699,7 +699,7 @@ probe syscall.eventfd = kernel.function("sys_eventfd2").call !,
 probe syscall.eventfd.return = kernel.function("sys_eventfd2").return !,
                                kernel.function("sys_eventfd").return ?
 {
-	flags = @defined($flags) ? $flags : 0
+	flags = @choose_defined($flags, 0)
 	name = flags == 0 ? "eventfd" : "eventfd2"
 	retstr = return_str(1, $return)
 }
@@ -716,7 +716,7 @@ probe syscall.execve = kernel.function("do_execve").call
 	name = "execve"
 	filename = kernel_string($filename)
 	# kernel 3.0 changed the pointer's name to __argv
-	__argv = @defined($__argv) ? $__argv : $argv
+	__argv = @choose_defined($__argv, $argv)
 	args = __get_argv(__argv, 0)
 	argstr = sprintf("%s %s", filename, __get_argv(__argv, 1))
 }
@@ -736,7 +736,7 @@ probe syscall.compat_execve = kernel.function("compat_do_execve").call ?
 	name = "compat_execve"
 	filename = kernel_string($filename)
 	# kernel 3.0 changed the pointer's name to __argv
-	__argv = @defined($__argv) ? $__argv : $argv
+	__argv = @choose_defined($__argv, $argv)
 	args = __get_compat_argv(__argv, 0)
 	argstr = sprintf("%s %s", filename, __get_compat_argv(__argv, 1))
 }
@@ -794,10 +794,10 @@ probe syscall.faccessat.return = kernel.function("sys_faccessat").return ?
 probe syscall.fadvise64 = kernel.function("sys_fadvise64").call ?
 {
 	name = "fadvise64"
-	fd = (@defined($fd) ? $fd : 0)
-	offset = (@defined($offset) ? $offset : 0)
-	len = (@defined($len) ? $len : 0)
-	advice = (@defined($advice) ? $advice : 0)
+	fd = @choose_defined($fd, 0)
+	offset = @choose_defined($offset, 0)
+	len = @choose_defined($len, 0)
+	advice = @choose_defined($advice, 0)
 	argstr = sprintf("%d, %d, %d, %s", $fd, $offset, $len, _fadvice_advice_str($advice))
 }
 probe syscall.fadvise64.return = kernel.function("sys_fadvise64").return ?
@@ -812,10 +812,10 @@ probe syscall.fadvise64.return = kernel.function("sys_fadvise64").return ?
 probe syscall.fadvise64_64 = kernel.function("sys_fadvise64_64").call ?
 {
 	name = "fadvise64_64"
-	fd = (@defined($fd) ? $fd : 0)
-	offset = (@defined($offset) ? $offset : 0)
-	len = (@defined($len) ? $len : 0)
-	advice = (@defined($advice) ? $advice : 0)
+	fd = @choose_defined($fd, 0)
+	offset = @choose_defined($offset, 0)
+	len = @choose_defined($len, 0)
+	advice = @choose_defined($advice, 0)
 	argstr = sprintf("%d, %d, %d, %s", $fd, $offset, $len, _fadvice_advice_str($advice))
 }
 probe syscall.fadvise64_64.return = kernel.function("sys_fadvise64_64").return ?
@@ -1620,12 +1620,12 @@ probe syscall.getresgid = kernel.function("sys_getresgid16").call ?,
                           kernel.function("sys_getresgid").call
 {
 	name = "getresgid"
-	rgid_uaddr = @defined($rgidp) ? $rgidp : $rgid
-	egid_uaddr = @defined($egidp) ? $egidp : $egid
-	sgid_uaddr = @defined($sgidp) ? $sgidp : $sgid
-	argstr = sprintf("%p, %p, %p", (@defined($rgidp) ? $rgidp : $rgid),
-			 (@defined($egidp) ? $egidp : $egid),
-			 (@defined($sgidp) ? $sgidp : $sgid))
+	rgid_uaddr = @choose_defined($rgidp, $rgid)
+	egid_uaddr = @choose_defined($egidp, $egid)
+	sgid_uaddr = @choose_defined($sgidp, $sgid)
+	argstr = sprintf("%p, %p, %p", @choose_defined($rgidp, $rgid),
+			 @choose_defined($egidp, $egid),
+			 @choose_defined($sgidp, $sgid))
 }
 probe syscall.getresgid.return = kernel.function("sys_getresgid16").return ?,
                                  kernel.function("sys_getresgid").return
@@ -1642,12 +1642,12 @@ probe syscall.getresuid = kernel.function("sys_getresuid16").call ?,
                           kernel.function("sys_getresuid").call
 {
 	name = "getresuid"
-	ruid_uaddr = @defined($ruidp) ? $ruidp : $ruid
-	euid_uaddr = @defined($euidp) ? $euidp : $euid
-	suid_uaddr = @defined($suidp) ? $suidp : $suid
-	argstr = sprintf("%p, %p, %p", (@defined($ruidp) ? $ruidp : $ruid),
-			 (@defined($euidp) ? $euidp : $euid),
-			 (@defined($suidp) ? $suidp : $suid))
+	ruid_uaddr = @choose_defined($ruidp, $ruid)
+	euid_uaddr = @choose_defined($euidp, $euid)
+	suid_uaddr = @choose_defined($suidp, $suid)
+	argstr = sprintf("%p, %p, %p", @choose_defined($ruidp, $ruid),
+			 @choose_defined($euidp, $euid),
+			 @choose_defined($suidp, $suid))
 }
 probe syscall.getresuid.return = kernel.function("sys_getresuid16").return ?,
                                  kernel.function("sys_getresuid").return
@@ -1821,7 +1821,7 @@ probe syscall.getuid.return = kernel.function("sys_getuid16").return ?,
 probe syscall.getxattr = kernel.function("sys_getxattr").call
 {
 	name = "getxattr"
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path = user_string(@choose_defined($pathname, $path))
 # 'name2' should have been 'name_str'.  Deprecate the old name.
 %(systemtap_v <= "1.4" %?
 	name2 = user_string($name)
@@ -1830,7 +1830,7 @@ probe syscall.getxattr = kernel.function("sys_getxattr").call
 	value_uaddr = $value
 	size = $size
 	argstr = sprintf("%s, %s, %p, %d",
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		user_string_quoted($name),
 		$value, $size)
 }
@@ -1868,10 +1868,10 @@ probe syscall.inotify_add_watch = kernel.function("sys_inotify_add_watch").call 
 	name = "inotify_add_watch"
 	fd = $fd
 	mask = $mask
-	path_uaddr = (@defined($pathname) ? $pathname : $path)
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path_uaddr = @choose_defined($pathname, $path)
+	path = user_string(@choose_defined($pathname, $path))
 	argstr = sprintf("%d, %s, %s", $fd,
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		_inotify_watch_mask_str($mask))
 }
 
@@ -1888,7 +1888,7 @@ probe syscall.inotify_add_watch.return = kernel.function("sys_inotify_add_watch"
 probe syscall.inotify_init = kernel.function("sys_inotify_init1").call !,
                              kernel.function("sys_inotify_init").call ?
 {
-	flags = @defined($flags) ? $flags : 0;
+	flags = @choose_defined($flags, 0);
 	if (flags == 0) {
 		name = "inotify_init"
 		argstr = ""
@@ -1900,7 +1900,7 @@ probe syscall.inotify_init = kernel.function("sys_inotify_init1").call !,
 probe syscall.inotify_init.return = kernel.function("sys_inotify_init1").return !,
                                     kernel.function("sys_inotify_init").return ?
 {
-	flags = @defined($flags) ? $flags : 0;
+	flags = @choose_defined($flags, 0);
 	name = (flags == 0) ? "inotify_init" : "inotify_init1"
 	retstr = return_str(1, $return)
 }
@@ -2228,7 +2228,7 @@ probe syscall.lchown16.return = kernel.function("sys_lchown16").return ?
 probe syscall.lgetxattr = kernel.function("sys_lgetxattr").call
 {
 	name = "lgetxattr"
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path = user_string(@choose_defined($pathname, $path))
 # 'name2' should have been 'name_str'.  Deprecate the old name.
 %(systemtap_v <= "1.4" %?
 	name2 = user_string($name)
@@ -2237,7 +2237,7 @@ probe syscall.lgetxattr = kernel.function("sys_lgetxattr").call
 	value_uaddr = $value
 	size = $size
 	argstr = sprintf("%s, %s, %p, %d",
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		user_string_quoted($name),
 		value_uaddr, size)
 }
@@ -2314,10 +2314,10 @@ probe syscall.listxattr = kernel.function("sys_listxattr").call
 	name = "listxattr"
 	list_uaddr = $list
 	size = $size
-	path_uaddr = (@defined($pathname) ? $pathname : $path)
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path_uaddr = @choose_defined($pathname, $path)
+	path = user_string(@choose_defined($pathname, $path))
 	argstr = sprintf("%s, %p, %d",
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		$list, $size)
 }
 probe syscall.listxattr.return = kernel.function("sys_listxattr").return
@@ -2334,10 +2334,10 @@ probe syscall.llistxattr = kernel.function("sys_llistxattr").call
 	name = "llistxattr"
 	list_uaddr = $list
 	size = $size
-	path_uaddr = (@defined($pathname) ? $pathname : $path)
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path_uaddr = @choose_defined($pathname, $path)
+	path = user_string(@choose_defined($pathname, $path))
 	argstr = sprintf("%s, %p, %d",
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		$list, $size)
 }
 probe syscall.llistxattr.return = kernel.function("sys_llistxattr").return
@@ -2399,10 +2399,10 @@ probe syscall.lremovexattr = kernel.function("sys_lremovexattr").call
 	name2 = user_string($name)
 %)
 	name_str = user_string($name)
-	path_uaddr = (@defined($pathname) ? $pathname : $path)
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path_uaddr = @choose_defined($pathname, $path)
+	path = user_string(@choose_defined($pathname, $path))
 	argstr = sprintf("%s, %s",
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		user_string_quoted($name))
 }
 probe syscall.lremovexattr.return = kernel.function("sys_lremovexattr").return
@@ -2439,15 +2439,15 @@ probe syscall.lseek.return = kernel.function("sys_lseek").return
 probe syscall.lsetxattr = kernel.function("sys_lsetxattr").call
 {
 	name = "lsetxattr"
-	path_uaddr = (@defined($pathname) ? $pathname : $path)
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path_uaddr = @choose_defined($pathname, $path)
+	path = user_string(@choose_defined($pathname, $path))
 	name_uaddr = $name
 	name_str = user_string($name)
 	value_uaddr = $value
 	size = $size
 	flags = $flags
 	argstr = sprintf("%s, %s, %p, %d, %d",
-			user_string_quoted(@defined($pathname) ? $pathname : $path),
+			user_string_quoted(@choose_defined($pathname, $path)),
 			user_string_quoted($name),
 			value_uaddr, $size, $flags)
 }

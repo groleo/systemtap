@@ -407,9 +407,9 @@ probe syscall.poll = kernel.function("sys_poll").call
 	name = "poll"
 	ufds_uaddr = $ufds
 	nfds = $nfds
-	timeout = (@defined($timeout_msecs) ? $timeout_msecs : $timeout)
+	timeout = @choose_defined($timeout_msecs, $timeout)
 	argstr = sprintf("%p, %d, %d", $ufds, $nfds,
-		(@defined($timeout_msecs) ? $timeout_msecs : $timeout))
+		@choose_defined($timeout_msecs, $timeout))
 }
 probe syscall.poll.return = kernel.function("sys_poll").return
 {
@@ -759,9 +759,9 @@ probe syscall.readlinkat = kernel.function("sys_readlinkat").call ?
 	dfd = $dfd
 	buf_uaddr = $buf
 	bufsiz = $bufsiz
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path = user_string(@choose_defined($pathname, $path))
 	argstr = sprintf("%s, %s, %p, %d", _dfd_str($dfd),
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		$buf, $bufsiz)
 }
 
@@ -974,7 +974,7 @@ probe syscall.remap_file_pages = kernel.function("sys_remap_file_pages").call ?
 	name = "remap_file_pages"
 	start = $start
 	size = $size
-	prot = (@defined($prot) ? $prot : $__prot)
+	prot = @choose_defined($prot, $__prot)
 	pgoff = $pgoff
 	flags = $flags
 	argstr = sprintf("%p, %p, %p, %p, %p", start, size, prot,
@@ -997,9 +997,9 @@ probe syscall.removexattr = kernel.function("sys_removexattr").call
 	name = "removexattr"
 	name_str = user_string($name)
 
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path = user_string(@choose_defined($pathname, $path))
 	argstr = sprintf("%s, %s",
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		user_string_quoted($name))
 }
 probe syscall.removexattr.return = kernel.function("sys_removexattr").return
@@ -1188,7 +1188,7 @@ probe syscall.rt_sigprocmask = kernel.function("sys32_rt_sigprocmask").call ?,
 	name = "rt_sigprocmask"
 	how  = $how
 	how_str = _sigprocmask_how_str($how)
-	set_uaddr    = @defined($set) ? $set : $nset
+	set_uaddr    = @choose_defined($set, $nset)
 	oldset_uaddr = $oset
 	argstr = sprintf("%s, [%s], %p, %d", how_str, _stp_sigset_u(set_uaddr),
 		$oset, $sigsetsize)
@@ -1392,7 +1392,7 @@ probe syscall.sched_setaffinity = kernel.function("sys_sched_setaffinity").call
 {
 	name = "sched_setaffinity"
 	pid = $pid
-	len = (@defined($len) ? $len : 0)
+	len = @choose_defined($len, 0)
 	mask_uaddr = $user_mask_ptr
 	argstr = sprintf("%d, %d, %p", $pid, $len, $user_mask_ptr)
 }
@@ -2225,15 +2225,15 @@ probe syscall.setuid.return = kernel.function("sys_setuid16").return ?,
 probe syscall.setxattr = kernel.function("sys_setxattr").call
 {
 	name = "setxattr"
-	path_uaddr = (@defined($pathname) ? $pathname : $path)
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path_uaddr = @choose_defined($pathname, $path)
+	path = user_string(@choose_defined($pathname, $path))
 	name_uaddr = $name
 	name_str = user_string($name)
 	value_uaddr = $value
 	size = $size
 	flags = $flags
 	argstr = sprintf("%s, %s, %p, %d, %d",
-			user_string_quoted(@defined($pathname) ? $pathname : $path),
+			user_string_quoted(@choose_defined($pathname, $path)),
 			user_string_quoted($name),
 			value_uaddr, $size, $flags)
 }
@@ -2447,7 +2447,7 @@ probe syscall.signal.return = kernel.function("sys_signal").return ?
 probe syscall.signalfd = kernel.function("sys_signalfd4").call !,
                          kernel.function("sys_signalfd").call ?
 {
-	flags = @defined($flags) ? $flags : 0;
+	flags = @choose_defined($flags, 0);
 	if (flags == 0) {
 		name = "signalfd"
 		argstr = sprintf("%d, %p, %d", $ufd, $user_mask, $sizemask)
@@ -2460,14 +2460,14 @@ probe syscall.signalfd = kernel.function("sys_signalfd4").call !,
 probe syscall.signalfd.return = kernel.function("sys_signalfd4").return !,
                                 kernel.function("sys_signalfd").return ?
 {
-	flags = @defined($flags) ? $flags : 0;
+	flags = @choose_defined($flags, 0);
 	name = (flags == 0) ? "signalfd" : "signalfd4"
 	retstr = return_str(1, $return)
 }
 probe syscall.compat_signalfd = kernel.function("compat_sys_signalfd4").call !,
                                 kernel.function("compat_sys_signalfd").call ?
 {
-	flags = @defined($flags) ? $flags : 0;
+	flags = @choose_defined($flags, 0);
 	if (flags == 0) {
 		name = "compat_signalfd"
 		argstr = sprintf("%d, %p, %d", $ufd, $sigmask, $sigsetsize)
@@ -2481,7 +2481,7 @@ probe syscall.compat_signalfd.return =
 		kernel.function("compat_sys_signalfd4").return !,
 		kernel.function("compat_sys_signalfd").return ?
 {
-	flags = @defined($flags) ? $flags : 0;
+	flags = @choose_defined($flags, 0);
 	name = (flags == 0) ? "compat_signalfd" : "compat_signalfd4"
 	retstr = return_str(1, $return)
 }
@@ -2512,7 +2512,7 @@ probe syscall.sigprocmask = kernel.function("sys_sigprocmask").call ?,
 	name = "sigprocmask"
 	how  = $how
 	how_str = _sigprocmask_how_str($how)
-	set_uaddr    = @defined($set) ? $set : $nset
+	set_uaddr    = @choose_defined($set, $nset)
 	oldset_uaddr = $oset
 	argstr = sprintf("%s, %p, %p", how_str, set_uaddr, $oset)
 }
@@ -2688,9 +2688,9 @@ probe syscall.statfs = kernel.function("compat_sys_statfs").call ?,
 {
 	name = "statfs"
 	buf_uaddr = $buf
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path = user_string(@choose_defined($pathname, $path))
 	argstr = sprintf("%s, %p",
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		$buf)
 }
 
@@ -2713,9 +2713,9 @@ probe syscall.statfs64 = kernel.function("compat_sys_statfs64").call ?,
 	sz = $sz
 	buf_uaddr = $buf
 
-	path = user_string(@defined($pathname) ? $pathname : $path)
+	path = user_string(@choose_defined($pathname, $path))
 	argstr = sprintf("%s, %d, %p",
-		user_string_quoted(@defined($pathname) ? $pathname : $path),
+		user_string_quoted(@choose_defined($pathname, $path)),
 		$sz, $buf)
 }
 
@@ -3313,8 +3313,8 @@ probe syscall.ustat32 = kernel.function("compat_sys_ustat").call ?,
 {
 	name = "ustat"
 	dev = $dev
-	ubuf_uaddr = (@defined($u) ? $u : $u32p)
-	argstr = sprintf("%d, %p", $dev, (@defined($u) ? $u : $u32p))
+	ubuf_uaddr = @choose_defined($u, $u32p)
+	argstr = sprintf("%d, %p", $dev, @choose_defined($u, $u32p))
 }
 
 probe syscall.ustat.return = kernel.function("sys_ustat").return ?,
@@ -3479,13 +3479,13 @@ probe syscall.compat_vmsplice.return = kernel.function("compat_sys_vmsplice").re
 probe syscall.wait4 = kernel.function("sys_wait4").call
 {
 	name = "wait4"
-	pid = (@defined($upid) ? $upid : $pid)
+	pid = @choose_defined($upid, $pid)
 	status_uaddr = $stat_addr
 	options = $options & 0xffffffff
 	options_str = _wait4_opt_str(options)
 	rusage_uaddr = $ru
 	argstr = sprintf("%d, %p, %s, %p",
-		(@defined($upid) ? $upid : $pid),
+		@choose_defined($upid, $pid),
 		$stat_addr, options_str, $ru)
 }
 probe syscall.wait4.return = kernel.function("sys_wait4").return
@@ -3512,7 +3512,7 @@ probe syscall.wait4.return = kernel.function("sys_wait4").return
 probe syscall.waitid = kernel.function("sys_waitid").call
 {
 	name = "waitid"
-	pid = (@defined($upid) ? $upid : $pid)
+	pid = @choose_defined($upid, $pid)
 	which = $which
 	which_str = _waitid_which_str($which)
 	infop_uaddr = $infop
@@ -3520,7 +3520,7 @@ probe syscall.waitid = kernel.function("sys_waitid").call
 	options_str = _waitid_opt_str($options)
 	rusage_uaddr = $ru
 	argstr = sprintf("%d, %d, %p, %s, %p", $which,
-		(@defined($upid) ? $upid : $pid), $infop,
+		@choose_defined($upid, $pid), $infop,
 		_waitid_opt_str($options), $ru)
 }
 probe syscall.waitid.return = kernel.function("sys_waitid").return

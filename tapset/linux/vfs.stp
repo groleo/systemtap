@@ -105,9 +105,8 @@ function __file_maxbytes:long (file:long)
 function __file_filename:string (file:long)
 {
 	dentry = file
-		? (@defined(@cast(file, "file", "kernel")->f_path->dentry)
-			? @cast(file, "file", "kernel")->f_path->dentry
-			: @cast(file, "file", "kernel")->f_dentry)
+		? @choose_defined(@cast(file, "file", "kernel")->f_path->dentry,
+				  @cast(file, "file", "kernel")->f_dentry)
 		: 0
 	name = dentry? @cast(dentry, "dentry", "kernel")->d_name->name : 0
 	if (name == 0)
@@ -174,7 +173,7 @@ probe generic.fop.aio_read =
 	devname = __find_bdevname(dev, __file_bdev($iocb->ki_filp))
 	ino = __file_ino($iocb->ki_filp)
         
-	pos = (@defined($pos) ? $pos : kernel_pointer($ppos))
+	pos = @choose_defined($pos, kernel_pointer($ppos))
 	buf = $iov->iov_base
 	count = __iov_length($iov,$nr_segs,1,1) /*FIX ME: should be VERIFY_WRITE instead of 1*/
 	name = "generic_file_aio_read"
@@ -215,7 +214,7 @@ probe generic.fop.aio_write = kernel.function("generic_file_aio_write")
         count = (@defined($iov)
 		? __iov_length($iov,$nr_segs,1,0) /*FIX ME: should be VERIFY_READ instead of 0*/
 		: $count)
-	buf = (@defined($iov->iov_base) ? $iov->iov_base : $buf)
+	buf = @choose_defined($iov->iov_base, $buf)
 	name = "generic_file_aio_write"
 	argstr = sprintf("%d, %d, %p", count, pos, buf)
 
@@ -988,7 +987,7 @@ probe _vfs.block_prepare_write.return =
 
 probe _vfs.block_write_begin = kernel.function("block_write_begin") ?
 {
-	file = (@defined($file) ? $file : 0)
+	file = @choose_defined($file, 0)
 	pos = $pos
 	len = $len
 	flags = $flags
@@ -1005,7 +1004,7 @@ probe _vfs.block_write_begin.return =
 	name = "_vfs.block_write_begin"
 	retstr = sprintf("%d", $return)
 
-	file = (@defined($file) ? $file : 0)
+	file = @choose_defined($file, 0)
 	pos = $pos
 	len = $len
 	flags = $flags

@@ -519,8 +519,8 @@ probe __vm.kmalloc_node.kp = kernel.function("kmalloc_node").return ?
 	# '$size' argument above).  Note that we can see the '$flags'
 	# argument on x86_64 f11 (2.6.29.4-167.fc11.x86_64).  So, the
 	# best we can do here is just use 0 when $flags isn't defined.
-	gfp_flags = (@defined($flags) ? $flags : 0)
-	gfp_flag_name = __gfp_flag_str(@defined($flags) ? $flags : 0)
+	gfp_flags = @choose_defined($flags, 0)
+	gfp_flag_name = __gfp_flag_str(@choose_defined($flags, 0))
 
 	ptr = $return
 }
@@ -610,7 +610,7 @@ probe __vm.kfree.kp = kernel.function("kfree").return
 {
 	call_site = 0
 	caller_function = "unknown"
-	ptr = (@defined($x) ? $x : $objp)
+	ptr = @choose_defined($x, $objp)
 }
 
 /**
@@ -636,7 +636,7 @@ probe __vm.kmem_cache_free.kp = kernel.function("kmem_cache_free").return
 {
 	call_site = 0
 	caller_function = "unknown"
-	ptr = (@defined($x) ? $x : $objp)
+	ptr = @choose_defined($x, $objp)
 }
 
 /**

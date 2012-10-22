@@ -60,9 +60,9 @@ probe signal.send = __signal.send.send_sigqueue,
 probe __signal.send.send_sigqueue = kernel.function("send_sigqueue")
 {
     name = "send_sigqueue"
-    task = (@defined($t) ? $t : $p)
-    sig = (@defined($q->info->si_signo) ? $q->info->si_signo : $sig)
-    sinfo = (@defined($q->info) ? $q->info : 0)
+    task = @choose_defined($t, $p)
+    sig = @choose_defined($q->info->si_signo, $sig)
+    sinfo = @choose_defined($q->info, 0)
     shared = 0
     send2queue = 1
 }
@@ -609,7 +609,7 @@ probe signal.handle = kernel.function("handle_rt_signal64") ?,
     sinfo = $info
     sig_code = $info->si_code
     ka_addr = $ka
-    oldset_addr = (@defined($oldset) ? $oldset : $set)
+    oldset_addr = @choose_defined($oldset, $set)
     regs = $regs
 
     // Check whether the signal is a User Mode or Kernel mode Signal.

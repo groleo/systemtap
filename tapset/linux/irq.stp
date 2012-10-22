@@ -136,11 +136,11 @@ probe softirq.entry = kernel.trace("irq_softirq_entry") !,
      		      kernel.trace("softirq_entry") ?
 {
 	# kernels < 2.6.37
-	h = (@defined($h) ? $h : 0)
-	vec = (@defined($vec) ? $vec : 0)
+	h = @choose_defined($h, 0)
+	vec = @choose_defined($vec, 0)
 	action = (@defined($h) ? @cast($h,"softirq_action","kernel<linux/interrupt.h>")->action : 0)
 	# kernels >= 2.6.37
-	vec_nr = (@defined($vec_nr) ? $vec_nr : 0)
+	vec_nr = @choose_defined($vec_nr, 0)
 }
 
 /**
@@ -154,9 +154,9 @@ probe softirq.exit = kernel.trace("irq_softirq_exit") !,
 		     kernel.trace("softirq_exit") ?
 {
 	# kernels < 2.6.37
-	h = (@defined($h) ? $h : 0)
-	vec = (@defined($vec) ? $vec : 0)
+	h = @choose_defined($h, 0)
+	vec = @choose_defined($vec, 0)
 	action = (@defined($h) ? @cast($h,"softirq_action","kernel<linux/interrupt.h>")->action : 0)
 	# kernels >= 2.6.37
-	vec_nr = (@defined($vec_nr) ? $vec_nr : 0)
+	vec_nr = @choose_defined($vec_nr, 0)
 }

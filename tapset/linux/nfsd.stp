@@ -348,7 +348,7 @@ probe nfsd.proc2.read = kernel.function("nfsd_proc_read") !,
 
 	count = $argp->count 
 	offset = $argp->offset 
-	vec = (@defined($rqstp->rq_vec) ? $rqstp->rq_vec : $argp->vec)
+	vec = @choose_defined($rqstp->rq_vec, $argp->vec)
 	vlen = $argp->vlen
 
 	name = "nfsd.proc2.read"
@@ -379,7 +379,7 @@ probe nfsd.proc3.read = kernel.function("nfsd3_proc_read") !,
 
 	count = $argp->count 
 	offset = $argp->offset 
-	vec = (@defined($rqstp->rq_vec) ? $rqstp->rq_vec : $argp->vec)
+	vec = @choose_defined($rqstp->rq_vec, $argp->vec)
 	vlen = $argp->vlen
 
 	name = "nfsd.proc3.read"
@@ -466,7 +466,7 @@ probe nfsd.proc2.write = kernel.function("nfsd_proc_write") !,
 
 	count = $argp->len
 	offset = $argp->offset 
-	vec = (@defined($rqstp->rq_vec) ? $rqstp->rq_vec : $argp->vec)
+	vec = @choose_defined($rqstp->rq_vec, $argp->vec)
 	vlen = $argp->vlen
 	stable = 1			# hardcoded in nfsd_proc_write()
 
@@ -500,7 +500,7 @@ probe nfsd.proc3.write = kernel.function("nfsd3_proc_write") !,
 
 	count = $argp->count 
 	offset = $argp->offset 
-	vec = (@defined($rqstp->rq_vec) ? $rqstp->rq_vec : $argp->vec)
+	vec = @choose_defined($rqstp->rq_vec, $argp->vec)
 	vlen = $argp->vlen
 	stable = $argp->stable
 
@@ -996,7 +996,7 @@ probe nfsd.open = kernel.function("nfsd_open") !,
 	client_ip = addr_from_rqst_str($rqstp)
 	fh = __svc_fh($fhp)
 
-	access = (@defined($access) ? $access : $may_flags)
+	access = @choose_defined($access, $may_flags)
 	type = $type
 
 	name = "nfsd.open"
@@ -1053,7 +1053,7 @@ probe nfsd.read = kernel.function("nfsd_read") !,
 	client_ip = addr_from_rqst_str($rqstp)
 	fh = __svc_fh($fhp)
 
-	file = (@defined($file) ? $file : 0)
+	file = @choose_defined($file, 0)
 	count = kernel_long($count)
 	offset = $offset
 	vec = $vec
@@ -1094,7 +1094,7 @@ probe nfsd.write = kernel.function("nfsd_write") !,
 	client_ip = addr_from_rqst_str($rqstp)
 	fh = __svc_fh($fhp)
 
-	file = (@defined($file) ? $file : 0)
+	file = @choose_defined($file, 0)
 %( kernel_v >= "2.6.30" %?
 	count = kernel_long($cnt)
 %:
