@@ -15,7 +15,6 @@
 #include <linux/log2.h>
 #elif defined(__DYNINST__)
 #include "dyninst/ilog2.h"
-#include "dyninst/tls_data.c"
 #endif
 
 /** @file map.h
@@ -25,23 +24,6 @@
  * @todo Needs a spinlock variable to help when locks are required on the map.
  * @{
  */
-
-
-/* Include map spinlocks only on demand.  Otherwise, assume that
-   caller does the right thing. */
-#ifndef NEED_MAP_LOCKS
-#define NEED_MAP_LOCKS 0
-#endif
-
-#if NEED_MAP_LOCKS
-#define MAP_GET_CPU() get_cpu()
-#define MAP_PUT_CPU() put_cpu()
-#else
-/* get/put_cpu wrappers.  Unnecessary if caller is already atomic. */
-#define MAP_GET_CPU() smp_processor_id()
-#define MAP_PUT_CPU() do {} while (0)
-#endif
-
 
 /* This sets the size of the hash table. */
 #ifndef HASH_TABLE_BITS
@@ -95,11 +77,6 @@ struct map_node {
  * It is allocated once when _stp_map_new() is called. 
  */
 struct map_root {
-#ifndef __KERNEL__
-	/* Note that the tls_data_object_t must be first in struct
-	 * map_root. */
-	struct tls_data_object_t object;
-#endif
 	/* type of the value stored in the array */
 	int type;
 	
@@ -134,8 +111,12 @@ struct map_root {
 
 	int data_offset;
 
-#if NEED_MAP_LOCKS
+#ifdef __KERNEL__
+#ifdef NEED_MAP_LOCKS
 	spinlock_t lock;
+#endif
+#else  /* !__KERNEL__ */
+	pthread_mutex_t lock;
 #endif
 
 	/* the hash table for this array, allocated in _stp_map_init() */
@@ -149,18 +130,7 @@ struct map_root {
 typedef struct map_root *MAP;
 
 struct pmap {
-#ifdef __KERNEL__
 	MAP map;		/* per-cpu maps */
-#else
-	struct tls_data_container_t container;
-
-	/* Cached _stp_map_init() values. */
-	unsigned max_entries;
-	int wrap;
-	int type;
-	int key_size;
-	int data_size;
-#endif
 	struct map_root agg;	/* aggregation map */
 };
 typedef struct pmap *PMAP;
@@ -187,6 +157,13 @@ typedef struct pmap *PMAP;
 	for (ptr = _stp_map_start(map); ptr; ptr = _stp_map_iter (map, ptr))
 
 /** @} */
+
+
+#ifdef __KERNEL__
+#include "linux/map_runtime.h"
+#elif defined(__DYNINST__)
+#include "dyninst/map_runtime.h"
+#endif
 
 
 /** @cond DONT_INCLUDE */

@@ -25,7 +25,7 @@
  * If you have a need to poll Stat data while probes are running, and
  * you want to be sure the data is accurate, you can do
  * @verbatim
-#define NEED_STAT_LOCKS 1
+#define NEED_STAT_LOCKS
 @endverbatim
  * This will insert per-cpu spinlocks around all accesses to Stat data, 
  * which will reduce performance some.
@@ -38,67 +38,14 @@
  * @{
  */
 
-#ifndef __KERNEL__
-#include <pthread.h>
-#endif
-
 #include "stat-common.c"
 
-/* for the paranoid. */
-#if NEED_STAT_LOCKS == 1
-#ifdef __KERNEL__
-#define STAT_LOCK(sd) spin_lock(&sd->lock)
-#define STAT_UNLOCK(sd) spin_unlock(&sd->lock)
-#else
-#define STAT_LOCK(sd) pthread_mutex_lock(&sd->lock)
-#define STAT_UNLOCK(sd) pthread_mutex_unlock(&sd->lock)
-#endif
-#else
-#define STAT_LOCK(sd) ;
-#define STAT_UNLOCK(sd) ;
+#if defined(__KERNEL__)
+#include "linux/stat_runtime.h"
+#elif defined(__DYNINST__)
+#include "dyninst/stat_runtime.h"
 #endif
 
-/** Stat struct for stat.c. Maps do not need this */
-struct _Stat {
-	struct _Hist hist;
-
-	/*
-	 * In kernel-mode, the stat data is per-cpu data (allocated
-	 * with _stp_alloc_percpu()) stored in 'sd'. In dyninst-mode,
-	 * the stat data is thread local storage.
-	 */
-#ifdef __KERNEL__
-	stat_data *sd;
-#else
-	struct tls_data_container_t container;
-#endif
-	/* aggregated data */   
-	stat_data *agg;  
-};
-
-typedef struct _Stat *Stat;
-
-#ifndef __KERNEL__
-#if NEED_STAT_LOCKS == 1
-static int _stp_stat_tls_object_init(struct tls_data_object_t *obj)
-{
-	stat_data *sd = container_of(obj, stat_data, object);
-
-	int rc;
-	if ((rc = pthread_mutex_init(&sd->lock, NULL)) != 0) {
-		_stp_error("Couldn't initialize stat mutex: %d\n", rc);
-		return -1;
-	}
-	return 0;
-}
-
-static void _stp_stat_tls_object_free(struct tls_data_object_t *obj)
-{
-	stat_data *sd = container_of(obj, stat_data, object);
-	(void)pthread_mutex_destroy(&sd->lock);
-}
-#endif	/* NEED_STAT_LOCKS == 1 */
-#endif	/* !__KERNEL__ */
 
 /** Initialize a Stat.
  * Call this during probe initialization to create a Stat.
@@ -116,11 +63,6 @@ static void _stp_stat_tls_object_free(struct tls_data_object_t *obj)
 static Stat _stp_stat_init (int type, ...)
 {
 	int size, buckets=0, start=0, stop=0, interval=0;
-#ifdef __KERNEL__
-	stat_data *sd, *agg;
-#else
-	stat_data *agg;
-#endif
 	Stat st;
 
 	if (type != HIST_NONE) {
@@ -147,51 +89,38 @@ static Stat _stp_stat_init (int type, ...)
 	
 	size = buckets * sizeof(int64_t) + sizeof(stat_data);	
 #ifdef __KERNEL__
-	sd = (stat_data *) _stp_alloc_percpu (size);
-	if (sd == NULL)
-		goto exit1;
-	st->sd = sd;
-
-#if NEED_STAT_LOCKS == 1
-	{
-		int i;
-		for_each_possible_cpu(i) {
-			stat_data *sdp = per_cpu_ptr (sd, i);
-			spin_lock_init(sdp->lock);
-		}
-	}
-#endif	/* NEED_STAT_LOCKS == 1 */
-
+	st->sd = (stat_data *) _stp_alloc_percpu (size);
 #else  /* !__KERNEL__ */
-
-#if NEED_STAT_LOCKS == 1
-	if (_stp_tls_data_container_init(&st->container, size,
-					 &_stp_stat_tls_object_init,
-					 &_stp_stat_tls_object_free) != 0)
-#else  /* NEED_STAT_LOCKS !=1 */
-	if (_stp_tls_data_container_init(&st->container, size,
-					 NULL, NULL) != 0)
-#endif	/* NEED_STAT_LOCKS != 1 */
-		goto exit1;
+	/* Allocate an array of stat_data structures. Note that the
+	 * memory must be initialized to zero. */
+	st->size = size;
+	st->sd = _stp_kzalloc_gfp(size * _stp_stat_get_cpus(),
+				       STP_ALLOC_SLEEP_FLAGS);
 #endif	/* !__KERNEL__ */
+	if (st->sd == NULL)
+		goto exit1;
 	
-	agg = (stat_data *)_stp_kmalloc_gfp(size, STP_ALLOC_SLEEP_FLAGS);
-	if (agg == NULL)
+	st->agg = (stat_data *)_stp_kzalloc_gfp(size, STP_ALLOC_SLEEP_FLAGS);
+	if (st->agg == NULL)
 		goto exit2;
+
+	if (_stp_stat_initialize_locks(st) != 0)
+		goto exit3;
 
 	st->hist.type = type;
 	st->hist.start = start;
 	st->hist.stop = stop;
 	st->hist.interval = interval;
 	st->hist.buckets = buckets;
-	st->agg = agg;
 	return st;
 
+exit3:
+	_stp_kfree(st->agg);
 exit2:
 #ifdef __KERNEL__
-	_stp_free_percpu (sd);
+	_stp_free_percpu (st->sd);
 #else
-	_stp_tls_data_container_cleanup(&st->container);
+	_stp_kfree(st->sd);
 #endif
 exit1:
 	_stp_kfree (st);
@@ -206,10 +135,11 @@ exit1:
 static void _stp_stat_del (Stat st)
 {
 	if (st) {
+		_stp_stat_destroy_locks(st);
 #ifdef __KERNEL__
 		_stp_free_percpu (st->sd);
 #else  /* !__KERNEL__ */
-		_stp_tls_data_container_cleanup(&st->container);
+		_stp_kfree(st->sd);
 #endif /* !__KERNEL__ */
 		_stp_kfree (st->agg);
 		_stp_kfree (st);
@@ -224,21 +154,11 @@ static void _stp_stat_del (Stat st)
  */
 static void _stp_stat_add (Stat st, int64_t val)
 {
-#ifdef __KERNEL__
-	stat_data *sd = per_cpu_ptr (st->sd, get_cpu());
-#else
-	struct tls_data_object_t *obj;
-	stat_data *sd;
-
-	obj = _stp_tls_get_per_thread_ptr(&st->container);
-	if (!obj)
-		return;
-	sd = container_of(obj, stat_data, object);
-#endif
+	stat_data *sd = _stp_stat_per_cpu_ptr (st, STAT_GET_CPU());
 	STAT_LOCK(sd);
 	__stp_stat_add (&st->hist, sd, val);
 	STAT_UNLOCK(sd);
-	put_cpu();
+	STAT_PUT_CPU();
 }
 
 
@@ -268,20 +188,11 @@ static stat_data *_stp_stat_get (Stat st, int clear)
 	int i, j;
 	stat_data *agg = st->agg;
 	stat_data *sd;
-#ifndef __KERNEL__
-	struct tls_data_object_t *obj;
-#endif
 	STAT_LOCK(agg);
 	_stp_stat_clear_data (st, agg);
 
-#ifdef __KERNEL__
-	for_each_possible_cpu(i) {
-		sd = per_cpu_ptr (st->sd, i);
-#else
-	TLS_DATA_CONTAINER_LOCK(&st->container);
-	for_each_tls_data(obj, &st->container) {
-		sd = container_of(obj, stat_data, object);
-#endif
+	_stp_stat_for_each_cpu(i) {
+		stat_data *sd = _stp_stat_per_cpu_ptr (st, i);
 		STAT_LOCK(sd);
 		if (sd->count) {
 			if (agg->count == 0) {
@@ -303,9 +214,14 @@ static stat_data *_stp_stat_get (Stat st, int clear)
 		}
 		STAT_UNLOCK(sd);
 	}
-#ifndef __KERNEL__
-	TLS_DATA_CONTAINER_UNLOCK(&st->container);
-#endif
+
+
+	/* Notice we're not calling 'STAT_UNLOCK(agg)'. The caller is
+	   responsible for unlocking the returned aggregate stat. */
+	/* FIXME: Sigh the translator needs some work here. For now,
+	   just unlock the agg. */
+	STAT_UNLOCK(agg);
+
 	return agg;
 }
 
@@ -317,24 +233,14 @@ static stat_data *_stp_stat_get (Stat st, int clear)
  */
 static void _stp_stat_clear (Stat st)
 {
-#ifdef __KERNEL__
 	int i;
-	for_each_possible_cpu(i) {
-		stat_data *sd = per_cpu_ptr (st->sd, i);
-#else
-	struct tls_data_object_t *obj;
-	TLS_DATA_CONTAINER_LOCK(&st->container);
-	for_each_tls_data(obj, &st->container) {
-		stat_data *sd = container_of(obj, stat_data, object);
-#endif
+
+	_stp_stat_for_each_cpu(i) {
+		stat_data *sd = _stp_stat_per_cpu_ptr (st, i);
 		STAT_LOCK(sd);
 		_stp_stat_clear_data (st, sd);
 		STAT_UNLOCK(sd);
 	}
-#ifndef __KERNEL__
-	TLS_DATA_CONTAINER_UNLOCK(&st->container);
-#endif
 }
 /** @} */
 #endif /* _STAT_C_ */
-

@@ -11,14 +11,6 @@
 #ifndef _STAT_H_
 #define _STAT_H_
 
-#ifndef __KERNEL__
-#include "dyninst/tls_data.c"
-#endif
-
-#ifndef NEED_STAT_LOCKS
-#define NEED_STAT_LOCKS 0
-#endif
-
 /* maximum buckets for a linear histogram */
 #ifndef STP_MAX_BUCKETS
 #define STP_MAX_BUCKETS 128
@@ -34,21 +26,16 @@ enum histtype { HIST_NONE, HIST_LOG, HIST_LINEAR };
 /** Statistics are stored in this struct.  This is per-cpu or per-node data 
     and is variable length due to the unknown size of the histogram. */
 struct stat_data {
-#ifndef __KERNEL__
-	/* Note that the tls_data_object_t must be first in struct
-	 * stat_data. */
-	struct tls_data_object_t object;
-#endif
 	int64_t count;
 	int64_t sum;
 	int64_t min, max;
-#if NEED_STAT_LOCKS == 1
 #ifdef __KERNEL__
+#ifdef NEED_STAT_LOCKS
 	spinlock_t lock;
+#endif
 #else  /* !__KERNEL__ */
 	pthread_mutex_t lock;
 #endif	/* !__KERNEL__ */
-#endif
 	int64_t histogram[];
 };
 typedef struct stat_data stat_data;
@@ -65,4 +52,22 @@ struct _Hist {
 };
 typedef struct _Hist *Hist;
 
+/** Stat struct. Maps do not need this */
+struct _Stat {
+	struct _Hist hist;
+
+	/*
+	 * The stat data is per-cpu data.
+	 */
+#ifdef __KERNEL__
+	stat_data *sd;
+#else
+	void *sd;
+	int size;
+#endif
+	/* aggregated data */   
+	stat_data *agg;  
+};
+
+typedef struct _Stat *Stat;
 #endif /* _STAT_H_ */

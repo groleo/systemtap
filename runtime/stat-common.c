@@ -209,6 +209,8 @@ static void _stp_stat_print_histogram_buf(char *buf, size_t size, Hist st,
 	}
 	val_space = max(val_space, 5 /* = sizeof("value") */);
 
+	//_stp_warn("%s:%d - low_bucket = %d, high_bucket = %d, valmax = %lld, scale = %d, val_space = %d", __FUNCTION__, __LINE__, low_bucket, high_bucket, valmax, scale, val_space);
+
 	/* print header */
 	HIST_PRINTF("%*s |", val_space, "value");
 	for (j = 0; j < HIST_WIDTH; ++j)

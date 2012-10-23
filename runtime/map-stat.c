@@ -55,27 +55,6 @@ _stp_map_new_hstat_linear (unsigned max_entries, int wrap, int ksize,
 	return m;
 }
 
-#ifndef __KERNEL__
-static int _stp_map_tls_object_init(struct tls_data_object_t *obj);
-static void _stp_map_tls_object_free(struct tls_data_object_t *obj);
-
-static int _stp_hstat_tls_object_init(struct tls_data_object_t *obj)
-{
-	MAP m = container_of(obj, struct map_root, object);
-	PMAP p = container_of(obj->container, struct pmap, container);
-
-	if (_stp_map_tls_object_init(obj) != 0)
-		return -1;
-
-	/* Copy the hist params from the agg. */
-	m->hist.type = p->agg.hist.type;
-	m->hist.start = p->agg.hist.start;
-	m->hist.stop = p->agg.hist.stop;
-	m->hist.interval = p->agg.hist.interval;
-	m->hist.buckets = p->agg.hist.buckets;
-	return 0;
-}
-#endif
 
 static PMAP
 _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap, int ksize,
@@ -94,29 +73,26 @@ _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap, int ksize,
 	if (pmap) {
 		int i;
 		MAP m;
-#ifdef __KERNEL__
-		for_each_possible_cpu(i) {
-			m = (MAP)per_cpu_ptr (pmap->map, i);
+
+		_stp_map_for_each_cpu(i) {
+			m = (MAP)_stp_map_per_cpu_ptr (pmap->map, i);
+			MAP_LOCK(m);
 			m->hist.type = HIST_LINEAR;
 			m->hist.start = start;
 			m->hist.stop = stop;
 			m->hist.interval = interval;
 			m->hist.buckets = buckets;
+			MAP_UNLOCK(m);
 		}
-#else
-		/* Override the tls data object init function with one
-		 * that knows how to handle hstats. */
-		_stp_tls_data_container_update(&pmap->container,
-					       &_stp_hstat_tls_object_init,
-					       &_stp_map_tls_object_free);
-#endif
 		/* now set agg map params */
 		m = &pmap->agg;
+		MAP_LOCK(m);
 		m->hist.type = HIST_LINEAR;
 		m->hist.start = start;
 		m->hist.stop = stop;
 		m->hist.interval = interval;
 		m->hist.buckets = buckets;
+		MAP_UNLOCK(m);
 	}
 	return pmap;
 }
@@ -130,23 +106,19 @@ _stp_pmap_new_hstat_log (unsigned max_entries, int wrap, int key_size)
 	if (pmap) {
 		int i;
 		MAP m;
-#ifdef __KERNEL__
-		for_each_possible_cpu(i) {
-			m = (MAP)per_cpu_ptr (pmap->map, i);
+		_stp_map_for_each_cpu(i) {
+			m = (MAP)_stp_map_per_cpu_ptr (pmap->map, i);
+			MAP_LOCK(m);
 			m->hist.type = HIST_LOG;
 			m->hist.buckets = HIST_LOG_BUCKETS;
+			MAP_UNLOCK(m);
 		}
-#else
-		/* Override the tls data object init function with one
-		 * that knows how to handle hstats. */
-		_stp_tls_data_container_update(&pmap->container,
-					       &_stp_hstat_tls_object_init,
-					       &_stp_map_tls_object_free);
-#endif
-		/* now set agg map  params */
+		/* now set agg map params */
 		m = &pmap->agg;
+		MAP_LOCK(m);
 		m->hist.type = HIST_LOG;
 		m->hist.buckets = HIST_LOG_BUCKETS;
+		MAP_UNLOCK(m);
 	}
 	return pmap;
 }
