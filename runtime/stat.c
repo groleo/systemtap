@@ -175,9 +175,6 @@ static void _stp_stat_clear_data (Stat st, stat_data *sd)
 /** Get Stats.
  * Gets the aggregated Stats for all CPUs.
  *
- * If NEED_STAT_LOCKS is set, you MUST call STAT_UNLOCK()
- * when you are finished with the returned pointer.
- *
  * @param st Stat
  * @param clear Set if you want the data cleared after the read. Useful
  * for polling.
@@ -215,13 +212,21 @@ static stat_data *_stp_stat_get (Stat st, int clear)
 		STAT_UNLOCK(sd);
 	}
 
-
-	/* Notice we're not calling 'STAT_UNLOCK(agg)'. The caller is
-	   responsible for unlocking the returned aggregate stat. */
-	/* FIXME: Sigh the translator needs some work here. For now,
-	   just unlock the agg. */
+	/*
+	 * Originally this function returned the aggregate still
+	 * locked and it was the caller's responsibility to unlock the
+	 * aggregate. However the translator generated code that called
+	 * this function wasn't unlocking it...
+	 *
+	 * But, the translator generates its own locks for global
+	 * variables (like stats), so we don't need to return the
+	 * aggregate still locked.
+	 *
+	 * It is possible we could even skip locking the aggregate in
+	 * this function, but to be a bit paranoid lets keep the
+	 * locking.
+	 */
 	STAT_UNLOCK(agg);
-
 	return agg;
 }
 
