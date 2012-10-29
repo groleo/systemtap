@@ -12,7 +12,8 @@ end}
 if {![installtest_p] || [catch {exec test -f /usr/bin/socat}]} {
     untested "$test"
 } else {
-    set sock [pwd]/$test.sock
+    # use a fixed name, to enable simple systemtap.sum comparability
+    set sock /tmp/$test.sock
     set socat_pid [spawn /usr/bin/socat UNIX-LISTEN:$sock EXEC:stapsh]
     set socat_sid $spawn_id
 
