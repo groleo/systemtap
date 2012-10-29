@@ -2,8 +2,10 @@ set test "pretty-char"
 set ::result_string {{.a='A', .b='\000', .c='\b', .d='\354', .e='z'}}
 
 set script $srcdir/$subdir/$test.stp
-set header [fullpath $srcdir/$subdir/$test.h]
+set header /tmp/$test.h
+file copy -force $srcdir/$subdir/$test.h $header
 
 stap_run2 $script kernel<$header> -g
 stap_run2 $script kernel<$header> -g -DSTP_LEGACY_PRINT
 
+file delete -force $header
