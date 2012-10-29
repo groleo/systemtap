@@ -1615,7 +1615,14 @@ stap_start_task_finder(void)
 		return EBUSY;
 	}
 
-	utrace_init();
+	rc = utrace_init();
+        if (rc != 0) { /* PR14781, handle utrace alloc failure. */
+                /* Decrement this back down to UNITIALIZED, to keep
+                   a stap_stop_task_finder() from trying to clean up. */
+		atomic_dec(&__stp_task_finder_state);
+		_stp_error("Failed to initialize utrace hooks");
+                return ENOMEM; /* XXX: or some other one. */
+        }
 
 	mmpath_buf = _stp_kmalloc(PATH_MAX);
 	if (mmpath_buf == NULL) {

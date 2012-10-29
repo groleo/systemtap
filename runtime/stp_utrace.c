@@ -118,10 +118,10 @@ int utrace_init(void)
 		INIT_HLIST_HEAD(&task_utrace_table[i]);
 	}
 
-	utrace_cachep = KMEM_CACHE(utrace, SLAB_PANIC);
+	utrace_cachep = KMEM_CACHE(utrace, 0);
 	if (unlikely(!utrace_cachep))
 		goto error;
-	utrace_engine_cachep = KMEM_CACHE(utrace_engine, SLAB_PANIC);
+	utrace_engine_cachep = KMEM_CACHE(utrace_engine, 0);
 	if (unlikely(!utrace_engine_cachep))
 		goto error;
 
