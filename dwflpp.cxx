@@ -1569,8 +1569,12 @@ dwflpp::iterate_over_srcfile_lines (char const * srcfile,
         }
       lineno += line_number;
     }
-  else if (line_type == WILDCARD)
-    function_line (&lineno);
+  else if (line_type == WILDCARD) {
+    if (name_has_wildcard(func_pattern)) /* PR14774: look at whole file if function name is wildcard */
+      lineno = 0;
+    else
+      function_line (&lineno);
+  }
   else if (line_type == RANGE) { /* correct lineno */
       int start_lineno;
 
