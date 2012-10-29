@@ -1,7 +1,7 @@
 /*
  * utrace infrastructure interface for debugging user processes
  *
- * Copyright (C) 2006-2011 Red Hat, Inc.  All rights reserved.
+ * Copyright (C) 2006-2012 Red Hat, Inc.  All rights reserved.
  *
  * This copyrighted material is made available to anyone wishing to use,
  * modify, copy, or redistribute it subject to the terms and conditions
@@ -109,6 +109,8 @@ int utrace_init(void)
 {
 	int i;
 	int rc = -1;
+        static char kmem_cache1_name[50];
+        static char kmem_cache2_name[50];
 
 	if (unlikely(stp_task_work_init() != 0))
 		goto error;
@@ -118,10 +120,22 @@ int utrace_init(void)
 		INIT_HLIST_HEAD(&task_utrace_table[i]);
 	}
 
-	utrace_cachep = KMEM_CACHE(utrace, 0);
+        /* PR14781: avoid kmem_cache naming collisions (detected by CONFIG_DEBUG_VM)
+           by plopping a non-conflicting token - in this case the address of a 
+           locally relevant variable - into the names. */
+        snprintf(kmem_cache1_name, sizeof(kmem_cache1_name),
+                 "utrace_%lx", (unsigned long) (& utrace_cachep));
+	utrace_cachep = kmem_cache_create(kmem_cache1_name, 
+                                          sizeof(struct utrace),
+                                          0, 0, NULL);
 	if (unlikely(!utrace_cachep))
 		goto error;
-	utrace_engine_cachep = KMEM_CACHE(utrace_engine, 0);
+
+        snprintf(kmem_cache2_name, sizeof(kmem_cache2_name),
+                 "utrace_engine_%lx", (unsigned long) (& utrace_engine_cachep));
+	utrace_engine_cachep = kmem_cache_create(kmem_cache2_name, 
+                                                 sizeof(struct utrace_engine),
+                                                 0, 0, NULL);
 	if (unlikely(!utrace_engine_cachep))
 		goto error;
 
