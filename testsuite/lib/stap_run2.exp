@@ -40,6 +40,13 @@ proc stap_run3 { TEST_NAME TEST_FILE args } {
 	    fail "$TEST_NAME"
 	    send_log "line [expr $n + 1]: expected \"[lindex $expected $n]\"\n"
 	    send_log "Got \"$line\"\n"
+            set m 0
+            foreach line2 [split $res "\n"] {
+                if {$m > $n} {
+                    send_log "    \"$line2\"\n"
+                }
+                incr m
+            }
 	    return
 	}
 	incr n
