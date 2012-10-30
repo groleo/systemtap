@@ -28,6 +28,10 @@ class mutatee {
 
     std::vector<BPatch_snippet*> registers; // PC + DWARF registers
 
+    // disable implicit constructors by not implementing these
+    mutatee (const mutatee& other);
+    mutatee& operator= (const mutatee& other);
+
   public:
     mutatee(BPatch_process* process);
     ~mutatee() {}

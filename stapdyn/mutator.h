@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/shared_ptr.hpp>
+
 #include <BPatch.h>
 #include <BPatch_module.h>
 #include <BPatch_process.h>
@@ -31,7 +33,7 @@ class mutator {
     std::string module_name; // the filename of the probe module
     std::vector<dynprobe_target> targets; // the probe targets in the module
 
-    std::vector<mutatee> mutatees; // all attached target processes
+    std::vector<boost::shared_ptr<mutatee> > mutatees; // all attached target processes
 
     // disable implicit constructors by not implementing these
     mutator (const mutator& other);

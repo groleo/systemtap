@@ -49,6 +49,8 @@ mutator:: mutator (const string& module_name)
 
 mutator::~mutator ()
 {
+  mutatees.clear();
+
   if (module)
     {
       dlclose(module);
@@ -110,12 +112,14 @@ mutator::create_process(const string& command)
       return false;
     }
 
-  mutatees.push_back(mutatee(app));
-  if (!mutatees.back().load_stap_dso(module_name))
+  boost::shared_ptr<mutatee> m(new mutatee(app));
+  mutatees.push_back(m);
+
+  if (!m->load_stap_dso(module_name))
     return false;
 
   if (!targets.empty())
-    mutatees.back().instrument_dynprobes(targets);
+    m->instrument_dynprobes(targets);
 
   return true;
 }
@@ -172,17 +176,17 @@ mutator::run ()
   // children for continuation and exit status.
 
   // Get the stap module ready...
-  mutatees[0].call_function("stp_dyninst_session_init");
+  mutatees[0]->call_function("stp_dyninst_session_init");
 
   // And away we go!
-  mutatees[0].continue_execution();
-  while (!mutatees[0].is_terminated())
+  mutatees[0]->continue_execution();
+  while (!mutatees[0]->is_terminated())
     patch.waitForStatusChange();
 
   // When we get process detaching (rather than just exiting), need:
-  // mutatees[0].call_function("stp_dyninst_session_exit");
+  // mutatees[0]->call_function("stp_dyninst_session_exit");
 
-  return mutatees[0].check_exit();
+  return mutatees[0]->check_exit();
 }
 
 
@@ -199,8 +203,8 @@ mutator::dynamic_library_callback(BPatch_thread *thread,
   BPatch_process* process = thread->getProcess();
 
   for (size_t i = 0; i < mutatees.size(); ++i)
-    if (mutatees[i] == process)
-      mutatees[i].instrument_object_dynprobes(module->getObject(), targets);
+    if (*mutatees[i] == process)
+      mutatees[i]->instrument_object_dynprobes(module->getObject(), targets);
 }
 
 
