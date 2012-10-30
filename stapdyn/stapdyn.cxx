@@ -43,7 +43,7 @@ static void __attribute__ ((noreturn))
 usage (int rc)
 {
   clog << "Usage: " << program_invocation_short_name
-       << " MODULE -c CMD" << endl;
+       << " MODULE [-c CMD | -x PID]" << endl;
   exit (rc);
 }
 
@@ -52,17 +52,22 @@ usage (int rc)
 int
 main(int argc, char * const argv[])
 {
+  pid_t pid = 0;
   const char* command = NULL;
   const char* module = NULL;
 
   // First, option parsing.
   int opt;
-  while ((opt = getopt (argc, argv, "c:vwV")) != -1)
+  while ((opt = getopt (argc, argv, "c:x:vwV")) != -1)
     {
       switch (opt)
         {
         case 'c':
           command = optarg;
+          break;
+
+        case 'x':
+          pid = atoi(optarg);
           break;
 
         case 'v':
@@ -89,7 +94,7 @@ main(int argc, char * const argv[])
   if (optind == argc - 1)
     module = argv[optind];
 
-  if (!module)
+  if (!module || (command && pid))
     usage (1);
 
   // Make sure that environment variables and selinux are set ok.
@@ -106,6 +111,9 @@ main(int argc, char * const argv[])
     }
 
   if (command && !session->create_process(command))
+    return 1;
+
+  if (pid && !session->attach_process(pid))
     return 1;
 
   return session->run() ? EXIT_SUCCESS : EXIT_FAILURE;

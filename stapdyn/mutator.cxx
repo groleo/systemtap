@@ -164,6 +164,37 @@ mutator::create_process(const string& command)
   return true;
 }
 
+// Attach to a specific existing process.
+bool
+mutator::attach_process(pid_t pid)
+{
+  if (target_mutatee)
+    {
+      staperror() << "Already attached to a target process!" << endl;
+      return false;
+    }
+
+  BPatch_process* app = patch.processAttach(NULL, pid);
+  if (!app)
+    {
+      staperror() << "Couldn't attach to the target process" << endl;
+      return false;
+    }
+
+  boost::shared_ptr<mutatee> m(new mutatee(app));
+  mutatees.push_back(m);
+  target_mutatee = m;
+  p_target_created = false;
+
+  if (!m->load_stap_dso(module_name))
+    return false;
+
+  if (!targets.empty())
+    m->instrument_dynprobes(targets);
+
+  return true;
+}
+
 // Initialize the module session
 bool
 mutator::run_module_init()
