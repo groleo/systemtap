@@ -21,6 +21,7 @@ extern "C" {
 #include <stdint.h>
 #include <spawn.h>
 #include <assert.h>
+#include <poll.h>
 }
 
 #include "privilege.h"
@@ -283,6 +284,14 @@ resolve_path(const std::string& path)
     }
   return result;
 }
+
+
+#ifndef HAVE_PPOLL
+// This is a poor-man's ppoll; see the implementation for more details...
+int ppoll(struct pollfd *fds, nfds_t nfds,
+          const struct timespec *timeout_ts,
+          const sigset_t *sigmask);
+#endif
 
 
 #endif // UTIL_H

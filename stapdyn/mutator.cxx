@@ -180,8 +180,33 @@ mutator::run ()
 
   // And away we go!
   mutatees[0]->continue_execution();
+
+  // XXX Dyninst's notification FD is currently broken, so we'll fall back to
+  // the fully-blocking wait for now.
+#if 0
+  // mask signals while we're preparing to poll
+  {
+    stap_sigmasker masked;
+
+    // Polling with a notification FD lets us wait on Dyninst while still
+    // letting signals break us out of the loop.
+    while (!mutatees[0]->is_terminated())
+      {
+        pollfd pfd = { .fd=patch.getNotificationFD(),
+                       .events=POLLIN, .revents=0 };
+
+        int rc = ppoll (&pfd, 1, NULL, &masked.old);
+        if (rc < 0 && errno != EINTR)
+          break;
+
+        // Acknowledge and activate whatever events are waiting
+        patch.pollForStatusChange();
+      }
+  }
+#else
   while (!mutatees[0]->is_terminated())
     patch.waitForStatusChange();
+#endif
 
   // When we get process detaching (rather than just exiting), need:
   // mutatees[0]->call_function("stp_dyninst_session_exit");
