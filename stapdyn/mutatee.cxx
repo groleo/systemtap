@@ -8,6 +8,11 @@
 
 #include "mutatee.h"
 
+extern "C" {
+#include <signal.h>
+#include <sys/types.h>
+}
+
 #include <BPatch_function.h>
 #include <BPatch_image.h>
 #include <BPatch_module.h>
@@ -70,6 +75,7 @@ get_dwarf_registers(BPatch_process *app,
 
 
 mutatee::mutatee(BPatch_process* process):
+  pid(process? process->getPid() : 0),
   process(process), stap_dso(NULL)
 {
   get_dwarf_registers(process, registers);
@@ -278,6 +284,14 @@ mutatee::call_function(const string& name)
       BPatch_funcCallExpr call(*functions[i], args);
       process->oneTimeCode(call);
     }
+}
+
+
+// Send a signal to the process.
+int
+mutatee::kill(int signal)
+{
+  return pid ? ::kill(pid, signal) : -2;
 }
 
 

@@ -13,6 +13,7 @@
 extern "C" {
 #include <dlfcn.h>
 #include <wordexp.h>
+#include <signal.h>
 }
 
 #include "dynutil.h"
@@ -37,9 +38,37 @@ g_dynamic_library_callback(BPatch_thread *thread,
     g_mutators[i]->dynamic_library_callback(thread, module, load);
 }
 
+static void
+g_signal_handler(int signal)
+{
+  for (size_t i = 0; i < g_mutators.size(); ++i)
+    g_mutators[i]->signal_callback(signal);
+}
 
-mutator:: mutator (const string& module_name)
-  : module(NULL), module_name(resolve_path(module_name))
+
+__attribute__((constructor))
+static void
+setup_signals (void)
+{
+  struct sigaction sa;
+  static const int signals[] = {
+      SIGHUP, SIGPIPE, SIGINT, SIGTERM,
+  };
+
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_handler = g_signal_handler;
+  sa.sa_flags = SA_RESTART;
+  sigemptyset (&sa.sa_mask);
+  for (size_t i = 0; i < sizeof(signals) / sizeof(*signals); ++i)
+    sigaddset (&sa.sa_mask, signals[i]);
+  for (size_t i = 0; i < sizeof(signals) / sizeof(*signals); ++i)
+    sigaction (signals[i], &sa, NULL);
+}
+
+
+mutator:: mutator (const string& module_name):
+  module(NULL), module_name(resolve_path(module_name)),
+  p_target_created(false), signal_count(0)
 {
   // NB: dlopen does a library-path search if the filename doesn't have any
   // path components, which is why we use resolve_path(module_name)
@@ -49,6 +78,9 @@ mutator:: mutator (const string& module_name)
 
 mutator::~mutator ()
 {
+  // Explicitly drop our mutatee references, so we better
+  // control when their instrumentation is removed.
+  target_mutatee.reset();
   mutatees.clear();
 
   if (module)
@@ -87,6 +119,12 @@ mutator::load ()
 bool
 mutator::create_process(const string& command)
 {
+  if (target_mutatee)
+    {
+      staperror() << "Already attached to a target process!" << endl;
+      return false;
+    }
+
   // Split the command into words.  If wordexp can't do it,
   // we'll just run via "sh -c" instead.
   const char** child_argv;
@@ -114,6 +152,8 @@ mutator::create_process(const string& command)
 
   boost::shared_ptr<mutatee> m(new mutatee(app));
   mutatees.push_back(m);
+  target_mutatee = m;
+  p_target_created = true;
 
   if (!m->load_stap_dso(module_name))
     return false;
@@ -124,20 +164,26 @@ mutator::create_process(const string& command)
   return true;
 }
 
-// When there's no target command given,
-// just run the begin/end basics directly.
+// Initialize the module session
 bool
-mutator::run_simple()
+mutator::run_module_init()
 {
+  // When we get multiple mutatees, we'll need to always do the basic
+  // begin/end/timers locally, but for now we'll run init/exit in the
+  // target if we have one.
+  if (target_mutatee)
+    {
+      target_mutatee->call_function("stp_dyninst_session_init");
+      return true;
+    }
+
   if (!module)
     return false;
 
   typeof(&stp_dyninst_session_init) session_init = NULL;
-  typeof(&stp_dyninst_session_exit) session_exit = NULL;
   try
     {
       set_dlsym(session_init, module, "stp_dyninst_session_init");
-      set_dlsym(session_exit, module, "stp_dyninst_session_exit");
     }
   catch (runtime_error& e)
     {
@@ -152,10 +198,66 @@ mutator::run_simple()
       return false;
     }
 
-  // XXX TODO we really ought to wait for a signal before exiting, or for a
-  // script requested exit (e.g. from a timer probe, which doesn't exist yet...)
+  return true;
+}
+
+// Shutdown the module session
+bool
+mutator::run_module_exit()
+{
+  // When we get multiple mutatees, we'll need to always do the basic
+  // begin/end/timers locally, but for now we'll run init/exit in the
+  // target if we have one.
+  // XXX This may already have been done in its deconstructor if the process exited.
+  if (target_mutatee)
+    {
+      target_mutatee->call_function("stp_dyninst_session_exit");
+      return true;
+    }
+
+  if (!module)
+    return false;
+
+  typeof(&stp_dyninst_session_exit) session_exit = NULL;
+  try
+    {
+      set_dlsym(session_exit, module, "stp_dyninst_session_exit");
+    }
+  catch (runtime_error& e)
+    {
+      staperror() << e.what() << endl;
+      return false;
+    }
 
   session_exit();
+  return true;
+}
+
+
+// Check the status of all mutatees
+bool
+mutator::update_mutatees()
+{
+  if (signal_count >= (p_target_created ? 2 : 1))
+    return false;
+
+  if (target_mutatee && target_mutatee->is_terminated())
+    return false;
+
+  for (size_t i = 0; i < mutatees.size();)
+    {
+      boost::shared_ptr<mutatee> m = mutatees[i];
+      if (m != target_mutatee && m->is_terminated())
+        {
+          mutatees.erase(mutatees.begin() + i);
+          continue; // NB: without ++i
+        }
+
+      if (m->is_stopped())
+        m->continue_execution();
+
+      ++i;
+    }
 
   return true;
 }
@@ -165,53 +267,48 @@ mutator::run_simple()
 bool
 mutator::run ()
 {
-  // With no command, just run it right away and quit.
-  if (mutatees.empty())
-    return run_simple();
-
-  // XXX The following code only works for a single mutatee. (PR14706)
-  assert(mutatees.size() == 1);
-  // When we get multiple mutatees, we'll need to always do the basic
-  // begin/end/timers locally as in run_simple(), and then loop over all
-  // children for continuation and exit status.
 
   // Get the stap module ready...
-  mutatees[0]->call_function("stp_dyninst_session_init");
+  run_module_init();
 
   // And away we go!
-  mutatees[0]->continue_execution();
-
-  // XXX Dyninst's notification FD is currently broken, so we'll fall back to
-  // the fully-blocking wait for now.
+  if (target_mutatee)
+   {
+      // XXX Dyninst's notification FD is currently broken, so we'll fall back
+      // to the fully-blocking wait for now.
 #if 0
-  // mask signals while we're preparing to poll
-  {
-    stap_sigmasker masked;
+      // mask signals while we're preparing to poll
+      stap_sigmasker masked;
 
-    // Polling with a notification FD lets us wait on Dyninst while still
-    // letting signals break us out of the loop.
-    while (!mutatees[0]->is_terminated())
-      {
-        pollfd pfd = { .fd=patch.getNotificationFD(),
-                       .events=POLLIN, .revents=0 };
+      // Polling with a notification FD lets us wait on Dyninst while still
+      // letting signals break us out of the loop.
+      while (update_mutatees())
+        {
+          pollfd pfd = { .fd=patch.getNotificationFD(),
+                         .events=POLLIN, .revents=0 };
 
-        int rc = ppoll (&pfd, 1, NULL, &masked.old);
-        if (rc < 0 && errno != EINTR)
-          break;
+          int rc = ppoll (&pfd, 1, NULL, &masked.old);
+          if (rc < 0 && errno != EINTR)
+            break;
 
-        // Acknowledge and activate whatever events are waiting
-        patch.pollForStatusChange();
-      }
-  }
+          // Acknowledge and activate whatever events are waiting
+          patch.pollForStatusChange();
+        }
 #else
-  while (!mutatees[0]->is_terminated())
-    patch.waitForStatusChange();
+      while (update_mutatees())
+        patch.waitForStatusChange();
 #endif
+    }
+  else // !target_mutatee
+    {
+      // XXX TODO we really ought to wait for a signal before exiting,
+      // or for a script requested exit (e.g. from a timer probe).
+    }
 
-  // When we get process detaching (rather than just exiting), need:
-  // mutatees[0]->call_function("stp_dyninst_session_exit");
+  // Shutdown the stap module.
+  run_module_exit();
 
-  return mutatees[0]->check_exit();
+  return target_mutatee ? target_mutatee->check_exit() : true;
 }
 
 
@@ -230,6 +327,29 @@ mutator::dynamic_library_callback(BPatch_thread *thread,
   for (size_t i = 0; i < mutatees.size(); ++i)
     if (*mutatees[i] == process)
       mutatees[i]->instrument_object_dynprobes(module->getObject(), targets);
+}
+
+
+// Callback to respond to signals.
+void
+mutator::signal_callback(int signal __attribute__((unused)))
+{
+  ++signal_count;
+
+  // First time, try to kill the target process, only if we created it.
+  if (signal_count == 1 && target_mutatee && p_target_created)
+    target_mutatee->kill(SIGTERM);
+
+  // Second time, mutator::run should break out anyway
+  if (signal_count == 2)
+    stapwarn() << "Multiple interrupts received, exiting..." << endl;
+
+  // Third time's the charm; the user wants OUT!
+  if (signal_count >= 3)
+    {
+      staperror() << "Too many interrupts received, aborting now!" << endl;
+      _exit (1);
+    }
 }
 
 

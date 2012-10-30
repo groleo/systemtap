@@ -34,14 +34,23 @@ class mutator {
     std::vector<dynprobe_target> targets; // the probe targets in the module
 
     std::vector<boost::shared_ptr<mutatee> > mutatees; // all attached target processes
+    boost::shared_ptr<mutatee> target_mutatee; // the main target process we created or attached
+    bool p_target_created; // we only kill and wait on the target we created
+
+    unsigned signal_count; // how many exit signals we've received
 
     // disable implicit constructors by not implementing these
     mutator (const mutator& other);
     mutator& operator= (const mutator& other);
 
-    // When there's no target command given,
-    // just run the begin/end basics directly.
-    bool run_simple();
+    // Initialize the module session
+    bool run_module_init();
+
+    // Shutdown the module session
+    bool run_module_exit();
+
+    // Check the status of all mutatees
+    bool update_mutatees();
 
   public:
 
@@ -66,6 +75,9 @@ class mutator {
     void dynamic_library_callback(BPatch_thread *thread,
                                   BPatch_module *module,
                                   bool load);
+
+    // Callback to respond to signals.
+    void signal_callback(int signal);
 };
 
 

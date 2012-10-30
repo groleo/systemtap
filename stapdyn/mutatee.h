@@ -23,6 +23,7 @@
 // A mutatee is created for each attached process
 class mutatee {
   private:
+    pid_t pid; // The system's process ID.
     BPatch_process* process; // Dyninst's handle for this process
     BPatch_object* stap_dso; // the injected stap module
 
@@ -65,8 +66,15 @@ class mutatee {
     // Look up a stap function by name and invoke it without parameters.
     void call_function(const std::string& name);
 
+    // Send a signal to the process.
+    int kill(int signal);
+
     void continue_execution() { process->continueExecution(); }
+    void terminate_execution() { process->terminateExecution(); }
+
+    bool is_stopped() { return process->isStopped(); }
     bool is_terminated() { return process->isTerminated(); }
+
     bool check_exit() { return check_dyninst_exit(process); }
 };
 
