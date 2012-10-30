@@ -23,7 +23,6 @@
 
 
 // The mutator drives all instrumentation.
-// NB: since Dyninst callbacks have no context, there can only be one g_mutator.
 class mutator {
   private:
     BPatch patch;
@@ -38,19 +37,14 @@ class mutator {
     mutator (const mutator& other);
     mutator& operator= (const mutator& other);
 
-    mutator (const std::string& module_name);
-    ~mutator ();
-
     // When there's no target command given,
     // just run the begin/end basics directly.
     bool run_simple();
 
-    static mutator* g_mutator;
-    static void dynamic_library_callback(BPatch_thread *thread,
-                                         BPatch_module *module,
-                                         bool load);
-
   public:
+
+    mutator (const std::string& module_name);
+    ~mutator ();
 
     // Load the stap module and initialize all probe info.
     bool load ();
@@ -65,8 +59,11 @@ class mutator {
     // Start the actual systemtap session!
     bool run ();
 
-    // Create the g_mutator singleton with a given module.
-    static mutator* create (const std::string& module_name);
+    // Callback to respond to dynamically loaded libraries.
+    // Check if it matches our targets, and instrument accordingly.
+    void dynamic_library_callback(BPatch_thread *thread,
+                                  BPatch_module *module,
+                                  bool load);
 };
 
 

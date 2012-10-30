@@ -7,6 +7,7 @@
 // later version.
 
 #include <iostream>
+#include <memory>
 
 extern "C" {
 #include <errno.h>
@@ -97,8 +98,8 @@ main(int argc, char * const argv[])
   if (!check_dyninst_sebools())
     return 1;
 
-  mutator *session = mutator::create(module);
-  if (!session || !session->load())
+  auto_ptr<mutator> session(new mutator(module));
+  if (!session.get() || !session->load())
     {
       staperror() << "failed to create the mutator!" << endl;
       return 1;

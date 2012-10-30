@@ -8,6 +8,8 @@
 
 #include "mutator.h"
 
+#include <algorithm>
+
 extern "C" {
 #include <dlfcn.h>
 #include <wordexp.h>
@@ -22,25 +24,17 @@ extern "C" {
 using namespace std;
 
 
-mutator* mutator::g_mutator = NULL;
+// NB: since Dyninst callbacks have no context, we have to demux it
+// to every mutator we've created, tracked by this vector.
+static vector<mutator*> g_mutators;
 
-
-// Callback to respond to dynamically loaded libraries.
-// Check if it matches our targets, and instrument accordingly.
-void
-mutator::dynamic_library_callback(BPatch_thread *thread,
-                                  BPatch_module *module,
-                                  bool load)
+static void
+g_dynamic_library_callback(BPatch_thread *thread,
+                           BPatch_module *module,
+                           bool load)
 {
-  if (!g_mutator || !load || !thread || !module)
-    return;
-
-  BPatch_process* process = thread->getProcess();
-
-  for (vector<mutatee>::iterator it = g_mutator->mutatees.begin();
-       it != g_mutator->mutatees.end(); ++it)
-    if (*it == process)
-      it->instrument_object_dynprobes(module->getObject(), g_mutator->targets);
+  for (size_t i = 0; i < g_mutators.size(); ++i)
+    g_mutators[i]->dynamic_library_callback(thread, module, load);
 }
 
 
@@ -49,6 +43,8 @@ mutator:: mutator (const string& module_name)
 {
   // NB: dlopen does a library-path search if the filename doesn't have any
   // path components, which is why we use resolve_path(module_name)
+
+  g_mutators.push_back(this);
 }
 
 mutator::~mutator ()
@@ -58,6 +54,8 @@ mutator::~mutator ()
       dlclose(module);
       module = NULL;
     }
+
+  g_mutators.erase(find(g_mutators.begin(), g_mutators.end(), this));
 }
 
 // Load the stap module and initialize all probe info.
@@ -78,7 +76,7 @@ mutator::load ()
   if ((rc = find_dynprobes(module, targets)))
     return rc;
   if (!targets.empty())
-    patch.registerDynLibraryCallback(dynamic_library_callback);
+    patch.registerDynLibraryCallback(g_dynamic_library_callback);
 
   return true;
 }
@@ -188,18 +186,22 @@ mutator::run ()
 }
 
 
-// Create the g_mutator singleton with a given module
-mutator*
-mutator::create (const string& module_name)
+// Callback to respond to dynamically loaded libraries.
+// Check if it matches our targets, and instrument accordingly.
+void
+mutator::dynamic_library_callback(BPatch_thread *thread,
+                                  BPatch_module *module,
+                                  bool load)
 {
-  if (g_mutator)
-    {
-      staperror() << "only a single mutator is allowed" << endl;
-      return NULL;
-    }
+  if (!load || !thread || !module)
+    return;
 
-  g_mutator = new mutator(module_name);
-  return g_mutator;
+  BPatch_process* process = thread->getProcess();
+
+  for (size_t i = 0; i < mutatees.size(); ++i)
+    if (mutatees[i] == process)
+      mutatees[i].instrument_object_dynprobes(module->getObject(), targets);
 }
+
 
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */
