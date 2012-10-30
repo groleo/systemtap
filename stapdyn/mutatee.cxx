@@ -53,10 +53,6 @@ get_dwarf_registers(BPatch_process *app,
   // O(m*n) loop, but neither array is very large
   for (const char* const* name = names; *name; ++name)
     {
-      // XXX Dyninst is currently limited in how many individual function
-      // arguments it can pass, so we'll have to cut this short...
-      if (registers.size() > 8) break;
-
       size_t i;
       for (i = 0; i < bpregs.size(); ++i)
         if (bpregs[i].name() == *name)
