@@ -28,18 +28,23 @@ class mutatee {
 
     std::vector<BPatch_snippet*> registers; // PC + DWARF registers
 
+    std::vector<BPatchSnippetHandle*> snippets; // handles from insertSnippet
+
     // disable implicit constructors by not implementing these
     mutatee (const mutatee& other);
     mutatee& operator= (const mutatee& other);
 
   public:
     mutatee(BPatch_process* process);
-    ~mutatee() {}
+    ~mutatee();
 
     bool operator==(BPatch_process* other) { return process == other; }
 
     // Inject the stap module into the target process
     bool load_stap_dso(const std::string& filename);
+
+    // Unload the stap module from the target process
+    void unload_stap_dso();
 
     // Given a target and the matching object, instrument all of the probes
     // with calls to the stap_dso's entry function.
@@ -53,6 +58,9 @@ class mutatee {
 
     // Look for probe matches in all objects.
     void instrument_dynprobes(const std::vector<dynprobe_target>& targets);
+
+    // Remove all BPatch snippets we've instrumented in the target
+    void remove_instrumentation();
 
     // Look up a stap function by name and invoke it without parameters.
     void call_function(const std::string& name);

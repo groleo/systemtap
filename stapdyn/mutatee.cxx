@@ -75,6 +75,13 @@ mutatee::mutatee(BPatch_process* process):
   get_dwarf_registers(process, registers);
 }
 
+mutatee::~mutatee()
+{
+  remove_instrumentation();
+  unload_stap_dso();
+}
+
+
 // Inject the stap module into the target process
 bool
 mutatee::load_stap_dso(const string& filename)
@@ -88,6 +95,17 @@ mutatee::load_stap_dso(const string& filename)
     }
   stap_dso = stap_mod->getObject();
   return true;
+}
+
+// Unload the stap module from the target process
+void
+mutatee::unload_stap_dso()
+{
+  if (!process || !stap_dso)
+    return;
+
+  // XXX Dyninst has no unloadLibrary() yet, as of 8.0
+  stap_dso = NULL;
 }
 
 
@@ -167,7 +185,9 @@ mutatee::instrument_dynprobe_target(BPatch_object* object,
       BPatch_funcCallExpr call(*enter_function, args);
 
       // Finally write the instrumentation for the probe!
-      process->insertSnippet(call, points);
+      BPatchSnippetHandle* handle = process->insertSnippet(call, points);
+      if (handle)
+        snippets.push_back(handle);
 
       // XXX write the semaphore too!
     }
@@ -218,6 +238,23 @@ mutatee::instrument_dynprobes(const vector<dynprobe_target>& targets)
   image->getObjects(objects);
   for (size_t i = 0; i < objects.size(); ++i)
     instrument_object_dynprobes(objects[i], targets);
+}
+
+
+// Remove all BPatch snippets we've instrumented in the target
+void
+mutatee::remove_instrumentation()
+{
+  if (!process || snippets.empty())
+    return;
+
+  process->beginInsertionSet();
+  for (size_t i = 0; i < snippets.size(); ++i)
+    process->deleteSnippet(snippets[i]);
+  process->finalizeInsertionSet(false);
+  snippets.clear();
+
+  unload_stap_dso();
 }
 
 
