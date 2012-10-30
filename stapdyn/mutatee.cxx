@@ -79,6 +79,8 @@ mutatee::~mutatee()
 {
   remove_instrumentation();
   unload_stap_dso();
+  if (process)
+    process->detach(true);
 }
 
 
