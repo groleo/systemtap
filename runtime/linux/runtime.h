@@ -187,9 +187,6 @@ void *kallsyms_task_work_cancel;
 struct unwind_context { };
 #endif
 
-static inline void _stp_runtime_entryfn_prologue(void) { }
-static inline void _stp_runtime_entryfn_epilogue(void) { }
-
 #ifdef module_param_cb			/* kernels >= 2.6.36 */
 #define _STP_KERNEL_PARAM_ARG const struct kernel_param
 #else

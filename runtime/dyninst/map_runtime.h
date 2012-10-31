@@ -11,16 +11,15 @@
 #ifndef _STAPDYN_MAP_RUNTIME_H_
 #define _STAPDYN_MAP_RUNTIME_H_
 
-/* For dyninst, NEED_MAP_LOCKS is always on since we don't have real
-   per-cpu data. */
-#ifndef NEED_MAP_LOCKS
-#define NEED_MAP_LOCKS
-#endif
-
 #include <pthread.h>
 
+#ifdef NEED_MAP_LOCKS
 #define MAP_LOCK(m)	pthread_mutex_lock(&(m)->lock)
 #define MAP_UNLOCK(m)	pthread_mutex_unlock(&(m)->lock)
+#else
+#define MAP_LOCK(sd)	do {} while (0)
+#define MAP_UNLOCK(sd)	do {} while (0)
+#endif
 
 /* Note that pthread_mutex_trylock()'s return value is opposite of the
  * kernel's spin_trylock(), so we invert the return value of
@@ -32,21 +31,24 @@
 
 static int _stp_map_initialize_lock(MAP m)
 {
+#ifdef NEED_MAP_LOCKS
 	int rc;
 
 	if ((rc = pthread_mutex_init(&m->lock, NULL)) != 0) {
 		_stp_error("Couldn't initialize map mutex: %d\n", rc);
 		return rc;
 	}
+#endif
 	return 0;
 }
 
 static void _stp_map_destroy_lock(MAP m)
 {
+#ifdef NEED_MAP_LOCKS
 	(void)pthread_mutex_destroy(&m->lock);
+#endif
 }
 
-#define _stp_map_for_each_cpu(cpu)	_stp_stat_for_each_cpu(cpu)
 #define _stp_map_per_cpu_ptr(m, cpu)	&((m)[(cpu)])
 
 #endif /* _STAPDYN_MAP_RUNTIME_H_ */

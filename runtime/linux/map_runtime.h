@@ -44,7 +44,6 @@ static int _stp_map_initialize_lock(MAP m)
 
 #define _stp_map_destroy_lock(m)	do {} while (0)
 
-#define _stp_map_for_each_cpu(cpu)	for_each_possible_cpu((cpu))
 #define _stp_map_per_cpu_ptr(m, cpu)	per_cpu_ptr((m), (cpu))
 
 #endif /* _LINUX_MAP_RUNTIME_H_ */

@@ -15,47 +15,20 @@
 #include <unistd.h>
 #include <sched.h>
 
-/* For dyninst, NEED_STAT_LOCKS is always on since we don't have real
-   per-cpu data. */
-#ifndef NEED_STAT_LOCKS
-#define NEED_STAT_LOCKS
+#ifdef NEED_STAT_LOCKS
+#define STAT_LOCK(sd)		pthread_mutex_lock(&(sd)->lock)
+#define STAT_UNLOCK(sd)		pthread_mutex_unlock(&(sd)->lock)
+#else
+#define STAT_LOCK(sd)		do {} while (0)
+#define STAT_UNLOCK(sd)		do {} while (0)
 #endif
 
-#define STAT_LOCK(sd)	pthread_mutex_lock(&(sd)->lock)
-#define STAT_UNLOCK(sd)	pthread_mutex_unlock(&(sd)->lock)
-
-
-/* Number of items allocated for a map or stat. Gets initialized to
-   the number of online cpus. */
-static inline int _stp_stat_get_cpus(void)
+static int STAT_GET_CPU(void)
 {
-	static int online_cpus = 0;
-	if (unlikely(online_cpus == 0)) {
-		online_cpus = sysconf(_SC_NPROCESSORS_ONLN);
-	}
-	return online_cpus;
+	return _stp_runtime_get_data_index();
 }
-
-
-static inline int STAT_GET_CPU(void)
-{
-	/*
-	 * Make sure the cpu number is within the range of
-	 * [0.._stp_stat_get_cpus()]. If sched_getcpu() fails,
-	 * it returns -1.
-	 */
-	int cpu = sched_getcpu() % _stp_stat_get_cpus();
-	if (unlikely(cpu < 0))
-		cpu = 0;
-	return cpu;
-}
-
 
 #define STAT_PUT_CPU()	do {} while (0)
-
-
-#define _stp_stat_for_each_cpu(cpu) \
-	for ((cpu) = 0; (cpu) < _stp_stat_get_cpus(); (cpu)++)
 
 
 #define _stp_stat_per_cpu_ptr(stat, cpu) \
@@ -64,8 +37,9 @@ static inline int STAT_GET_CPU(void)
 
 static int _stp_stat_initialize_locks(Stat st)
 {
+#ifdef NEED_STAT_LOCKS
 	int i, rc;
-	_stp_stat_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		stat_data *sdp = _stp_stat_per_cpu_ptr (st, i);
 
 		if ((rc = pthread_mutex_init(&sdp->lock, NULL)) != 0) {
@@ -79,17 +53,22 @@ static int _stp_stat_initialize_locks(Stat st)
 		_stp_error("Couldn't initialize stat mutex: %d\n", rc);
 	}
 	return rc;
+#else
+	return 0;
+#endif
 }
 
 
 static void _stp_stat_destroy_locks(Stat st)
 {
+#ifdef NEED_STAT_LOCKS
 	int i;
-	_stp_stat_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		stat_data *sdp = _stp_stat_per_cpu_ptr(st, i);
 		(void)pthread_mutex_destroy(&sdp->lock);
 	}
 	(void)pthread_mutex_destroy(&st->agg->lock);
+#endif
 }
 
 #endif /* _STAPDYN_STAT_RUNTIME_H_ */

@@ -85,34 +85,17 @@ static inline int pseudo_atomic_cmpxchg(atomic_t *v, int oldval, int newval)
 	return __sync_val_compare_and_swap(&(v->counter), oldval, newval);
 }
 
-
-static pthread_mutex_t stapdyn_big_dumb_lock = PTHREAD_MUTEX_INITIALIZER;
-
-static inline void _stp_runtime_entryfn_prologue(void)
-{
-	pthread_mutex_lock(&stapdyn_big_dumb_lock);
-}
-
-static inline void _stp_runtime_entryfn_epilogue(void)
-{
-	pthread_mutex_unlock(&stapdyn_big_dumb_lock);
-}
-
-
 #include "linux_defs.h"
 
 #define MODULE_DESCRIPTION(str)
 #define MODULE_LICENSE(str)
 #define MODULE_INFO(tag,info)
 
-/* XXX for now, act like uniprocessor... */
-#define NR_CPUS 1
-#define num_online_cpus() 1
-#define smp_processor_id() 0
-#define get_cpu() 0
-#define put_cpu() 0
-#define for_each_possible_cpu(cpu) for ((cpu) = 0; (cpu) < NR_CPUS; ++(cpu))
-#define stp_for_each_cpu(cpu) for_each_possible_cpu((cpu))
+/* Semi-forward declaration from runtime_context.h, needed by stat.c. */
+static int _stp_runtime_num_contexts;
+
+#define for_each_possible_cpu(cpu) for ((cpu) = 0; (cpu) < _stp_runtime_num_contexts; (cpu)++)
+
 #define yield() sched_yield()
 
 #define access_ok(type, addr, size) 1
@@ -197,14 +180,24 @@ static void stp_dyninst_ctor(void)
     _stp_err = _stp_clone_file(stderr);
 }
 
+static int _stp_runtime_contexts_init(void);
+
 int stp_dyninst_session_init(void)
 {
     /* We don't have a chance to indicate errors in the ctor, so do it here. */
     if (_stp_mem_fd < 0) {
 	return -errno;
     }
+    
+    int rc = _stp_runtime_contexts_init();
+    if (rc != 0)
+	return rc;
 
-    int rc = systemtap_module_init();
+    rc = _stp_print_init();
+    if (rc != 0)
+	return rc;
+
+    rc = systemtap_module_init();
     if (rc == 0) {
 	stp_dyninst_master = getpid();
     }
@@ -215,6 +208,7 @@ void stp_dyninst_session_exit(void)
 {
     if (stp_dyninst_master == getpid()) {
 	systemtap_module_exit();
+	_stp_print_cleanup();
 	stp_dyninst_master = 0;
     }
 }

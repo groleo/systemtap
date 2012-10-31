@@ -29,13 +29,13 @@ struct stat_data {
 	int64_t count;
 	int64_t sum;
 	int64_t min, max;
-#ifdef __KERNEL__
 #ifdef NEED_STAT_LOCKS
+#ifdef __KERNEL__
 	spinlock_t lock;
-#endif
 #else  /* !__KERNEL__ */
 	pthread_mutex_t lock;
 #endif	/* !__KERNEL__ */
+#endif
 	int64_t histogram[];
 };
 typedef struct stat_data stat_data;

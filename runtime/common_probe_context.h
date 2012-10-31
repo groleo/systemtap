@@ -2,6 +2,15 @@
    Defines all common fields and probe flags for struct context.
    Available to C-based probe handlers as fields of the CONTEXT ptr.  */
 
+#ifdef __DYNINST__
+/* The index of this context structure with the array of allocated
+   context structures. */
+int data_index;
+
+/* The lock for this context structure. */
+pthread_mutex_t lock;
+#endif
+
 /* Used to indicate whether a probe context is in use.
    Tested in the code entering the probe setup by common_probe_entry_prologue
    and cleared by the common_probe_entry_epilogue code. When an early error

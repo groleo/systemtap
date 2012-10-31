@@ -111,12 +111,12 @@ struct map_root {
 
 	int data_offset;
 
-#ifdef __KERNEL__
 #ifdef NEED_MAP_LOCKS
+#ifdef __KERNEL__
 	spinlock_t lock;
-#endif
 #else  /* !__KERNEL__ */
 	pthread_mutex_t lock;
+#endif
 #endif
 
 	/* the hash table for this array, allocated in _stp_map_init() */

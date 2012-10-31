@@ -94,7 +94,7 @@ static Stat _stp_stat_init (int type, ...)
 	/* Allocate an array of stat_data structures. Note that the
 	 * memory must be initialized to zero. */
 	st->size = size;
-	st->sd = _stp_kzalloc_gfp(size * _stp_stat_get_cpus(),
+	st->sd = _stp_kzalloc_gfp(size * _stp_runtime_num_contexts,
 				       STP_ALLOC_SLEEP_FLAGS);
 #endif	/* !__KERNEL__ */
 	if (st->sd == NULL)
@@ -188,7 +188,7 @@ static stat_data *_stp_stat_get (Stat st, int clear)
 	STAT_LOCK(agg);
 	_stp_stat_clear_data (st, agg);
 
-	_stp_stat_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		stat_data *sd = _stp_stat_per_cpu_ptr (st, i);
 		STAT_LOCK(sd);
 		if (sd->count) {
@@ -240,7 +240,7 @@ static void _stp_stat_clear (Stat st)
 {
 	int i;
 
-	_stp_stat_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		stat_data *sd = _stp_stat_per_cpu_ptr (st, i);
 		STAT_LOCK(sd);
 		_stp_stat_clear_data (st, sd);

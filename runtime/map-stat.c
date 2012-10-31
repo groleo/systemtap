@@ -74,7 +74,7 @@ _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap, int ksize,
 		int i;
 		MAP m;
 
-		_stp_map_for_each_cpu(i) {
+		for_each_possible_cpu(i) {
 			m = (MAP)_stp_map_per_cpu_ptr (pmap->map, i);
 			MAP_LOCK(m);
 			m->hist.type = HIST_LINEAR;
@@ -106,7 +106,7 @@ _stp_pmap_new_hstat_log (unsigned max_entries, int wrap, int key_size)
 	if (pmap) {
 		int i;
 		MAP m;
-		_stp_map_for_each_cpu(i) {
+		for_each_possible_cpu(i) {
 			m = (MAP)_stp_map_per_cpu_ptr (pmap->map, i);
 			MAP_LOCK(m);
 			m->hist.type = HIST_LOG;

@@ -13,6 +13,12 @@
 #ifndef _RUNTIME_CONTEXT_H_
 #define _RUNTIME_CONTEXT_H_
 
+#if defined(__KERNEL__)
+#include "linux/runtime_context.h"
+#elif defined(__DYNINST__)
+#include "dyninst/runtime_context.h"
+#endif
+
 #include "print.c"
 #include "io.c"				// needs to be included after print.c
 

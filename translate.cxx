@@ -1107,10 +1107,6 @@ c_unparser::emit_common_header ()
   emit_compiled_printf_locals ();
 
   o->newline(-1) << "};\n";
-  if (!session->runtime_usermode_p())
-    o->newline() << "static struct context *contexts[NR_CPUS] = { NULL };\n";
-  else
-    o->newline() << "static __thread struct context contexts;\n";
 
   emit_map_type_instantiations ();
 
@@ -1660,20 +1656,11 @@ c_unparser::emit_module_init ()
   // while to abort right away.  Currently running probes are allowed to
   // terminate.  These may set STAP_SESSION_ERROR!
 
-  if (!session->runtime_usermode_p()) {
-    // per-cpu context
-    o->newline() << "for_each_possible_cpu(cpu) {";
-    o->indent(1);
-    // Module init, so in user context, safe to use "sleeping" allocation.
-    o->newline() << "contexts[cpu] = _stp_kzalloc_gfp(sizeof(struct context), STP_ALLOC_SLEEP_FLAGS);";
-    o->newline() << "if (contexts[cpu] == NULL) {";
-    o->indent(1);
-    o->newline() << "_stp_error (\"context (size %lu) allocation failed\", (unsigned long) sizeof (struct context));";
-    o->newline() << "rc = -ENOMEM;";
-    o->newline() << "goto out;";
-    o->newline(-1) << "}";
-    o->newline(-1) << "}";
-  }
+  // Allocate context structures.
+  o->newline() << "rc = _stp_runtime_contexts_alloc();";
+  o->newline() << "if (rc != 0)";
+  o->newline(1) << "goto out;";
+  o->indent(-1);
 
   for (unsigned i=0; i<session->globals.size(); i++)
     {
@@ -1703,13 +1690,13 @@ c_unparser::emit_module_init ()
 
   // Print a message to the kernel log about this module.  This is
   // intended to help debug problems with systemtap modules.
-
-  o->newline() << "_stp_print_kernel_info("
-	       << "\"" << VERSION
-	       << "/" << dwfl_version (NULL) << "\""
-	       << ", (num_online_cpus() * sizeof(struct context))"
-	       << ", " << session->probes.size()
-	       << ");";
+  if (! session->runtime_usermode_p())
+    o->newline() << "_stp_print_kernel_info("
+		 << "\"" << VERSION
+		 << "/" << dwfl_version (NULL) << "\""
+		 << ", (num_online_cpus() * sizeof(struct context))"
+		 << ", " << session->probes.size()
+		 << ");";
 
   // Run all probe registrations.  This actually runs begin probes.
 
@@ -1768,16 +1755,7 @@ c_unparser::emit_module_init ()
   o->newline() << "#endif";
 
   // Free up the context memory after an error too
-  if (!session->runtime_usermode_p()) {
-    o->newline() << "for_each_possible_cpu(cpu) {";
-    o->indent(1);
-    o->newline() << "if (contexts[cpu] != NULL) {";
-    o->indent(1);
-    o->newline() << "_stp_kfree(contexts[cpu]);";
-    o->newline() << "contexts[cpu] = NULL;";
-    o->newline(-1) << "}";
-    o->newline(-1) << "}";
-  }
+  o->newline() << "_stp_runtime_contexts_free();";
 
   o->newline() << "return rc;";
   o->newline(-1) << "}\n";
@@ -1806,13 +1784,6 @@ c_unparser::emit_module_exit ()
   o->newline() << "static void systemtap_module_exit (void) {";
   // rc?
   o->newline(1) << "int i=0, j=0;"; // for derived_probe_group use
-  if (! session->runtime_usermode_p())
-    {
-      o->newline() << "int holdon;";
-      o->newline() << "int cpu;";
-      o->newline() << "unsigned long hold_start;";
-      o->newline() << "int hold_index;";
-    }
   o->newline() << "(void) i;";
   o->newline() << "(void) j;";
   // If we aborted startup, then everything has been cleaned up already, and
@@ -1849,60 +1820,7 @@ c_unparser::emit_module_exit ()
   // NB: systemtap_module_exit is assumed to be called from ordinary
   // user context, say during module unload.  Among other things, this
   // means we can sleep a while.
-  //
-  // XXX for now, only limit kernel holds, not dyninst. Note that with
-  // TLS (which the dyninst runtime code uses), there isn't an
-  // easy/easily-found way to loop over all the current threads to get
-  // each thread's data value.
-  if (! session->runtime_usermode_p())
-    {
-      o->newline() << "hold_start = jiffies;";
-      o->newline() << "hold_index = -1;";
-      o->newline() << "do {";
-      o->newline(1) << "int i;";
-      o->newline() << "holdon = 0;";
-
-      o->newline() << "for_each_possible_cpu(i)";
-      o->newline(1) << "if (contexts[i] != NULL && "
-		    << "atomic_read (& contexts[i]->busy)) {";
-      o->newline(1) << "holdon = 1;";
-
-      // just in case things are really stuck, let's print some diagnostics
-      o->newline() << "if (time_after(jiffies, hold_start + HZ) "; // > 1 second
-      o->line() << "&& (i > hold_index)) {"; // not already printed
-      o->newline(1) << "hold_index = i;";
-      o->newline() << "printk(KERN_ERR \"%s context[%d] stuck: %s\\n\", THIS_MODULE->name, i, contexts[i]->probe_point);";
-      o->newline(-1) << "}";
-      o->newline(-1) << "}";
-      o->indent(-1);
-
-      // Just in case things are really really stuck, a handler
-      // probably suffered a fault, and the kernel probably killed a
-      // task/thread already.  We can't be quite sure in what state
-      // everything is in, however auxiliary stuff like kprobes /
-      // uprobes / locks have already been unregistered.  So it's
-      // *probably* safe to pretend/assume/hope everything is OK, and
-      // let the cleanup finish.
-      //
-      // In the worst case, there may occur a fault, as a genuinely
-      // running probe handler tries to access script globals (about
-      // to be freed), or something accesses module memory (about to
-      // be unloaded).  This is sometimes stinky, so the alternative
-      // (default) is to change from a livelock to a livelock that
-      // sleeps awhile.
-      o->newline() << "#ifdef STAP_OVERRIDE_STUCK_CONTEXT";
-      o->newline() << "if (time_after(jiffies, hold_start + HZ*10)) { "; // > 10 seconds
-      o->newline(1) << "printk(KERN_ERR \"%s overriding stuck context to allow module shutdown.\", THIS_MODULE->name);";
-      o->newline() << "holdon = 0;"; // allow loop to exit
-      o->newline(-1) << "}";
-      o->newline() << "#else";
-      o->newline() << "msleep (250);"; // at least stop sucking down the staprun cpu
-      o->newline() << "#endif";
-
-      // NB: we run at least one of these during the shutdown sequence:
-      o->newline () << "yield ();"; // aka schedule() and then some
-      o->newline(-1) << "} while (holdon);";
-    }
+  o->newline() << "_stp_runtime_context_wait();";
 
   // cargo cult epilogue
   o->newline() << "atomic_set (&session_state, STAP_SESSION_STOPPED);";
@@ -1922,17 +1840,8 @@ c_unparser::emit_module_exit ()
 	o->newline() << getvar (v).fini();
     }
 
-  if (! session->runtime_usermode_p())
-    {
-      o->newline() << "for_each_possible_cpu(cpu) {";
-      o->indent(1);
-      o->newline() << "if (contexts[cpu] != NULL) {";
-      o->indent(1);
-      o->newline() << "_stp_kfree(contexts[cpu]);";
-      o->newline() << "contexts[cpu] = NULL;";
-      o->newline(-1) << "}";
-      o->newline(-1) << "}";
-    }
+  // We're finished with the contexts.
+  o->newline() << "_stp_runtime_contexts_free();";
 
   // teardown gettimeofday (if needed)
   o->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";

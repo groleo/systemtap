@@ -268,7 +268,7 @@ _stp_pmap_new(unsigned max_entries, int wrap, int type, int key_size,
 	pmap->map = (MAP) _stp_alloc_percpu (sizeof(struct map_root));
 #else
 	/* Allocate an array of map_root structures. */
-	pmap->map = (struct map_root *) _stp_kmalloc_gfp(sizeof(struct map_root) * _stp_stat_get_cpus(),
+	pmap->map = (struct map_root *) _stp_kmalloc_gfp(sizeof(struct map_root) * _stp_runtime_num_contexts,
 							 STP_ALLOC_SLEEP_FLAGS);
 #endif
 	if (pmap->map == NULL)
@@ -276,7 +276,7 @@ _stp_pmap_new(unsigned max_entries, int wrap, int type, int key_size,
 
 	/* Initialize the memory lists first so if allocations fail
          * at some point, it is easy to clean up. */
-	_stp_map_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		m = _stp_map_per_cpu_ptr(pmap->map, i);
 		INIT_LIST_HEAD(&m->pool);
 		INIT_LIST_HEAD(&m->head);
@@ -285,7 +285,7 @@ _stp_pmap_new(unsigned max_entries, int wrap, int type, int key_size,
 	INIT_LIST_HEAD(&pmap->agg.pool);
 	INIT_LIST_HEAD(&pmap->agg.head);
 
-	_stp_map_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		m = _stp_map_per_cpu_ptr(pmap->map, i);
 		if (_stp_map_init(m, max_entries, wrap, type, key_size,
 				  data_size, i)) {
@@ -300,7 +300,7 @@ _stp_pmap_new(unsigned max_entries, int wrap, int type, int key_size,
 	return pmap;
 
 err1:
-	_stp_map_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		m = _stp_map_per_cpu_ptr (pmap->map, i);
 		__stp_map_del(m);
 	}
@@ -391,7 +391,7 @@ static void _stp_pmap_clear(PMAP pmap)
 	if (pmap == NULL)
 		return;
 
-	_stp_map_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		MAP m = _stp_map_per_cpu_ptr (pmap->map, i);
 
 		MAP_LOCK(m);
@@ -444,7 +444,7 @@ static void _stp_pmap_del(PMAP pmap)
 	if (pmap == NULL)
 		return;
 
-	_stp_map_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		MAP m = _stp_map_per_cpu_ptr (pmap->map, i);
 		__stp_map_del(m);
 	}
@@ -779,7 +779,7 @@ static MAP _stp_pmap_agg (PMAP pmap)
 	/* every time we aggregate. which would be best? */
 	_stp_map_clear (agg);
 
-	_stp_map_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		m = _stp_map_per_cpu_ptr (pmap->map, i);
 		MAP_LOCK(m);
 		/* walk the hash chains. */
@@ -954,7 +954,7 @@ static int _stp_pmap_size (PMAP pmap)
 {
 	int i, num = 0;
 
-	_stp_map_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		MAP m = _stp_map_per_cpu_ptr (pmap->map, i);
 		MAP_LOCK(m);
 		num += m->num;

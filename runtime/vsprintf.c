@@ -356,12 +356,8 @@ _stp_vsprint_memory(char * str, char * end, const char * ptr,
 	if (format == 'M') { /* stolen from kernel: trace_seq_putmem_hex() */
 		static const char _stp_hex_asc[] = "0123456789abcdef";
 
-#ifdef __KERNEL__
-		c = contexts[smp_processor_id()];
-#else
-		c = &contexts;
-#endif
                 /* PR13386: Skip if called with null context */
+		c = _stp_runtime_get_context();
                 if (c) for (i = 0; i < len && str < end; i++) {
 			unsigned char c_tmp = kread((unsigned char *)(ptr));
 			ptr++;
@@ -371,12 +367,8 @@ _stp_vsprint_memory(char * str, char * end, const char * ptr,
 		len = len * 2; /* the actual length */
 	}
 	else if (format == 'm') {
-#ifdef __KERNEL__
-		c = contexts[smp_processor_id()];
-#else
-		c = &contexts;
-#endif
                 /* PR13386: Skip if called with null context */
+		c = _stp_runtime_get_context();
 		if (c) for (i = 0; i < len && str <= end; ++i) {
 			*str++ = kread((unsigned char *)(ptr));
 			ptr++;

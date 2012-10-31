@@ -25,14 +25,13 @@
 #define STAT_PUT_CPU()		do {} while (0)
 #endif
 
-#define _stp_stat_for_each_cpu(cpu) for_each_possible_cpu((cpu))
 #define _stp_stat_per_cpu_ptr(stat, cpu) per_cpu_ptr((stat)->sd, (cpu))
 
 static int _stp_stat_initialize_locks(Stat st)
 {
 #ifdef NEED_STAT_LOCKS
 	int i;
-	_stp_stat_for_each_cpu(i) {
+	for_each_possible_cpu(i) {
 		stat_data *sdp = _stp_stat_per_cpu_ptr(st, i);
 		spin_lock_init(&sdp->lock);
 	}

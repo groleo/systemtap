@@ -135,10 +135,23 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline(1) << "goto probe_epilogue;";
   s.op->indent(-1);
 
-  if (! s.runtime_usermode_p())
-    s.op->newline() << "c = contexts[smp_processor_id()];";
-  else
-    s.op->newline() << "c = &contexts;";
+  s.op->newline() << "c = _stp_runtime_entryfn_get_context();";
+  if (s.runtime_usermode_p())
+    {
+      s.op->newline() << "if (!c) {";
+      s.op->newline(1) << "#if !INTERRUPTIBLE";
+      s.op->newline() << "atomic_inc (& skipped_count);";
+      s.op->newline() << "#endif";
+      s.op->newline() << "#ifdef STP_TIMING";
+      s.op->newline() << "atomic_inc (& skipped_count_reentrant);";
+      s.op->newline() << "#ifdef DEBUG_REENTRANCY";
+      s.op->newline() << "_stp_warn (\"Skipped %s\\n\", " << probe << "->pp);";
+      s.op->newline() << "#endif";
+      s.op->newline() << "#endif";
+      s.op->newline() << "goto probe_epilogue;";
+      s.op->newline(-1) << "}";
+    }
+
   s.op->newline() << "if (atomic_inc_return (& c->busy) != 1) {";
   s.op->newline(1) << "#if !INTERRUPTIBLE";
   s.op->newline() << "atomic_inc (& skipped_count);";
@@ -158,7 +171,6 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline() << "atomic_dec (& c->busy);";
   s.op->newline() << "goto probe_epilogue;";
   s.op->newline(-1) << "}";
-  s.op->newline() << "_stp_runtime_entryfn_prologue();";
   s.op->newline();
   s.op->newline() << "c->last_stmt = 0;";
   s.op->newline() << "c->last_error = 0;";
@@ -303,12 +315,12 @@ common_probe_entryfn_epilogue (systemtap_session& s,
   s.op->newline(-1) << "}";
 
 
-  s.op->newline() << "_stp_runtime_entryfn_epilogue();";
   s.op->newline() << "atomic_dec (&c->busy);";
 
   s.op->newline(-1) << "probe_epilogue:"; // context is free
   s.op->indent(1);
 
+  s.op->newline() << "_stp_runtime_entryfn_put_context();";
   if (! s.suppress_handler_errors) // PR 13306
     {
       // Check for excessive skip counts.
