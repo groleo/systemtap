@@ -270,19 +270,16 @@ endif
 TEST_COV_DIR = coverage
 
 gcov:
-	@-$(MAKE) clean CXXFLAGS="-g -fprofile-arcs -ftest-coverage" all check
-	@gcov *.gcno >/dev/null 2>&1
-	@rm -f `ls -1 *.gcov | fgrep -v .cxx.gcov`
-	ls -l *.cxx.gcov
-
-lcov:
-	@lcov --directory . -z
-	@-$(MAKE) clean CXXFLAGS="-g -fprofile-arcs -ftest-coverage" all check
-	@lcov --directory . -c -o stap.info
-	@genhtml -o ./$(TEST_COV_DIR) stap.info
+	find . -name '*.gc*' | xargs rm -f
+	$(MAKE) clean CXXFLAGS="-g -fprofile-arcs -ftest-coverage" CFLAGS="-g -fprofile-arcs -ftest-coverage" all install
+	-sudo $(MAKE) installcheck $${RUNTESTFLAGS+RUNTESTFLAGS=$${RUNTESTFLAGS}}
+	for dir in $(SUBDIRS); do \
+		(cd $$dir; gcov *.gcno > SUMMARY.gcov 2>&1 || true); \
+	done
+	find . -name '*.gcov'
 
 clean-local:
-	rm -f *.gcov *.gcno *.gcda ${PACKAGE_TARNAME}-*.tar.gz
+	rm -rf ${PACKAGE_TARNAME}-*.tar.gz
 	rm -rf ${PACKAGE_TARNAME}-${PACKAGE_VERSION}
 	rm -rf $(TEST_COV_DIR)
 	rm -rf stap.info
@@ -316,6 +313,7 @@ endif
 	(cd $(srcdir)/man; for f in *.3*; do rm -rf "$(DESTDIR)$(man3dir)/$$f"; done)
 
 SUBDIRS = . stapdyn staprun doc po
+# NB: the gcov target above uses this to enumarate linked binaries' build directories
 DIST_SUBDIRS = testsuite $(SUBDIRS)
 EXTRA_DIST = m4/ChangeLog
 
