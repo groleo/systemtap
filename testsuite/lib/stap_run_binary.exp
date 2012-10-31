@@ -3,17 +3,24 @@
 # Simple script for testing binary output
 # stap_run_binary TEST_NAME
 # TEST_NAME is path to the current test
+# Additional arguments are passed to stap as-is.
+#
 # global result_string must be set to the expected output
 
-proc stap_run_binary { TEST_NAME} {
+proc stap_run_binary { TEST_NAME args } {
   # zap the srcdir prefix
   set test_file_name $TEST_NAME
   set TEST_NAME [regsub {.*/testsuite/} $TEST_NAME ""]
+  if {[llength $args]} {
+      set TEST_NAME [concat $TEST_NAME $args]
+  }
 
   if {[info procs installtest_p] != "" && ![installtest_p]} {untested $TEST_NAME; return}
 
-  set hex_args {-ve 8/1 "%02x " "\n"}
-  set res [exec stap $test_file_name | hexdump $hex_args] 
+  set hex_args {-ve {8/1 "%02x " "\n"}}
+  set cmd [concat stap $args $test_file_name | hexdump $hex_args]
+  send_log "executing: $cmd\n"
+  catch { eval exec $cmd } res
 
   if {[string compare $res $::result_string] == 0} {
       pass "$TEST_NAME"

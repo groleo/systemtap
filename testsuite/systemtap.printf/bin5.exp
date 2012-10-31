@@ -14,4 +14,11 @@ cd ef 20 62 3d 11 11 22
 11 22 22               }
 
 set test "bin5"
-stap_run_binary $srcdir/$subdir/$test.stp
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run_binary $srcdir/$subdir/$test.stp --runtime=$runtime
+    } else {
+	stap_run_binary $srcdir/$subdir/$test.stp
+    }
+}

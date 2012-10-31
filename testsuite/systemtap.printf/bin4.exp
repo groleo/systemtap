@@ -8,4 +8,11 @@ ab cd ef 00 00 00 56 78
 ef 00 00               }
 
 set test "bin4"
-stap_run_binary $srcdir/$subdir/$test.stp
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run_binary $srcdir/$subdir/$test.stp --runtime=$runtime
+    } else {
+	stap_run_binary $srcdir/$subdir/$test.stp
+    }
+}
