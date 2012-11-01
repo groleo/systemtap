@@ -10495,9 +10495,12 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 # Check whether --with-dyninst was given.
 if test "${with_dyninst+set}" = set; then :
   withval=$with_dyninst;
+fi
+
+
 case "$with_dyninst" in
-''|no) ;;
-yes) # Try a simple-minded distro search
+no) ;;
+''|yes) # Try a simple-minded distro search
      DYNINST_CXXFLAGS="-I/usr/include/dyninst"
      DYNINST_LDFLAGS="-L/usr/lib64/dyninst -L/usr/lib/dyninst" # XXX both lib paths!?!
      ;;
@@ -10544,9 +10547,6 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 fi
-
-fi
-
  if test "${have_dyninst}" = "yes"; then
   HAVE_DYNINST_TRUE=
   HAVE_DYNINST_FALSE='#'

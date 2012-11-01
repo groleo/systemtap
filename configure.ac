@@ -479,11 +479,11 @@ AC_LANG_POP(C++)
 # Check for Dyninst headers and libraries
 AC_ARG_WITH([dyninst],
   AS_HELP_STRING([--with-dyninst=DIRECTORY],
-    [find dyninst headers/libraries in DIRECTORY]),
-  [
+    [find dyninst headers/libraries in DIRECTORY]))
+
 case "$with_dyninst" in
-''|no) ;;
-yes) # Try a simple-minded distro search
+no) ;;
+''|yes) # Try a simple-minded distro search
      DYNINST_CXXFLAGS="-I/usr/include/dyninst"
      DYNINST_LDFLAGS="-L/usr/lib64/dyninst -L/usr/lib/dyninst" # XXX both lib paths!?!
      ;;
@@ -506,7 +506,6 @@ if test -n "$DYNINST_CXXFLAGS"; then
   CPPFLAGS="$old_CPPFLAGS"
   AC_LANG_POP(C++)
 fi
-])
 AM_CONDITIONAL([HAVE_DYNINST], [test "${have_dyninst}" = "yes"])
 
 
