@@ -6747,9 +6747,11 @@ dwarf_builder::build(systemtap_session & sess,
       if (kernel_supports_inode_uprobes(sess))
         {
           // XXX: autoconf this?
+#if 0 // XXX hack out the uretprobes check, to allow aarapov's test kernels
           if (has_null_param(parameters, TOK_RETURN))
             throw semantic_error
               (_("process return probes not available with inode-based uprobes"));
+#endif
         }
       // There is a similar check in pass 4 (buildrun), but it is
       // needed here too to make sure alternatives for optional
@@ -7618,10 +7620,9 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
   s.op->newline() << "#include \"linux/uprobes-inode.c\"";
 
   // Write the probe handler.
-  s.op->newline() << "static int enter_inode_uprobe "
-                  << "(struct uprobe_consumer *inst, struct pt_regs *regs) {";
-  s.op->newline(1) << "struct stapiu_consumer *sup = "
-                   << "container_of(inst, struct stapiu_consumer, consumer);";
+  s.op->newline() << "static int stapiu_probe_handler "
+                  << "(struct stapiu_consumer *sup, struct pt_regs *regs) {";
+  s.op->newline(1);
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
                                  "stp_probe_type_uprobe");
   s.op->newline() << "c->uregs = regs;";
@@ -7694,7 +7695,8 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
       uprobe_derived_probe *p = probes[i];
       unsigned index = module_index[make_pbm_key(p)];
       s.op->newline() << "{";
-      s.op->line() << " .consumer={ .handler=enter_inode_uprobe },";
+      if (p->has_return)
+        s.op->line() << " .return_p=1,";
       s.op->line() << " .target=&stap_inode_uprobe_targets[" << index << "],";
       s.op->line() << " .offset=(loff_t)0x" << hex << p->addr << dec << "ULL,";
       if (p->sdt_semaphore_addr)

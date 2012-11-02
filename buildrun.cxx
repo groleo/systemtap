@@ -365,7 +365,10 @@ compile_pass (systemtap_session& s)
 			   "STAPCONF_UPROBE_REGISTER_EXPORTED");
   output_either_exportconf(s, o, "uprobe_unregister", "unregister_uprobe",
 			   "STAPCONF_UPROBE_UNREGISTER_EXPORTED");
+  output_exportconf(s, o, "uretprobe_register", "STAPCONF_URETPROBE_REGISTER_EXPORTED");
+  output_exportconf(s, o, "uretprobe_unregister", "STAPCONF_URETPROBE_UNREGISTER_EXPORTED");
   output_autoconf(s, o, "autoconf-old-inode-uprobes.c", "STAPCONF_OLD_INODE_UPROBES", NULL);
+  output_autoconf(s, o, "autoconf-inode-uretprobes.c", "STAPCONF_INODE_URETPROBES", NULL);
 
   // used by tapsets.cxx inode uprobe generated code
   output_exportconf(s, o, "uprobe_get_swbp_addr", "STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED");

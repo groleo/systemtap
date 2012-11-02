@@ -25,6 +25,7 @@
 #if !defined(CONFIG_UPROBES)
 #error "not to be built without CONFIG_UPROBES"
 #endif
+
 #if !defined(STAPCONF_UPROBE_REGISTER_EXPORTED)
 // First get the right typeof(name) that's found in uprobes.h
 #if defined(STAPCONF_OLD_INODE_UPROBES)
@@ -53,6 +54,20 @@ typedef typeof(&uprobe_unregister) uprobe_unregister_fn;
 #define uprobe_unregister unregister_uprobe
 #endif
 
+#if defined(STAPCONF_INODE_URETPROBES)
+#if !defined(STAPCONF_URETPROBE_REGISTER_EXPORTED)
+// First typedef from the original decl, then #define it as a typecasted call.
+typedef typeof(&uretprobe_register) uretprobe_register_fn;
+#define uretprobe_register (* (uretprobe_register_fn)kallsyms_uretprobe_register)
+#endif
+
+#if !defined(STAPCONF_URETPROBE_UNREGISTER_EXPORTED)
+// First typedef from the original decl, then #define it as a typecasted call.
+typedef typeof(&uretprobe_unregister) uretprobe_unregister_fn;
+#define uretprobe_unregister (* (uretprobe_unregister_fn)kallsyms_uretprobe_unregister)
+#endif
+#endif
+
 #if !defined(STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED)
 // First typedef from the original decl, then #define it as a typecasted call.
 typedef typeof(&uprobe_get_swbp_addr) uprobe_get_swbp_addr_fn;
@@ -78,8 +93,15 @@ struct stapiu_target {
 
 /* A consumer is a specific uprobe that we want to place.  */
 struct stapiu_consumer {
-	struct uprobe_consumer consumer;
-	unsigned registered;
+	union {
+		struct uprobe_consumer uconsumer;
+#if defined(STAPCONF_INODE_URETPROBES)
+		struct uretprobe_consumer uretconsumer;
+#endif
+	};
+
+	const unsigned return_p:1;
+	unsigned registered:1;
 
 	struct list_head target_consumer;
 	struct stapiu_target * const target;
@@ -104,6 +126,56 @@ static struct stapiu_process {
 /* This lock guards modification to stapiu_process_slots and target->processes.
  * XXX: consider fine-grained locking for target-processes.  */
 DEFINE_RWLOCK(stapiu_process_lock);
+
+
+/* The stap-generated probe handler for all inode-uprobes. */
+static int
+stapiu_probe_handler (struct stapiu_consumer *sup, struct pt_regs *regs);
+
+static int
+stapiu_uprobe_handler (struct uprobe_consumer *inst, struct pt_regs *regs)
+{
+	struct stapiu_consumer *sup =
+		container_of(inst, struct stapiu_consumer, uconsumer);
+	return stapiu_probe_handler(sup, regs);
+}
+
+#if defined(STAPCONF_INODE_URETPROBES)
+static int
+stapiu_uretprobe_handler (struct uretprobe_consumer *inst, struct pt_regs *regs)
+{
+	struct stapiu_consumer *sup =
+		container_of(inst, struct stapiu_consumer, uretconsumer);
+	return stapiu_probe_handler(sup, regs);
+}
+#endif
+
+static int
+stapiu_register (struct inode* inode, struct stapiu_consumer* c)
+{
+	if (!c->return_p) {
+		c->uconsumer.handler = stapiu_uprobe_handler;
+		return uprobe_register (inode, c->offset, &c->uconsumer);
+        } else {
+#if defined(STAPCONF_INODE_URETPROBES)
+		c->uretconsumer.handler = stapiu_uretprobe_handler;
+		return uretprobe_register (inode, c->offset, &c->uretconsumer);
+#else
+		return EINVAL;
+#endif
+        }
+}
+
+static void
+stapiu_unregister (struct inode* inode, struct stapiu_consumer* c)
+{
+	if (!c->return_p)
+		uprobe_unregister (inode, c->offset, &c->uconsumer);
+#if defined(STAPCONF_INODE_URETPROBES)
+	else
+		uretprobe_unregister (inode, c->offset, &c->uretconsumer);
+#endif
+}
 
 
 static inline void
@@ -240,8 +312,7 @@ stapiu_target_unreg(struct stapiu_target *target)
 	list_for_each_entry(c, &target->consumers, target_consumer) {
 		if (c->registered) {
 			c->registered = 0;
-			uprobe_unregister(target->inode, c->offset,
-					  &c->consumer);
+			stapiu_unregister(target->inode, c);
 		}
 	}
 }
@@ -256,7 +327,7 @@ stapiu_target_reg(struct stapiu_target *target)
 
 	list_for_each_entry(c, &target->consumers, target_consumer) {
 		if (! c->registered) {
-			ret = uprobe_register(target->inode, c->offset, &c->consumer);
+			ret = stapiu_register(target->inode, c);
 			if (ret) {
 				c->registered = 0;
 				_stp_error("probe %s registration error (rc %d)",
