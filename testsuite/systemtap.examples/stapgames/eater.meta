@@ -1,0 +1,4 @@
+Title: eater game
+Keywords: stapgames
+test_check: stap -p4 -Itapset/ eater.stp
+test_installcheck: stap -p4 -Itapset/ eater.stp

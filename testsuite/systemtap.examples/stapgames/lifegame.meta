@@ -1,0 +1,5 @@
+Title: life game
+Keywords: stapgames
+Description: watch as your creation morphes into different forms
+test_check: stap -p4 -Itapset/ lifegame.stp
+test_installcheck: stap -p4 -Itapset/ lifegame.stp
