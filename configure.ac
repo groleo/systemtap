@@ -479,11 +479,11 @@ AC_LANG_POP(C++)
 # Check for Dyninst headers and libraries
 AC_ARG_WITH([dyninst],
   AS_HELP_STRING([--with-dyninst=DIRECTORY],
-    [find dyninst headers/libraries in DIRECTORY]),
-  [
+    [find dyninst headers/libraries in DIRECTORY]))
+
 case "$with_dyninst" in
-''|no) ;;
-yes) # Try a simple-minded distro search
+no) ;;
+''|yes) # Try a simple-minded distro search
      DYNINST_CXXFLAGS="-I/usr/include/dyninst"
      DYNINST_LDFLAGS="-L/usr/lib64/dyninst -L/usr/lib/dyninst" # XXX both lib paths!?!
      ;;
@@ -496,17 +496,19 @@ if test -n "$DYNINST_CXXFLAGS"; then
   AC_LANG_PUSH(C++)
   old_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $DYNINST_CXXFLAGS"
+  AC_MSG_NOTICE([checking dyninst support])
   AC_CHECK_HEADERS([BPatch_object.h], [
       AC_SUBST(DYNINST_CXXFLAGS)
       AC_SUBST(DYNINST_LDFLAGS)
       AC_DEFINE([HAVE_DYNINST],[1],[Define to 1 if Dyninst is enabled])
       have_dyninst=yes
-    ],
-    AC_MSG_ERROR([Dyninst does not appear to be usable]))
+      AC_MSG_NOTICE([dyninst support available])])
+  if test "$with_dyninst" == "yes" -a "$have_dyninst" != "yes"; then
+    AC_MSG_ERROR([Dyninst does not appear to be usable])
+  fi
   CPPFLAGS="$old_CPPFLAGS"
   AC_LANG_POP(C++)
 fi
-])
 AM_CONDITIONAL([HAVE_DYNINST], [test "${have_dyninst}" = "yes"])
 
 

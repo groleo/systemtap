@@ -10495,9 +10495,12 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 # Check whether --with-dyninst was given.
 if test "${with_dyninst+set}" = set; then :
   withval=$with_dyninst;
+fi
+
+
 case "$with_dyninst" in
-''|no) ;;
-yes) # Try a simple-minded distro search
+no) ;;
+''|yes) # Try a simple-minded distro search
      DYNINST_CXXFLAGS="-I/usr/include/dyninst"
      DYNINST_LDFLAGS="-L/usr/lib64/dyninst -L/usr/lib/dyninst" # XXX both lib paths!?!
      ;;
@@ -10515,6 +10518,8 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
   old_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $DYNINST_CXXFLAGS"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking dyninst support" >&5
+$as_echo "$as_me: checking dyninst support" >&6;}
   for ac_header in BPatch_object.h
 do :
   ac_fn_cxx_check_header_mongrel "$LINENO" "BPatch_object.h" "ac_cv_header_BPatch_object_h" "$ac_includes_default"
@@ -10529,13 +10534,15 @@ _ACEOF
 $as_echo "#define HAVE_DYNINST 1" >>confdefs.h
 
       have_dyninst=yes
-
-else
-  as_fn_error $? "Dyninst does not appear to be usable" "$LINENO" 5
+      { $as_echo "$as_me:${as_lineno-$LINENO}: dyninst support available" >&5
+$as_echo "$as_me: dyninst support available" >&6;}
 fi
 
 done
 
+  if test "$with_dyninst" == "yes" -a "$have_dyninst" != "yes"; then
+    as_fn_error $? "Dyninst does not appear to be usable" "$LINENO" 5
+  fi
   CPPFLAGS="$old_CPPFLAGS"
   ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -10544,9 +10551,6 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 fi
-
-fi
-
  if test "${have_dyninst}" = "yes"; then
   HAVE_DYNINST_TRUE=
   HAVE_DYNINST_FALSE='#'
