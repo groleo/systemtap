@@ -304,78 +304,6 @@ setup_signals (sighandler_t handler)
   sigaction (SIGXCPU, &sa, NULL);
 }
 
-int parse_kernel_config (systemtap_session &s)
-{
-  // PR10702: pull config options
-  string kernel_config_file = s.kernel_build_tree + "/.config";
-  struct stat st;
-  int rc = stat(kernel_config_file.c_str(), &st);
-  if (rc != 0)
-    {
-        clog << _F("Checking \"%s\" failed with error: %s",
-                   kernel_config_file.c_str(), strerror(errno)) << endl;
-	find_devel_rpms(s, s.kernel_build_tree.c_str());
-	missing_rpm_list_print(s,"-devel");
-	return rc;
-    }
-
-  ifstream kcf (kernel_config_file.c_str());
-  string line;
-  while (getline (kcf, line))
-    {
-      if (!startswith(line, "CONFIG_")) continue;
-      size_t off = line.find('=');
-      if (off == string::npos) continue;
-      string key = line.substr(0, off);
-      string value = line.substr(off+1, string::npos);
-      s.kernel_config[key] = value;
-    }
-  if (s.verbose > 2)
-    clog << _F("Parsed kernel \"%s\", ", kernel_config_file.c_str())
-         << _F(ngettext("containing %zu tuple", "containing %zu tuples",
-                s.kernel_config.size()), s.kernel_config.size()) << endl;
-
-  kcf.close();
-  return 0;
-}
-
-
-int parse_kernel_exports (systemtap_session &s)
-{
-  string kernel_exports_file = s.kernel_build_tree + "/Module.symvers";
-  struct stat st;
-  int rc = stat(kernel_exports_file.c_str(), &st);
-  if (rc != 0)
-    {
-        clog << _F("Checking \"%s\" failed with error: %s\nEnsure kernel development headers & makefiles are installed",
-                   kernel_exports_file.c_str(), strerror(errno)) << endl;
-	return rc;
-    }
-
-  ifstream kef (kernel_exports_file.c_str());
-  string line;
-  while (getline (kef, line))
-    {
-      vector<string> tokens;
-      tokenize (line, tokens, "\t");
-      if (tokens.size() == 4 &&
-          tokens[2] == "vmlinux" &&
-          tokens[3].substr(0,13) == string("EXPORT_SYMBOL"))
-        s.kernel_exports.insert (tokens[1]);
-      // RHEL4 Module.symvers file only has 3 tokens.  No
-      // 'EXPORT_SYMBOL' token at the end of the line.
-      else if (tokens.size() == 3 && tokens[2] == "vmlinux")
-        s.kernel_exports.insert (tokens[1]);
-    }
-  if (s.verbose > 2)
-    clog << _F(ngettext("Parsed kernel %s, which contained one vmlinux export",
-                        "Parsed kernel %s, which contained %zu vmlinux exports",
-                         s.kernel_exports.size()), kernel_exports_file.c_str(),
-                         s.kernel_exports.size()) << endl;
-
-  kef.close();
-  return 0;
-}
 
 // Compilation passes 0 through 4
 static int
@@ -436,14 +364,8 @@ passes_0_4 (systemtap_session &s)
     }
 
   // Now that no further changes to s.kernel_build_tree can occur, let's use it.
-  if ((rc = parse_kernel_config (s)) != 0)
-    {
-      // Try again with a server
-      s.set_try_server ();
-      return rc;
-    }
-
-  if ((rc = parse_kernel_exports (s)) != 0)
+  if ((rc = s.parse_kernel_config ()) != 0
+      || (rc = s.parse_kernel_exports ()) != 0)
     {
       // Try again with a server
       s.set_try_server ();

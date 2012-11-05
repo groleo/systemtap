@@ -132,16 +132,20 @@ public:
   std::vector<std::string> kbuildflags; // -B var=val
   std::vector<std::string> globalopts; // -G var=val
   std::vector<std::string> modinfos; // --modinfo tag=value
+
   std::string release;
   std::string kernel_release;
   std::string kernel_base_release;
   std::string kernel_build_tree;
   std::string kernel_source_tree;
+  std::map<std::string,std::string> kernel_config;
+  std::set<std::string> kernel_exports;
+  int parse_kernel_config ();
+  int parse_kernel_exports ();
+
   std::string sysroot;
   std::map<std::string,std::string> sysenv;
   bool update_release_sysroot;
-  std::map<std::string,std::string> kernel_config;
-  std::set<std::string> kernel_exports;
   std::string machine;
   std::string architecture;
   bool native_build;
