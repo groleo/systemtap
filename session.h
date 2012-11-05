@@ -140,8 +140,10 @@ public:
   std::string kernel_source_tree;
   std::map<std::string,std::string> kernel_config;
   std::set<std::string> kernel_exports;
+  std::set<std::string> kernel_functions;
   int parse_kernel_config ();
   int parse_kernel_exports ();
+  int parse_kernel_functions ();
 
   std::string sysroot;
   std::map<std::string,std::string> sysenv;

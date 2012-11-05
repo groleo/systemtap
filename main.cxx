@@ -365,7 +365,8 @@ passes_0_4 (systemtap_session &s)
 
   // Now that no further changes to s.kernel_build_tree can occur, let's use it.
   if ((rc = s.parse_kernel_config ()) != 0
-      || (rc = s.parse_kernel_exports ()) != 0)
+      || (rc = s.parse_kernel_exports ()) != 0
+      || (rc = s.parse_kernel_functions ()) != 0)
     {
       // Try again with a server
       s.set_try_server ();

@@ -1557,6 +1557,61 @@ systemtap_session::parse_kernel_exports ()
 }
 
 
+int
+systemtap_session::parse_kernel_functions ()
+{
+  string system_map_path = kernel_build_tree + "/System.map";
+  ifstream system_map;
+
+  system_map.open(system_map_path.c_str(), ifstream::in);
+  if (! system_map.is_open())
+    {
+      string system_map_path2 = "/boot/System.map-" + kernel_release;
+
+      system_map.clear();
+      system_map.open(system_map_path2.c_str(), ifstream::in);
+      if (! system_map.is_open())
+        {
+          if (verbose > 3)
+            //TRANSLATORS: specific path cannot be opened
+            clog << system_map_path << _(" and ")
+                 << system_map_path2 << _(" cannot be opened: ")
+                 << strerror(errno) << endl;
+          return 1;
+        }
+    }
+
+  string address, type, name;
+  do
+    {
+      system_map >> address >> type >> name;
+
+      if (verbose > 3)
+        clog << "'" << address << "' '" << type << "' '" << name
+             << "'" << endl;
+
+      // 'T'/'t' are text code symbols
+      if (type != "t" && type != "T")
+          continue;
+
+#ifdef __powerpc__ // XXX cross-compiling hazard
+      // Map ".sys_foo" to "sys_foo".
+      if (name[0] == '.')
+          name.erase(0, 1);
+#endif
+
+      // FIXME: better things to do here - look for _stext before
+      // remembering symbols. Also:
+      // - stop remembering names at ???
+      // - what about __kprobes_text_start/__kprobes_text_end?
+      kernel_functions.insert(name);
+    }
+  while (! system_map.eof());
+  system_map.close();
+  return 0;
+}
+
+
 void
 systemtap_session::init_try_server ()
 {

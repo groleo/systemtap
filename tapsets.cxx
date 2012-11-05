@@ -8414,24 +8414,10 @@ kprobe_derived_probe_group::emit_module_exit (systemtap_session& s)
 
 struct kprobe_builder: public derived_probe_builder
 {
-private:
-  bool cache_initialized;
-  vector<string> function_name_cache;
-
-  void load_function_name_cache(systemtap_session & sess);
-
 public:
-  kprobe_builder(): cache_initialized(false) {}
+  kprobe_builder() {}
 
-  void build_no_more (systemtap_session &s)
-  {
-    if (! function_name_cache.empty())
-      {
-	if (s.verbose > 3)
-          clog << _("kprobe_builder releasing cache") << endl;
-	function_name_cache.clear();
-      }
-  }
+  void build_no_more (systemtap_session &s) {}
 
   virtual void build(systemtap_session & sess,
 		     probe * base,
@@ -8440,63 +8426,6 @@ public:
 		     vector<derived_probe *> & finished_results);
 };
 
-
-void
-kprobe_builder::load_function_name_cache(systemtap_session &sess)
-{
-  if (! cache_initialized)
-    {
-      cache_initialized = true;
-      string system_map_path = sess.kernel_build_tree + "/System.map";
-      ifstream system_map;
-
-      system_map.open(system_map_path.c_str(), ifstream::in);
-      if (! system_map.is_open())
-        {
-	  string system_map_path2 = "/boot/System.map-" + sess.kernel_release;
-
-	  system_map.clear();
-	  system_map.open(system_map_path2.c_str(), ifstream::in);
-	  if (! system_map.is_open())
-	    {
-	      if (sess.verbose > 3)
-		//TRANSLATORS: specific path cannot be opened
-		clog << system_map_path << _(" and ")
-		     << system_map_path2 << _(" cannot be opened: ")
-		     << strerror(errno) << endl;
-	      return;
-	    }
-        }
-
-      string address, type, name;
-      do
-        {
-	  system_map >> address >> type >> name;
-
-	  if (sess.verbose > 3)
-	    clog << "'" << address << "' '" << type << "' '" << name
-		 << "'" << endl;
-
-	  // 'T'/'t' are text code symbols
-	  if (type != "t" && type != "T")
-	      continue;
-
-#ifdef __powerpc__
-	  // Map ".sys_foo" to "sys_foo".
-	  if (name[0] == '.')
-	      name.erase(0, 1);
-#endif
-
-	  // FIXME: better things to do here - look for _stext before
-	  // remembering symbols. Also:
-	  // - stop remembering names at ???
-	  // - what about __kprobes_text_start/__kprobes_text_end?
-	  function_name_cache.push_back(name);
-	}
-      while (! system_map.eof());
-      system_map.close();
-    }
-}
 
 void
 kprobe_builder::build(systemtap_session & sess,
@@ -8535,7 +8464,7 @@ kprobe_builder::build(systemtap_session & sess,
 
   if (has_function_str)
     {
-      if (has_module_str) 
+      if (has_module_str)
         {
 	  function_string_val = module_string_val + ":" + function_string_val;
 	  derived_probe *dp
@@ -8548,25 +8477,34 @@ kprobe_builder::build(systemtap_session & sess,
 	}
       else
         {
-	  load_function_name_cache(sess);
+          vector<string> matches;
 
-	  // Search function name list for matching names
-	  for (vector<string>::const_iterator it = function_name_cache.begin();
-	       it != function_name_cache.end(); it++)
+          // Simple names can be found directly
+          if (function_string_val.find_first_of("*?[") == string::npos)
+            {
+              if (sess.kernel_functions.count(function_string_val))
+                matches.push_back(function_string_val);
+            }
+          else // Search function name list for matching names
+            {
+              for (set<string>::const_iterator it = sess.kernel_functions.begin();
+                   it != sess.kernel_functions.end(); it++)
+                // fnmatch returns zero for matching.
+                if (fnmatch(function_string_val.c_str(), it->c_str(), 0) == 0)
+                  matches.push_back(*it);
+            }
+
+	  for (vector<string>::const_iterator it = matches.begin();
+	       it != matches.end(); it++)
 	    {
-	      // Below, "rc" has negative polarity: zero iff matching.
-	      int rc = fnmatch(function_string_val.c_str(), (*it).c_str(), 0);
-	      if (! rc)
-	        {
-		  derived_probe *dp
-		    = new kprobe_derived_probe (sess, finished_results, base,
-						location, *it, 0, has_return,
-						has_statement_num,
-						has_maxactive, has_path,
-						has_library, maxactive_val,
-						path_tgt, library_tgt);
-		  finished_results.push_back (dp);
-		}
+              derived_probe *dp
+                = new kprobe_derived_probe (sess, finished_results, base,
+                                            location, *it, 0, has_return,
+                                            has_statement_num,
+                                            has_maxactive, has_path,
+                                            has_library, maxactive_val,
+                                            path_tgt, library_tgt);
+              finished_results.push_back (dp);
 	    }
 	}
     }
