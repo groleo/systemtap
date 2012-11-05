@@ -4213,6 +4213,17 @@ kernel_supports_inode_uprobes(systemtap_session& s)
 }
 
 
+static bool
+kernel_supports_inode_uretprobes(systemtap_session& s)
+{
+  // We need inode-uprobes first, then look for uretprobe_register either as a
+  // real export or in the list possibly accessible by kallsyms.
+  return kernel_supports_inode_uprobes(s) &&
+    (s.kernel_exports.count("uretprobe_register") > 0 ||
+     s.kernel_functions.count("uretprobe_register") > 0);
+}
+
+
 void
 check_process_probe_kernel_support(systemtap_session& s)
 {
@@ -6744,20 +6755,25 @@ dwarf_builder::build(systemtap_session & sess,
       else
 	module_name = user_path; // canonicalize it
 
-      if (kernel_supports_inode_uprobes(sess))
+      // uretprobes aren't available everywhere
+      if (has_null_param(parameters, TOK_RETURN))
         {
-          // XXX: autoconf this?
-#if 0 // XXX hack out the uretprobes check, to allow aarapov's test kernels
-          if (has_null_param(parameters, TOK_RETURN))
+          if (sess.runtime_usermode_p())
+            throw semantic_error
+              (_("process return probes not available with --runtime=dyninst"));
+
+          if (kernel_supports_inode_uprobes(sess) &&
+              !kernel_supports_inode_uretprobes(sess))
             throw semantic_error
               (_("process return probes not available with inode-based uprobes"));
-#endif
         }
+
       // There is a similar check in pass 4 (buildrun), but it is
       // needed here too to make sure alternatives for optional
       // (? or !) process probes are disposed and/or alternatives
       // are selected.
-      check_process_probe_kernel_support(sess);
+      if (!sess.runtime_usermode_p())
+        check_process_probe_kernel_support(sess);
 
       // user-space target; we use one dwflpp instance per module name
       // (= program or shared library)
