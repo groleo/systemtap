@@ -81,8 +81,7 @@ PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 @HAVE_DYNINST_TRUE@	dynsdt-dynutil.$(OBJEXT) \
 @HAVE_DYNINST_TRUE@	dynsdt-util.$(OBJEXT)
 dynsdt_OBJECTS = $(am_dynsdt_OBJECTS)
-am__DEPENDENCIES_1 =
-@HAVE_DYNINST_TRUE@dynsdt_DEPENDENCIES = $(am__DEPENDENCIES_1)
+dynsdt_DEPENDENCIES =
 dynsdt_LINK = $(CXXLD) $(dynsdt_CXXFLAGS) $(CXXFLAGS) \
 	$(dynsdt_LDFLAGS) $(LDFLAGS) -o $@
 @HAVE_DYNINST_TRUE@am_stapdyn_OBJECTS = stapdyn-stapdyn.$(OBJEXT) \
@@ -92,7 +91,7 @@ dynsdt_LINK = $(CXXLD) $(dynsdt_CXXFLAGS) $(CXXFLAGS) \
 @HAVE_DYNINST_TRUE@	stapdyn-dynutil.$(OBJEXT) \
 @HAVE_DYNINST_TRUE@	stapdyn-util.$(OBJEXT)
 stapdyn_OBJECTS = $(am_stapdyn_OBJECTS)
-@HAVE_DYNINST_TRUE@stapdyn_DEPENDENCIES = $(am__DEPENDENCIES_1)
+stapdyn_DEPENDENCIES =
 stapdyn_LINK = $(CXXLD) $(stapdyn_CXXFLAGS) $(CXXFLAGS) \
 	$(stapdyn_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
@@ -290,19 +289,16 @@ AM_CPPFLAGS = -D_GNU_SOURCE -I$(srcdir)/../includes \
 	-DPKGLIBDIR='"$(pkglibexecdir)"' -DLOCALEDIR='"$(localedir)"' \
 	$(am__append_1)
 AM_LDFLAGS = @PIELDFLAGS@ $(am__append_2)
-@HAVE_DYNINST_TRUE@dyninst_LIBS = -ldwarf -lcommon -linstructionAPI -lparseAPI -lpatchAPI \
-@HAVE_DYNINST_TRUE@	       -lpcontrol -lstackwalk -lsymtabAPI -ldyninstAPI
-
 @HAVE_DYNINST_TRUE@stapdyn_SOURCES = stapdyn.cxx mutator.cxx mutatee.cxx \
 @HAVE_DYNINST_TRUE@				  dynprobe.cxx dynutil.cxx ../util.cxx
 
 @HAVE_DYNINST_TRUE@stapdyn_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@
 @HAVE_DYNINST_TRUE@stapdyn_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
-@HAVE_DYNINST_TRUE@stapdyn_LDADD = -ldl $(dyninst_LIBS)
+@HAVE_DYNINST_TRUE@stapdyn_LDADD = -ldl -ldyninstAPI
 @HAVE_DYNINST_TRUE@dynsdt_SOURCES = dynsdt.cxx dynutil.cxx ../util.cxx
 @HAVE_DYNINST_TRUE@dynsdt_CXXFLAGS = $(AM_CXXFLAGS) @DYNINST_CXXFLAGS@
 @HAVE_DYNINST_TRUE@dynsdt_LDFLAGS = $(AM_LDFLAGS) @DYNINST_LDFLAGS@
-@HAVE_DYNINST_TRUE@dynsdt_LDADD = -ldl -lelf $(dyninst_LIBS)
+@HAVE_DYNINST_TRUE@dynsdt_LDADD = -ldl -lelf -ldyninstAPI
 
 # Arrange for the top-level git_version.h to be regenerated at every "make".
 BUILT_SOURCES = git_version.stamp
