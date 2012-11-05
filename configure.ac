@@ -492,7 +492,7 @@ no) ;;
     DYNINST_LDFLAGS="-L$with_dyninst/lib/" # XXX need lib64 too?
     ;;
 esac
-if test -n "$DYNINST_CXXFLAGS"; then
+if test "$with_dyninst" != "no"; then
   AC_LANG_PUSH(C++)
   old_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $DYNINST_CXXFLAGS"
@@ -503,7 +503,7 @@ if test -n "$DYNINST_CXXFLAGS"; then
       AC_DEFINE([HAVE_DYNINST],[1],[Define to 1 if Dyninst is enabled])
       have_dyninst=yes
       AC_MSG_NOTICE([dyninst support available])])
-  if test "$with_dyninst" == "yes" -a "$have_dyninst" != "yes"; then
+  if test -n "$with_dyninst" -a "$have_dyninst" != "yes"; then
     AC_MSG_ERROR([Dyninst does not appear to be usable])
   fi
   CPPFLAGS="$old_CPPFLAGS"
