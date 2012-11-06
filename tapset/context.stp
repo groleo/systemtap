@@ -13,6 +13,20 @@
 // </tapsetdescription>
 
 /**
+ * sfunction print_regs - Print a register dump
+ * 
+ * Description: This function prints a register dump. Does nothing if no registers are available for the probe point.
+ */
+function print_regs ()
+%{
+	if (c->user_mode_p && CONTEXT->uregs) {
+		_stp_print_regs (CONTEXT->uregs);
+	} else if (CONTEXT->kregs) {
+		_stp_print_regs (CONTEXT->kregs);
+	}
+%}
+
+/**
  * sfunction pp - Returns the active probe point
  *
  * Description: This function returns the fully-resolved probe point

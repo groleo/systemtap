@@ -54,6 +54,13 @@ get_dwarf_registers(BPatch_process *app,
   vector<BPatch_register> bpregs;
   app->getRegisters(bpregs);
 
+  ostream& debug_reg = staplog(4);
+  debug_reg << "pid " << app->getPid() << " has "
+             << bpregs.size() << " registers available:";
+  for (size_t i = 0; i < bpregs.size(); ++i)
+    debug_reg << " " << bpregs[i].name();
+  debug_reg << endl;
+
   // Look for each DWARF register in BPatch's register set.
   // O(m*n) loop, but neither array is very large
   for (const char* const* name = names; *name; ++name)

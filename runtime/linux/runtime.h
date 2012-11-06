@@ -167,7 +167,7 @@ void *kallsyms_task_work_cancel;
 #include "stp_string.c"
 #include "arith.c"
 #include "copy.c"
-#include "regs.c"
+#include "../regs.c"
 #include "regs-ia64.c"
 
 #if (defined(CONFIG_UTRACE) || defined(STAPCONF_UTRACE_VIA_TRACEPOINTS))

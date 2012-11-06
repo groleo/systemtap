@@ -16,8 +16,6 @@
 #include <unistd.h>
 %}
 
-// TODO function print_regs ()
-
 function execname:string ()
 %{
 	/* Need a 16-byte buffer, which will be 0-terminated only if shorter.
