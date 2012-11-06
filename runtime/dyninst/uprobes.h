@@ -26,6 +26,7 @@ struct stapdu_probe {
 	uint64_t target; /* the target index for this probe */
 	uint64_t offset; /* the probe offset within the file */
 	uint64_t semaphore; /* the sdt semaphore offset within the file */
+	uint64_t flags; /* a mask of STAPDYN_PROBE_FLAG_* */
 	struct stap_probe * const probe;
 };
 

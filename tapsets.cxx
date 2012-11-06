@@ -6756,12 +6756,8 @@ dwarf_builder::build(systemtap_session & sess,
 	module_name = user_path; // canonicalize it
 
       // uretprobes aren't available everywhere
-      if (has_null_param(parameters, TOK_RETURN))
+      if (has_null_param(parameters, TOK_RETURN) && !sess.runtime_usermode_p())
         {
-          if (sess.runtime_usermode_p())
-            throw semantic_error
-              (_("process return probes not available with --runtime=dyninst"));
-
           if (kernel_supports_inode_uprobes(sess) &&
               !kernel_supports_inode_uretprobes(sess))
             throw semantic_error
@@ -7807,6 +7803,12 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
       if (p->sdt_semaphore_addr)
         s.op->line() << " .semaphore="
                      << lex_cast_hex(p->sdt_semaphore_addr) << "ULL,";
+
+      s.op->line() << " .flags=0";
+      if (p->has_return)
+        s.op->line() << "|STAPDYN_PROBE_FLAG_RETURN";
+      s.op->line() << ",";
+
       s.op->line() << " .probe=" << common_probe_init (p) << ",";
       s.op->line() << " },";
     }

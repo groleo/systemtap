@@ -179,6 +179,20 @@ mutatee::instrument_dynprobe_target(BPatch_object* object,
 
       // TODO check each point->getFunction()->isInstrumentable()
 
+      if (probe.return_p)
+        {
+          // Transform the address points into function exits
+          vector<BPatch_point*> return_points;
+          for (size_t i = 0; i < points.size(); ++i)
+            {
+              vector<BPatch_point*>* exits =
+                points[i]->getFunction()->findPoint(BPatch_locExit);
+              return_points.insert(return_points.end(),
+                                   exits->begin(), exits->end());
+            }
+          points.swap(return_points);
+        }
+
       // The entry function needs the index of this particular probe, then
       // the registers in whatever form we chose above.
       vector<BPatch_snippet *> args;

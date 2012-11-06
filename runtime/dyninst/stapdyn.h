@@ -48,6 +48,10 @@ extern int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...);
 
 /* STAP 2.x : */
 
+#define STAPDYN_PROBE_FLAG_RETURN	0x1
+
+extern uint64_t stp_dyninst_probe_flags(uint64_t index);
+
 
 #ifdef __cplusplus
 }

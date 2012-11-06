@@ -8,6 +8,7 @@
 
 #include "dynprobe.h"
 #include "dynutil.h"
+#include "../util.h"
 
 #include "../runtime/dyninst/stapdyn.h"
 
@@ -49,20 +50,31 @@ find_dynprobes(void* module, vector<dynprobe_target>& targets)
       return 1;
     }
 
+  // This is optional - was only added post-2.0
+  typeof(&stp_dyninst_probe_flags) probe_flags = NULL;
+  set_dlsym(probe_flags, module, "stp_dyninst_probe_flags", false);
+
   // Construct all the targets in the module.
   const uint64_t ntargets = target_count();
   for (uint64_t i = 0; i < ntargets; ++i)
-    targets.push_back(dynprobe_target(target_path(i)));
+    {
+      const char* path = target_path(i);
+      dynprobe_target target(path);
+      targets.push_back(target);
+    }
 
   // Construct all the probes in the module,
   // and associate each with their target.
   const uint64_t nprobes = probe_count();
   for (uint64_t i = 0; i < nprobes; ++i)
     {
-      uint64_t ti = probe_target(i);
-      dynprobe_location p(i, probe_offset(i), probe_semaphore(i));
-      if (ti < ntargets)
-        targets[ti].probes.push_back(p);
+      uint64_t target_index = probe_target(i);
+      uint64_t offset = probe_offset(i);
+      uint64_t semaphore = probe_semaphore(i);
+      uint64_t flags = probe_flags ? probe_flags(i) : 0;
+      dynprobe_location p(i, offset, semaphore, flags);
+      if (target_index < ntargets)
+        targets[target_index].probes.push_back(p);
     }
 
   // For debugging, dump what we found.
@@ -72,11 +84,20 @@ find_dynprobes(void* module, vector<dynprobe_target>& targets)
       staplog(3) << "target " << t.path << " has "
                  << t.probes.size() << " probes" << endl;
       for (uint64_t j = 0; j < t.probes.size(); ++j)
-        staplog(3) << "  offset:" << (void*)t.probes[j].offset
-                   << " semaphore:" << t.probes[j].semaphore << endl;
+        staplog(3) << "  offset:" << lex_cast_hex(t.probes[j].offset)
+                   << " semaphore:" << lex_cast_hex(t.probes[j].semaphore)
+                   << " return_p:" << t.probes[j].return_p << endl;
     }
 
   return 0;
+}
+
+
+dynprobe_location::dynprobe_location(uint64_t index, uint64_t offset,
+                                     uint64_t semaphore, uint64_t flags):
+      index(index), offset(offset), semaphore(semaphore),
+      return_p(flags & STAPDYN_PROBE_FLAG_RETURN)
+{
 }
 
 

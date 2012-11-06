@@ -22,8 +22,10 @@ struct dynprobe_location {
     uint64_t index;     // The index as counted by the module.
     uint64_t offset;    // The file offset of the probe's address.
     uint64_t semaphore; // The file offset of the probe's semaphore.
-    dynprobe_location(uint64_t index, uint64_t offset, uint64_t semaphore):
-      index(index), offset(offset), semaphore(semaphore) {}
+    bool return_p;      // This is flagged as a return probe
+
+    dynprobe_location(uint64_t index, uint64_t offset,
+                      uint64_t semaphore, uint64_t flags);
 };
 
 

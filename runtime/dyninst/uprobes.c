@@ -60,6 +60,13 @@ uint64_t stp_dyninst_probe_semaphore(uint64_t index)
 	return stapdu_probes[index].semaphore;
 }
 
+uint64_t stp_dyninst_probe_flags(uint64_t index)
+{
+	if (index >= stp_dyninst_probe_count())
+		return (uint64_t)-1;
+	return stapdu_probes[index].flags;
+}
+
 int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...)
 {
 	struct pt_regs regs = {0};
