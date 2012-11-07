@@ -43,6 +43,7 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 
 #include "linux_types.h"
+#include "offset_list.h"
 
 
 #ifndef NSEC_PER_SEC
