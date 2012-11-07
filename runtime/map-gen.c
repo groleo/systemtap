@@ -327,12 +327,8 @@
 /* */
 
 struct KEYSYM(map_node) {
-	/* list of other nodes in the map */
-	struct list_head lnode;
-	/* list of nodes with the same hash value */
-	struct hlist_node hnode;
-	/* pointer back to the map struct */
-	struct map_root *map;
+	/* common node bits */
+	struct map_node node;
 
 	KEY1STOR;
 #if KEY_ARITY > 1
@@ -361,6 +357,12 @@ struct KEYSYM(map_node) {
 #endif
 };
 
+static inline struct KEYSYM(map_node)*
+KEYSYM(get_map_node) (struct map_node* m)
+{
+	return container_of(m, struct KEYSYM(map_node), node);
+}
+
 #define type_to_enum(type)						\
 	({								\
 		int ret;						\
@@ -374,7 +376,7 @@ struct KEYSYM(map_node) {
 static key_data KEYSYM(map_get_key) (struct map_node *mn, int n, int *type)
 {
 	key_data ptr;
-	struct KEYSYM(map_node) *m = (struct KEYSYM(map_node) *)mn;	
+	struct KEYSYM(map_node) *m = KEYSYM(get_map_node)(mn);
 
 	if (n > KEY_ARITY || n < 1) {
 		if (type)
@@ -621,8 +623,7 @@ static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(map_node) *)((long)e - sizeof(struct list_head));
+	hlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -649,15 +650,15 @@ static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 #endif
 #endif
 			) {
-			return MAP_SET_VAL(map,(struct map_node *)n, val, add);
+			return MAP_SET_VAL(map, &n->node, val, add);
 		}
 	}
 	/* key not found */
-	n = (struct KEYSYM(map_node)*)_new_map_create (map, head);
+	n = KEYSYM(get_map_node)(_new_map_create (map, head));
 	if (n == NULL)
 		return -1;
 	KEYCPY(n);
-	return MAP_SET_VAL(map,(struct map_node *)n, val, 0);
+	return MAP_SET_VAL(map, &n->node, val, 0);
 }
 
 static int KEYSYM(_stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val)
@@ -684,8 +685,7 @@ static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(map_node) *)((long)e - sizeof(struct list_head));
+	hlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -712,7 +712,7 @@ static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 #endif
 #endif
 			) {
-			return MAP_GET_VAL((struct map_node *)n);
+			return MAP_GET_VAL(&n->node);
 		}
 	}
 	/* key not found */
@@ -732,8 +732,7 @@ static int KEYSYM(_stp_map_del) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(map_node) *)((long)e - sizeof(struct list_head));
+	hlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -760,7 +759,7 @@ static int KEYSYM(_stp_map_del) (MAP map, ALLKEYSD(key))
 #endif
 #endif
 			) {
-			_new_map_del_node(map,(struct map_node *)n);
+			_new_map_del_node(map, &n->node);
 			return 0;
 		}
 	}
@@ -781,8 +780,7 @@ static int KEYSYM(_stp_map_exists) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(map_node) *)((long)e - sizeof(struct list_head));
+	hlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)

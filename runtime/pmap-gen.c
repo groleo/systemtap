@@ -327,12 +327,8 @@
 /* */
 
 struct KEYSYM(pmap_node) {
-	/* list of other nodes in the map */
-	struct list_head lnode;
-	/* list of nodes with the same hash value */
-	struct hlist_node hnode;
-	/* pointer back to the map struct */
-	struct map_root *map;
+	/* common node bits */
+	struct map_node node;
 
 	KEY1STOR;
 #if KEY_ARITY > 1
@@ -361,6 +357,12 @@ struct KEYSYM(pmap_node) {
 #endif
 };
 
+static inline struct KEYSYM(pmap_node)*
+KEYSYM(get_pmap_node) (struct map_node* m)
+{
+	return container_of(m, struct KEYSYM(pmap_node), node);
+}
+
 #define type_to_enum(type)						\
 	({								\
 		int ret;						\
@@ -374,8 +376,8 @@ struct KEYSYM(pmap_node) {
 /* returns 1 on match, 0 otherwise */
 static int KEYSYM(pmap_key_cmp) (struct map_node *m1, struct map_node *m2)
 {
-	struct KEYSYM(pmap_node) *n1 = (struct KEYSYM(pmap_node) *)m1;
-	struct KEYSYM(pmap_node) *n2 = (struct KEYSYM(pmap_node) *)m2;
+	struct KEYSYM(pmap_node) *n1 = KEYSYM(get_pmap_node)(m1);
+	struct KEYSYM(pmap_node) *n2 = KEYSYM(get_pmap_node)(m2);
 		if (KEY1_EQ_P(n1->key1, n2->key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n1->key2, n2->key2)
@@ -410,8 +412,8 @@ static int KEYSYM(pmap_key_cmp) (struct map_node *m1, struct map_node *m2)
 /* copy keys for m2 -> m1 */
 static void KEYSYM(pmap_copy_keys) (struct map_node *m1, struct map_node *m2)
 {
-	struct KEYSYM(pmap_node) *dst = (struct KEYSYM(pmap_node) *)m1;
-	struct KEYSYM(pmap_node) *src = (struct KEYSYM(pmap_node) *)m2;
+	struct KEYSYM(pmap_node) *dst = KEYSYM(get_pmap_node)(m1);
+	struct KEYSYM(pmap_node) *src = KEYSYM(get_pmap_node)(m2);
 #if KEY1_TYPE == STRING
 	str_copy (dst->key1, src->key1); 
 #else
@@ -478,7 +480,7 @@ static void KEYSYM(pmap_copy_keys) (struct map_node *m1, struct map_node *m2)
 static key_data KEYSYM(pmap_get_key) (struct map_node *mn, int n, int *type)
 {
 	key_data ptr;
-	struct KEYSYM(pmap_node) *m = (struct KEYSYM(pmap_node) *)mn;	
+	struct KEYSYM(pmap_node) *m = KEYSYM(get_pmap_node)(mn);
 
 	if (n > KEY_ARITY || n < 1) {
 		if (type)
@@ -755,8 +757,7 @@ static int KEYSYM(__stp_pmap_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 	hv = KEYSYM(phash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(pmap_node) *)((long)e - sizeof(struct list_head));
+	hlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -783,17 +784,17 @@ static int KEYSYM(__stp_pmap_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 #endif
 #endif
 			) {
-			return MAP_SET_VAL(map,(struct map_node *)n, val, add);
+			return MAP_SET_VAL(map, &n->node, val, add);
 		}
 	}
 
 	/* key not found */
-	n = (struct KEYSYM(pmap_node)*)_new_map_create (map, head);
+	n = KEYSYM(get_pmap_node)(_new_map_create (map, head));
 	if (n == NULL)
 		return -1;
 
 	KEYCPY(n);
-	return MAP_SET_VAL(map,(struct map_node *)n, val, 0);
+	return MAP_SET_VAL(map, &n->node, val, 0);
 }
 
 static int KEYSYM(_stp_pmap_set) (PMAP pmap, ALLKEYSD(key), VSTYPE val)
@@ -851,8 +852,7 @@ static VALTYPE KEYSYM(_stp_pmap_get_cpu) (PMAP pmap, ALLKEYSD(key))
 
 	hv = KEYSYM(phash) (ALLKEYS(key));
 	head = &map->hashes[hv];
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(pmap_node) *)((long)e - sizeof(struct list_head));
+	hlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -879,7 +879,7 @@ static VALTYPE KEYSYM(_stp_pmap_get_cpu) (PMAP pmap, ALLKEYSD(key))
 #endif
 #endif
 			) {
-			res = MAP_GET_VAL((struct map_node *)n);
+			res = MAP_GET_VAL(&n->node);
 			MAP_UNLOCK(map);
 			MAP_PUT_CPU();
 			return res;
@@ -909,8 +909,7 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 	/* first look it up in the aggregation map */
 	agg = &pmap->agg;
 	ahead = &agg->hashes[hv];
-	hlist_for_each(e, ahead) {
-		n = (struct KEYSYM(pmap_node) *)((long)e - sizeof(struct list_head));
+	hlist_for_each_entry(n, e, ahead, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -937,7 +936,7 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 #endif
 #endif
 			) {
-			anode = (struct map_node *)n;
+			anode = &n->node;
 			clear_agg = 1;
 			break;
 		}
@@ -952,8 +951,7 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 #endif
 
 		head = &map->hashes[hv];
-		hlist_for_each(e, head) {
-			n = (struct KEYSYM(pmap_node) *)((long)e - sizeof(struct list_head));
+		hlist_for_each_entry(n, e, head, node.hnode) {
 			if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 			    && KEY2_EQ_P(n->key2, key2)
@@ -981,13 +979,13 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 #endif
 				) {
 				if (anode == NULL) {
-					anode = _stp_new_agg(agg, ahead, (struct map_node *)n);
+					anode = _stp_new_agg(agg, ahead, &n->node);
 				} else {
 					if (clear_agg) {
 						_new_map_clear_node (anode);
 						clear_agg = 0;
 					}
-					_stp_add_agg(anode, (struct map_node *)n);
+					_stp_add_agg(anode, &n->node);
 				}
 			}
 		}
@@ -1016,8 +1014,7 @@ static int KEYSYM(__stp_pmap_del) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(phash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(pmap_node) *)((long)e - sizeof(struct list_head));
+	hlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -1044,7 +1041,7 @@ static int KEYSYM(__stp_pmap_del) (MAP map, ALLKEYSD(key))
 #endif
 #endif
 			) {
-			_new_map_del_node(map,(struct map_node *)n);
+			_new_map_del_node(map, &n->node);
 			return 0;
 		}
 	}
