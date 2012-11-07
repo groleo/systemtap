@@ -9,6 +9,7 @@
 #include "config.h"
 #include "session.h"
 #include "cache.h"
+#include "re2c-migrate/regcomp.h" // TODOXXX
 #include "elaborate.h"
 #include "translate.h"
 #include "buildrun.h"

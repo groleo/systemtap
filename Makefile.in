@@ -547,7 +547,7 @@ LDADD =
 EXAMPLE_SOURCE_DIR = $(srcdir)/testsuite/systemtap.examples
 EXAMPLE_META_FILES = $(EXAMPLE_SOURCE_DIR)/*/*.meta
 TEST_COV_DIR = coverage
-SUBDIRS = . stapdyn staprun doc man po
+SUBDIRS = . stapdyn staprun re2c-migrate doc man po
 # NB: the gcov target above uses this to enumarate linked binaries' build directories
 DIST_SUBDIRS = testsuite $(SUBDIRS)
 EXTRA_DIST = m4/ChangeLog

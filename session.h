@@ -56,6 +56,7 @@ struct hrtimer_derived_probe_group;
 struct procfs_derived_probe_group;
 struct dynprobe_derived_probe_group;
 struct embeddedcode;
+struct stapdfa;
 class translator_output;
 struct unparser;
 struct semantic_error;
@@ -293,6 +294,7 @@ public:
   std::vector<derived_probe*> probes; // see also *_probes groups below
   std::vector<embeddedcode*> embeds;
   std::map<std::string, statistic_decl> stat_decls;
+  std::map<std::string, stapdfa> dfas;
   // track things that are removed
   std::vector<vardecl*> unused_globals;
   std::vector<derived_probe*> unused_probes; // see also *_probes groups below

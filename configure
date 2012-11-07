@@ -10828,6 +10828,8 @@ ac_config_files="$ac_config_files staprun/Makefile"
 
 ac_config_files="$ac_config_files staprun/run-staprun"
 
+ac_config_files="$ac_config_files re2c-migrate/Makefile"
+
 
 # Setup "shadow" directory doc/beginners that has everything setup for
 # publican in one directory (through directory links if necessary).
@@ -11666,6 +11668,7 @@ do
     "stapdyn/Makefile") CONFIG_FILES="$CONFIG_FILES stapdyn/Makefile" ;;
     "staprun/Makefile") CONFIG_FILES="$CONFIG_FILES staprun/Makefile" ;;
     "staprun/run-staprun") CONFIG_FILES="$CONFIG_FILES staprun/run-staprun" ;;
+    "re2c-migrate/Makefile") CONFIG_FILES="$CONFIG_FILES re2c-migrate/Makefile" ;;
     "doc/beginners/publican.cfg") CONFIG_FILES="$CONFIG_FILES doc/beginners/publican.cfg:doc/SystemTap_Beginners_Guide/publican.cfg.in" ;;
     "doc/beginners") CONFIG_COMMANDS="$CONFIG_COMMANDS doc/beginners" ;;
 

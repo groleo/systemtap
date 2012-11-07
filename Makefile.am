@@ -306,7 +306,7 @@ if BUILD_SERVER
 	rm -f $(DESTDIR)$(localstatedir)/log/stap-server/log
 endif
 
-SUBDIRS = . stapdyn staprun doc man po
+SUBDIRS = . stapdyn staprun re2c-migrate doc man po
 # NB: the gcov target above uses this to enumarate linked binaries' build directories
 DIST_SUBDIRS = testsuite $(SUBDIRS)
 EXTRA_DIST = m4/ChangeLog

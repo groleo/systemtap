@@ -647,6 +647,7 @@ AC_CONFIG_FILES([dtrace], [chmod +x dtrace])
 AC_CONFIG_FILES(stapdyn/Makefile)
 AC_CONFIG_FILES(staprun/Makefile)
 AC_CONFIG_FILES([staprun/run-staprun], [chmod +x staprun/run-staprun])
+AC_CONFIG_FILES(re2c-migrate/Makefile)
 
 # Setup "shadow" directory doc/beginners that has everything setup for
 # publican in one directory (through directory links if necessary).
