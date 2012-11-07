@@ -1387,6 +1387,9 @@ systemtap_session::check_options (int argc, char * const argv [])
 	      cerr << _("You are trying to run systemtap as a normal user.\n"
 			"You should either be root, or be part of "
 			"the group \"stapusr\" and possibly one of the groups \"stapsys\" or \"stapdev\".\n");
+#if HAVE_DYNINST
+	      cerr << _("Alternatively, you may specify --runtime=dyninst for userspace probing.\n");
+#endif
 	      usage (1); // does not return.
 	    }
 	}
