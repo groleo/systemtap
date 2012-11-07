@@ -74,6 +74,16 @@ int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...)
 	va_list varegs;
 	va_start(varegs, nregs);
 
+#ifdef __i386__
+	// XXX Dyninst currently has a bug where it's only passing a 32-bit
+	// index, which means nregs gets stuffed into the upper bits of index,
+	// and the varegs are all off by one.  Hacking it into shape for now...
+	if (index > UINT32_MAX) {
+		SET_REG_IP((&regs), nregs);
+                nregs = index >> 32;
+                index &= UINT32_MAX;
+        } else
+#endif
 	if (nregs > 0)
 		SET_REG_IP((&regs), va_arg(varegs, unsigned long));
 
