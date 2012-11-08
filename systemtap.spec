@@ -54,8 +54,7 @@ BuildRequires: gcc-c++
 BuildRequires: gettext-devel
 BuildRequires: nss-devel avahi-devel pkgconfig
 %if %{with_dyninst}
-# include the prerelease version for now, but really this is >= 8.0
-BuildRequires: dyninst-devel >= 7.99
+BuildRequires: dyninst-devel >= 8.0
 BuildRequires: libselinux-devel
 %endif
 %if %{with_sqlite}

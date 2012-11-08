@@ -101,14 +101,13 @@ mutatee::~mutatee()
 bool
 mutatee::load_stap_dso(const string& filename)
 {
-  BPatch_module* stap_mod = process->loadLibrary(filename.c_str());
-  if (!stap_mod)
+  stap_dso = process->loadLibrary(filename.c_str());
+  if (!stap_dso)
     {
       staperror() << "Couldn't load " << filename
                   << " into the target process" << endl;
       return false;
     }
-  stap_dso = stap_mod->getObject();
   return true;
 }
 
