@@ -134,7 +134,6 @@ systemtap_session::systemtap_session ():
   need_symbols = false;
   uprobes_path = "";
   consult_symtab = false;
-  ignore_vmlinux = false;
   ignore_dwarf = false;
   load_only = false;
   skip_badvars = false;
@@ -302,7 +301,6 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   need_symbols = false;
   uprobes_path = "";
   consult_symtab = other.consult_symtab;
-  ignore_vmlinux = other.ignore_vmlinux;
   ignore_dwarf = other.ignore_dwarf;
   load_only = other.load_only;
   skip_badvars = other.skip_badvars;
@@ -530,8 +528,6 @@ systemtap_session::usage (int exitcode)
     "              equivalent to --privilege=stapusr\n"
 #if 0 /* PR6864: disable temporarily; should merge with -d somehow */
     "   --kelf     make do with symbol table from vmlinux\n"
-    "   --kmap[=FILE]\n"
-    "              make do with symbol table from nm listing\n"
 #endif
   // Formerly present --ignore-{vmlinux,dwarf} options are for testsuite use
   // only, and don't belong in the eyesight of a plain user.
@@ -875,28 +871,6 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 	case LONG_OPT_KELF:
 	  server_args.push_back ("--kelf");
 	  consult_symtab = true;
-	  break;
-
-	case LONG_OPT_KMAP:
-	  // Leave consult_symtab unset for now, to ease error checking.
-	  if (!kernel_symtab_path.empty())
-	    {
-	      cerr << _("You can't specify multiple --kmap options.") << endl;
-	      return 1;
-	    }
-	  if (optarg) {
-	    kernel_symtab_path = optarg;
-	    server_args.push_back ("--kmap=" + string(optarg));
-	  }
-	  else {
-	    kernel_symtab_path = PATH_TBD;
-	    server_args.push_back ("--kmap");
-	  }
-	  break;
-
-	case LONG_OPT_IGNORE_VMLINUX:
-	  server_args.push_back ("--ignore-vmlinux");
-	  ignore_vmlinux = true;
 	  break;
 
 	case LONG_OPT_IGNORE_DWARF:
@@ -1431,17 +1405,6 @@ systemtap_session::check_options (int argc, char * const argv [])
       usage (1);
     }
 
-  if (!kernel_symtab_path.empty())
-    {
-      if (consult_symtab)
-      {
-        cerr << _F("You can't specify %s and %s together.", "--kelf", "--kmap") << endl;
-        usage (1);
-      }
-      consult_symtab = true;
-      if (kernel_symtab_path == PATH_TBD)
-        kernel_symtab_path = string("/boot/System.map-") + kernel_release;
-    }
   // Can't use --remote and --tmpdir together because with --remote,
   // there may be more than one tmpdir needed.
   if (!remote_uris.empty() && tmpdir_opt_set)

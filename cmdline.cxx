@@ -13,8 +13,6 @@
 // should be restricted from stap clients (after --client-options)!
 struct option stap_long_options[] = {
   { "kelf", 0, NULL, LONG_OPT_KELF },
-  { "kmap", 2, NULL, LONG_OPT_KMAP },
-  { "ignore-vmlinux", 0, NULL, LONG_OPT_IGNORE_VMLINUX },
   { "ignore-dwarf", 0, NULL, LONG_OPT_IGNORE_DWARF },
   { "skip-badvars", 0, NULL, LONG_OPT_SKIP_BADVARS },
   { "vp", 1, NULL, LONG_OPT_VERBOSE_PASS },

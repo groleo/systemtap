@@ -18,8 +18,6 @@ extern "C" {
 // characters, since those are returned by getopt_long for short options.
 enum {
   LONG_OPT_KELF = 256,
-  LONG_OPT_KMAP,
-  LONG_OPT_IGNORE_VMLINUX,
   LONG_OPT_IGNORE_DWARF,
   LONG_OPT_VERBOSE_PASS,
   LONG_OPT_SKIP_BADVARS,

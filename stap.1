@@ -257,25 +257,7 @@ output files exceed
 .\"See the
 .\".B "MAKING DO WITH SYMBOL TABLES"
 .\"section for more information.
-.\".TP
-.\".BI \-\-kmap [=FILE] 
-.\"For names and addresses of kernel functions to probe,
-.\"consult the symbol table in the indicated text file.
-.\"The default is /boot/System.map\-VERSION.
-.\"The contents of this file should be in the form of the default output from
-.\".IR nm (1).
-.\"Only symbols of type T or t are used.
-.\"If you specify /proc/kallsyms or some other file in that format,
-.\"where lines for module symbols contain a fourth column,
-.\"reading of the symbol table stops with the first module symbol
-.\"(which should be right after the last kernel symbol).
-.\"As with
-.\".BR \-\-kelf ,
-.\"the symbol table in each module's .ko file will also be consulted.
-.\"See the
-.\".B "MAKING DO WITH SYMBOL TABLES"
-.\"section for more information.
-.\" \-\-ignore\-{vmlinux,dwarf} shouldn't be visible
+.\" \-\-ignore\-dwarf shouldn't be visible
 .TP
 .B \-\-skip\-badvars
 Ignore unresolvable or run-time-inaccessible context variables and
@@ -1958,15 +1940,11 @@ group stapusr.
 .\"such as /boot/System.map or /proc/kallsyms.
 .\"See the
 .\".B \-\-kelf
-.\"and
-.\".B \-\-kmap
-.\"options.
+.\"option.
 .\".PP
 .\"If systemtap finds relevant debugging information,
 .\"it will use it even if you specify
-.\".B \-\-kelf
-.\"or
-.\".BR \-\-kmap .
+.\".BR \-\-kelf .
 .\".PP
 .\"Without debugging information, systemtap cannot support the
 .\"following types of language constructs:

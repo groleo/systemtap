@@ -2021,13 +2021,7 @@ query_module (Dwfl_Module *mod,
                                    & main_filename,
                                    & debug_filename);
 
-          if (q->sess.ignore_vmlinux && name == TOK_KERNEL)
-            {
-              // report_kernel() in elfutils found vmlinux, but pretend it didn't.
-              // Given a non-null path, returning 1 means keep reporting modules.
-              mi->dwarf_status = info_absent;
-            }
-          else if (debug_filename || main_filename)
+          if (debug_filename || main_filename)
             {
               mi->elf_path = debug_filename ?: main_filename;
             }
@@ -7117,41 +7111,19 @@ symbol_table::purge_syscall_stubs()
 void
 module_info::get_symtab(dwarf_query *q)
 {
-  systemtap_session &sess = q->sess;
-
   if (symtab_status != info_unknown)
     return;
 
   sym_table = new symbol_table(this);
   if (!elf_path.empty())
     {
-      if (name == TOK_KERNEL && !sess.kernel_symtab_path.empty())
-        sess.print_warning("reading symbol table from " + elf_path + " -- ignoring " + sess.kernel_symtab_path.c_str());
       symtab_status = sym_table->get_from_elf();
     }
   else
     {
       assert(name == TOK_KERNEL);
-      if (sess.kernel_symtab_path.empty())
-        {
-          symtab_status = info_absent;
-          cerr << _("Error: Cannot find vmlinux.\n"
-                  "  Consider using --kmap instead of --kelf.")
-               << endl;;
-        }
-      else
-        {
-          symtab_status =
-	    sym_table->read_from_text_file(sess.kernel_symtab_path, sess);
-          if (symtab_status == info_present)
-            {
-              sess.sym_kprobes_text_start =
-                sym_table->lookup_symbol_address("__kprobes_text_start");
-              sess.sym_kprobes_text_end =
-                sym_table->lookup_symbol_address("__kprobes_text_end");
-              sess.sym_stext = sym_table->lookup_symbol_address("_stext");
-            }
-        }
+      symtab_status = info_absent;
+      cerr << _("Error: Cannot find vmlinux.") << endl;;
     }
   if (symtab_status == info_absent)
     {
