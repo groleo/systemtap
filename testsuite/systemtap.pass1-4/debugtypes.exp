@@ -1,9 +1,18 @@
 set test debugtypes
 
+# Make sure gcc has support for the '-gdwarf-4 -fdebug-types-section'
+# options, otherwise, there is no point to running this test.
+if {[catch {exec gcc -E -gdwarf-4 -fdebug-types-section - < /dev/null}]} {
+    untested "$test (no gcc '-gdwarf-4 -fdebug-types-section' support)"
+    return
+}
+
+# Now that we know gcc has support for those options, make sure we
+# handle that debugging section option.
 if {[target_compile $srcdir/$subdir/$test.cxx $test.exe executable \
        {debug {additional_flags=-gdwarf-4 -fdebug-types-section}}] != ""} {
-  fail "compiling $test.cxx"
-  return
+    fail "compiling $test.cxx"
+    return
 }
 pass "compiling $test.cxx"
 
