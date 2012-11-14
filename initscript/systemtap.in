@@ -303,7 +303,7 @@ stap_getopt () { # opts
   local ret
   # TODO: support quoted options
   getopt -s bash -u \
-         -l 'kelf,ignore-dwarf,vp:' \
+         -l 'vp:' \
          -o 'hVvtp:I:e:o:R:r:m:kgPc:x:D:bs:uqwl:d:L:FS:' -- $@
   ret=$?
   [ $ret -ne 0 ] && slog "Failed to parse parameters. ($@)"

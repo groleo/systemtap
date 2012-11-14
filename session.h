@@ -255,7 +255,6 @@ public:
   // dwarfless operation
   bool consult_symtab;
   std::string kernel_symtab_path;
-  bool ignore_dwarf;
 
   // Skip bad $ vars
   bool skip_badvars;

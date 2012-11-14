@@ -3062,9 +3062,6 @@ msgid ""
 "privilege level\n"
 "   --unprivileged\n"
 "              equivalent to --privilege=stapusr\n"
-"   --kelf     make do with symbol table from vmlinux\n"
-"   --kmap[=FILE]\n"
-"              make do with symbol table from nm listing\n"
 "   --compatible=VERSION\n"
 "              suppress incompatible language/tapset changes beyond VERSION,\n"
 "              instead of %s\n"
@@ -4370,8 +4367,7 @@ msgstr ""
 
 #: tapsets.cxx:7103
 msgid ""
-"Error: Cannot find vmlinux.\n"
-"  Consider using --kmap instead of --kelf."
+"Error: Cannot find vmlinux."
 msgstr ""
 
 #: tapsets.cxx:7267
@@ -5372,9 +5368,6 @@ msgstr ""
 #, fuzzy
 #~ msgid "              run pass 5 on the specified ssh host."
 #~ msgstr "              run pass 5 on the specified ssh host (EXPERIMENTAL)"
-
-#~ msgid "You can't specify --kelf and --kmap together."
-#~ msgstr "You can't specify --kelf and --kmap together."
 
 #~ msgid "ERROR: -R invalid with --client-options"
 #~ msgstr "ERROR: -R invalid with --client-options"

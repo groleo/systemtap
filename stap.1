@@ -246,18 +246,6 @@ If the size of output file will exceed
 output files exceed
 .B N
 , systemtap removes the oldest output file. You can omit the second argument.
-.\" PR6864: disable temporarily 
-.\".TP
-.\".B \-\-kelf
-.\"For names and addresses of functions to probe,
-.\"consult the symbol tables in the kernel and modules.
-.\"This can be useful if your kernel and/or modules were compiled
-.\"without debugging information, or the function you want to probe
-.\"is in an assembly-language file built without debugging information.
-.\"See the
-.\".B "MAKING DO WITH SYMBOL TABLES"
-.\"section for more information.
-.\" \-\-ignore\-dwarf shouldn't be visible
 .TP
 .B \-\-skip\-badvars
 Ignore unresolvable or run-time-inaccessible context variables and
@@ -1928,46 +1916,6 @@ above categories is used by members of only the group stapusr.
 
 No other built-in tapset functions may be used by members of only the
 group stapusr.
-
-.\" PR6864: disable temporarily 
-.\".SH MAKING DO WITH SYMBOL TABLES
-.\"Systemtap performs best when it has access to the debugging information
-.\"associated with your kernel and modules.
-.\"However, if this information is not available,
-.\"systemtap can still support probing of function entries and returns
-.\"using symbols read from vmlinux and/or the modules in /lib/modules.
-.\"Systemtap can also read the kernel symbol table from a text file
-.\"such as /boot/System.map or /proc/kallsyms.
-.\"See the
-.\".B \-\-kelf
-.\"option.
-.\".PP
-.\"If systemtap finds relevant debugging information,
-.\"it will use it even if you specify
-.\".BR \-\-kelf .
-.\".PP
-.\"Without debugging information, systemtap cannot support the
-.\"following types of language constructs:
-.\".IP \(bu 4
-.\"probe specifications that refer to source files or line numbers
-.\".IP \(bu 4
-.\"probe specifications that refer to inline functions
-.\".IP \(bu 4
-.\"statements that refer to $target variables
-.\".IP \(bu 4
-.\"statements that refer to @cast() variables
-.\".IP \(bu 4
-.\"tapset-defined variables defined using any of the above constructs.
-.\"In particular, at this writing,
-.\"the prologue blocks for certain aliases in the syscall tapset
-.\"(e.g., syscall.open) contain "if" statements that refer to $target variables.
-.\"If your script refers to any such aliases,
-.\"systemtap must have access to the kernel's debugging information.
-.\".PP
-.\"Most T and t symbols correspond to function entry points, but some do not.
-.\"Based only on the symbol table, systemtap cannot tell the difference.
-.\"Placing return probes on symbols that aren't entry points
-.\"will most likely lead to kernel stack corruption.
 
 .SH ALTERNATE RUNTIMES
 

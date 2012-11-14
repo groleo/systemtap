@@ -17,9 +17,7 @@ extern "C" {
 // NB: The values of these enumerators must not conflict with the values of ordinary
 // characters, since those are returned by getopt_long for short options.
 enum {
-  LONG_OPT_KELF = 256,
-  LONG_OPT_IGNORE_DWARF,
-  LONG_OPT_VERBOSE_PASS,
+  LONG_OPT_VERBOSE_PASS = 256,
   LONG_OPT_SKIP_BADVARS,
   LONG_OPT_UNPRIVILEGED,
   LONG_OPT_OMIT_WERROR,

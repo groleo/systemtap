@@ -134,7 +134,6 @@ systemtap_session::systemtap_session ():
   need_symbols = false;
   uprobes_path = "";
   consult_symtab = false;
-  ignore_dwarf = false;
   load_only = false;
   skip_badvars = false;
   privilege = pr_stapdev;
@@ -301,7 +300,6 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   need_symbols = false;
   uprobes_path = "";
   consult_symtab = other.consult_symtab;
-  ignore_dwarf = other.ignore_dwarf;
   load_only = other.load_only;
   skip_badvars = other.skip_badvars;
   privilege = other.privilege;
@@ -526,11 +524,6 @@ systemtap_session::usage (int exitcode)
     "              check the script for constructs not allowed at the given privilege level\n"
     "   --unprivileged\n"
     "              equivalent to --privilege=stapusr\n"
-#if 0 /* PR6864: disable temporarily; should merge with -d somehow */
-    "   --kelf     make do with symbol table from vmlinux\n"
-#endif
-  // Formerly present --ignore-{vmlinux,dwarf} options are for testsuite use
-  // only, and don't belong in the eyesight of a plain user.
     "   --compatible=VERSION\n"
     "              suppress incompatible language/tapset changes beyond VERSION,\n"
     "              instead of %s\n"
@@ -867,16 +860,6 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 	case LONG_OPT_VERSION:
 	  version ();
 	  throw exit_exception (EXIT_SUCCESS);
-
-	case LONG_OPT_KELF:
-	  server_args.push_back ("--kelf");
-	  consult_symtab = true;
-	  break;
-
-	case LONG_OPT_IGNORE_DWARF:
-	  server_args.push_back ("--ignore-dwarf");
-	  ignore_dwarf = true;
-	  break;
 
 	case LONG_OPT_VERBOSE_PASS:
 	  {

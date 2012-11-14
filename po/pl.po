@@ -2997,9 +2997,6 @@ msgid ""
 "privilege level\n"
 "   --unprivileged\n"
 "              equivalent to --privilege=stapusr\n"
-"   --kelf     make do with symbol table from vmlinux\n"
-"   --kmap[=FILE]\n"
-"              make do with symbol table from nm listing\n"
 "   --compatible=VERSION\n"
 "              suppress incompatible language/tapset changes beyond VERSION,\n"
 "              instead of %s\n"
@@ -4284,8 +4281,7 @@ msgstr ""
 
 #: tapsets.cxx:7103
 msgid ""
-"Error: Cannot find vmlinux.\n"
-"  Consider using --kmap instead of --kelf."
+"Error: Cannot find vmlinux."
 msgstr ""
 
 #: tapsets.cxx:7267

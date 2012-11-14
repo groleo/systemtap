@@ -12,8 +12,6 @@
 // NB: when adding new options, consider very carefully whether they
 // should be restricted from stap clients (after --client-options)!
 struct option stap_long_options[] = {
-  { "kelf", 0, NULL, LONG_OPT_KELF },
-  { "ignore-dwarf", 0, NULL, LONG_OPT_IGNORE_DWARF },
   { "skip-badvars", 0, NULL, LONG_OPT_SKIP_BADVARS },
   { "vp", 1, NULL, LONG_OPT_VERBOSE_PASS },
   { "unprivileged", 0, NULL, LONG_OPT_UNPRIVILEGED },
