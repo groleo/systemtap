@@ -1,8 +1,8 @@
 # Make sure we can use ptrace() on a process probed with systemtap.
 
 set TEST_NAME "ptrace"
-if {![utrace_p]} {
-    untested "$TEST_NAME : no kernel utrace support found"
+if {![uprobes_p]} {
+    untested "$TEST_NAME : no uprobes support found"
     return
 } elseif {![installtest_p]} {
     untested $TEST_NAME
@@ -18,7 +18,7 @@ set output_found 0
 eval spawn $cmd
 expect {
     -timeout 180
-    -re {^read\(\d+, .+\) = \d+\r\n\+\+\+ exited with 0 \+\+\+\r\n} {
+    -re {^read\(\d+, .+\) = \d+\r\n} {
 	set output_found 1
 	exp_continue
     }
@@ -27,8 +27,8 @@ catch close
 wait
 if { $output_found } { pass "$TEST_NAME" } else { fail "$TEST_NAME" }
 
-# The never probe won't get hit, but including 'print_ubacktrace()' will
-# enable task_finder and vma tracking.
+# The never probe won't get hit, but including 'print_ubacktrace()'
+# will enable task_finder and vma tracking.
 set TEST_NAME "ptrace (never)"
 set script {probe never{print_ubacktrace()}}
 set cmd {stap -e $script -c $subcmd}
@@ -36,7 +36,7 @@ set output_found 0
 eval spawn $cmd
 expect {
     -timeout 180
-    -re {^read\(\d+, .+\) = \d+\r\n\+\+\+ exited with 0 \+\+\+\r\n} {
+    -re {^read\(\d+, .+\) = \d+\r\n} {
 	set output_found 1
 	exp_continue
     }
