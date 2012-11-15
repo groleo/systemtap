@@ -14,7 +14,6 @@
 #include "../session.h"
 #include "../util.h"
 
-// TODOXXX more relevant includes from stdlib
 #include <iostream>
 #include <cstdlib>
 #include <string>
@@ -81,27 +80,38 @@ regex_to_stapdfa (systemtap_session *s, const string& input, unsigned& counter)
 
 // ------------------------------------------------------------------------
 
+RegExp *stapdfa::failRE = NULL;
+
 stapdfa::stapdfa ()
 {
   content = NULL;
+
+  if (!failRE) {
+    regex_parser p(" [\000-\377] "); // TODOXXX temp padding hack
+    failRE = p.parse();
+  }
 }
 
 stapdfa::stapdfa (const string& func_name, const string& re)
   : orig_input(re), func_name(func_name)
 {
-  regex_parser p(re);
-  RegExp *ast = p.parse ();
+  if (!failRE) {
+    regex_parser p("."); // TODOXXX temp padding hack
+    failRE = p.parse();
+  }
+
+  regex_parser p(" " + re + " "); // TODOXXX temporary padding hack
+  ast = prepare_rule(p.parse ()); // must be retained for re2c's reference
 
   // compile ast to DFA
   content = genCode (ast);
   content->prepare();
-
-  delete ast;
 }
 
 stapdfa::~stapdfa ()
 {
   delete content;
+  delete ast;
 }
 
 void
@@ -118,15 +128,11 @@ stapdfa::emit_declaration (translator_output *o)
   o->newline() << "#define YYCURSOR cur";
   o->newline() << "#define YYLIMIT cur";
   o->newline() << "#define YYMARKER mar";
-  o->newline() << "#define YYFILL(n) ";
+  o->newline() << "#define YYFILL(n) "; // TODOXXX bounds check YYFILL
 
-  // TODOXXX basic code + invocation of appropriate re2c code
-  RegExpMap* specMap = new RegExpMap();
-  re2c::uint ind = 0;
-  string condName;
+  re2c::uint topIndent = 0;
   bool bPrologBrace = false;
-  content->emit(o->newline(), ind, specMap, condName, true, bPrologBrace);
-  // o->newline() << "// condName == " << condName;
+  content->emit(o->newline(), topIndent, NULL, "", 0, bPrologBrace);
 
   o->newline() << "}";
 }
@@ -138,6 +144,24 @@ stapdfa::emit_matchop (translator_output *o, const string& match_expr)
   // TODOXXX can multiple copies of a match be generated? avoid
   // TODOXXX imitate translate.cxx's careful paren-wrapping
   o->line() << func_name << " (" << match_expr << ")";
+}
+
+RegExp *
+stapdfa::prepare_rule (RegExp *expr)
+{
+#define CODE_YES "{ return 1; }"
+#define CODE_NO "{ return 0; }"
+  SubStr codeYes(CODE_YES);
+  Token *tokenYes = new Token(codeYes, CODE_YES, 0);
+  SubStr codeNo(CODE_NO);
+  Token *tokenNo = new Token(codeNo, CODE_NO, 0);
+
+  RegExp *nope = new NullOp;
+  RegExp *resMatch = new RuleOp(expr, nope, tokenYes, 0);
+  RegExp *resFail = new RuleOp(failRE, nope, tokenNo, 0);
+
+  // return mkAlt(resFail, resMatch);
+  return resMatch; // TODOXXX trigger {return 0;} properly
 }
 
 void
@@ -427,12 +451,16 @@ regex_parser::parse_char_range ()
   if (c == '^')
     {
       inv = true;
-      next ();
+      c = next ();
     }
 
-  // TODOXXX grab range to next ']'
+  // TODOXXX grab range to next ']' PROPERLY
+  while (c != ']')
+    {
+      accumulate.push_back (c);
+      c = next ();
+    }
 
-  cerr << "ACCUMRANGE " << accumulate << endl;
   // invToRE and ranToRE take this funky custom class
   SubStr accumSubStr (accumulate.c_str ());
   return inv ? sc->invToRE (accumSubStr) : sc->ranToRE (accumSubStr);

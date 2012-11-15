@@ -19,6 +19,8 @@
 struct systemtap_session; /* from session.h */
 struct translator_output; /* from translate.h */
 namespace re2c {
+  typedef unsigned int uint;
+  class RegExp; /* from re2c */
   class DFA; /* from re2c */
 };
 
@@ -31,8 +33,11 @@ struct stapdfa {
   void emit_matchop (translator_output *o, const std::string& match_expr);
   void print (std::ostream& o) const;
 private:
+  re2c::RegExp *prepare_rule(re2c::RegExp *raw);
   std::string func_name;
+  re2c::RegExp *ast;
   re2c::DFA *content;
+  static re2c::RegExp *failRE; // TODOXXX hacky thing to attach {return 0;} to
 };
 
 std::ostream& operator << (std::ostream &o, const stapdfa& d);

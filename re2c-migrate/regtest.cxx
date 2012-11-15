@@ -45,7 +45,8 @@ int main(int argc, char *argv [])
         stapdfa d("do_match", s);
         translator_output o(cout);
 
-        string match_expr = "foo"; // TODOXXX escape argv[3]
+        string t(argv[3]);
+        string match_expr = "\"" + t + "\""; // TODOXXX escape argv[3]
 
         // emit code skeleton
         o.line() << "// test output for systemtap-re2c";
