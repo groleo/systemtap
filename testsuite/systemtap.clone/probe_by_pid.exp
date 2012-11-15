@@ -61,7 +61,7 @@ stap_run $TEST_NAME run_test_prog $output_string \
 
 # Kill both of the spawned processes
 catch {exec kill -INT -[exp_pid -i $id1]; close -i $id1; wait -i $id1}
-catch {exec kill -INT -$pid2]; close -i $id2; wait -i $id2}
+catch {exec kill -INT -[exp_pid -i $id2]; close -i $id2; wait -i $id2}
 
 # Here we'd like to test 'process(PID).function(FUNC)', but process
 # function probes only support .process(PATH).function(FUNC)' probes.
@@ -98,7 +98,7 @@ stap_run $TEST_NAME run_test_prog $output_string \
 
 # Kill both of the spawned processes
 catch {exec kill -INT -[exp_pid -i $id1]; close -i $id1; wait -i $id1}
-catch {exec kill -INT -$pid2]; close -i $id2; wait -i $id2}
+catch {exec kill -INT -[exp_pid -i $id2]; close -i $id2; wait -i $id2}
 
 # FIXME: we could also test hard-linked paths with
 # 'process(PATH).mark(MARK)' probes (with and without semaphores).
