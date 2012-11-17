@@ -5344,6 +5344,8 @@ static void create_debug_frame_hdr (const unsigned char e_ident[],
     }
 }
 
+static set<string> vdso_paths;
+
 // Get the .debug_frame end .eh_frame sections for the given module.
 // Also returns the lenght of both sections when found, plus the section
 // address (offset) of the eh_frame data. If a debug_frame is found, a
@@ -5367,9 +5369,29 @@ static void get_unwind_data (Dwfl_Module *m,
   Elf *elf;
 
   // fetch .eh_frame info preferably from main elf file.
-  dwfl_module_info (m, NULL, &start, NULL, NULL, NULL, NULL, NULL);
+  const char *modname = dwfl_module_info (m, NULL, &start,
+                                          NULL, NULL, NULL, NULL, NULL);
   elf = dwfl_module_getelf(m, &bias);
   ehdr = gelf_getehdr(elf, &ehdr_mem);
+
+  // This is a little unelegant, since at this point we only have the
+  // kernel normalized machine architecture as string, but we can deduce
+  // the ELF class from that and warn if it is different from the module
+  // ELF class. See PR10272.
+  int kelf_class = elf_class_from_normalized_machine (session.architecture);
+  int melf_class = (int) ehdr->e_ident[EI_CLASS];
+  if (kelf_class != melf_class)
+    {
+      // Don't warn about 32bit VDSO, the user didn't explicitly add those.
+      if (vdso_paths.find (string(modname)) == vdso_paths.end ())
+        session.print_warning ("Kernel ELF class (" + lex_cast (kelf_class)
+                               + ") doesn't match module '" + modname
+                               + "' ELF class (" + lex_cast (melf_class)
+                               + "), backtraces for 32bit programs on 64bit"
+                               + " kernels don't work.");
+      return;
+    }
+
   scn = NULL;
   bool eh_frame_seen = false;
   bool eh_frame_hdr_seen = false;
@@ -6275,8 +6297,6 @@ add_unwindsym_ldd (systemtap_session &s)
 
   s.unwindsym_modules.insert (added.begin(), added.end());
 }
-
-static set<string> vdso_paths;
 
 static int find_vdso(const char *path, const struct stat *, int type)
 {

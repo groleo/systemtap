@@ -26,6 +26,7 @@
 #include <ext/stdio_filebuf.h>
 
 extern "C" {
+#include <elf.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <pwd.h>
@@ -1005,6 +1006,25 @@ normalize_machine(const string& machine)
   else if (machine.substr(0,3) == "sh3") return "sh";
   else if (machine.substr(0,3) == "sh4") return "sh";
   return machine;
+}
+
+int
+elf_class_from_normalized_machine (const string &machine)
+{
+  // Must match kernel machine architectures as used un tapset directory.
+  // And must match normalization done in normalize_machine ().
+  if (machine == "i386"
+      || machine == "arm")         // arm assumes 32-bit
+    return ELFCLASS32;
+  else if (machine == "s390"       // powerpc and s390 always assume 64-bit,
+           || machine == "powerpc" // see normalize_machine ().
+           || machine == "x86_64"
+           || machine == "ia64")
+    return ELFCLASS64;
+
+  cerr << _F("Unknown kernel machine architecture '%s', don't know elf class",
+             machine.c_str()) << endl;
+  return -1;
 }
 
 string
