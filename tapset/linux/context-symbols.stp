@@ -87,8 +87,8 @@ function sprint_stack:string(stk:string) { return sprint_syms(stk) }
  * sfunction probefunc - Return the probe point's function name, if known
  *
  * Description: This function returns the name of the function being probed
- * based on the current address, as computed by symname(stack(0)) or
- * usymname(ustack(0)) depending on probe context (whether the probe is
+ * based on the current address, as computed by symname(addr()) or
+ * usymname(uaddr()) depending on probe context (whether the probe is
  * a user probe or a kernel probe).
  *
  * Please note: this function's behaviour differs between SystemTap 2.0
@@ -130,9 +130,9 @@ function probefunc:string () %( systemtap_v < "2.0" %?
 %:
 {
 	%( systemtap_privilege != "stapusr" %?
-	   return user_mode() ? usymname(ustack(0)) : symname(stack(0))
+	   return user_mode() ? usymname(uaddr()) : symname(addr())
 	%:
-	   return user_mode() ? usymname(ustack(0))
+	   return user_mode() ? usymname(uaddr())
 	   	  	      : error("kernel probefunc() query from unprivileged script") /* XXX should be impossible */
         %)
 }
