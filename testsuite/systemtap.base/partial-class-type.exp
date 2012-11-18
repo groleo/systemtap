@@ -15,13 +15,13 @@ proc error_handler { res message } {
 }
 
 set srcpath "$srcdir/$subdir"
-set res [target_compile $srcpath/partial-class-type-heap.cxx "partial-class-type-heap.o" object "additional_flags=-g additional_flags=-O2"]
+set res [target_compile $srcpath/partial-class-type-heap.cxx "partial-class-type-heap.o" object "compiler=g++ additional_flags=-g additional_flags=-O2"]
 if { [error_handler [expr {$res==""}] "partial-class-type-heap.cxx"] } { return }
 
-set res [target_compile $srcpath/partial-class-type-main.cxx "partial-class-type-main.o" object "additional_flags=-g additional_flags=-O2"]
+set res [target_compile $srcpath/partial-class-type-main.cxx "partial-class-type-main.o" object "compiler=g++ additional_flags=-g additional_flags=-O2"]
 if { [error_handler [expr {$res==""}] "partial-class-type-main.cxx"] } { return }
 
-set res [target_compile "partial-class-type-main.o partial-class-type-heap.o" "partial-class-type" executable "additional_flags=-g additional_flags=-O2"]
+set res [target_compile "partial-class-type-main.o partial-class-type-heap.o" "partial-class-type" executable "compiler=g++ additional_flags=-g additional_flags=-O2"]
 if { [error_handler [expr {$res==""}] "partial-class-type"] } { return }
 
 set script {"probe process(\"./partial-class-type\").function(\"main\") { printf(\"_size member offset: %d\\n\", &@cast(0, \"Heap\")->_size); }"}
