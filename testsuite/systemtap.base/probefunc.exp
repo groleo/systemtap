@@ -50,7 +50,8 @@ set script [format $systemtap_script $probepoint]
 stap_run $prefix$probepoint sleep_one_sec $output_string -e $script
 
 # test probefunc() with kernel.function().inline
+# NOTE probefunc inline behavior changed after 1.8.
 set output_string "\\mcontext_switch\\M\r\n"
 set probepoint "kernel.function(\"context_switch\").inline"
 set script [format $systemtap_script $probepoint]
-stap_run $prefix$probepoint sleep_one_sec $output_string -e $script
+stap_run $prefix$probepoint sleep_one_sec $output_string -e $script --compatible=1.8
