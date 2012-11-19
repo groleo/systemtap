@@ -44,7 +44,7 @@
 #define EREG(nm, regs) ((regs)->nm)
 #define RREG(nm, regs) ((regs)->nm)
 #else
-#define EREG(nm, regs) ((regs)->r##nm)
+#define EREG(nm, regs) ((regs)->e##nm)
 #define RREG(nm, regs) ((regs)->r##nm)
 #endif
 
