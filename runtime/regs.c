@@ -79,6 +79,13 @@ static int64_t __stp_sign_extend32(int64_t val)
  * -1 if the arg number is invalid.
  * We assume that the regs pointer is valid.
  */
+
+#if defined(__i386__)
+#define ERREG(nm, regs) EREG(nm, regs)
+#else  /* x86_64 */
+#define ERREG(nm, regs) RREG(nm, regs)
+#endif
+
 static int _stp_get_arg32_by_number(int n, int nr_regargs,
 					struct pt_regs *regs, long *val)
 {
@@ -95,9 +102,9 @@ static int _stp_get_arg32_by_number(int n, int nr_regargs,
 		return (user_mode(regs) ? 2 : 1);
 	} else {
 		switch (n) {
-		case 1: *val = EREG(ax, regs); break;
-		case 2: *val = EREG(dx, regs); break;
-		case 3: *val = EREG(cx, regs); break;
+		case 1: *val = (int32_t)(ERREG(ax, regs)); break;
+		case 2: *val = (int32_t)(ERREG(dx, regs)); break;
+		case 3: *val = (int32_t)(ERREG(cx, regs)); break;
 		default:
 			/* gcc rejects regparm values > 3. */
 			return -1;
