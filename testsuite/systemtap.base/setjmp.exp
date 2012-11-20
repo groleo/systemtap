@@ -2,7 +2,7 @@ set test "setjmp"
 set ::result_string {hit longjmp_target}
 
 foreach variant [list "" "-DSIGJMP" "-DUNDERJMP"] {
-    foreach flags [list "" "-D_FORTIFY_SOURCE=2"] {
+    foreach flags [list "" "-O -D_FORTIFY_SOURCE=2"] {
 
 	set this_test "$test $variant $flags"
 
