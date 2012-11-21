@@ -7341,7 +7341,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
   // too big to embed in the initialized .data stap_uprobe_spec array.
   // XXX: consider a slab cache or somesuch for stap_uprobes
   s.op->newline() << "static struct stap_uprobe stap_uprobes [MAXUPROBES];";
-  s.op->newline() << "DEFINE_MUTEX(stap_uprobes_lock);"; // protects against concurrent registration/unregistration
+  s.op->newline() << "static DEFINE_MUTEX(stap_uprobes_lock);"; // protects against concurrent registration/unregistration
 
   s.op->assert_0_indent();
 

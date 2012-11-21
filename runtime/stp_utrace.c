@@ -105,7 +105,7 @@ static void utrace_report_exec(void *cb_data __attribute__ ((unused)),
 #define __UTRACE_REGISTERED	1
 static atomic_t utrace_state = ATOMIC_INIT(__UTRACE_UNREGISTERED);
 
-int utrace_init(void)
+static int utrace_init(void)
 {
 	int i;
 	int rc = -1;
@@ -186,7 +186,7 @@ error:
 	return rc;
 }
 
-int utrace_exit(void)
+static int utrace_exit(void)
 {
 	utrace_shutdown();
 
@@ -199,7 +199,7 @@ int utrace_exit(void)
 	return 0;
 }
 
-void utrace_resume(struct task_work *work);
+static void utrace_resume(struct task_work *work);
 
 /*
  * Clean up everything associated with @task.utrace.
@@ -247,7 +247,7 @@ static void utrace_cleanup(struct utrace *utrace)
 #endif
 }
 
-void utrace_shutdown(void)
+static void utrace_shutdown(void)
 {
 	int i;
 	struct utrace *utrace;
@@ -406,7 +406,7 @@ static void splice_attaching(struct utrace *utrace)
 /*
  * This is the exported function used by the utrace_engine_put() inline.
  */
-void __utrace_engine_release(struct kref *kref)
+static void __utrace_engine_release(struct kref *kref)
 {
 	struct utrace_engine *engine = container_of(kref, struct utrace_engine,
 						    kref);
@@ -534,7 +534,7 @@ unlock:
  * %UTRACE_ATTACH_EXCLUSIVE in such a call fails with -%EEXIST if there
  * are any engines on @target at all.
  */
-struct utrace_engine *utrace_attach_task(
+static struct utrace_engine *utrace_attach_task(
 	struct task_struct *target, int flags,
 	const struct utrace_engine_ops *ops, void *data)
 {
@@ -767,9 +767,9 @@ static bool engine_wants_stop(struct utrace_engine *engine)
  * These rules provide for coherent synchronization based on %UTRACE_STOP,
  * even when %SIGKILL is breaking its normal simple rules.
  */
-int utrace_set_events(struct task_struct *target,
-		      struct utrace_engine *engine,
-		      unsigned long events)
+static int utrace_set_events(struct task_struct *target,
+			     struct utrace_engine *engine,
+			     unsigned long events)
 {
 	struct utrace *utrace;
 	unsigned long old_flags, old_utrace_flags;
@@ -993,7 +993,7 @@ static bool utrace_reset(struct task_struct *task, struct utrace *utrace)
 	return !flags;
 }
 
-void utrace_finish_stop(void)
+static void utrace_finish_stop(void)
 {
 	/*
 	 * If we were task_is_traced() and then SIGKILL'ed, make
@@ -1107,8 +1107,8 @@ relock:
  * unless still making callbacks.  On death, update bookkeeping
  * and handle the reap work if release_task() came in first.
  */
-void utrace_maybe_reap(struct task_struct *target, struct utrace *utrace,
-		       bool reap)
+static void utrace_maybe_reap(struct task_struct *target, struct utrace *utrace,
+			      bool reap)
 {
 	struct utrace_engine *engine, *next;
 	struct list_head attached;
@@ -1288,9 +1288,9 @@ static inline int utrace_control_dead(struct task_struct *target,
  * Since this is meaningless unless @report_quiesce callbacks will
  * be made, it returns -%EINVAL if @engine lacks %UTRACE_EVENT(%QUIESCE).
  */
-int utrace_control(struct task_struct *target,
-		   struct utrace_engine *engine,
-		   enum utrace_resume_action action)
+static int utrace_control(struct task_struct *target,
+			  struct utrace_engine *engine,
+			  enum utrace_resume_action action)
 {
 	struct utrace *utrace;
 	bool reset;
@@ -1433,7 +1433,8 @@ int utrace_control(struct task_struct *target,
  * still be in progress; utrace_barrier() waits until there is no chance
  * an unwanted callback can be in progress.
  */
-int utrace_barrier(struct task_struct *target, struct utrace_engine *engine)
+static int utrace_barrier(struct task_struct *target,
+			  struct utrace_engine *engine)
 {
 	struct utrace *utrace;
 	int ret = -ERESTARTSYS;
@@ -1983,7 +1984,7 @@ static void utrace_report_clone(void *cb_data __attribute__ ((unused)),
  * After this, we'll enter the uninterruptible wait_for_completion()
  * waiting for the child.
  */
-void utrace_finish_vfork(struct task_struct *task)
+static void utrace_finish_vfork(struct task_struct *task)
 {
 	struct utrace *utrace = task_utrace_struct(task);
 
@@ -2080,7 +2081,7 @@ static void finish_resume_report(struct task_struct *task,
  * We are close to user mode, and this is the place to report or stop.
  * When we return, we're going to user mode or into the signals code.
  */
-void utrace_resume(struct task_work *work)
+static void utrace_resume(struct task_work *work)
 {
 	/*
 	 * We could also do 'task_utrace_struct()' here to find the

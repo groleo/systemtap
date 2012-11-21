@@ -97,7 +97,7 @@ static struct notifier_block _stp_module_panic_notifier_nb = {
 };
 #endif
 
-struct timer_list _stp_ctl_work_timer;
+static struct timer_list _stp_ctl_work_timer;
 
 /*
  *	_stp_handle_start - handle STP_START

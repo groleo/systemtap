@@ -71,9 +71,9 @@ struct utrace_engine {
 	unsigned long flags;
 };
 
-int utrace_init(void);
-int utrace_exit(void);
-void utrace_shutdown(void);
+static int utrace_init(void);
+static int utrace_exit(void);
+static void utrace_shutdown(void);
 
 /**
  * utrace_engine_get - acquire a reference on a &struct utrace_engine
@@ -86,7 +86,7 @@ static inline void utrace_engine_get(struct utrace_engine *engine)
 	kref_get(&engine->kref);
 }
 
-void __utrace_engine_release(struct kref *);
+static void __utrace_engine_release(struct kref *);
 
 /**
  * utrace_engine_put - release a reference on a &struct utrace_engine
@@ -272,14 +272,14 @@ struct utrace_engine_ops {
  * These are the exported entry points for tracing engines to use.
  * See stp_utrace.c for their kerneldoc comments with interface details.
  */
-struct utrace_engine *utrace_attach_task(struct task_struct *, int,
-					 const struct utrace_engine_ops *,
-					 void *);
-int __must_check utrace_set_events(struct task_struct *,
-				   struct utrace_engine *,
-				   unsigned long eventmask);
-int __must_check utrace_barrier(struct task_struct *,
-				struct utrace_engine *);
+static struct utrace_engine *utrace_attach_task(struct task_struct *, int,
+						const struct utrace_engine_ops *,
+						void *);
+static int __must_check utrace_set_events(struct task_struct *,
+					  struct utrace_engine *,
+					  unsigned long eventmask);
+static int __must_check utrace_barrier(struct task_struct *,
+				       struct utrace_engine *);
 
 /*
  * Version number of the API defined in this file.  This will change

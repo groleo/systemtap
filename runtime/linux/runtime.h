@@ -135,28 +135,28 @@ static struct
 
 // PR13489, inode-uprobes sometimes lacks the necessary SYMBOL_EXPORT's.
 #if !defined(STAPCONF_TASK_USER_REGSET_VIEW_EXPORTED)
-void *kallsyms_task_user_regset_view;
+static void *kallsyms_task_user_regset_view;
 #endif
 #if !defined(STAPCONF_UPROBE_REGISTER_EXPORTED)
-void *kallsyms_uprobe_register;
+static void *kallsyms_uprobe_register;
 #endif
 #if !defined(STAPCONF_UPROBE_UNREGISTER_EXPORTED)
-void *kallsyms_uprobe_unregister;
+static void *kallsyms_uprobe_unregister;
 #endif
 #if !defined(STAPCONF_URETPROBE_REGISTER_EXPORTED)
-void *kallsyms_uretprobe_register;
+static void *kallsyms_uretprobe_register;
 #endif
 #if !defined(STAPCONF_URETPROBE_UNREGISTER_EXPORTED)
-void *kallsyms_uretprobe_unregister;
+static void *kallsyms_uretprobe_unregister;
 #endif
 #if !defined(STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED)
-void *kallsyms_uprobe_get_swbp_addr;
+static void *kallsyms_uprobe_get_swbp_addr;
 #endif
 
 /* task_work functions lack the necessary SYMBOL_EXPORT's */
 #if !defined(STAPCONF_TASK_WORK_ADD_EXPORTED)
-void *kallsyms_task_work_add;
-void *kallsyms_task_work_cancel;
+static void *kallsyms_task_work_add;
+static void *kallsyms_task_work_cancel;
 #endif
 
 #include "access_process_vm.h"

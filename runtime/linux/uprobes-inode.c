@@ -125,7 +125,7 @@ static struct stapiu_process {
 
 /* This lock guards modification to stapiu_process_slots and target->processes.
  * XXX: consider fine-grained locking for target-processes.  */
-DEFINE_RWLOCK(stapiu_process_lock);
+static DEFINE_RWLOCK(stapiu_process_lock);
 
 
 /* The stap-generated probe handler for all inode-uprobes. */

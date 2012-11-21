@@ -256,7 +256,7 @@ hrtimer_derived_probe_group::emit_module_decls (systemtap_session& s)
 
   if (!s.runtime_usermode_p())
     {
-      s.op->newline() << "hrtimer_return_t _stp_hrtimer_notify_function (struct hrtimer *timer) {";
+      s.op->newline() << "static hrtimer_return_t _stp_hrtimer_notify_function (struct hrtimer *timer) {";
 
       s.op->newline(1) << "int rc = HRTIMER_NORESTART;";
       s.op->newline() << "struct stap_hrtimer_probe *stp = container_of(timer, struct stap_hrtimer_probe, hrtimer);";
@@ -280,7 +280,7 @@ hrtimer_derived_probe_group::emit_module_decls (systemtap_session& s)
     }
   else
     {
-      s.op->newline() << "void _stp_hrtimer_notify_function (sigval_t value)";
+      s.op->newline() << "static void _stp_hrtimer_notify_function (sigval_t value)";
       s.op->newline(1) << "{";
       s.op->newline() << "struct stap_hrtimer_probe *stp = value.sival_ptr;";
 
