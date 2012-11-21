@@ -1,6 +1,6 @@
 # Path setup
 # SCRIPT_PATH=@sysconfdir@/systemtap/script.d
-# CONFIG_PATH=@sysconfdir@/etc/systemtap/conf.d
+# CONFIG_PATH=@sysconfdir@/systemtap/conf.d
 # CACHE_PATH=@localstatedir@/cache/systemtap
 # STAT_PATH=@localstatedir@/run/systemtap
 # TEMP_PATH=/tmp

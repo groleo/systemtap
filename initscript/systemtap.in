@@ -61,7 +61,7 @@ DEFAULT_START=
 ALLOW_CACHEONLY=no
 
 # Optional settings
-CONFIG=/etc/systemtap/config
+CONFIG=@sysconfdir@/systemtap/config
 SCRIPTS=
 KRELEASE=`uname -r`
 OPT_RECURSIVE=
