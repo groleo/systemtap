@@ -744,8 +744,8 @@ KEYSYM(_stp_pmap_new) (unsigned max_entries, int wrap, int htype, ...)
 static int KEYSYM(__stp_pmap_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(pmap_node) *n;
 
 	if (map == NULL)
@@ -757,7 +757,7 @@ static int KEYSYM(__stp_pmap_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 	hv = KEYSYM(phash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each_entry(n, e, head, node.hnode) {
+	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -833,8 +833,8 @@ static int KEYSYM(_stp_pmap_add) (PMAP pmap, ALLKEYSD(key), VSTYPE val)
 static VALTYPE KEYSYM(_stp_pmap_get_cpu) (PMAP pmap, ALLKEYSD(key))
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(pmap_node) *n;
 	VALTYPE res;
 	MAP map;
@@ -852,7 +852,7 @@ static VALTYPE KEYSYM(_stp_pmap_get_cpu) (PMAP pmap, ALLKEYSD(key))
 
 	hv = KEYSYM(phash) (ALLKEYS(key));
 	head = &map->hashes[hv];
-	hlist_for_each_entry(n, e, head, node.hnode) {
+	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -895,8 +895,8 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 {
 	unsigned int hv;
 	int cpu, clear_agg = 0;
-	struct hlist_head *head, *ahead;
-	struct hlist_node *e;
+	struct mhlist_head *head, *ahead;
+	struct mhlist_node *e;
 	struct KEYSYM(pmap_node) *n;
 	struct map_node *anode = NULL;
 	MAP map, agg;
@@ -909,7 +909,7 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 	/* first look it up in the aggregation map */
 	agg = &pmap->agg;
 	ahead = &agg->hashes[hv];
-	hlist_for_each_entry(n, e, ahead, node.hnode) {
+	mhlist_for_each_entry(n, e, ahead, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -951,7 +951,7 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 #endif
 
 		head = &map->hashes[hv];
-		hlist_for_each_entry(n, e, head, node.hnode) {
+		mhlist_for_each_entry(n, e, head, node.hnode) {
 			if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 			    && KEY2_EQ_P(n->key2, key2)
@@ -1001,8 +1001,8 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 static int KEYSYM(__stp_pmap_del) (MAP map, ALLKEYSD(key))
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(pmap_node) *n;
 
 	if (map == NULL)
@@ -1014,7 +1014,7 @@ static int KEYSYM(__stp_pmap_del) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(phash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each_entry(n, e, head, node.hnode) {
+	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)

@@ -11,10 +11,12 @@
 #ifndef _MAP_H_
 #define _MAP_H_
 
-#if defined(__KERNEL__)
+#ifdef __KERNEL__
 #include <linux/log2.h>
+#include "linux/map_list.h"
 #elif defined(__DYNINST__)
 #include "dyninst/ilog2.h"
+#include "dyninst/map_list.h"
 #endif
 
 /** @file map.h
@@ -66,12 +68,13 @@ typedef union {
 /* basic map element */
 struct map_node {
 	/* list of other nodes in the map */
-	struct list_head lnode;
+	struct mlist_head lnode;
 	/* list of nodes with the same hash value */
-	struct hlist_node hnode;
+	struct mhlist_node hnode;
 	/* pointer back to the map struct */
 	struct map_root *map;
 };
+#define mlist_map_node(head) mlist_entry((head), struct map_node, lnode)
 
 /* This structure contains all information about a map.
  * It is allocated once when _stp_map_new() is called. 
@@ -79,8 +82,8 @@ struct map_node {
 struct map_root {
 	/* type of the value stored in the array */
 	int type;
-	
- 	/* maximum number of elements allowed in the array. */
+
+        /* maximum number of elements allowed in the array. */
 	int maxnum;
 
 	/* current number of used elements */
@@ -93,10 +96,10 @@ struct map_root {
 	int list;
 
 	/* linked list of current entries */
-	struct list_head head;
+	struct mlist_head head;
 
 	/* pool of unused entries. */
-	struct list_head pool;
+	struct mlist_head pool;
 
 	/* saved key entry for lookups */
 	struct map_node *key;
@@ -120,7 +123,7 @@ struct map_root {
 #endif
 
 	/* the hash table for this array, allocated in _stp_map_init() */
-	struct hlist_head *hashes;
+	struct mhlist_head *hashes;
 
 	/* used if this map's nodes contain stats */
 	struct _Hist hist;
@@ -202,7 +205,7 @@ static void _stp_map_del(MAP map);
 static void _stp_map_clear(MAP map);
 void _stp_map_print(MAP map, const char *fmt);
 
-static struct map_node *_new_map_create (MAP map, struct hlist_head *head);
+static struct map_node *_new_map_create (MAP map, struct mhlist_head *head);
 static int _new_map_set_int64 (MAP map, struct map_node *n, int64_t val, int add);
 static int _new_map_set_str (MAP map, struct map_node *n, char *val, int add);
 static void _new_map_clear_node (struct map_node *);
@@ -213,7 +216,7 @@ static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap,
 static PMAP _stp_pmap_new_hstat_log (unsigned max_entries, int wrap,
 				     int key_size);
 static void _stp_add_agg(struct map_node *aptr, struct map_node *ptr);
-static struct map_node *_stp_new_agg(MAP agg, struct hlist_head *ahead, struct map_node *ptr);
+static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead, struct map_node *ptr);
 static void __stp_map_del(MAP map);
 static int _new_map_set_stat (MAP map, struct map_node *n, int64_t val, int add);
 /** @endcond */

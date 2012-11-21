@@ -610,8 +610,8 @@ static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap, int htype, ...)
 static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(map_node) *n;
 
 	if (map == NULL)
@@ -623,7 +623,7 @@ static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each_entry(n, e, head, node.hnode) {
+	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -675,8 +675,8 @@ static int KEYSYM(_stp_map_add) (MAP map, ALLKEYSD(key), VSTYPE val)
 static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(map_node) *n;
 
 	if (map == NULL)
@@ -685,7 +685,7 @@ static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each_entry(n, e, head, node.hnode) {
+	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -722,8 +722,8 @@ static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 static int KEYSYM(_stp_map_del) (MAP map, ALLKEYSD(key))
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(map_node) *n;
 
 	if (map == NULL)
@@ -732,7 +732,7 @@ static int KEYSYM(_stp_map_del) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each_entry(n, e, head, node.hnode) {
+	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
@@ -770,8 +770,8 @@ static int KEYSYM(_stp_map_del) (MAP map, ALLKEYSD(key))
 static int KEYSYM(_stp_map_exists) (MAP map, ALLKEYSD(key))
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(map_node) *n;
 
 	if (map == NULL)
@@ -780,7 +780,7 @@ static int KEYSYM(_stp_map_exists) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each_entry(n, e, head, node.hnode) {
+	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY1_EQ_P(n->key1, key1)
 #if KEY_ARITY > 1
 		    && KEY2_EQ_P(n->key2, key2)
