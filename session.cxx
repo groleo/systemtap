@@ -1515,17 +1515,17 @@ systemtap_session::parse_kernel_functions ()
   system_map.open(system_map_path.c_str(), ifstream::in);
   if (! system_map.is_open())
     {
+      clog << _F("Checking \"%s\" failed with error: %s\nEnsure kernel development headers & makefiles are installed",
+                 system_map_path.c_str(), strerror(errno)) << endl;
+
       string system_map_path2 = "/boot/System.map-" + kernel_release;
 
       system_map.clear();
       system_map.open(system_map_path2.c_str(), ifstream::in);
       if (! system_map.is_open())
         {
-          if (verbose > 3)
-            //TRANSLATORS: specific path cannot be opened
-            clog << system_map_path << _(" and ")
-                 << system_map_path2 << _(" cannot be opened: ")
-                 << strerror(errno) << endl;
+          clog << _F("Checking \"%s\" failed with error: %s",
+                     system_map_path2.c_str(), strerror(errno)) << endl;
           return 1;
         }
     }
