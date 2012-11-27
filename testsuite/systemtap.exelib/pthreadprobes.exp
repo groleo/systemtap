@@ -24,17 +24,70 @@ if {[catch {exec stap $cmd } res2]} {
 }
 
 # Now we exercise every probe available
-set cmd2 [concat -e global cond_broadcast , cond_destroy , cond_init , cond_signal , cond_timedwait , cond_wait , mutex_acquired , mutex_destroy , mutex_entry , mutex_init , mutex_release , mutex_timedlock_acquired , mutex_timedlock_entry , pthread_create , pthread_join , pthread_join_ret , pthread_start , rdlock_entry , rwlock_destroy , wrlock_entry\; probe process(\"$res\").mark(\"cond_broadcast\") \{ cond_broadcast++ \} probe process(\"$res\").mark(\"cond_destroy\") \{ cond_destroy++ \} probe process(\"$res\").mark(\"cond_init\") \{ cond_init++ \} probe process(\"$res\").mark(\"cond_signal\") \{ cond_signal++ \} probe process(\"$res\").mark(\"cond_timedwait\") \{ cond_timedwait++ \} probe process(\"$res\").mark(\"cond_wait\") \{ cond_wait++ \} probe process(\"$res\").mark(\"mutex_acquired\") \{ mutex_acquired++ \} probe process(\"$res\").mark(\"mutex_destroy\") \{ mutex_destroy++ \} probe process(\"$res\").mark(\"mutex_entry\") \{ mutex_entry++ \} probe process(\"$res\").mark(\"mutex_init\") \{ mutex_init++ \} probe process(\"$res\").mark(\"mutex_release\") \{ mutex_release++ \} probe process(\"$res\").mark(\"mutex_timedlock_acquired\") \{ mutex_timedlock_acquired++ \} probe process(\"$res\").mark(\"mutex_timedlock_entry\") \{ mutex_timedlock_entry++ \} probe process(\"$res\").mark(\"pthread_create\") \{ pthread_create++ \} probe process(\"$res\").mark(\"pthread_join\") \{ pthread_join++ \} probe process(\"$res\").mark(\"pthread_join_ret\") \{ pthread_join_ret++ \} probe process(\"$res\").mark(\"pthread_start\") \{ pthread_start++ \} probe process(\"$res\").mark(\"rdlock_entry\") \{ rdlock_entry++ \} probe process(\"$res\").mark(\"rwlock_destroy\") \{ rwlock_destroy++ \} probe process(\"$res\").mark(\"wrlock_entry\") \{ wrlock_entry++ \} probe end \{ printf(\"cond_broadcast=%d\\n", cond_broadcast)\; printf(\"cond_destroy=%d\\n", cond_destroy)\; printf(\"cond_init=%d\\n", cond_init)\; printf(\"cond_signal=%d\\n", cond_signal)\; printf(\"cond_signal=%d\\n", cond_signal)\; printf(\"cond_timedwait=%d\\n", cond_timedwait)\; printf(\"cond_wait=%d\\n", cond_wait)\; printf(\"mutex_acquired=%d\\n", mutex_acquired)\; printf(\"mutex_destroy=%d\\n", mutex_destroy)\; printf(\"mutex_entry=%d\\n", mutex_entry)\; printf(\"mutex_init=%d\\n", mutex_init)\; printf(\"mutex_release=%d\\n", mutex_release)\; printf(\"mutex_timedlock_acquired=%d\\n", mutex_timedlock_acquired)\; printf(\"mutex_timedlock_entry=%d\\n", mutex_timedlock_entry)\; printf(\"pthread_create=%d\\n", pthread_create)\; printf(\"pthread_join=%d\\n", pthread_join)\; printf(\"pthread_join_ret=%d\\n", pthread_join_ret)\; printf(\"pthread_start=%d\\n", pthread_start)\; printf(\"rdlock_entry=%d\\n", rdlock_entry)\; printf(\"rwlock_destroy=%d\\n", rwlock_destroy)\; printf(\"wrlock_entry=%d\\n", wrlock_entry)\; \} ]
+set script [subst {
+  global cond_broadcast, cond_destroy, cond_init, cond_signal,
+    cond_timedwait, cond_wait, mutex_acquired, mutex_destroy,
+    mutex_entry, mutex_init, mutex_release, mutex_timedlock_acquired,
+    mutex_timedlock_entry, pthread_create, pthread_join,
+    pthread_join_ret, pthread_start, rdlock_entry, rwlock_destroy,
+    wrlock_entry
+
+  probe process("$res").mark("cond_broadcast") { cond_broadcast++ }
+  probe process("$res").mark("cond_destroy") { cond_destroy++ }
+  probe process("$res").mark("cond_init") { cond_init++ }
+  probe process("$res").mark("cond_signal") { cond_signal++ }
+  probe process("$res").mark("cond_timedwait") { cond_timedwait++ }
+  probe process("$res").mark("cond_wait") { cond_wait++ }
+  probe process("$res").mark("mutex_acquired") { mutex_acquired++ }
+  probe process("$res").mark("mutex_destroy") { mutex_destroy++ }
+  probe process("$res").mark("mutex_entry") { mutex_entry++ }
+  probe process("$res").mark("mutex_init") { mutex_init++ }
+  probe process("$res").mark("mutex_release") { mutex_release++ }
+  probe process("$res").mark("mutex_timedlock_acquired") {
+    mutex_timedlock_acquired++ }
+  probe process("$res").mark("mutex_timedlock_entry") {
+    mutex_timedlock_entry++ }
+  probe process("$res").mark("pthread_create") { pthread_create++ }
+  probe process("$res").mark("pthread_join") { pthread_join++ }
+  probe process("$res").mark("pthread_join_ret") { pthread_join_ret++ }
+  probe process("$res").mark("pthread_start") { pthread_start++ }
+  probe process("$res").mark("rdlock_entry") { rdlock_entry++ }
+  probe process("$res").mark("rwlock_destroy") { rwlock_destroy++ }
+  probe process("$res").mark("wrlock_entry") { wrlock_entry++ }
+  probe end {
+    printf("cond_broadcast=%d\\n", cond_broadcast)
+    printf("cond_destroy=%d\\n", cond_destroy)
+    printf("cond_init=%d\\n", cond_init)
+    printf("cond_signal=%d\\n", cond_signal)
+    printf("cond_signal=%d\\n", cond_signal)
+    printf("cond_timedwait=%d\\n", cond_timedwait)
+    printf("cond_wait=%d\\n", cond_wait)
+    printf("mutex_acquired=%d\\n", mutex_acquired)
+    printf("mutex_destroy=%d\\n", mutex_destroy)
+    printf("mutex_entry=%d\\n", mutex_entry)
+    printf("mutex_init=%d\\n", mutex_init)
+    printf("mutex_release=%d\\n", mutex_release)
+    printf("mutex_timedlock_acquired=%d\\n", mutex_timedlock_acquired)
+    printf("mutex_timedlock_entry=%d\\n", mutex_timedlock_entry)
+    printf("pthread_create=%d\\n", pthread_create)
+    printf("pthread_join=%d\\n", pthread_join)
+    printf("pthread_join_ret=%d\\n", pthread_join_ret)
+    printf("pthread_start=%d\\n", pthread_start)
+    printf("rdlock_entry=%d\\n", rdlock_entry)
+    printf("rwlock_destroy=%d\\n", rwlock_destroy)
+    printf("wrlock_entry=%d\\n", wrlock_entry)
+  }
+}]
 
 foreach runtime [get_runtime_list] {
     set test_name $test
     if {$runtime != ""} {
-	verbose -log "Running: stap --runtime=$runtime $cmd2 -c ./$test"
-	set rc [catch {exec stap --runtime=$runtime $cmd2 -c ./$test } res3]
+	verbose -log "Running: stap --runtime=$runtime -e $script -c ./$test"
+	set rc [catch {exec stap --runtime=$runtime -e $script -c ./$test } res3]
 	lappend test_name "($runtime)"
     } else {
-	verbose -log "Running: stap $cmd2 -c ./$test"
-	set rc [catch {exec stap $cmd2 -c ./$test } res3]
+	verbose -log "Running: stap -e $script -c ./$test"
+	set rc [catch {exec stap -e $script -c ./$test } res3]
     }
     verbose -log "$res3"
 
