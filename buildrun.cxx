@@ -781,6 +781,11 @@ make_tracequeries(systemtap_session& s, const map<string,string>& contents)
       osrc << src;
       osrc.close();
 
+      if (s.verbose > 2)
+        clog << _F("Processing tracepoint header %s with query %s", 
+                   it->first.c_str(), srcname.c_str())
+             << endl;
+
       // arrange to build it
       omf << "obj-m += " + sbasename + ".o" << endl; // NB: without <dir> prefix
       objs[it->first] = dir + "/" + sbasename + ".o";
