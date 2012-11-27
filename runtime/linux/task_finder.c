@@ -1602,8 +1602,7 @@ stap_start_task_finder(void)
 		size_t mmpathlen;
 		struct list_head *tgt_node;
 
-		/* Skip over processes other than that specified with
-		 * stap -c or -x. */
+		/* If in stap -c/-x mode, skip over other processes. */
 		if (_stp_target && tsk->tgid != _stp_target)
 			continue;
 
