@@ -23,7 +23,7 @@ static MAP _stp_map_new_hstat_log (unsigned max_entries, int wrap, int key_size)
 {
 	/* add size for buckets */
 	int size = HIST_LOG_BUCKETS * sizeof(int64_t) + sizeof(stat_data);
-	MAP m = _stp_map_new (max_entries, wrap, STAT, key_size, size);
+	MAP m = _stp_map_new (max_entries, wrap, STAT, key_size, size, -1);
 	if (m) {
 		m->hist.type = HIST_LOG;
 		m->hist.buckets = HIST_LOG_BUCKETS;
@@ -44,7 +44,7 @@ _stp_map_new_hstat_linear (unsigned max_entries, int wrap, int ksize,
         /* add size for buckets */
 	size = buckets * sizeof(int64_t) + sizeof(stat_data);
 	
-	m = _stp_map_new (max_entries, wrap, STAT, ksize, size);
+	m = _stp_map_new (max_entries, wrap, STAT, ksize, size, -1);
 	if (m) {
 		m->hist.type = HIST_LINEAR;
 		m->hist.start = start;
@@ -75,7 +75,7 @@ _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap, int ksize,
 		MAP m;
 
 		for_each_possible_cpu(i) {
-			m = (MAP)_stp_map_per_cpu_ptr (pmap->map, i);
+			m = _stp_pmap_get_map (pmap, i);
 			MAP_LOCK(m);
 			m->hist.type = HIST_LINEAR;
 			m->hist.start = start;
@@ -85,7 +85,7 @@ _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap, int ksize,
 			MAP_UNLOCK(m);
 		}
 		/* now set agg map params */
-		m = &pmap->agg;
+		m = _stp_pmap_get_agg(pmap);
 		MAP_LOCK(m);
 		m->hist.type = HIST_LINEAR;
 		m->hist.start = start;
@@ -107,14 +107,14 @@ _stp_pmap_new_hstat_log (unsigned max_entries, int wrap, int key_size)
 		int i;
 		MAP m;
 		for_each_possible_cpu(i) {
-			m = (MAP)_stp_map_per_cpu_ptr (pmap->map, i);
+			m = _stp_pmap_get_map (pmap, i);
 			MAP_LOCK(m);
 			m->hist.type = HIST_LOG;
 			m->hist.buckets = HIST_LOG_BUCKETS;
 			MAP_UNLOCK(m);
 		}
 		/* now set agg map params */
-		m = &pmap->agg;
+		m = _stp_pmap_get_agg(pmap);
 		MAP_LOCK(m);
 		m->hist.type = HIST_LOG;
 		m->hist.buckets = HIST_LOG_BUCKETS;

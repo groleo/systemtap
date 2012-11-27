@@ -44,6 +44,40 @@ static int _stp_map_initialize_lock(MAP m)
 
 #define _stp_map_destroy_lock(m)	do {} while (0)
 
-#define _stp_map_per_cpu_ptr(m, cpu)	per_cpu_ptr((m), (cpu))
+struct pmap {
+	MAP agg;	/* aggregation map */
+	MAP map[];	/* per-cpu maps */
+};
+
+static inline PMAP _stp_pmap_alloc(void)
+{
+	/* Called from module_init, so user context, may sleep alloc. */
+	return _stp_kzalloc_gfp((1 + NR_CPUS) * sizeof(MAP),
+				STP_ALLOC_SLEEP_FLAGS);
+}
+
+static inline MAP _stp_pmap_get_agg(PMAP p)
+{
+	return p->agg;
+}
+
+static inline void _stp_pmap_set_agg(PMAP p, MAP agg)
+{
+	p->agg = agg;
+}
+
+static inline MAP _stp_pmap_get_map(PMAP p, unsigned cpu)
+{
+	if (cpu >= NR_CPUS)
+		cpu = 0;
+	return p->map[cpu];
+}
+
+static inline void _stp_pmap_set_map(PMAP p, MAP m, unsigned cpu)
+{
+	if (cpu >= NR_CPUS)
+		cpu = 0;
+	p->map[cpu] = m;
+}
 
 #endif /* _LINUX_MAP_RUNTIME_H_ */

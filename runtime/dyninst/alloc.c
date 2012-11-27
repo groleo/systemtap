@@ -37,6 +37,9 @@
 #define _stp_kmalloc_node(size, node) malloc((size))
 #define _stp_kmalloc_node_gfp(size, node, gfp_mask) malloc((size))
 
+#define _stp_kzalloc_node(size, node) calloc((size), 1)
+#define _stp_kzalloc_node_gfp(size, node, gfp_mask) calloc((size), 1)
+
 
 #endif /* _STAPDYN_ALLOC_C_ */
 

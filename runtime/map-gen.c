@@ -556,7 +556,7 @@ static unsigned int KEYSYM(hash) (ALLKEYSD(key))
 static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap)
 {
 	MAP m = _stp_map_new (max_entries, wrap, VALUE_TYPE,
-			      sizeof(struct KEYSYM(map_node)), 0);
+			      sizeof(struct KEYSYM(map_node)), 0, -1);
 	if (m)
 		m->get_key = KEYSYM(map_get_key);
 	return m;
@@ -584,7 +584,7 @@ static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap, int htype, ...)
 	switch (htype) {
 	case HIST_NONE:
 		m = _stp_map_new (max_entries, wrap, STAT,
-				  sizeof(struct KEYSYM(map_node)), 0);
+				  sizeof(struct KEYSYM(map_node)), 0, -1);
 		break;
 	case HIST_LOG:
 		m = _stp_map_new_hstat_log (max_entries, wrap,

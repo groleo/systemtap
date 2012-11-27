@@ -172,80 +172,79 @@ static int
 _stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
 	      int data_size, int cpu)
 {
-	int size, hash;
-	size_t hash_size = sizeof(struct mhlist_head) * HASH_TABLE_SIZE;
+	unsigned i;
+	int node_size = key_size + data_size;
+
+	INIT_MLIST_HEAD(&m->pool);
+	INIT_MLIST_HEAD(&m->head);
+	for (i = 0; i < HASH_TABLE_SIZE; i++)
+		INIT_MHLIST_HEAD(&m->hashes[i]);
+
+	m->maxnum = max_entries;
+	m->type = type;
+	m->wrap = wrap;
+	m->data_offset = key_size;
+
+        /* _stp_map_new allocates all the map_nodes at the tail of the
+         * map_root, so now we can just link those into the free pool.  */
+	for (i = 0; i < max_entries; i++) {
+		struct map_node *tmp = ((void*)&m[1]) + i * node_size;
+		mlist_add(&tmp->lnode, &m->pool);
+		INIT_MHLIST_NODE(&tmp->hnode);
+		tmp->map = m;
+	}
+
+	if (type == STAT)
+		m->hist.type = HIST_NONE;
 
 	if (_stp_map_initialize_lock(m) != 0)
 		return -1;
 
-	if(cpu < 0)
-		m->hashes = _stp_kmalloc_gfp(hash_size, STP_ALLOC_SLEEP_FLAGS);
-	else
-		m->hashes = _stp_kmalloc_node_gfp(hash_size, cpu_to_node(cpu), STP_ALLOC_SLEEP_FLAGS);
-	if(m->hashes == NULL) {
-		_stp_error("error allocating hash\n");
-		return -1;
-	}
-	for (hash = 0; hash < HASH_TABLE_SIZE; hash++)
-		INIT_MHLIST_HEAD(&m->hashes[hash]);
-	m->maxnum = max_entries;
-	m->type = type;
-	m->wrap = wrap;
-	if (type >= END) {
-		_stp_error("unknown map type %d\n", type);
-		return -1;
-	}
-	if (max_entries) {
-		unsigned i;
-
-		/* size is the size of the map_node. */
-		/* add space for the value. */
-		key_size = (key_size + 3) & ~3; //ALIGN(key_size,4);
-		m->data_offset = key_size;
-		if (data_size == 0)
-			data_size = map_sizes[type];
-		data_size = (data_size + 3) & ~3; //ALIGN(data_size,4);
-		size = key_size + data_size;
-
-
-		for (i = 0; i < max_entries; i++) {
-			struct map_node *tmp;
-
-			/* Called at module init time, so user context.  */
-			if (cpu < 0)
-				tmp = _stp_kmalloc_gfp(size, STP_ALLOC_SLEEP_FLAGS);
-			else
-				tmp = _stp_kmalloc_node_gfp(size, cpu_to_node(cpu), STP_ALLOC_SLEEP_FLAGS);
-
-			if (!tmp) {
-				_stp_error("error allocating map entry\n");
-				return -1;
-			}
-
-			// dbug ("allocated %lx\n", (long)tmp);
-			mlist_add(&tmp->lnode, &m->pool);
-			INIT_MHLIST_NODE(&tmp->hnode);
-			tmp->map = m;
-		}
-	}
-	if (type == STAT)
-		m->hist.type = HIST_NONE;
 	return 0;
+}
+
+
+static int
+_stp_map_normalize_key_size(int key_size)
+{
+	return (key_size + 3) & ~3; //ALIGN(key_size,4);
+}
+
+static int
+_stp_map_normalize_data_size(int data_size, int type)
+{
+	if (data_size == 0)
+		data_size = map_sizes[type];
+	return (data_size + 3) & ~3; //ALIGN(data_size,4);
 }
 
 
 static MAP
 _stp_map_new(unsigned max_entries, int wrap, int type, int key_size,
-	     int data_size)
+	     int data_size, int cpu)
 {
+	size_t map_size;
+	MAP m;
+
+	if (type >= END) {
+		_stp_error("unknown map type %d\n", type);
+		return NULL;
+	}
+
+	key_size = _stp_map_normalize_key_size(key_size);
+	data_size = _stp_map_normalize_data_size(data_size, type);
+	map_size = sizeof(struct map_root) +
+		max_entries * (key_size + data_size);
+
 	/* Called from module_init, so user context, may sleep alloc. */
-	MAP m = (MAP) _stp_kzalloc_gfp(sizeof(struct map_root),
-				       STP_ALLOC_SLEEP_FLAGS);
+	if (cpu < 0)
+		m = _stp_kzalloc_gfp(map_size, STP_ALLOC_SLEEP_FLAGS);
+	else
+		m = _stp_kzalloc_node_gfp(map_size, cpu_to_node(cpu),
+					  STP_ALLOC_SLEEP_FLAGS);
 	if (m == NULL)
 		return NULL;
 
-	INIT_MLIST_HEAD(&m->pool);
-	INIT_MLIST_HEAD(&m->head);
 	if (_stp_map_init(m, max_entries, wrap, type, key_size, data_size,
 			  -1)) {
 		_stp_map_del(m);
@@ -262,56 +261,33 @@ _stp_pmap_new(unsigned max_entries, int wrap, int type, int key_size,
 	MAP m;
 
 	/* Called from module_init, so user context, may sleep alloc. */
-	PMAP pmap = (PMAP) _stp_kzalloc_gfp(sizeof(struct pmap),
-					    STP_ALLOC_SLEEP_FLAGS);
+	PMAP pmap = _stp_pmap_alloc();
 	if (pmap == NULL)
 		return NULL;
 
-#ifdef __KERNEL__
-	pmap->map = (MAP) _stp_alloc_percpu (sizeof(struct map_root));
-#else
-	/* Allocate an array of map_root structures. */
-	pmap->map = _stp_kmalloc_gfp(sizeof(struct map_root) * _stp_runtime_num_contexts,
-							 STP_ALLOC_SLEEP_FLAGS);
-#endif
-	if (pmap->map == NULL)
-		goto err;
-
-	/* Initialize the memory lists first so if allocations fail
-         * at some point, it is easy to clean up. */
+	/* Allocate the per-cpu maps.  */
 	for_each_possible_cpu(i) {
-		m = _stp_map_per_cpu_ptr(pmap->map, i);
-		INIT_MLIST_HEAD(&m->pool);
-		INIT_MLIST_HEAD(&m->head);
-	}
-
-	INIT_MLIST_HEAD(&pmap->agg.pool);
-	INIT_MLIST_HEAD(&pmap->agg.head);
-
-	for_each_possible_cpu(i) {
-		m = _stp_map_per_cpu_ptr(pmap->map, i);
-		if (_stp_map_init(m, max_entries, wrap, type, key_size,
-				  data_size, i)) {
+		m = _stp_map_new(max_entries, wrap, type,
+				 key_size, data_size, i);
+		if (m == NULL)
 			goto err1;
-		}
+                _stp_pmap_set_map(pmap, m, i);
 	}
 
-	if (_stp_map_init(&pmap->agg, max_entries, wrap, type, key_size,
-			  data_size, -1))
+	/* Allocate the aggregate map.  */
+	m = _stp_map_new(max_entries, wrap, type,
+			 key_size, data_size, -1);
+	if (m == NULL)
 		goto err1;
-	
+        _stp_pmap_set_agg(pmap, m);
+
 	return pmap;
 
 err1:
 	for_each_possible_cpu(i) {
-		m = _stp_map_per_cpu_ptr (pmap->map, i);
-		__stp_map_del(m);
+		m = _stp_pmap_get_map (pmap, i);
+		_stp_map_del(m);
 	}
-#ifdef __KERNEL__
-	_stp_free_percpu(pmap->map);
-#else
-	_stp_kfree(pmap->map);
-#endif
 err:
 	_stp_kfree(pmap);
 	return NULL;
@@ -395,35 +371,15 @@ static void _stp_pmap_clear(PMAP pmap)
 		return;
 
 	for_each_possible_cpu(i) {
-		MAP m = _stp_map_per_cpu_ptr (pmap->map, i);
+		MAP m = _stp_pmap_get_map (pmap, i);
 
 		MAP_LOCK(m);
 		_stp_map_clear(m);
 		MAP_UNLOCK(m);
 	}
-	_stp_map_clear(&pmap->agg);
+	_stp_map_clear(_stp_pmap_get_agg(pmap));
 }
 
-static void __stp_map_del(MAP map)
-{
-	struct mlist_head *p, *tmp;
-
-	/* free unused pool */
-	mlist_for_each_safe(p, tmp, &map->pool) {
-		mlist_del(p);
-		_stp_kfree(p);
-	}
-
-	/* free used list */
-	mlist_for_each_safe(p, tmp, &map->head) {
-		mlist_del(p);
-		_stp_kfree(p);
-	}
-	/* free used hash */
-	_stp_kfree(map->hashes);
-
-	_stp_map_destroy_lock(map);
-}
 
 /** Deletes a map.
  * Deletes a map, freeing all memory in all elements.  Normally done only when the module exits.
@@ -435,7 +391,11 @@ static void _stp_map_del(MAP map)
 	if (map == NULL)
 		return;
 
-	__stp_map_del(map);
+	/* NB: We used to free every entry in &map->pool and ->head,
+	 * but now those are allocated in the same chunk, so they
+	 * can just disappear quietly.  */
+
+	_stp_map_destroy_lock(map);
 
 	_stp_kfree(map);
 }
@@ -448,18 +408,13 @@ static void _stp_pmap_del(PMAP pmap)
 		return;
 
 	for_each_possible_cpu(i) {
-		MAP m = _stp_map_per_cpu_ptr (pmap->map, i);
-		__stp_map_del(m);
+		MAP m = _stp_pmap_get_map (pmap, i);
+		_stp_map_del(m);
 	}
-#ifdef __KERNEL__
-	_stp_free_percpu(pmap->map);
-#else
-	_stp_kfree(pmap->map);
-#endif
 
 	/* free agg map elements */
-	__stp_map_del(&pmap->agg);
-	
+	_stp_map_del(_stp_pmap_get_agg(pmap));
+
 	_stp_kfree(pmap);
 }
 
@@ -772,14 +727,14 @@ static MAP _stp_pmap_agg (PMAP pmap)
 	struct mhlist_node *e, *f;
 	int quit = 0;
 
-	agg = &pmap->agg;
+	agg = _stp_pmap_get_agg(pmap);
 	
         /* FIXME. we either clear the aggregation map or clear each local map */
 	/* every time we aggregate. which would be best? */
 	_stp_map_clear (agg);
 
 	for_each_possible_cpu(i) {
-		m = _stp_map_per_cpu_ptr (pmap->map, i);
+		m = _stp_pmap_get_map (pmap, i);
 		MAP_LOCK(m);
 		/* walk the hash chains. */
 		for (hash = 0; hash < HASH_TABLE_SIZE; hash++) {
@@ -812,15 +767,6 @@ static MAP _stp_pmap_agg (PMAP pmap)
 out:
 	return agg;
 }
-
-/** Get the aggregation map for a pmap.
- * This function returns a pointer to the aggregation map.
- * It does not do any aggregation.
- * @param map A pointer to a pmap.
- * @returns a pointer to an aggregated map. 
- * @sa _stp_pmap_agg()
- */
-#define _stp_pmap_get_agg(pmap) (&pmap->agg)
 
 /* #define _stp_pmap_printn(map,n,fmt) _stp_map_printn (_stp_pmap_agg(map), n, fmt) */
 /* #define _stp_pmap_print(map,fmt) _stp_map_printn(_stp_pmap_agg(map),0,fmt) */
@@ -952,7 +898,7 @@ static int _stp_pmap_size (PMAP pmap)
 	int i, num = 0;
 
 	for_each_possible_cpu(i) {
-		MAP m = _stp_map_per_cpu_ptr (pmap->map, i);
+		MAP m = _stp_pmap_get_map (pmap, i);
 		MAP_LOCK(m);
 		num += m->num;
 		MAP_UNLOCK(m);

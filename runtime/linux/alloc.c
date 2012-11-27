@@ -379,6 +379,8 @@ static void *_stp_alloc_percpu(size_t size)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,12)
 #define _stp_kmalloc_node(size,node) _stp_kmalloc(size)
 #define _stp_kmalloc_node_gfp(size,node,gfp) _stp_kmalloc_gfp(size,gfp)
+#define _stp_kzalloc_node(size,node) _stp_kzalloc(size)
+#define _stp_kzalloc_node_gfp(size,node,gfp) _stp_kzalloc_gfp(size,gfp)
 #else
 static void *_stp_kmalloc_node_gfp(size_t size, int node, gfp_t gfp_mask)
 {
@@ -403,9 +405,17 @@ static void *_stp_kmalloc_node_gfp(size_t size, int node, gfp_t gfp_mask)
 #endif
 	return ret;
 }
+static void *_stp_kzalloc_node_gfp(size_t size, int node, gfp_t gfp_mask)
+{
+	return _stp_kmalloc_node_gfp(size, node, gfp_mask | __GFP_ZERO);
+}
 static void *_stp_kmalloc_node(size_t size, int node)
 {
 	return _stp_kmalloc_node_gfp(size, node, STP_ALLOC_FLAGS);
+}
+static void *_stp_kzalloc_node(size_t size, int node)
+{
+	return _stp_kzalloc_node_gfp(size, node, STP_ALLOC_FLAGS);
 }
 #endif /* LINUX_VERSION_CODE */
 

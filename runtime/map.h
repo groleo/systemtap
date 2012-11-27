@@ -123,7 +123,7 @@ struct map_root {
 #endif
 
 	/* the hash table for this array, allocated in _stp_map_init() */
-	struct mhlist_head *hashes;
+	struct mhlist_head hashes[HASH_TABLE_SIZE];
 
 	/* used if this map's nodes contain stats */
 	struct _Hist hist;
@@ -132,10 +132,7 @@ struct map_root {
 /** All maps are of this type. */
 typedef struct map_root *MAP;
 
-struct pmap {
-	MAP map;		/* per-cpu maps */
-	struct map_root agg;	/* aggregation map */
-};
+struct pmap; /* defined in map_runtime.h */
 typedef struct pmap *PMAP;
 
 /** Extracts string from key1 union */
@@ -191,7 +188,7 @@ static char * _stp_get_str(struct map_node *m);
 static stat_data *_stp_get_stat(struct map_node *m);
 static unsigned int str_hash(const char *key1);
 static MAP _stp_map_new(unsigned max_entries, int wrap, int type, int key_size,
-			int data_size);
+			int data_size, int cpu);
 static PMAP _stp_pmap_new(unsigned max_entries, int wrap, int type,
 			  int key_size, int data_size);
 static int msb64(int64_t x);
@@ -217,7 +214,6 @@ static PMAP _stp_pmap_new_hstat_log (unsigned max_entries, int wrap,
 				     int key_size);
 static void _stp_add_agg(struct map_node *aptr, struct map_node *ptr);
 static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead, struct map_node *ptr);
-static void __stp_map_del(MAP map);
 static int _new_map_set_stat (MAP map, struct map_node *n, int64_t val, int add);
 /** @endcond */
 #endif /* _MAP_H_ */

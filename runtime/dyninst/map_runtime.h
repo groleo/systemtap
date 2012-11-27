@@ -49,6 +49,38 @@ static void _stp_map_destroy_lock(MAP m)
 #endif
 }
 
-#define _stp_map_per_cpu_ptr(m, cpu)	&((m)[(cpu)])
+struct pmap {
+	offptr_t oagg;    /* aggregation map */
+	offptr_t omap[];  /* per-cpu maps */
+};
+
+static inline PMAP _stp_pmap_alloc(void)
+{
+	return calloc((1 + _stp_runtime_num_contexts), sizeof(offptr_t));
+}
+
+static inline MAP _stp_pmap_get_agg(PMAP p)
+{
+	return offptr_get(&p->oagg);
+}
+
+static inline void _stp_pmap_set_agg(PMAP p, MAP agg)
+{
+	offptr_set(&p->oagg, agg);
+}
+
+static inline MAP _stp_pmap_get_map(PMAP p, unsigned cpu)
+{
+	if (cpu >= _stp_runtime_num_contexts)
+		cpu = 0;
+	return offptr_get(&p->omap[cpu]);
+}
+
+static inline void _stp_pmap_set_map(PMAP p, MAP m, unsigned cpu)
+{
+	if (cpu >= _stp_runtime_num_contexts)
+		cpu = 0;
+	offptr_set(&p->omap[cpu], m);
+}
 
 #endif /* _STAPDYN_MAP_RUNTIME_H_ */
