@@ -783,8 +783,10 @@ RegExp * Scanner::matchChar(uint c) const
 
 RegExp * Scanner::strToRE(SubStr s) const
 {
-	s.len -= 2;
-	s.str += 1;
+        // strToRE used to take quoted literal,
+        // but the quote-stripping is no longer needed
+        //s.len -= 2;
+	//s.str += 1;
 
 	if (s.len == 0)
 		return new NullOp;
@@ -841,8 +843,10 @@ RegExp * Scanner::strToCaseInsensitiveRE(SubStr s) const
 
 RegExp * Scanner::ranToRE(SubStr s) const
 {
-	s.len -= 2;
-	s.str += 1;
+        // ranToRE et al. used to take bracketed literal,
+        // but the bracket-stripping is no longer needed
+	//s.len -= 2;
+	//s.str += 1;
 
 	if (s.len == 0)
 		return new NullOp;
@@ -869,8 +873,10 @@ RegExp * Scanner::getAnyRE() const
 
 RegExp * Scanner::invToRE(SubStr s) const
 {
-	s.len--;
-	s.str++;
+        // ranToRE et al. used to take bracketed literal,
+        // but the bracket-stripping is no longer needed
+	//s.len--;
+	//s.str++;
 	
 	RegExp * any = getAnyRE();
 
@@ -1024,13 +1030,14 @@ DFA* genCode(RegExp *re)
 	uint j;
 
 	re->split(cs);
-	/*
-	    for(uint k = 0; k < nChars;){
+        /*
+        std::cerr << std::endl << "CS.REP" << std::endl; 
+	    for(uint k = 0; k < nRealChars;){
 		for(j = k; ++k < nRealChars && cs.rep[k] == cs.rep[j];);
-		printSpan(cerr, j, k);
-		cerr << "\t" << cs.rep[j] - &cs.ptn[0] << endl;
+		printSpan(std::cerr, j, k);
+                std::cerr << "\t" << cs.rep[j] - &cs.ptn[0] << std::endl;
 	    }
-	*/
+        */
 	Char *rep = new Char[nRealChars];
 
 	for (j = 0; j < nRealChars; ++j)
@@ -1045,17 +1052,33 @@ DFA* genCode(RegExp *re)
 	Ins *ins = new Ins[re->size + 1];
 	memset(ins, 0, (re->size + 1)*sizeof(Ins));
 	re->compile(rep, ins);
+
+        /*
+        std::cerr << std::endl << "BEFORE EOI" << std::endl;
+	for (const Ins *inst = &ins[0]; inst < &ins[re->size]; ) {
+		inst = showIns(std::cout, *inst, ins[0]);
+	}
+        */
+
 	Ins *eoi = &ins[re->size];
 	eoi->i.tag = GOTO;
 	eoi->i.link = eoi;
 
-	optimize(ins);
-
-	/*
-	for (const Ins *inst = &ins[0]; inst < &ins[re->size]; ) {
+        /*
+        std::cerr << std::endl << "BEFORE OPT" << std::endl;
+	for (const Ins *inst = &ins[0]; inst <= &ins[re->size]; ) {
 		inst = showIns(std::cout, *inst, ins[0]);
 	}
-	*/
+        */
+
+	optimize(ins);
+
+        /*
+        std::cerr << std::endl << "AFTER OPT" << std::endl;
+	for (const Ins *inst = &ins[0]; inst <= &ins[re->size]; ) {
+		inst = showIns(std::cout, *inst, ins[0]);
+	}
+        */
 
 	for (j = 0; j < re->size;)
 	{

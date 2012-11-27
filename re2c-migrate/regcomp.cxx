@@ -8,7 +8,7 @@
 //
 // ... TODOXXX additional blurb for re2c ...
 
-// TODOXXX support for REGCOMP_STANDALONE
+// TODOXXX support for standalone regcomp without ugly duplicate code
 #include "regcomp.h"
 #include "../translate.h"
 #include "../session.h"
@@ -85,22 +85,17 @@ RegExp *stapdfa::failRE = NULL;
 stapdfa::stapdfa ()
 {
   content = NULL;
-
-  if (!failRE) {
-    regex_parser p(" [\000-\377] "); // TODOXXX temp padding hack
-    failRE = p.parse();
-  }
 }
 
 stapdfa::stapdfa (const string& func_name, const string& re)
   : orig_input(re), func_name(func_name)
 {
   if (!failRE) {
-    regex_parser p("."); // TODOXXX temp padding hack
+    regex_parser p("[\\000-\\377]");
     failRE = p.parse();
   }
 
-  regex_parser p(" " + re + " "); // TODOXXX temporary padding hack
+  regex_parser p(re);
   ast = prepare_rule(p.parse ()); // must be retained for re2c's reference
 
   // compile ast to DFA
@@ -120,30 +115,29 @@ stapdfa::emit_declaration (translator_output *o)
   o->newline() << "int";
   o->newline() << func_name << " (char *cur)";
   o->newline() << "{";
-  // TODOXXX indent contents
+  o->indent(1);
 
+  o->newline() << "char *start = cur;";
+  o->newline() << "unsigned l = strlen(cur);";
   o->newline() << "char *mar;";
-  // TODOXXX anchor at left column:
   o->newline() << "#define YYCTYPE char";
   o->newline() << "#define YYCURSOR cur";
   o->newline() << "#define YYLIMIT cur";
   o->newline() << "#define YYMARKER mar";
-  o->newline() << "#define YYFILL(n) "; // TODOXXX bounds check YYFILL
+  o->newline() << "#define YYFILL(n) ({ if ((cur - start) + n > l) return 0; })";
 
   re2c::uint topIndent = 0;
   bool bPrologBrace = false;
   content->emit(o->newline(), topIndent, NULL, "", 0, bPrologBrace);
 
-  o->newline() << "}";
+  o->newline(-1) << "}";
 }
 
 void
-// TODOXXX fix function prototype
 stapdfa::emit_matchop (translator_output *o, const string& match_expr)
 {
-  // TODOXXX can multiple copies of a match be generated? avoid
-  // TODOXXX imitate translate.cxx's careful paren-wrapping
-  o->line() << func_name << " (" << match_expr << ")";
+  // TODOXXX eventually imitate visit_functioncall in translate.cxx??
+  o->line() << "(" << func_name << " (" << match_expr << ")" << ")";
 }
 
 RegExp *
@@ -157,17 +151,23 @@ stapdfa::prepare_rule (RegExp *expr)
   Token *tokenNo = new Token(codeNo, CODE_NO, 0);
 
   RegExp *nope = new NullOp;
-  RegExp *resMatch = new RuleOp(expr, nope, tokenYes, 0);
-  RegExp *resFail = new RuleOp(failRE, nope, tokenNo, 0);
 
-  // return mkAlt(resFail, resMatch);
-  return resMatch; // TODOXXX trigger {return 0;} properly
+  // To ensure separate outcomes for each alternative (match or fail),
+  // simply give different accept parameters to the RuleOp
+  // constructor:
+  RegExp *resMatch = new RuleOp(expr, nope, tokenYes, 0);
+  RegExp *resFail = new RuleOp(failRE, nope, tokenNo, 1);
+
+  return mkAlt(resMatch, resFail);
 }
 
 void
 stapdfa::print (std::ostream& o) const
 {
-  // TODOXXX print func_name, orig_input
+  // TODOXXX escape special chars in orig_input
+  o << "dfa(" << func_name << ",\"" << orig_input << "\")" << endl;
+  o << content << endl;
+  // TODOXXX properly indent and delineate content
 }
 
 std::ostream&
@@ -182,7 +182,7 @@ operator << (std::ostream &o, const stapdfa& d)
 RegExp *
 regex_parser::parse ()
 {
-  sc = new Scanner(cin, cout); // cin/cout actually ignored...
+  sc = new Scanner(cin, cout); // cin/cout are actually ignored here...
   next_c = 0; last_c = 0;
   next_pos = 0; last_pos = 0;
 
@@ -194,8 +194,8 @@ regex_parser::parse ()
       if (c == ')')
         parse_error ("unbalanced ')'", next_pos);
       else
-        // TODOXXX which errors are possible here?
-        parse_error ("FIXME -- did not reach end of input", next_pos);
+        // This should not be possible:
+        parse_error ("BUG -- regex parse failed to finish for unknown reasons", next_pos);
     }
 
   delete sc;
@@ -217,7 +217,6 @@ regex_parser::next ()
   last_c = next_c;
   // advance by zeroing next_c
   next_c = 0;
-  //cerr << "NEXT " << last_c << endl;
   return last_c;
 }
 
@@ -233,7 +232,6 @@ regex_parser::peek ()
 
   // don't advance by zeroing next_c
   last_c = next_c;
-  //cerr << "NEXT " << next_c << endl;
   return next_c;
 }
 
@@ -246,7 +244,6 @@ regex_parser::finished ()
 bool
 regex_parser::isspecial (char c)
 {
-  // TODOXXX use switch() for more efficiency?
   return ( c == '.' || c == '[' || c == '{' || c == '(' || c == ')'
            || c == '\\' || c == '*' || c == '+' || c == '?' || c == '|'
            || c == '^' || c == '$' );
@@ -255,8 +252,13 @@ regex_parser::isspecial (char c)
 void
 regex_parser::expect (char expected)
 {
-  char c = next ();
-  // TODOXXX handle error for end of input
+  char c;
+  try {
+    c = next ();
+  } catch (const dfa_parse_error &e) {
+    parse_error (_F("expected %c, found end of input", expected));
+  }
+
   if (c != expected)
     parse_error (_F("expected %c, found %c", expected, c));
 }
@@ -264,7 +266,7 @@ regex_parser::expect (char expected)
 void
 regex_parser::parse_error (const string& msg, unsigned pos)
 {
-  throw new dfa_parse_error(msg, input, pos);
+  throw dfa_parse_error(msg, input, pos);
 }
 
 void
@@ -362,7 +364,6 @@ regex_parser::parse_factor ()
           c = peek ();
         }
 
-      //cerr << "ACCUM " << accumulate << endl;
       // strToRE takes this funky custom class
       SubStr accumSubStr (accumulate.c_str ());
       result = sc->strToRE (accumSubStr);
@@ -451,14 +452,16 @@ regex_parser::parse_char_range ()
   if (c == '^')
     {
       inv = true;
-      c = next ();
+      next ();
+      c = peek ();
     }
 
-  // TODOXXX grab range to next ']' PROPERLY
+  // grab range to next ']'
   while (c != ']')
     {
       accumulate.push_back (c);
-      c = next ();
+      next ();
+      c = peek ();
     }
 
   // invToRE and ranToRE take this funky custom class

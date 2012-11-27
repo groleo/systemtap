@@ -33,45 +33,50 @@ int main(int argc, char *argv [])
     }
 
   int test_type = atoi (argv[1]);
-  switch (test_type)
-    {
-    case 0:
-    case 1:
-    case 2:
-      // glibc-style test syntax
+  try {
+    switch (test_type)
       {
-        if (argc != 4) { print_usage (argv[0]); exit (1); }
-        string s(argv[2]);
-        stapdfa d("do_match", s);
-        translator_output o(cout);
+      case 0:
+      case 1:
+      case 2:
+        // glibc-style test syntax
+        {
+          if (argc != 4) { print_usage (argv[0]); exit (1); }
+          string s(argv[2]);
+          stapdfa d("do_match", s);
+          translator_output o(cout);
 
-        string t(argv[3]);
-        string match_expr = "\"" + t + "\""; // TODOXXX escape argv[3]
+          string t(argv[3]);
+          string match_expr = "\"" + t + "\""; // TODOXXX escape argv[3]
+          
+          // emit code skeleton
+          o.line() << "// test output for systemtap-re2c";
+          o.newline() << "#include <stdio.h>";
+          o.newline() << "#include <stdlib.h>";
+          o.newline() << "#include <string.h>";
+          
+          o.newline();
+          d.emit_declaration (&o);
+          o.newline();
 
-        // emit code skeleton
-        o.line() << "// test output for systemtap-re2c";
-        o.newline() << "#include <stdio.h>";
-        o.newline() << "#include <stdlib.h>";
-
-        o.newline();
-        d.emit_declaration (&o);
-        o.newline();
-
-        o.newline() << "int main()";
-        o.newline() << "{";
-        o.indent(1);
-        o.newline() << "int ans = ";
-        d.emit_matchop (&o, match_expr); // TODOXXX escape argv[3]
-        o.line() << ";";
-        o.newline() << "printf(\"match %s\\n\", ans ? \"succeed\" : \"fail\");";
-        o.newline() << "exit(ans);";
-        o.newline(-1) << "}";
-        o.newline();
-
-        break;
+          o.newline() << "int main()";
+          o.newline() << "{";
+          o.indent(1);
+          o.newline() << "int ans = ";
+          d.emit_matchop (&o, match_expr); // TODOXXX escape argv[3]
+          o.line() << ";";
+          o.newline() << "printf(\"match %s\\n\", ans ? \"succeed\" : \"fail\");";
+          o.newline() << "exit(ans);";
+          o.newline(-1) << "}";
+          o.newline();
+          
+          break;
+        }
+      default:
+        print_usage (argv[0]);
+        exit (1);
       }
-    default:
-      print_usage (argv[0]);
-      exit (1);
-    }
+  } catch (const dfa_parse_error &e) {
+    cerr << e.what() << endl;
+  }
 }
