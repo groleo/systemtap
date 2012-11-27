@@ -1642,8 +1642,7 @@ stap_start_task_finder(void)
 		size_t mmpathlen;
 		struct list_head *tgt_node;
 
-		/* Skip over processes other than that specified with
-		 * stap -c or -x. */
+		/* If in stap -c/-x mode, skip over other processes. */
 		if (_stp_target && tsk->tgid != _stp_target)
 			continue;
 
@@ -1760,8 +1759,7 @@ stap_task_finder_post_init(void)
 	do_each_thread(grp, tsk) {
 		struct list_head *tgt_node;
 
-		/* Skip over processes other than that specified with
-		 * stap -c or -x. */
+		/* If in stap -c/-x mode, skip over other processes. */
 		if (_stp_target && tsk->tgid != _stp_target)
 			continue;
 
@@ -1806,7 +1804,6 @@ stap_task_finder_post_init(void)
 			}
 		}
 	} while_each_thread(grp, tsk);
-stf_err:
 	rcu_read_unlock();
 	return;
 }
