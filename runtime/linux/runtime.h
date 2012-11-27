@@ -159,6 +159,13 @@ static void *kallsyms_task_work_add;
 static void *kallsyms_task_work_cancel;
 #endif
 
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
+static void *kallsyms_signal_wake_up;
+#endif
+#if !defined(STAPCONF___LOCK_TASK_SIGHAND_EXPORTED)
+static void *kallsyms___lock_task_sighand;
+#endif
+
 #include "access_process_vm.h"
 #include "loc2c-runtime.h"
 

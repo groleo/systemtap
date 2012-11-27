@@ -1725,6 +1725,12 @@ c_unparser::emit_module_init ()
   o->newline() << "if (atomic_read (&session_state) == STAP_SESSION_STARTING)";
   // NB: only other valid state value is ERROR, in which case we don't
   o->newline(1) << "atomic_set (&session_state, STAP_SESSION_RUNNING);";
+
+  // Run all post-session starting code.
+  for (unsigned i=0; i<g.size(); i++)
+    {
+      g[i]->emit_module_post_init (*session);
+    }
   o->newline(-1) << "return 0;";
 
   // Error handling path; by now all partially registered probe groups

@@ -132,13 +132,13 @@ static inline void utrace_engine_put(struct utrace_engine *engine)
  * When %UTRACE_STOP is used in @report_syscall_entry, then @current
  * stops before attempting the system call.  In this case, another
  * @report_syscall_entry callback will follow after @current resumes
- * if %UTRACE_REPORT was returned by some callback or passed to
- * utrace_control().  In a second or later callback,
- * %UTRACE_SYSCALL_RESUMED is set in the @action argument to indicate
- * a repeat callback still waiting to attempt the same system call
- * invocation.  This repeat callback gives each engine an opportunity
- * to reexamine registers another engine might have changed while
- * @current was held in %UTRACE_STOP.
+ * if %UTRACE_REPORT or %UTRACE_INTERRUPT was returned by some
+ * callback or passed to utrace_control().  In a second or later
+ * callback, %UTRACE_SYSCALL_RESUMED is set in the @action argument to
+ * indicate a repeat callback still waiting to attempt the same system
+ * call invocation.  This repeat callback gives each engine an
+ * opportunity to reexamine registers another engine might have
+ * changed while @current was held in %UTRACE_STOP.
  *
  * In other cases, the resume action does not take effect until @current
  * is ready to check for signals and return to user mode.  If there
@@ -172,8 +172,8 @@ static inline void utrace_engine_put(struct utrace_engine *engine)
  *	call here can request the immediate callback for this occurrence of
  *	@event.  @event is zero when there is no other event, @current is
  *	now ready to check for signals and return to user mode, and some
- *	engine has used %UTRACE_REPORT to request this
- *	callback.
+ *	engine has used %UTRACE_REPORT or %UTRACE_INTERRUPT to request
+ *	this callback.
  *
  * @report_clone:
  *	Requested by %UTRACE_EVENT(%CLONE).
@@ -182,8 +182,8 @@ static inline void utrace_engine_put(struct utrace_engine *engine)
  *	equivalent flags for a fork() or vfork() system call.  This
  *	function can use utrace_attach_task() on @child.  Then passing
  *	%UTRACE_STOP to utrace_control() on @child here keeps the child
- *	stopped before it ever runs in user mode, %UTRACE_REPORT
- *	ensures a callback from @child before it
+ *	stopped before it ever runs in user mode, %UTRACE_REPORT or
+ *	%UTRACE_INTERRUPT ensures a callback from @child before it
  *	starts in user mode.
  *
  * @report_exec:
@@ -293,6 +293,7 @@ static int __must_check utrace_barrier(struct task_struct *,
 /**
  * enum utrace_resume_action - engine's choice of action for a traced task
  * @UTRACE_STOP:		Stay quiescent after callbacks.
+ * @UTRACE_INTERRUPT:		Make quiesce callback soon.
  * @UTRACE_REPORT:		Make some callback soon.
  * @UTRACE_RESUME:		Resume normally in user mode.
  * @UTRACE_DETACH:		Detach my engine (implies %UTRACE_RESUME).
@@ -306,6 +307,7 @@ static int __must_check utrace_barrier(struct task_struct *,
  */
 enum utrace_resume_action {
 	UTRACE_STOP,
+	UTRACE_INTERRUPT,
 	UTRACE_REPORT,
 	UTRACE_RESUME,
 	UTRACE_DETACH,

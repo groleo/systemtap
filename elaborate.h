@@ -218,6 +218,10 @@ struct derived_probe_group
   // invoked.  The generated code may use pre-declared "int i, j;"
   // and set "const char* probe_point;".
 
+  virtual void emit_module_post_init (systemtap_session& s) {}
+  // The emit_module_post_init() code is called once session_state is
+  // set to running.
+
   virtual void emit_module_refresh (systemtap_session& s) {}
   // The _refresh-generated code may be called multiple times during
   // a session run, bracketed by _init and _exit calls.

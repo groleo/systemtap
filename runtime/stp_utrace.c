@@ -105,6 +105,37 @@ static void utrace_report_exec(void *cb_data __attribute__ ((unused)),
 #define __UTRACE_REGISTERED	1
 static atomic_t utrace_state = ATOMIC_INIT(__UTRACE_UNREGISTERED);
 
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
+// First typedef from the original decl, then #define as typecasted call.
+typedef typeof(&signal_wake_up) signal_wake_up_fn;
+#define signal_wake_up (* (signal_wake_up_fn)kallsyms_signal_wake_up)
+#endif
+
+#if !defined(STAPCONF___LOCK_TASK_SIGHAND_EXPORTED)
+// First typedef from the original decl, then #define as typecasted call.
+typedef typeof(&__lock_task_sighand) __lock_task_sighand_fn;
+#define __lock_task_sighand (* (__lock_task_sighand_fn)kallsyms___lock_task_sighand)
+
+/*
+ * __lock_task_sighand() is called from the inline function
+ * 'lock_task_sighand'. Since the real inline function won't know
+ * anything about our '#define' above, we have to have our own version
+ * of the inline function.  Sigh.
+ */
+static inline struct sighand_struct *
+stp_lock_task_sighand(struct task_struct *tsk, unsigned long *flags)
+{
+	struct sighand_struct *ret;
+
+	ret = __lock_task_sighand(tsk, flags);
+	(void)__cond_lock(&tsk->sighand->siglock, ret);
+	return ret;
+}
+#else
+#define stp_lock_task_sighand lock_task_sighand
+#endif
+
+
 static int utrace_init(void)
 {
 	int i;
@@ -119,6 +150,25 @@ static int utrace_init(void)
 	for (i = 0; i < TASK_UTRACE_TABLE_SIZE; i++) {
 		INIT_HLIST_HEAD(&task_utrace_table[i]);
 	}
+
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
+	/* The signal_wake_up() function isn't exported. Look up that
+	 * function address. */
+        kallsyms_signal_wake_up = (void *)kallsyms_lookup_name("signal_wake_up");
+        if (kallsyms_signal_wake_up == NULL) {
+		_stp_error("Can't resolve signal_wake_up!");
+		goto error;
+        }
+#endif
+#if !defined(STAPCONF___LOCK_TASK_SIGHAND_EXPORTED)
+	/* The __lock_task_sighand() function isn't exported. Look up
+	 * that function address. */
+        kallsyms___lock_task_sighand = (void *)kallsyms_lookup_name("__lock_task_sighand");
+        if (kallsyms___lock_task_sighand == NULL) {
+		_stp_error("Can't resolve __lock_task_sighand!");
+		goto error;
+        }
+#endif
 
         /* PR14781: avoid kmem_cache naming collisions (detected by CONFIG_DEBUG_VM)
            by plopping a non-conflicting token - in this case the address of a 
@@ -524,7 +574,6 @@ unlock:
  * UTRACE_ATTACH_EXCLUSIVE:
  * Attempting to attach a second (matching) engine fails with -%EEXIST.
  *
- * *** FIXME: needed??? ***
  * UTRACE_ATTACH_MATCH_OPS: Only consider engines matching @ops.
  * UTRACE_ATTACH_MATCH_DATA: Only consider engines matching @data.
  *
@@ -1287,6 +1336,15 @@ static inline int utrace_control_dead(struct task_struct *target,
  *
  * Since this is meaningless unless @report_quiesce callbacks will
  * be made, it returns -%EINVAL if @engine lacks %UTRACE_EVENT(%QUIESCE).
+ *
+ * UTRACE_INTERRUPT:
+ *
+ * This is like %UTRACE_REPORT, but ensures that @target will make a
+ * callback before it resumes or delivers signals.  If @target was in
+ * a system call or about to enter one, work in progress will be
+ * interrupted as if by %SIGSTOP.  If another engine is keeping
+ * @target stopped, then there might be no callbacks until all engines
+ * let it resume.
  */
 static int utrace_control(struct task_struct *target,
 			  struct utrace_engine *engine,
@@ -1391,6 +1449,64 @@ static int utrace_control(struct task_struct *target,
 					printk(KERN_ERR
 					       "%s:%d - stp_task_work_add() returned %d\n",
 					       __FUNCTION__, __LINE__, ret);
+				}
+			}
+		}
+		break;
+
+	case UTRACE_INTERRUPT:
+		/*
+		 * Make the thread call tracehook_get_signal() soon.
+		 */
+		clear_engine_wants_stop(engine);
+		if (utrace->resume == UTRACE_INTERRUPT)
+			break;
+		utrace->resume = UTRACE_INTERRUPT;
+
+		/*
+		 * If it's not already stopped, interrupt it now.  We need
+		 * the siglock here in case it calls recalc_sigpending()
+		 * and clears its own TIF_SIGPENDING.  By taking the lock,
+		 * we've serialized any later recalc_sigpending() after our
+		 * setting of utrace->resume to force it on.
+		 */
+		if (reset) {
+			/*
+			 * This is really just to keep the invariant that
+			 * TIF_SIGPENDING is set with UTRACE_INTERRUPT.
+			 * When it's stopped, we know it's always going
+			 * through utrace_get_signal() and will recalculate.
+			 */
+			set_tsk_thread_flag(target, TIF_SIGPENDING);
+		} else {
+			int rc = 0;
+
+			if (! utrace->task_work_added) {
+				rc = stp_task_work_add(target, &utrace->work);
+				/* stp_task_work_add() returns -ESRCH
+				 * if the task has already passed
+				 * exit_task_work(). Just ignore this
+				 * error. */
+				if (rc == 0 || rc == -ESRCH) {
+					utrace->task_work_added = 1;
+					rc = 0;
+				}
+				else {
+					printk(KERN_ERR
+					       "%s:%d - task_work_add() returned %d\n",
+					       __FUNCTION__, __LINE__, rc);
+				}
+			}
+
+			if (likely(rc == 0)) {
+				struct sighand_struct *sighand;
+				unsigned long irqflags;
+
+				sighand = stp_lock_task_sighand(target,
+								&irqflags);
+				if (likely(sighand)) {
+					signal_wake_up(target, 0);
+					unlock_task_sighand(target, &irqflags);
 				}
 			}
 		}

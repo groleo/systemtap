@@ -554,11 +554,12 @@ __stp_utrace_attach(struct task_struct *tsk,
 			debug_task_finder_attach();
 
 			if (action != UTRACE_RESUME) {
-				rc = utrace_control(tsk, engine, UTRACE_STOP);
-				/* If utrace_control(..., UTRACE_STOP)
-				 * returns EINPROGRESS, that means the
-				 * task hasn't stopped quite yet, but
-				 * will soon.  Ignore this error. */
+				rc = utrace_control(tsk, engine, action);
+				/* If utrace_control() returns
+				 * EINPROGRESS when we're trying to
+				 * stop/interrupt, that means the task
+				 * hasn't stopped quite yet, but will
+				 * soon.  Ignore this error. */
 				if (rc != 0 && rc != -EINPROGRESS) {
 					_stp_error("utrace_control returned error %d on pid %d",
 						   rc, (int)tsk->pid);
@@ -1743,6 +1744,73 @@ stf_err:
 	debug_task_finder_report(); // report at end for utrace engine counting
 	return rc;
 }
+
+
+static void
+stap_task_finder_post_init(void)
+{
+	struct task_struct *grp, *tsk;
+
+	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING) {
+		_stp_error("task_finder not running?");
+		return;
+	}
+
+	rcu_read_lock();
+	do_each_thread(grp, tsk) {
+		struct list_head *tgt_node;
+
+		/* Skip over processes other than that specified with
+		 * stap -c or -x. */
+		if (_stp_target && tsk->tgid != _stp_target)
+			continue;
+
+		/* Only "poke" thread group leaders. */
+		if (tsk->tgid != tsk->pid)
+			continue;
+
+		/* See if we need to "poke" this thread. */
+		list_for_each(tgt_node, &__stp_task_finder_list) {
+			struct stap_task_finder_target *tgt;
+			struct utrace_engine *engine;
+
+			tgt = list_entry(tgt_node,
+					 struct stap_task_finder_target, list);
+			if (tgt == NULL || !tgt->engine_attached)
+				continue;
+
+			// If we found an "interesting" task earlier,
+			// stop it.
+			engine = utrace_attach_task(tsk,
+						    UTRACE_ATTACH_MATCH_OPS,
+						    &tgt->ops, tgt);
+			if (engine != NULL && !IS_ERR(engine)) {
+				/* We found a target task. Stop it. */
+				int rc = utrace_control(tsk, engine,
+							UTRACE_INTERRUPT);
+				/* If utrace_control() returns
+				 * EINPROGRESS when we're trying to
+				 * stop/interrupt, that means the task
+				 * hasn't stopped quite yet, but will
+				 * soon.  Ignore this error. */
+				if (rc != 0 && rc != -EINPROGRESS) {
+					_stp_error("utrace_control returned error %d on pid %d",
+						   rc, (int)tsk->pid);
+				}
+				utrace_engine_put(engine);
+
+				/* Since we only need to interrupt
+				 * the task once, not once per
+				 * engine, get out of this loop. */
+				break;
+			}
+		}
+	} while_each_thread(grp, tsk);
+stf_err:
+	rcu_read_unlock();
+	return;
+}
+
 
 static void
 stap_stop_task_finder(void)
