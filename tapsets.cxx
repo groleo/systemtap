@@ -9927,6 +9927,7 @@ tracepoint_builder::init_dw(systemtap_session& s)
   glob_suffixes.push_back("include/trace/*.h");
   glob_suffixes.push_back("arch/x86/kvm/*trace.h");
   glob_suffixes.push_back("fs/xfs/linux-*/xfs_tr*.h");
+  glob_suffixes.push_back("fs/xfs/xfs_trace*.h");
 
   // compute cartesian product
   vector<string> globs;
