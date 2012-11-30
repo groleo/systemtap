@@ -647,7 +647,10 @@ static void _stp_kmodule_update_address(const char* module,
 #ifndef STAPCONF_KALLSYMS
 unsigned long kallsyms_lookup_name (const char *name)
 {
-        _stp_error ("kallsyms_lookup_name unavailable for %s\n", name);
+        /* NB: PR14804: don't use _stp_error here.  It's called too
+           early for the actual message buffer goo to be allocated. */
+        /* Don't even printk.  A user can't do anything about it. */
+        /* printk (KERN_ERR "kallsyms_lookup_name unavailable for %s\n", name); */
         return 0;
 }
 #endif

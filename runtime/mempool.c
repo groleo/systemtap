@@ -77,6 +77,10 @@ static void *_stp_mempool_alloc(_stp_mempool_t *pool)
 {
 	unsigned long flags;
 	struct _stp_mem_buffer *ptr = NULL;
+        /* PR14804: tolerate accidental early call, before pool is
+         actually initialized. */
+        if (pool == NULL)
+                return NULL;
 	spin_lock_irqsave(&pool->lock, flags);
 	if (likely(!list_empty(&pool->free_list))) {
 		ptr = (struct _stp_mem_buffer *)pool->free_list.next;
