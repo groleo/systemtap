@@ -1,5 +1,5 @@
 // context-symbols tapset
-// Copyright (C) 2005-2008, 2011 Red Hat Inc.
+// Copyright (C) 2005-2012 Red Hat Inc.
 // Copyright (C) 2006 Intel Corporation.
 //
 // This file is part of systemtap, and is free software.  You can
@@ -30,19 +30,19 @@ function __stack_raw (n:long) %{ /* pragma:unwind */ /* pure */
  *  no matter how many times stack() is called, or in what order.
  */
 function stack:long (n:long) {
-         r = __stack_raw(n);
-         if (r != 0) return r
+         __r = __stack_raw(n);
+         if (__r != 0) return __r
 
          /* fallback: parse backtrace() to go deeper in the stack */
-         b = backtrace (); orig_n = n;
-         sym = tokenize (b, " ");
-         if (sym == "") @__context_unwind_error(orig_n);
-         while (n > 0) {
-               sym = tokenize ("", " ");
-               if (sym == "") @__context_unwind_error(orig_n);
-               n--;
+         __b = backtrace (); __orig_n = __n;
+         __sym = tokenize (__b, " ");
+         if (__sym == "") @__context_unwind_error(__orig_n);
+         while (__n > 0) {
+               __sym = tokenize ("", " ");
+               if (__sym == "") @__context_unwind_error(__orig_n);
+               __n--;
          }
-         return strtol(sym, 16)
+         return strtol(__sym, 16)
 }
 
 /**
@@ -247,10 +247,10 @@ function symdata:string (addr: long) %{ /* pure */ /* pragma:symbols */
  *  Returns nothing.
  */
 function print_syms (callers:string) {
-         sym = tokenize (callers, " ");
-         while (sym != "") {
-               printf (" %s : %s\n", sym, symdata (strtol(sym,16)));
-               sym = tokenize ("", " ");
+         __sym = tokenize (callers, " ");
+         while (__sym != "") {
+               printf (" %s : %s\n", __sym, symdata (strtol(__sym,16)));
+               __sym = tokenize ("", " ");
          }
 }
 
@@ -274,15 +274,15 @@ function print_syms (callers:string) {
  * print_syms().
  */
 function sprint_syms (callers:string) {
-         sym = tokenize (callers, " ");
-         foo = ""; l = 0
-         while (sym != "") {
+         __sym = tokenize (callers, " ");
+         __foo = ""; __l = 0
+         while (__sym != "") {
                // cleanly handle overflow instead of printing partial line:
-               line = sprintf (" %s : %s\n", sym, symdata (strtol(sym,16)));
-               l += strlen(line)
-               if (l > %{ MAXSTRINGLEN %}) break
-               foo .= line
-               sym = tokenize ("", " ")
+               __line = sprintf (" %s : %s\n", __sym, symdata (strtol(__sym,16)));
+               __l += strlen(__line)
+               if (__l > %{ MAXSTRINGLEN %}) break
+               __foo .= __line
+               __sym = tokenize ("", " ")
          }
-         return foo
+         return __foo
 }
