@@ -1,8 +1,15 @@
 # Makefile.am --- automake input file for systemtap-re2c
 
-noinst_PROGRAMS =
+AUTOMAKE_OPTIONS=dejagnu
 
-noinst_PROGRAMS += regtest
+clean-local:
+	-rm -f tmp_regtest*
+
+check_PROGRAMS =
+
+check_PROGRAMS += regtest
+
+# check_SCRIPTS = regcomp.base/regtest.in.0 regcomp.base/regtest.in.1
 
 regtest_SOURCES = regcomp.cxx regtest.cxx
 regtest_SOURCES += actions.cc code.cc dfa.cc substr.cc translate.cc globals.cc
@@ -16,3 +23,4 @@ BUILT_SOURCES += git_version.stamp
 git_version.stamp ../git_version.h:
 	$(MAKE) -C .. $(notdir $@)
 
+RUNTESTDEFAULTFLAGS = --tool regcomp --srcdir $$srcdir

@@ -1,0 +1,18 @@
+# The test format is basically stolen from glibc's regex testsuite. 
+# Each line has format <expected outcome>:<regexp>:<match string>.
+
+# 0 means match should succeed:
+0:abc:abc
+
+# 1 means match should fail:
+1:abc:zb
+1:abc:ab
+
+# 2 means regex compilation should fail (cleanly):
+2:[:abc
+
+# FIXME -- matching should not be left-anchored by default
+1:abc:zabc
+
+# FIXME -- indefinite repetition should not fail via reading past the end
+1:.*:stuffs

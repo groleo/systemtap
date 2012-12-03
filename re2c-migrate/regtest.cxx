@@ -66,7 +66,12 @@ int main(int argc, char *argv [])
           d.emit_matchop (&o, match_expr); // TODOXXX escape argv[3]
           o.line() << ";";
           o.newline() << "printf(\"match %s\\n\", ans ? \"succeed\" : \"fail\");";
-          o.newline() << "exit(ans);";
+          if (test_type == 1) {
+            o.newline() << "exit(ans ? 1 : 0);";
+          } else if (test_type == 0) {
+            o.newline() << "exit(ans ? 0 : 1);";
+          }
+          /* TODO test type 2 should fail to compile */
           o.newline(-1) << "}";
           o.newline();
           
@@ -77,6 +82,7 @@ int main(int argc, char *argv [])
         exit (1);
       }
   } catch (const dfa_parse_error &e) {
-    cerr << e.what() << endl;
+    cerr << "ERROR: " << e.what() << endl;
+    exit (1);
   }
 }
