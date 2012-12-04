@@ -118,7 +118,7 @@ stapdfa::emit_declaration (translator_output *o)
   o->indent(1);
 
   o->newline() << "char *start = cur;";
-  o->newline() << "unsigned l = strlen(cur);";
+  o->newline() << "unsigned l = strlen(cur) + 1;"; /* include \0 byte at end of string */
   o->newline() << "char *mar;";
   o->newline() << "#define YYCTYPE char";
   o->newline() << "#define YYCURSOR cur";

@@ -897,7 +897,11 @@ RegExp * Scanner::invToRE(SubStr s) const
 RegExp * Scanner::mkDot() const
 {
 	RegExp * any = getAnyRE();
-	RegExp * ran = matchChar('\n');
+        // TODOXXX we want to avoid having .* &such overrun the end
+        // TODOXXX is this the only place '\n' is hardcoded?
+        // TODOXXX what about actually respecting '\n' in POSIX ERE?
+	// RegExp * ran = matchChar('\n'); // TODOXXX may want to keep this?
+        RegExp * ran = matchChar('\0');
 	RegExp * inv = mkDiff(any, ran);
 	
 	delete ran;

@@ -3,6 +3,7 @@
 
 # 0 means match should succeed:
 0:abc:abc
+0:s*:ssss
 
 # 1 means match should fail:
 1:abc:zb
@@ -12,7 +13,7 @@
 2:[:abc
 
 # FIXME -- matching should not be left-anchored by default
-1:abc:zabc
+0:abc:zabc
 
 # FIXME -- indefinite repetition should not fail via reading past the end
-1:.*:stuffs
+0:.*:stuffs
