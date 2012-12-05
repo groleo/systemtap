@@ -967,10 +967,10 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 							     KEYSYM(pmap_copy_keys));
 				} else {
 					if (clear_agg) {
-						_new_map_clear_node (anode);
+						_new_map_clear_node (agg, anode);
 						clear_agg = 0;
 					}
-					_stp_add_agg(anode, &n->node);
+					_stp_add_agg(agg, anode, &n->node);
 				}
 			}
 		}
