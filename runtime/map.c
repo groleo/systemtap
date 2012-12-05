@@ -123,13 +123,14 @@ static stat_data *_stp_get_stat(struct map_node *m)
  * @returns an int64
  * @sa key1int(), key2int()
  */
-static int64_t _stp_key_get_int64 (struct map_node *mn, int n)
+static int64_t _stp_key_get_int64 (struct map_node *mn, int n,
+				   map_get_key_fn get_key)
 {
 	int type;
 	int64_t res = 0;
 
 	if (mn) {
-		res = (*mn->map->get_key)(mn, n, &type).val;
+		res = (*get_key)(mn, n, &type).val;
 		if (type != INT64)
 			res = 0;
 	}
@@ -143,13 +144,14 @@ static int64_t _stp_key_get_int64 (struct map_node *mn, int n)
  * @returns a pointer to a string
  * @sa key1str(), key2str()
  */
-static char *_stp_key_get_str (struct map_node *mn, int n)
+static char *_stp_key_get_str (struct map_node *mn, int n,
+			       map_get_key_fn get_key)
 {
 	int type;
 	char *str = "";
 
 	if (mn) {
-		str = (*mn->map->get_key)(mn, n, &type).strp;
+		str = (*get_key)(mn, n, &type).strp;
 		if (type != STRING)
 			str = "bad type";
 	}
@@ -426,14 +428,16 @@ static void _stp_pmap_del(PMAP pmap)
 #define SORT_AVG   -1
 
 /* comparison function for sorts. */
-static int _stp_cmp (struct mlist_head *a, struct mlist_head *b, int keynum, int dir, int type)
+static int _stp_cmp (struct mlist_head *a, struct mlist_head *b,
+		     int keynum, int dir, int type, map_get_key_fn get_key)
 {
 	struct map_node *m1 = mlist_map_node(a);
 	struct map_node *m2 = mlist_map_node(b);
 	if (type == STRING) {
 		int ret;
 		if (keynum)
-			ret = strcmp(_stp_key_get_str(m1, keynum), _stp_key_get_str(m2, keynum));
+			ret = strcmp(_stp_key_get_str(m1, keynum, get_key),
+				     _stp_key_get_str(m2, keynum, get_key));
 		else
 			ret = strcmp(_stp_get_str(m1), _stp_get_str(m2));
 		if ((ret < 0 && dir > 0) || (ret > 0 && dir < 0))
@@ -445,8 +449,8 @@ static int _stp_cmp (struct mlist_head *a, struct mlist_head *b, int keynum, int
 	} else {
 		int64_t a,b;
 		if (keynum > 0) {
-			a = _stp_key_get_int64(m1, keynum);
-			b = _stp_key_get_int64(m2, keynum);
+			a = _stp_key_get_int64(m1, keynum, get_key);
+			b = _stp_key_get_int64(m2, keynum, get_key);
 		} else if (keynum < 0) {
 			stat_data *sd1 = (stat_data *)((long)m1 + m1->map->data_offset);
 			stat_data *sd2 = (stat_data *)((long)m2 + m2->map->data_offset);
@@ -502,7 +506,8 @@ static inline void _stp_swap (struct mlist_head *a, struct mlist_head *b)
  * @sa _stp_map_sortn()
  */
 
-static void _stp_map_sort (MAP map, int keynum, int dir)
+static void _stp_map_sort (MAP map, int keynum, int dir,
+			   map_get_key_fn get_key)
 {
         struct mlist_head *p, *q, *e, *tail;
         int nmerges, psize, qsize, i, type, insize = 1;
@@ -512,7 +517,7 @@ static void _stp_map_sort (MAP map, int keynum, int dir)
 		return;
 
 	if (keynum > 0)
-		(*map->get_key)(mlist_map_node(mlist_next(head)), keynum, &type);
+		(*get_key)(mlist_map_node(mlist_next(head)), keynum, &type);
 	else if (keynum < 0)
 		type = INT64;
 	else
@@ -536,7 +541,8 @@ static void _stp_map_sort (MAP map, int keynum, int dir)
 
                         qsize = insize;
                         while (psize > 0 || (qsize > 0 && q)) {
-                                if (psize && (!qsize || !q || !_stp_cmp(p, q, keynum, dir, type))) {
+                                if (psize && (!qsize || !q ||
+					      !_stp_cmp(p, q, keynum, dir, type, get_key))) {
                                         e = p;
                                         p = mlist_next(p) == head ? NULL : mlist_next(p);
                                         psize--;
@@ -569,10 +575,11 @@ static void _stp_map_sort (MAP map, int keynum, int dir)
  * @param dir Sort Direction. -1 for low-to-high. 1 for high-to-low.
  * @sa _stp_map_sort()
  */
-static void _stp_map_sortn(MAP map, int n, int keynum, int dir)
+static void _stp_map_sortn(MAP map, int n, int keynum, int dir,
+			   map_get_key_fn get_key)
 {
 	if (n == 0 || n > 30) {
-		_stp_map_sort(map, keynum, dir);
+		_stp_map_sort(map, keynum, dir, get_key);
 	} else {
 		struct mlist_head *head = &map->head;
 		struct mlist_head *c, *a, *last, *tmp;
@@ -582,7 +589,7 @@ static void _stp_map_sortn(MAP map, int n, int keynum, int dir)
 			return;
 
 		if (keynum > 0)
-			(*map->get_key)(mlist_map_node(mlist_next(head)), keynum, &type);
+			(*get_key)(mlist_map_node(mlist_next(head)), keynum, &type);
 		else if (keynum < 0)
 			type = INT64;
 		else
@@ -595,7 +602,7 @@ static void _stp_map_sortn(MAP map, int n, int keynum, int dir)
 			a = mlist_next(head);
 			c = mlist_next(mlist_next(a));
 			while ((mlist_next(a) != head) && (--num > 0)) {
-				if (_stp_cmp(a, mlist_next(a), keynum, dir, type)) {
+				if (_stp_cmp(a, mlist_next(a), keynum, dir, type, get_key)) {
 					swaps++;
 					_stp_swap(a, mlist_next(a));
 				}
@@ -611,7 +618,7 @@ static void _stp_map_sortn(MAP map, int n, int keynum, int dir)
 		while (a != head) {
 			tmp = mlist_next(a);
 			c = last;
-			while (c != head && _stp_cmp(c, a, keynum, dir, type))
+			while (c != head && _stp_cmp(c, a, keynum, dir, type, get_key))
 				c = mlist_prev(c);
 			if (c != last) {
 				mlist_del(a);
@@ -623,14 +630,15 @@ static void _stp_map_sortn(MAP map, int n, int keynum, int dir)
 	}
 }
 
-static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead, struct map_node *ptr)
+static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead,
+				     struct map_node *ptr, map_copy_fn copy)
 {
 	struct map_node *aptr;
 	/* copy keys and aggregate */
 	aptr = _new_map_create(agg, ahead);
 	if (aptr == NULL)
 		return NULL;
-	(*agg->copy)(aptr, ptr);
+	(*copy)(aptr, ptr);
 	switch (agg->type) {
 	case INT64:
 		_new_map_set_int64(agg, 
@@ -718,7 +726,7 @@ static void _stp_add_agg(struct map_node *aptr, struct map_node *ptr)
  * @param map A pointer to a pmap.
  * @returns a pointer to the aggregated map. Null on failure.
  */
-static MAP _stp_pmap_agg (PMAP pmap)
+static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp)
 {
 	int i, hash;
 	MAP m, agg;
@@ -743,7 +751,7 @@ static MAP _stp_pmap_agg (PMAP pmap)
 			mhlist_for_each_entry(ptr, e, head, hnode) {
 				int match = 0;
 				mhlist_for_each_entry(aptr, f, ahead, hnode) {
-					if ((*m->cmp)(ptr, aptr)) {
+					if ((*cmp)(ptr, aptr)) {
 						match = 1;
 						break;
 					}
@@ -751,7 +759,7 @@ static MAP _stp_pmap_agg (PMAP pmap)
 				if (match)
 					_stp_add_agg(aptr, ptr);
 				else {
-					if (!_stp_new_agg(agg, ahead, ptr)) {
+					if (!_stp_new_agg(agg, ahead, ptr, copy)) {
                                                 MAP_UNLOCK(m);
                                                 agg = NULL;
 						goto out;

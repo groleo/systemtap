@@ -624,10 +624,16 @@ struct mapvar
     return result;
   }
 
-  string call_prefix (string const & fname, vector<tmpvar> const & indices, bool pre_agg=false) const
+  string function_keysym(string const & fname, bool pre_agg=false) const
   {
     string mtype = (is_parallel() && !pre_agg) ? "pmap" : "map";
-    string result = "_stp_" + mtype + "_" + fname + "_" + keysym() + " (";
+    string result = "_stp_" + mtype + "_" + fname + "_" + keysym();
+    return result;
+  }
+
+  string call_prefix (string const & fname, vector<tmpvar> const & indices, bool pre_agg=false) const
+  {
+    string result = function_keysym(fname, pre_agg) + " (";
     result += pre_agg? fetch_existing_aggregate() : value();
     for (unsigned i = 0; i < indices.size(); ++i)
       {
@@ -650,7 +656,7 @@ struct mapvar
     if (!is_parallel())
       throw semantic_error(_("aggregating non-parallel map type"));
 
-    return "_stp_pmap_agg (" + value() + ")";
+    return function_keysym("agg") + " (" + value() + ")";
   }
 
   string fetch_existing_aggregate() const
@@ -747,8 +753,7 @@ struct mapvar
 
   string init () const
   {
-    string mtype = is_parallel() ? "pmap" : "map";
-    string prefix = value() + " = _stp_" + mtype + "_new_" + keysym() + " ("
+    string prefix = value() + " = " + function_keysym("new") + " ("
       + (maxsize > 0 ? lex_cast(maxsize) : "MAXMAPENTRIES")
       + ((wrap == true) ? ", 1" : ", 0");
 
@@ -847,17 +852,19 @@ public:
     return "l->" + name;
   }
 
-  string get_key (exp_type ty, unsigned i) const
+  string get_key (mapvar const& mv, exp_type ty, unsigned i) const
   {
     // bug translator/1175: runtime uses base index 1 for the first dimension
     // see also mapval::get
     switch (ty)
       {
       case pe_long:
-	return "_stp_key_get_int64 ("+ value() + ", " + lex_cast(i+1) + ")";
+	return mv.function_keysym("key_get_int64")
+	  + " (" + value() + ", " + lex_cast(i+1) + ")";
       case pe_string:
         // impedance matching: NULL -> empty strings
-	return "(_stp_key_get_str ("+ value() + ", " + lex_cast(i+1) + ") ?: \"\")";
+	return "(" + mv.function_keysym("key_get_str")
+	  + " (" + value() + ", " + lex_cast(i+1) + ") ?: \"\")";
       default:
 	throw semantic_error(_("illegal key type"));
       }
@@ -3260,14 +3267,14 @@ c_unparser::visit_foreach_loop (foreach_loop *s)
 	      o->newline() << "else"; // only sort if aggregation was ok
 	      if (s->limit)
 	        {
-		  o->newline(1) << "_stp_map_sortn ("
+		  o->newline(1) << mv.function_keysym("sortn") <<" ("
 				<< mv.fetch_existing_aggregate() << ", "
 				<< *res_limit << ", " << sort_column << ", "
 				<< - s->sort_direction << ");";
 		}
 	      else
 	        {
-		  o->newline(1) << "_stp_map_sort ("
+		  o->newline(1) << mv.function_keysym("sort") <<" ("
 				<< mv.fetch_existing_aggregate() << ", "
 				<< sort_column << ", "
 				<< - s->sort_direction << ");";
@@ -3282,13 +3289,15 @@ c_unparser::visit_foreach_loop (foreach_loop *s)
 	    {
 	      if (s->limit)
 	        {
-		  o->newline() << "_stp_map_sortn (" << mv.value() << ", "
+		  o->newline() << mv.function_keysym("sortn") <<" ("
+			       << mv.value() << ", "
 			       << *res_limit << ", " << s->sort_column << ", "
 			       << - s->sort_direction << ");";
 		}
 	      else
 	        {
-		  o->newline() << "_stp_map_sort (" << mv.value() << ", "
+		  o->newline() << mv.function_keysym("sort") <<" ("
+			       << mv.value() << ", "
 			       << s->sort_column << ", "
 			       << - s->sort_direction << ");";
 		}
@@ -3343,7 +3352,7 @@ c_unparser::visit_foreach_loop (foreach_loop *s)
 	{
 	  // copy the iter values into the specified locals
 	  var v = getvar (s->indexes[i]->referent);
-	  c_assign (v, iv.get_key (v.type(), i), s->tok);
+	  c_assign (v, iv.get_key (mv, v.type(), i), s->tok);
 	}
 
       if (s->value)

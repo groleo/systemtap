@@ -455,6 +455,26 @@ static key_data KEYSYM(map_get_key) (struct map_node *mn, int n, int *type)
 	return ptr;
 }
 
+static int64_t KEYSYM(_stp_map_key_get_int64) (struct map_node *mn, int n)
+{
+	return _stp_key_get_int64 (mn, n, KEYSYM(map_get_key));
+}
+
+static char *KEYSYM(_stp_map_key_get_str) (struct map_node *mn, int n)
+{
+	return _stp_key_get_str (mn, n, KEYSYM(map_get_key));
+}
+
+static void KEYSYM(_stp_map_sort) (MAP map, int keynum, int dir)
+{
+	_stp_map_sort (map, keynum, dir, KEYSYM(map_get_key));
+}
+
+static void KEYSYM(_stp_map_sortn) (MAP map, int n, int keynum, int dir)
+{
+	_stp_map_sortn (map, n, keynum, dir, KEYSYM(map_get_key));
+}
+
 
 static unsigned int KEYSYM(keycheck) (ALLKEYSD(key))
 {
@@ -557,8 +577,6 @@ static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap)
 {
 	MAP m = _stp_map_new (max_entries, wrap, VALUE_TYPE,
 			      sizeof(struct KEYSYM(map_node)), 0, -1);
-	if (m)
-		m->get_key = KEYSYM(map_get_key);
 	return m;
 }
 #else
@@ -599,9 +617,6 @@ static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap, int htype, ...)
 		_stp_warn ("Unknown histogram type %d\n", htype);
 		m = NULL;
 	}
-
-	if (m)
-		m->get_key = KEYSYM(map_get_key);
 
 	return m;
 }

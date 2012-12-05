@@ -92,27 +92,14 @@ struct map_root {
 	/* when more than maxnum elements, wrap or discard? */
 	int wrap;
 
-	/* is this a list? */
-	int list;
+	/* This is the offset from each map_node to find the data.  */
+	int data_offset;
 
 	/* linked list of current entries */
 	struct mlist_head head;
 
 	/* pool of unused entries. */
 	struct mlist_head pool;
-
-	/* saved key entry for lookups */
-	struct map_node *key;
-
-	/* This is information about the structure of the map_nodes used */
-	/* for this map. It is stored here instead of the map_node to save */
-	/* space. */
-	void (*copy_keys)(struct map_root *, struct map_node *);
-	key_data (*get_key)(struct map_node *mn, int n, int *type);
-	void (*copy)(struct map_node *dst, struct map_node *src);
-	int (*cmp)(struct map_node *dst, struct map_node *src);
-
-	int data_offset;
 
 #ifdef NEED_MAP_LOCKS
 #ifdef __KERNEL__
@@ -128,6 +115,10 @@ struct map_root {
 	/* used if this map's nodes contain stats */
 	struct _Hist hist;
 };
+
+typedef key_data (*map_get_key_fn)(struct map_node *mn, int n, int *type);
+typedef void (*map_copy_fn)(struct map_node *dst, struct map_node *src);
+typedef int (*map_cmp_fn)(struct map_node *dst, struct map_node *src);
 
 /** All maps are of this type. */
 typedef struct map_root *MAP;
@@ -176,8 +167,8 @@ int64_t int64_get(void *ptr);
 void stat_copy(void *dest, stat_data *src);
 void stat_add(void *dest, stat_data *src);
 stat_data *stat_get(void *ptr);
-static int64_t _stp_key_get_int64(struct map_node *mn, int n);
-static char * _stp_key_get_str(struct map_node *mn, int n);
+static int64_t _stp_key_get_int64(struct map_node *mn, int n, map_get_key_fn get_key);
+static char * _stp_key_get_str(struct map_node *mn, int n, map_get_key_fn get_key);
 static unsigned int int64_hash(const int64_t v);
 char * str_get(void *ptr);
 static void str_copy(char *dest, char *src);
@@ -212,8 +203,12 @@ static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap,
 					int interval);
 static PMAP _stp_pmap_new_hstat_log (unsigned max_entries, int wrap,
 				     int key_size);
+static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp);
 static void _stp_add_agg(struct map_node *aptr, struct map_node *ptr);
-static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead, struct map_node *ptr);
+static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead,
+				     struct map_node *ptr, map_copy_fn copy);
 static int _new_map_set_stat (MAP map, struct map_node *n, int64_t val, int add);
+static void _stp_map_sort (MAP map, int keynum, int dir, map_get_key_fn get_key);
+static void _stp_map_sortn(MAP map, int n, int keynum, int dir, map_get_key_fn get_key);
 /** @endcond */
 #endif /* _MAP_H_ */

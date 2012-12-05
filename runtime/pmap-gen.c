@@ -559,6 +559,26 @@ static key_data KEYSYM(pmap_get_key) (struct map_node *mn, int n, int *type)
 	return ptr;
 }
 
+static int64_t KEYSYM(_stp_pmap_key_get_int64) (struct map_node *mn, int n)
+{
+	return _stp_key_get_int64 (mn, n, KEYSYM(pmap_get_key));
+}
+
+static char *KEYSYM(_stp_pmap_key_get_str) (struct map_node *mn, int n)
+{
+	return _stp_key_get_str (mn, n, KEYSYM(pmap_get_key));
+}
+
+static void KEYSYM(_stp_pmap_sort) (MAP map, int keynum, int dir)
+{
+	_stp_map_sort (map, keynum, dir, KEYSYM(pmap_get_key));
+}
+
+static void KEYSYM(_stp_pmap_sortn) (MAP map, int n, int keynum, int dir)
+{
+	_stp_map_sortn (map, n, keynum, dir, KEYSYM(pmap_get_key));
+}
+
 
 static unsigned int KEYSYM(pkeycheck) (ALLKEYSD(key))
 {
@@ -660,24 +680,6 @@ static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries, int wrap)
 {
 	PMAP pmap = _stp_pmap_new (max_entries, wrap, VALUE_TYPE,
 				   sizeof(struct KEYSYM(pmap_node)), 0);
-	if (pmap) {
-		int i;
-		MAP m;
-		for_each_possible_cpu(i) {
-			m = _stp_pmap_get_map (pmap, i);
-			MAP_LOCK(m);
-			m->get_key = KEYSYM(pmap_get_key);
-			m->copy = KEYSYM(pmap_copy_keys);
-			m->cmp = KEYSYM(pmap_key_cmp);
-			MAP_UNLOCK(m);
-		}
-		m = _stp_pmap_get_agg(pmap);
-		MAP_LOCK(m);
-		m->get_key = KEYSYM(pmap_get_key);
-		m->copy = KEYSYM(pmap_copy_keys);
-		m->cmp = KEYSYM(pmap_key_cmp);
-		MAP_UNLOCK(m);
-	}
 	return pmap;
 }
 #else
@@ -719,24 +721,6 @@ KEYSYM(_stp_pmap_new) (unsigned max_entries, int wrap, int htype, ...)
 		pmap = NULL;
 	}
 
-	if (pmap) {
-		int i;
-		MAP m;
-		for_each_possible_cpu(i) {
-			m = _stp_pmap_get_map (pmap, i);
-			MAP_LOCK(m);
-			m->get_key = KEYSYM(pmap_get_key);
-			m->copy = KEYSYM(pmap_copy_keys);
-			m->cmp = KEYSYM(pmap_key_cmp);
-			MAP_UNLOCK(m);
-		}
-		m = _stp_pmap_get_agg(pmap);
-		MAP_LOCK(m);
-		m->get_key = KEYSYM(pmap_get_key);
-		m->copy = KEYSYM(pmap_copy_keys);
-		m->cmp = KEYSYM(pmap_key_cmp);
-		MAP_UNLOCK(m);
-	}
 	return pmap;
 }
 
@@ -979,7 +963,8 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 #endif
 				) {
 				if (anode == NULL) {
-					anode = _stp_new_agg(agg, ahead, &n->node);
+					anode = _stp_new_agg(agg, ahead, &n->node,
+							     KEYSYM(pmap_copy_keys));
 				} else {
 					if (clear_agg) {
 						_new_map_clear_node (anode);
@@ -996,6 +981,12 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 
 	/* key not found */
 	return NULLRET;
+}
+
+static MAP KEYSYM(_stp_pmap_agg) (PMAP pmap)
+{
+	return _stp_pmap_agg(pmap, KEYSYM(pmap_copy_keys),
+			     KEYSYM(pmap_key_cmp));
 }
 
 static int KEYSYM(__stp_pmap_del) (MAP map, ALLKEYSD(key))
