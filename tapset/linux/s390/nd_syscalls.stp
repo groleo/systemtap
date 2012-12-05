@@ -64,13 +64,13 @@ probe nd_syscall.mmap = kprobe.function("old_mmap") ?,
 {
 	name = "mmap"
 
-	// if ((probefunc() == "old_mmap") || (probefunc() == "SyS_s390_old_mmap"))
+	// if ((symname(addr()) == "old_mmap") || (symname(addr()) == "SyS_s390_old_mmap"))
 	// 	argstr = get_mmap_args($arg)
 	// else
 	// 	argstr = get_32mmap_args($arg)
 
 	asmlinkage()
-	if ((probefunc() == "old_mmap") || (probefunc() == "SyS_s390_old_mmap"))
+	if ((symname(addr()) == "old_mmap") || (symname(addr()) == "SyS_s390_old_mmap"))
 		argstr = get_mmap_args(pointer_arg(1))
 	else
 		argstr = get_32mmap_args(pointer_arg(1))
@@ -93,13 +93,13 @@ probe nd_syscall.mmap2 = kprobe.function("sys_mmap2") ?,
 {
 	name = "mmap2"
 
-	// if ((probefunc() == "sys_mmap2") || (probefunc() == "SyS_mmap2"))
+	// if ((symname(addr()) == "sys_mmap2") || (symname(addr()) == "SyS_mmap2"))
 	// 	argstr = get_mmap_args($arg)
 	// else
 	// 	argstr = get_32mmap_args($arg)
 
 	asmlinkage()
-	if ((probefunc() == "sys_mmap2") || (probefunc() == "SyS_mmap2"))
+	if ((symname(addr()) == "sys_mmap2") || (symname(addr()) == "SyS_mmap2"))
 		argstr = get_mmap_args(pointer_arg(1))
 	else
 		argstr = get_32mmap_args(pointer_arg(1))

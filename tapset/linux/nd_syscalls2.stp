@@ -1376,7 +1376,7 @@ probe nd_syscall.rt_sigprocmask = kprobe.function("sys32_rt_sigprocmask") ?,
 	// oldset_uaddr = $oset
 	// argstr = sprintf("%s, [%s], %p, %d", how_str, _stp_sigset_u($set),
 	//			$oset, $sigsetsize)
-	if (probefunc() != "compat_sys_rt_sigprocmask")
+	if (symname(addr()) != "compat_sys_rt_sigprocmask")
 		asmlinkage()
 	how  = int_arg(1)
 	how_str = _sigprocmask_how_str(how)
@@ -1474,7 +1474,7 @@ probe nd_syscall.rt_sigtimedwait = kprobe.function("compat_sys_rt_sigtimedwait")
 	uthese_uaddr = pointer_arg(1)
 	uinfo_uaddr = pointer_arg(2)
 	uts_uaddr = pointer_arg(3)
-	if (probefunc() == "sys_rt_sigtimedwait")
+	if (symname(addr()) == "sys_rt_sigtimedwait")
 		sigsetsize = ulong_arg(4)
 	else
 		sigsetsize = u32_arg(4)
@@ -3834,7 +3834,7 @@ probe nd_syscall.truncate = kprobe.function("sys_truncate") ?,
 	asmlinkage()
 	path_uaddr = pointer_arg(1)
 	path = user_string(path_uaddr)
-	if (probefunc() == "sys_truncate")
+	if (symname(addr()) == "sys_truncate")
 		length = ulong_arg(2)
 	else
 		length = longlong_arg(2)
@@ -3924,7 +3924,7 @@ probe nd_syscall.uname = kprobe.function("sys_uname") ?,
 {
 	name = "uname"
 	// argstr = sprintf("%p", $name)
-	_func_name = probefunc()
+	_func_name = symname(addr())
 	if (_func_name != "sys32_uname") {
 		if (_func_name == "sys_uname" || _func_name == "sys_olduname") {
 			%( arch != "powerpc" %? asmlinkage() %)
