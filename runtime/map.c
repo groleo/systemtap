@@ -159,6 +159,31 @@ static char *_stp_key_get_str (struct map_node *mn, int n,
 }
 
 
+static int
+_stp_map_normalize_key_size(int key_size)
+{
+	return (key_size + 3) & ~3; //ALIGN(key_size,4);
+}
+
+static int
+_stp_map_normalize_data_size(int data_size, int type)
+{
+	if (data_size == 0)
+		data_size = map_sizes[type];
+	return (data_size + 3) & ~3; //ALIGN(data_size,4);
+}
+
+static void*
+_stp_map_kzalloc(size_t size, int cpu)
+{
+	/* Called from module_init, so user context, may sleep alloc. */
+	if (cpu < 0)
+		return _stp_kzalloc_gfp(size, STP_ALLOC_SLEEP_FLAGS);
+	return _stp_kzalloc_node_gfp(size, cpu_to_node(cpu),
+				     STP_ALLOC_SLEEP_FLAGS);
+}
+
+
 /** Create a new map.
  * Maps must be created at module initialization time.
  * @param max_entries The maximum number of entries allowed. Currently that number will
@@ -175,7 +200,7 @@ _stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
 	      int data_size, int cpu)
 {
 	unsigned i;
-	int node_size = key_size + data_size;
+	int node_size;
 
 	INIT_MLIST_HEAD(&m->pool);
 	INIT_MLIST_HEAD(&m->head);
@@ -185,10 +210,18 @@ _stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
 	m->maxnum = max_entries;
 	m->wrap = wrap;
 
-        /* _stp_map_new allocates all the map_nodes at the tail of the
-         * map_root, so now we can just link those into the free pool.  */
+	key_size = _stp_map_normalize_key_size(key_size);
+	data_size = _stp_map_normalize_data_size(data_size, type);
+	node_size = key_size + data_size;
+
+	/* It would be nice to allocate the nodes in one big chunk, but
+	 * sometimes they're big, and there may be a lot of them, so memory
+	 * fragmentation may cause us to fail allocation.  */
 	for (i = 0; i < max_entries; i++) {
-		struct map_node *node = ((void*)&m[1]) + i * node_size;
+		struct map_node *node = _stp_map_kzalloc(node_size, cpu);
+		if (node == NULL)
+			return -1;
+
 		mlist_add(&node->lnode, &m->pool);
 		INIT_MHLIST_NODE(&node->hnode);
 		node->type = type;
@@ -205,26 +238,10 @@ _stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
 }
 
 
-static int
-_stp_map_normalize_key_size(int key_size)
-{
-	return (key_size + 3) & ~3; //ALIGN(key_size,4);
-}
-
-static int
-_stp_map_normalize_data_size(int data_size, int type)
-{
-	if (data_size == 0)
-		data_size = map_sizes[type];
-	return (data_size + 3) & ~3; //ALIGN(data_size,4);
-}
-
-
 static MAP
 _stp_map_new(unsigned max_entries, int wrap, int type, int key_size,
 	     int data_size, int cpu)
 {
-	size_t map_size;
 	MAP m;
 
 	if (type >= END) {
@@ -232,22 +249,11 @@ _stp_map_new(unsigned max_entries, int wrap, int type, int key_size,
 		return NULL;
 	}
 
-	key_size = _stp_map_normalize_key_size(key_size);
-	data_size = _stp_map_normalize_data_size(data_size, type);
-	map_size = sizeof(struct map_root) +
-		max_entries * (key_size + data_size);
-
-	/* Called from module_init, so user context, may sleep alloc. */
-	if (cpu < 0)
-		m = _stp_kzalloc_gfp(map_size, STP_ALLOC_SLEEP_FLAGS);
-	else
-		m = _stp_kzalloc_node_gfp(map_size, cpu_to_node(cpu),
-					  STP_ALLOC_SLEEP_FLAGS);
+	m = _stp_map_kzalloc(sizeof(struct map_root), cpu);
 	if (m == NULL)
 		return NULL;
 
-	if (_stp_map_init(m, max_entries, wrap, type, key_size, data_size,
-			  -1)) {
+	if (_stp_map_init(m, max_entries, wrap, type, key_size, data_size, cpu)) {
 		_stp_map_del(m);
 		return NULL;
 	}
@@ -389,12 +395,22 @@ static void _stp_pmap_clear(PMAP pmap)
 
 static void _stp_map_del(MAP map)
 {
+	struct mlist_head *p, *tmp;
+
 	if (map == NULL)
 		return;
 
-	/* NB: We used to free every entry in &map->pool and ->head,
-	 * but now those are allocated in the same chunk, so they
-	 * can just disappear quietly.  */
+	/* free unused pool */
+	mlist_for_each_safe(p, tmp, &map->pool) {
+		mlist_del(p);
+		_stp_kfree(p);
+	}
+
+	/* free used list */
+	mlist_for_each_safe(p, tmp, &map->head) {
+		mlist_del(p);
+		_stp_kfree(p);
+	}
 
 	_stp_map_destroy_lock(map);
 
