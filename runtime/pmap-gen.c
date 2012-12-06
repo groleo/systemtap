@@ -279,13 +279,13 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 			if (KEY_EQ_P(n)) {
 				if (anode == NULL) {
 					anode = _stp_new_agg(agg, ahead, &n->node,
-							     KEYSYM(pmap_copy_keys));
+							     KEYSYM(pmap_copy_keys), VALUE_TYPE);
 				} else {
 					if (clear_agg) {
-						_new_map_clear_node (agg, anode);
+						_new_map_clear_node (agg, anode, VALUE_TYPE);
 						clear_agg = 0;
 					}
-					_stp_add_agg(agg, anode, &n->node);
+					_stp_add_agg(agg, anode, &n->node, VALUE_TYPE);
 				}
 			}
 		}
@@ -301,7 +301,7 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 static MAP KEYSYM(_stp_pmap_agg) (PMAP pmap)
 {
 	return _stp_pmap_agg(pmap, KEYSYM(pmap_copy_keys),
-			     KEYSYM(pmap_key_cmp));
+			     KEYSYM(pmap_key_cmp), VALUE_TYPE);
 }
 
 static int KEYSYM(_stp_pmap_del) (PMAP pmap, ALLKEYSD(key))

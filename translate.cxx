@@ -870,7 +870,7 @@ public:
       }
   }
 
-  string get_value (exp_type ty) const
+  string get_value (mapvar const& mv, exp_type ty) const
   {
     if (ty != referent_ty)
       throw semantic_error(_("inconsistent iterator value in itervar::get_value()"));
@@ -878,12 +878,12 @@ public:
     switch (ty)
       {
       case pe_long:
-	return "_stp_get_int64 ("+ value() + ")";
+	return mv.function_keysym("get_int64", true) + " ("+ value() + ")";
       case pe_string:
         // impedance matching: NULL -> empty strings
-	return "(_stp_get_str ("+ value() + ") ?: \"\")";
+	return "(" + mv.function_keysym("get_str", true) + " ("+ value() + ") ?: \"\")";
       case pe_stats:
-	return "_stp_get_stat ("+ value() + ")";
+	return mv.function_keysym("get_stat_data", true) + " ("+ value() + ")";
       default:
 	throw semantic_error(_("illegal value type"));
       }
@@ -3338,10 +3338,10 @@ c_unparser::visit_foreach_loop (foreach_loop *s)
       if (s->value)
         {
 	  var v = getvar (s->value->referent);
-	  c_assign (v, iv.get_value (v.type()), s->tok);
+	  c_assign (v, iv.get_value (mv, v.type()), s->tok);
         }
 
-      visit_foreach_loop_value(this, s, iv.get_value(array->type));
+      visit_foreach_loop_value(this, s, iv.get_value(mv, array->type));
       record_actions(0, s->block->tok, true);
       o->newline(-1) << "}";
       loop_break_labels.pop_back ();

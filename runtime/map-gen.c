@@ -47,7 +47,7 @@
 #define VALNAME str
 #define VALN s
 #define MAP_SET_VAL(a,b,c,d) _new_map_set_str(a,b,c,d)
-#define MAP_GET_VAL(n) _stp_get_str(n)
+#define MAP_GET_VAL(n) ((char *)map_node_data(n))
 #define NULLRET ""
 #elif VALUE_TYPE == INT64
 #define VALTYPE int64_t
@@ -55,7 +55,7 @@
 #define VALNAME int64
 #define VALN i
 #define MAP_SET_VAL(a,b,c,d) _new_map_set_int64(a,b,c,d)
-#define MAP_GET_VAL(n) _stp_get_int64(n)
+#define MAP_GET_VAL(n) (*(int64_t *)map_node_data(n))
 #define NULLRET (int64_t)0
 #elif VALUE_TYPE == STAT
 #define VALTYPE stat_data*
@@ -63,7 +63,7 @@
 #define VALNAME stat_data
 #define VALN x
 #define MAP_SET_VAL(a,b,c,d) _new_map_set_stat(a,b,c,d)
-#define MAP_GET_VAL(n) _stp_get_stat(n)
+#define MAP_GET_VAL(n) ((stat_data *)map_node_data(n))
 #define NULLRET (stat_data*)0
 #else
 #error Need to define VALUE_TYPE as STRING, STAT, or INT64
@@ -364,7 +364,7 @@ KEYSYM(get_map_node) (struct map_node* m)
 #define type_to_enum(type)						\
 	({								\
 		int ret;						\
-		if (__builtin_types_compatible_p (type, char*)) 	\
+		if (__builtin_types_compatible_p (type, char*))		\
 			ret = STRING;					\
 		else							\
 			ret = INT64;					\
@@ -376,7 +376,13 @@ static key_data KEYSYM(map_get_key) (struct map_node *mn, int n, int *type)
 	key_data ptr;
 	struct KEYSYM(map_node) *m = KEYSYM(get_map_node)(mn);
 
-	if (n > KEY_ARITY || n < 1) {
+	if (n < 1) {
+		if (type)
+			*type = VALUE_TYPE;
+		return (key_data)MAP_GET_VAL(mn);
+	}
+
+	if (n > KEY_ARITY) {
 		if (type)
 			*type = END;
 		return (key_data)(int64_t)0;
@@ -453,14 +459,50 @@ static key_data KEYSYM(map_get_key) (struct map_node *mn, int n, int *type)
 	return ptr;
 }
 
+/** Return an int64 key from a map node.
+ * This function will return an int64 key from a map_node.
+ * @param mn pointer to the map_node.
+ * @param n key number
+ * @returns an int64
+ */
 static int64_t KEYSYM(_stp_map_key_get_int64) (struct map_node *mn, int n)
 {
-	return _stp_key_get_int64 (mn, n, KEYSYM(map_get_key));
+	int type;
+	int64_t res = 0;
+	if (mn) {
+		res = KEYSYM(map_get_key)(mn, n, &type).val;
+		if (type != INT64)
+			res = 0;
+	}
+	return res;
 }
 
+/** Return a string key from a map node.
+ * This function will return an string key from a map_node.
+ * @param mn pointer to the map_node.
+ * @param n key number
+ * @returns a pointer to a string
+ */
 static char *KEYSYM(_stp_map_key_get_str) (struct map_node *mn, int n)
 {
-	return _stp_key_get_str (mn, n, KEYSYM(map_get_key));
+	int type;
+	char *str = "";
+	if (mn) {
+		str = KEYSYM(map_get_key)(mn, n, &type).strp;
+		if (type != STRING)
+			str = "bad type";
+	}
+	return str;
+}
+
+/** Return value from a map node.
+ * This function will return the int64/str/stat value of a map_node.
+ * @param m pointer to the map_node. 
+ * @returns a typed value.
+ */
+static VALTYPE KEYSYM(JOIN(_stp_map_get,VALNAME))(struct map_node *m)
+{
+	return m ? MAP_GET_VAL(m) : 0;
 }
 
 static void KEYSYM(_stp_map_sort) (MAP map, int keynum, int dir)

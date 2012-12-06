@@ -74,90 +74,6 @@ static unsigned int str_hash(const char *key1)
  * @{ 
  */
 
-/** Return an int64 from a map node.
- * This function will return the int64 value of a map_node
- * from a map containing int64s. You can get the map_nodes in a map
- * with _stp_map_start(), _stp_map_iter() and foreach().
- * @param m pointer to the map_node. 
- * @returns an int64 value.
- */
-static int64_t _stp_get_int64(struct map_node *m)
-{
-	if (!m || m->type != INT64)
-		return 0;
-	return *(int64_t *)map_node_data(m);
-}
-
-/** Return a string from a map node.
- * This function will return the string value of a map_node
- * from a map containing strings. You can get the map_nodes in a map
- * with _stp_map_start(), _stp_map_iter() and foreach().
- * @param m pointer to the map_node.
- * @returns a pointer to a string. 
- */
-static char *_stp_get_str(struct map_node *m)
-{
-	if (!m || m->type != STRING)
-		return "bad type";
-	return (char *)map_node_data(m);
-}
-
-/** Return a stat pointer from a map node.
- * This function will return the stats of a map_node
- * from a map containing stats. You can get the map_nodes in a map
- * with _stp_map_start(), _stp_map_iter() and foreach().
- * @param m pointer to the map_node.
- * @returns A pointer to the stats.  
- */
-static stat_data *_stp_get_stat(struct map_node *m)
-{
-	if (!m || m->type != STAT)
-		return 0;
-	return (stat_data *)map_node_data(m);
-}
-
-/** Return an int64 key from a map node.
- * This function will return an int64 key from a map_node.
- * @param mn pointer to the map_node.
- * @param n key number
- * @returns an int64
- * @sa key1int(), key2int()
- */
-static int64_t _stp_key_get_int64 (struct map_node *mn, int n,
-				   map_get_key_fn get_key)
-{
-	int type;
-	int64_t res = 0;
-
-	if (mn) {
-		res = (*get_key)(mn, n, &type).val;
-		if (type != INT64)
-			res = 0;
-	}
-	return res;
-}
-
-/** Return a string key from a map node.
- * This function will return an string key from a map_node.
- * @param mn pointer to the map_node.
- * @param n key number
- * @returns a pointer to a string
- * @sa key1str(), key2str()
- */
-static char *_stp_key_get_str (struct map_node *mn, int n,
-			       map_get_key_fn get_key)
-{
-	int type;
-	char *str = "";
-
-	if (mn) {
-		str = (*get_key)(mn, n, &type).strp;
-		if (type != STRING)
-			str = "bad type";
-	}
-	return str;
-}
-
 
 static int
 _stp_map_normalize_key_size(int key_size)
@@ -224,7 +140,6 @@ _stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
 
 		mlist_add(&node->lnode, &m->pool);
 		INIT_MHLIST_NODE(&node->hnode);
-		node->type = type;
 		node->data_offset = key_size;
 	}
 
@@ -443,65 +358,51 @@ static void _stp_pmap_del(PMAP pmap)
 #define SORT_AVG   -1
 
 /* comparison function for sorts. */
-static int _stp_cmp (struct mlist_head *a, struct mlist_head *b,
-		     int keynum, int dir, int type, map_get_key_fn get_key)
+static int _stp_cmp (struct mlist_head *h1, struct mlist_head *h2,
+		     int keynum, int dir, map_get_key_fn get_key)
 {
-	struct map_node *m1 = mlist_map_node(a);
-	struct map_node *m2 = mlist_map_node(b);
-	if (type == STRING) {
-		int ret;
-		if (keynum)
-			ret = strcmp(_stp_key_get_str(m1, keynum, get_key),
-				     _stp_key_get_str(m2, keynum, get_key));
-		else
-			ret = strcmp(_stp_get_str(m1), _stp_get_str(m2));
-		if ((ret < 0 && dir > 0) || (ret > 0 && dir < 0))
-			ret = 1;
-		else
-			ret = 0;
-		//dbug ("comparing %s and %s and returning %d\n", _stp_get_str(m1), _stp_get_str(m2), ret);
-		return ret;
-	} else {
-		int64_t a,b;
-		if (keynum > 0) {
-			a = _stp_key_get_int64(m1, keynum, get_key);
-			b = _stp_key_get_int64(m2, keynum, get_key);
-		} else if (keynum < 0) {
-			stat_data *sd1 = (stat_data *)map_node_data(m1);
-			stat_data *sd2 = (stat_data *)map_node_data(m2);
-			switch (keynum) {
-			case SORT_COUNT:
-				a = sd1->count;
-				b = sd2->count;
-				break;
-			case SORT_SUM:
-				a = sd1->sum;
-				b = sd2->sum;
-				break;
-			case SORT_MIN:
-				a = sd1->min;
-				b = sd2->min;
-				break;
-			case SORT_MAX:
-				a = sd1->max;
-				b = sd2->max;
-				break;
-			case SORT_AVG:
-				a = _stp_div64 (NULL, sd1->sum, sd1->count);
-				b = _stp_div64 (NULL, sd2->sum, sd2->count);
-				break;
-			default:
-				/* should never happen */
-				a = b = 0;
-			}
-		} else {
-			a = _stp_get_int64(m1);
-			b = _stp_get_int64(m2);
+	int64_t a = 0, b = 0;
+	int type = END;
+	key_data k1 = (*get_key)(mlist_map_node(h1), keynum, &type);
+	key_data k2 = (*get_key)(mlist_map_node(h2), keynum, NULL);
+	if (type == INT64) {
+		a = k1.val;
+		b = k2.val;
+	} else if (type == STRING) {
+		a = strcmp(k1.strp, k2.strp);
+		b = 0;
+	} else if (type == STAT) {
+		stat_data *sd1 = k1.statp;
+		stat_data *sd2 = k2.statp;
+		switch (keynum) {
+		case SORT_COUNT:
+			a = sd1->count;
+			b = sd2->count;
+			break;
+		case SORT_SUM:
+			a = sd1->sum;
+			b = sd2->sum;
+			break;
+		case SORT_MIN:
+			a = sd1->min;
+			b = sd2->min;
+			break;
+		case SORT_MAX:
+			a = sd1->max;
+			b = sd2->max;
+			break;
+		case SORT_AVG:
+			a = _stp_div64 (NULL, sd1->sum, sd1->count);
+			b = _stp_div64 (NULL, sd2->sum, sd2->count);
+			break;
+		default:
+			/* should never happen */
+			a = b = 0;
 		}
-		if ((a < b && dir > 0) || (a > b && dir < 0))
-			return 1;
-		return 0;
 	}
+	if ((a < b && dir > 0) || (a > b && dir < 0))
+		return 1;
+	return 0;
 }
 
 /* swap function for bubble sort */
@@ -525,18 +426,11 @@ static void _stp_map_sort (MAP map, int keynum, int dir,
 			   map_get_key_fn get_key)
 {
         struct mlist_head *p, *q, *e, *tail;
-        int nmerges, psize, qsize, i, type, insize = 1;
+        int nmerges, psize, qsize, i, insize = 1;
 	struct mlist_head *head = &map->head;
 
 	if (mlist_empty(head))
 		return;
-
-	if (keynum > 0)
-		(*get_key)(mlist_map_node(mlist_next(head)), keynum, &type);
-	else if (keynum < 0)
-		type = INT64;
-	else
-		type = mlist_map_node(mlist_next(head))->type;
 
         do {
 		tail = head;
@@ -557,7 +451,7 @@ static void _stp_map_sort (MAP map, int keynum, int dir,
                         qsize = insize;
                         while (psize > 0 || (qsize > 0 && q)) {
                                 if (psize && (!qsize || !q ||
-					      !_stp_cmp(p, q, keynum, dir, type, get_key))) {
+					      !_stp_cmp(p, q, keynum, dir, get_key))) {
                                         e = p;
                                         p = mlist_next(p) == head ? NULL : mlist_next(p);
                                         psize--;
@@ -598,17 +492,10 @@ static void _stp_map_sortn(MAP map, int n, int keynum, int dir,
 	} else {
 		struct mlist_head *head = &map->head;
 		struct mlist_head *c, *a, *last, *tmp;
-		int type, num, swaps = 1;
+		int num, swaps = 1;
 
 		if (mlist_empty(head))
 			return;
-
-		if (keynum > 0)
-			(*get_key)(mlist_map_node(mlist_next(head)), keynum, &type);
-		else if (keynum < 0)
-			type = INT64;
-		else
-			type = mlist_map_node(mlist_next(head))->type;
 
 		/* start off with a modified bubble sort of the first n elements */
 		while (swaps) {
@@ -617,7 +504,7 @@ static void _stp_map_sortn(MAP map, int n, int keynum, int dir,
 			a = mlist_next(head);
 			c = mlist_next(mlist_next(a));
 			while ((mlist_next(a) != head) && (--num > 0)) {
-				if (_stp_cmp(a, mlist_next(a), keynum, dir, type, get_key)) {
+				if (_stp_cmp(a, mlist_next(a), keynum, dir, get_key)) {
 					swaps++;
 					_stp_swap(a, mlist_next(a));
 				}
@@ -633,7 +520,7 @@ static void _stp_map_sortn(MAP map, int n, int keynum, int dir,
 		while (a != head) {
 			tmp = mlist_next(a);
 			c = last;
-			while (c != head && _stp_cmp(c, a, keynum, dir, type, get_key))
+			while (c != head && _stp_cmp(c, a, keynum, dir, get_key))
 				c = mlist_prev(c);
 			if (c != last) {
 				mlist_del(a);
@@ -646,7 +533,7 @@ static void _stp_map_sortn(MAP map, int n, int keynum, int dir,
 }
 
 static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead,
-				     struct map_node *ptr, map_copy_fn copy)
+				     struct map_node *ptr, map_copy_fn copy, int type)
 {
 	struct map_node *aptr;
 	/* copy keys and aggregate */
@@ -654,7 +541,7 @@ static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead,
 	if (aptr == NULL)
 		return NULL;
 	(*copy)(aptr, ptr);
-	switch (aptr->type) {
+	switch (type) {
 	case INT64:
 		_new_map_set_int64(agg,
 				   aptr,
@@ -683,14 +570,14 @@ static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead,
 		break;
 	}
 	default:
-		_stp_error("Attempted to aggregate map of type %d\n", aptr->type);
+		_stp_error("Attempted to aggregate map of type %d\n", type);
 	}
 	return aptr;
 }
 
-static void _stp_add_agg(MAP agg, struct map_node *aptr, struct map_node *ptr)
+static void _stp_add_agg(MAP agg, struct map_node *aptr, struct map_node *ptr, int type)
 {
-	switch (aptr->type) {
+	switch (type) {
 	case INT64:
 		_new_map_set_int64(agg,
 				   aptr,
@@ -728,7 +615,7 @@ static void _stp_add_agg(MAP agg, struct map_node *aptr, struct map_node *ptr)
 		break;
 	}
 	default:
-		_stp_error("Attempted to aggregate map of type %d\n", aptr->type);
+		_stp_error("Attempted to aggregate map of type %d\n", type);
 	}
 }
 
@@ -741,7 +628,7 @@ static void _stp_add_agg(MAP agg, struct map_node *aptr, struct map_node *ptr)
  * @param map A pointer to a pmap.
  * @returns a pointer to the aggregated map. Null on failure.
  */
-static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp)
+static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp, int type)
 {
 	int i, hash;
 	MAP m, agg;
@@ -772,9 +659,9 @@ static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp)
 					}
 				}
 				if (match)
-					_stp_add_agg(agg, aptr, ptr);
+					_stp_add_agg(agg, aptr, ptr, type);
 				else {
-					if (!_stp_new_agg(agg, ahead, ptr, copy)) {
+					if (!_stp_new_agg(agg, ahead, ptr, copy, type)) {
                                                 MAP_UNLOCK(m);
                                                 agg = NULL;
 						goto out;
@@ -794,9 +681,9 @@ out:
 /* #define _stp_pmap_printn(map,n,fmt) _stp_map_printn (_stp_pmap_agg(map), n, fmt) */
 /* #define _stp_pmap_print(map,fmt) _stp_map_printn(_stp_pmap_agg(map),0,fmt) */
 
-static void _new_map_clear_node (MAP map, struct map_node *m)
+static void _new_map_clear_node (MAP map, struct map_node *m, int type)
 {
-	switch (m->type) {
+	switch (type) {
 	case INT64:
 		*(int64_t *)map_node_data(m) = 0;
 		break;

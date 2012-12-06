@@ -58,10 +58,11 @@ amount of memory. Do not increase above 5. */
 
 #include "stat.h"
 
-/* Keys are either int64 or strings */
+/* Keys are either int64 or strings, and values can also be stats */
 typedef union {
 	int64_t val;
 	char *strp;
+	stat_data *statp;
 } key_data;
 
 
@@ -73,17 +74,14 @@ struct map_node {
 	/* list of nodes with the same hash value */
 	struct mhlist_node hnode;
 
-	/* type of the value stored in the node */
-	int type;
-
 	/* This is the offset from this map_node to find the data.  */
 	int data_offset;
 
-	/* NB: type and data_offset used to be in map_root, retrieved through a
+	/* NB: data_offset used to be in map_root, retrieved through a
 	 * pointer here.  There's only a slight memory savings in that for
 	 * 32-bit, neutral on 64-bit, and we can avoid the extra indirection.
-	 * Places that use these fields might be better candidates for
-	 * KEYSYM-specialized functions instead, and we can remove these.  */
+	 * Places that use this field might be better candidates for
+	 * KEYSYM-specialized functions instead, and we can remove it.  */
 };
 
 #define mlist_map_node(head) mlist_entry((head), struct map_node, lnode)
@@ -133,15 +131,6 @@ typedef struct map_root *MAP;
 struct pmap; /* defined in map_runtime.h */
 typedef struct pmap *PMAP;
 
-/** Extracts string from key1 union */
-#define key1str(ptr) (_stp_key_get_str(ptr,1))
-/** Extracts string from key2 union */
-#define key2str(ptr) (_stp_key_get_str(ptr,2))
-/** Extracts int from key1 union */
-#define key1int(ptr) (_stp_key_get_int64(ptr,1))
-/** Extracts int from key2 union */
-#define key2int(ptr) (_stp_key_get_int64(ptr,2))
-
 
 /** Loop through all elements of a map or list.
  * @param map 
@@ -174,16 +163,11 @@ int64_t int64_get(void *ptr);
 void stat_copy(void *dest, stat_data *src);
 void stat_add(void *dest, stat_data *src);
 stat_data *stat_get(void *ptr);
-static int64_t _stp_key_get_int64(struct map_node *mn, int n, map_get_key_fn get_key);
-static char * _stp_key_get_str(struct map_node *mn, int n, map_get_key_fn get_key);
 static unsigned int int64_hash(const int64_t v);
 char * str_get(void *ptr);
 static void str_copy(char *dest, char *src);
 static void str_add(void *dest, char *val);
 static int str_eq_p(char *key1, char *key2);
-static int64_t _stp_get_int64(struct map_node *m);
-static char * _stp_get_str(struct map_node *m);
-static stat_data *_stp_get_stat(struct map_node *m);
 static unsigned int str_hash(const char *key1);
 static MAP _stp_map_new(unsigned max_entries, int wrap, int type, int key_size,
 			int data_size, int cpu);
@@ -203,17 +187,17 @@ void _stp_map_print(MAP map, const char *fmt);
 static struct map_node *_new_map_create (MAP map, struct mhlist_head *head);
 static int _new_map_set_int64 (MAP map, struct map_node *n, int64_t val, int add);
 static int _new_map_set_str (MAP map, struct map_node *n, char *val, int add);
-static void _new_map_clear_node (MAP map, struct map_node *m);
+static void _new_map_clear_node (MAP map, struct map_node *m, int type);
 static void _new_map_del_node (MAP map, struct map_node *n);
 static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap,
 					int ksize, int start, int stop,
 					int interval);
 static PMAP _stp_pmap_new_hstat_log (unsigned max_entries, int wrap,
 				     int key_size);
-static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp);
-static void _stp_add_agg(MAP agg, struct map_node *aptr, struct map_node *ptr);
+static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp, int type);
+static void _stp_add_agg(MAP agg, struct map_node *aptr, struct map_node *ptr, int type);
 static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead,
-				     struct map_node *ptr, map_copy_fn copy);
+				     struct map_node *ptr, map_copy_fn copy, int type);
 static int _new_map_set_stat (MAP map, struct map_node *n, int64_t val, int add);
 static void _stp_map_sort (MAP map, int keynum, int dir, map_get_key_fn get_key);
 static void _stp_map_sortn(MAP map, int n, int keynum, int dir, map_get_key_fn get_key);
