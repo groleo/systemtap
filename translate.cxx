@@ -859,11 +859,11 @@ public:
     switch (ty)
       {
       case pe_long:
-	return mv.function_keysym("key_get_int64")
+	return mv.function_keysym("key_get_int64", true)
 	  + " (" + value() + ", " + lex_cast(i+1) + ")";
       case pe_string:
         // impedance matching: NULL -> empty strings
-	return "(" + mv.function_keysym("key_get_str")
+	return "(" + mv.function_keysym("key_get_str", true)
 	  + " (" + value() + ", " + lex_cast(i+1) + ") ?: \"\")";
       default:
 	throw semantic_error(_("illegal key type"));
@@ -2347,35 +2347,15 @@ c_unparser::emit_map_type_instantiations ()
 	  string ktype = mapvar::key_typename(i->first.at(j));
 	  o->newline() << "#define KEY" << (j+1) << "_TYPE " << ktype;
 	}
+      /* For statistics, flag map-gen to pull in nested pmap-gen too.  */
       if (i->second == pe_stats)
-	o->newline() << "#include \"pmap-gen.c\"";
-      else
-	o->newline() << "#include \"map-gen.c\"";
+	o->newline() << "#define MAP_DO_PMAP 1";
+      o->newline() << "#include \"map-gen.c\"";
+      o->newline() << "#undef MAP_DO_PMAP";
       o->newline() << "#undef VALUE_TYPE";
       for (unsigned j = 0; j < i->first.size(); ++j)
 	{
 	  o->newline() << "#undef KEY" << (j+1) << "_TYPE";
-	}
-
-      /* FIXME
-       * For pmaps, we also need to include map-gen.c, because we might be accessing
-       * the aggregated map.  The better way to handle this is for pmap-gen.c to make
-       * this include, but that's impossible with the way they are set up now.
-       */
-      if (i->second == pe_stats)
-	{
-	  o->newline() << "#define VALUE_TYPE " << mapvar::value_typename(i->second);
-	  for (unsigned j = 0; j < i->first.size(); ++j)
-	    {
-	      string ktype = mapvar::key_typename(i->first.at(j));
-	      o->newline() << "#define KEY" << (j+1) << "_TYPE " << ktype;
-	    }
-	  o->newline() << "#include \"map-gen.c\"";
-	  o->newline() << "#undef VALUE_TYPE";
-	  for (unsigned j = 0; j < i->first.size(); ++j)
-	    {
-	      o->newline() << "#undef KEY" << (j+1) << "_TYPE";
-	    }
 	}
     }
 
@@ -3267,14 +3247,14 @@ c_unparser::visit_foreach_loop (foreach_loop *s)
 	      o->newline() << "else"; // only sort if aggregation was ok
 	      if (s->limit)
 	        {
-		  o->newline(1) << mv.function_keysym("sortn") <<" ("
+		  o->newline(1) << mv.function_keysym("sortn", true) <<" ("
 				<< mv.fetch_existing_aggregate() << ", "
 				<< *res_limit << ", " << sort_column << ", "
 				<< - s->sort_direction << ");";
 		}
 	      else
 	        {
-		  o->newline(1) << mv.function_keysym("sort") <<" ("
+		  o->newline(1) << mv.function_keysym("sort", true) <<" ("
 				<< mv.fetch_existing_aggregate() << ", "
 				<< sort_column << ", "
 				<< - s->sort_direction << ");";

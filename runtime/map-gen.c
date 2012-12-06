@@ -210,26 +210,6 @@
 #define KEY7_HASH JOIN(KEY7NAME,hash)
 #endif /* defined(KEY7_TYPE) */
 
-#if defined (KEY7_TYPE)
-#undef KEY_ARITY
-#define KEY_ARITY 7
-#if KEY7_TYPE == STRING
-#define KEY7TYPE char*
-#define KEY7NAME str
-#define KEY7N s
-#define KEY7STOR char key7[MAP_STRING_LENGTH]
-#define KEY7CPY(m) str_copy(m->key7, key7)
-#else
-#define KEY7TYPE int64_t
-#define KEY7NAME int64
-#define KEY7N i
-#define KEY7STOR int64_t key7
-#define KEY7CPY(m) m->key7=key7
-#endif
-#define KEY7_EQ_P JOIN(KEY7NAME,eq_p)
-#define KEY7_HASH JOIN(KEY7NAME,hash)
-#endif /* defined(KEY7_TYPE) */
-
 #if defined (KEY8_TYPE)
 #undef KEY_ARITY
 #define KEY_ARITY 8
@@ -282,46 +262,64 @@
 #define ALLKEYS(x) x##1
 #define ALLKEYSD(x) KEY1TYPE x##1
 #define KEYCPY(m) {KEY1CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1))
 #elif KEY_ARITY == 2
 #define KEYSYM(x) JOIN3(x,KEY1N,KEY2N,VALN)
 #define ALLKEYS(x) x##1, x##2
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2))
 #elif KEY_ARITY == 3
 #define KEYSYM(x) JOIN4(x,KEY1N,KEY2N,KEY3N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3))
 #elif KEY_ARITY == 4
 #define KEYSYM(x) JOIN5(x,KEY1N,KEY2N,KEY3N,KEY4N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4))
 #elif KEY_ARITY == 5
 #define KEYSYM(x) JOIN6(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5))
 #elif KEY_ARITY == 6
 #define KEYSYM(x) JOIN7(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,KEY6N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5, x##6
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5, KEY6TYPE x##6
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);KEY6CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5) && KEY6_EQ_P(m->key6,key6))
 #elif KEY_ARITY == 7
 #define KEYSYM(x) JOIN8(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,KEY6N,KEY7N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5, x##6, x##7
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5, KEY6TYPE x##6, KEY7TYPE x##7
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);KEY6CPY(m);KEY7CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5) && KEY6_EQ_P(m->key6,key6)\
+		&& KEY7_EQ_P(m->key7,key7))
 #elif KEY_ARITY == 8
 #define KEYSYM(x) JOIN9(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,KEY6N,KEY7N,KEY8N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5, x##6, x##7, x##8
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5, KEY6TYPE x##6, KEY7TYPE x##7, KEY8TYPE x##8
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);KEY6CPY(m);KEY7CPY(m);KEY8CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5) && KEY6_EQ_P(m->key6,key6)\
+		&& KEY7_EQ_P(m->key7,key7) && KEY8_EQ_P(m->key8,key8))
 #elif KEY_ARITY == 9
 #define KEYSYM(x) JOIN10(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,KEY6N,KEY7N,KEY8N,KEY9N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5, x##6, x##7, x##8, x##9
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5, KEY6TYPE x##6, KEY7TYPE x##7, KEY8TYPE x##8, KEY9TYPE x##9
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);KEY6CPY(m);KEY7CPY(m);KEY8CPY(m);KEY9CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5) && KEY6_EQ_P(m->key6,key6)\
+		&& KEY7_EQ_P(m->key7,key7) && KEY8_EQ_P(m->key8,key8) && KEY9_EQ_P(m->key9,key9))
 #endif
 
 /* */
@@ -622,6 +620,7 @@ static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap, int htype, ...)
 }
 
 #endif /* VALUE_TYPE */
+
 static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 {
 	unsigned int hv;
@@ -639,32 +638,7 @@ static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 	head = &map->hashes[hv];
 
 	mhlist_for_each_entry(n, e, head, node.hnode) {
-		if (KEY1_EQ_P(n->key1, key1)
-#if KEY_ARITY > 1
-		    && KEY2_EQ_P(n->key2, key2)
-#if KEY_ARITY > 2
-		    && KEY3_EQ_P(n->key3, key3)
-#if KEY_ARITY > 3
-		    && KEY4_EQ_P(n->key4, key4)
-#if KEY_ARITY > 4
-		    && KEY5_EQ_P(n->key5, key5)
-#if KEY_ARITY > 5
-		    && KEY6_EQ_P(n->key6, key6)
-#if KEY_ARITY > 6
-		    && KEY7_EQ_P(n->key7, key7)
-#if KEY_ARITY > 7
-		    && KEY8_EQ_P(n->key8, key8)
-#if KEY_ARITY > 8
-		    && KEY9_EQ_P(n->key9, key9)
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-			) {
+		if (KEY_EQ_P(n)) {
 			return MAP_SET_VAL(map, &n->node, val, add);
 		}
 	}
@@ -701,32 +675,7 @@ static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 	head = &map->hashes[hv];
 
 	mhlist_for_each_entry(n, e, head, node.hnode) {
-		if (KEY1_EQ_P(n->key1, key1)
-#if KEY_ARITY > 1
-		    && KEY2_EQ_P(n->key2, key2)
-#if KEY_ARITY > 2
-		    && KEY3_EQ_P(n->key3, key3)
-#if KEY_ARITY > 3
-		    && KEY4_EQ_P(n->key4, key4)
-#if KEY_ARITY > 4
-		    && KEY5_EQ_P(n->key5, key5)
-#if KEY_ARITY > 5
-		    && KEY6_EQ_P(n->key6, key6)
-#if KEY_ARITY > 6
-		    && KEY7_EQ_P(n->key7, key7)
-#if KEY_ARITY > 7
-		    && KEY8_EQ_P(n->key8, key8)
-#if KEY_ARITY > 8
-		    && KEY9_EQ_P(n->key9, key9)
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-			) {
+		if (KEY_EQ_P(n)) {
 			return MAP_GET_VAL(&n->node);
 		}
 	}
@@ -744,36 +693,14 @@ static int KEYSYM(_stp_map_del) (MAP map, ALLKEYSD(key))
 	if (map == NULL)
 		return -1;
 
+	if (KEYSYM(keycheck) (ALLKEYS(key)) == 0)
+		return -1;
+
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
 	mhlist_for_each_entry(n, e, head, node.hnode) {
-		if (KEY1_EQ_P(n->key1, key1)
-#if KEY_ARITY > 1
-		    && KEY2_EQ_P(n->key2, key2)
-#if KEY_ARITY > 2
-		    && KEY3_EQ_P(n->key3, key3)
-#if KEY_ARITY > 3
-		    && KEY4_EQ_P(n->key4, key4)
-#if KEY_ARITY > 4
-		    && KEY5_EQ_P(n->key5, key5)
-#if KEY_ARITY > 5
-		    && KEY6_EQ_P(n->key6, key6)
-#if KEY_ARITY > 6
-		    && KEY7_EQ_P(n->key7, key7)
-#if KEY_ARITY > 7
-		    && KEY8_EQ_P(n->key8, key8)
-#if KEY_ARITY > 8
-		    && KEY9_EQ_P(n->key9, key9)
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-			) {
+		if (KEY_EQ_P(n)) {
 			_new_map_del_node(map, &n->node);
 			return 0;
 		}
@@ -796,38 +723,20 @@ static int KEYSYM(_stp_map_exists) (MAP map, ALLKEYSD(key))
 	head = &map->hashes[hv];
 
 	mhlist_for_each_entry(n, e, head, node.hnode) {
-		if (KEY1_EQ_P(n->key1, key1)
-#if KEY_ARITY > 1
-		    && KEY2_EQ_P(n->key2, key2)
-#if KEY_ARITY > 2
-		    && KEY3_EQ_P(n->key3, key3)
-#if KEY_ARITY > 3
-		    && KEY4_EQ_P(n->key4, key4)
-#if KEY_ARITY > 4
-		    && KEY5_EQ_P(n->key5, key5)
-#if KEY_ARITY > 5
-		    && KEY6_EQ_P(n->key6, key6)
-#if KEY_ARITY > 6
-		    && KEY7_EQ_P(n->key7, key7)
-#if KEY_ARITY > 7
-		    && KEY8_EQ_P(n->key8, key8)
-#if KEY_ARITY > 8
-		    && KEY9_EQ_P(n->key9, key9)
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-			) {
+		if (KEY_EQ_P(n)) {
 			return 1;
 		}
 	}
 	/* key not found */
 	return 0;
 }
+
+
+/* Pull in pmaps while all the defines are still in place.  */
+#ifdef MAP_DO_PMAP
+#include "pmap-gen.c"
+#endif
+
 
 #undef KEY1NAME
 #undef KEY1N
@@ -896,7 +805,8 @@ static int KEYSYM(_stp_map_exists) (MAP map, ALLKEYSD(key))
 #undef ALLKEYS
 #undef ALLKEYSD
 #undef KEYCPY
-#undef KEYSYM 
+#undef KEYSYM
+#undef KEY_EQ_P
 
 #undef VALUE_TYPE
 #undef VALNAME
