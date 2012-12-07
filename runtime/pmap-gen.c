@@ -120,11 +120,27 @@ static void KEYSYM(pmap_copy_keys) (struct map_node *m1, struct map_node *m2)
 #endif
 }
 
+/* update the keys and value of a map_node */
+static void KEYSYM(pmap_update_node) (MAP m, struct map_node *m1, struct map_node *m2, int add)
+{
+	struct KEYSYM(map_node) *src, * dst = KEYSYM(get_map_node)(m1);
+
+	if (!m2) {
+		MAP_COPY_VAL(m, dst, NULLRET, 0);
+		return;
+	}
+
+	src = KEYSYM(get_map_node)(m2);
+	if (!add)
+		KEYSYM(pmap_copy_keys)(m1, m2);
+	MAP_COPY_VAL(m, dst, MAP_GET_VAL(src), add);
+}
+
 #if VALUE_TYPE == INT64 || VALUE_TYPE == STRING
 static PMAP KEYSYM(_stp_pmap_new) (unsigned max_entries, int wrap)
 {
-	PMAP pmap = _stp_pmap_new (max_entries, wrap, VALUE_TYPE,
-				   sizeof(struct KEYSYM(map_node)), 0);
+	PMAP pmap = _stp_pmap_new (max_entries, wrap,
+				   sizeof(struct KEYSYM(map_node)));
 	return pmap;
 }
 #else
@@ -149,8 +165,8 @@ KEYSYM(_stp_pmap_new) (unsigned max_entries, int wrap, int htype, ...)
 
 	switch (htype) {
 	case HIST_NONE:
-		pmap = _stp_pmap_new (max_entries, wrap, STAT,
-				      sizeof(struct KEYSYM(map_node)), 0);
+		pmap = _stp_pmap_new_hstat (max_entries, wrap,
+					    sizeof(struct KEYSYM(map_node)));
 		break;
 	case HIST_LOG:
 		pmap = _stp_pmap_new_hstat_log (max_entries, wrap,
@@ -228,7 +244,7 @@ static VALTYPE KEYSYM(_stp_pmap_get_cpu) (PMAP pmap, ALLKEYSD(key))
 	head = &map->hashes[hv];
 	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY_EQ_P(n)) {
-			res = MAP_GET_VAL(&n->node);
+			res = MAP_GET_VAL(n);
 			MAP_UNLOCK(map);
 			MAP_PUT_CPU();
 			return res;
@@ -279,20 +295,20 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 			if (KEY_EQ_P(n)) {
 				if (anode == NULL) {
 					anode = _stp_new_agg(agg, ahead, &n->node,
-							     KEYSYM(pmap_copy_keys), VALUE_TYPE);
+							     KEYSYM(pmap_update_node));
 				} else {
 					if (clear_agg) {
-						_new_map_clear_node (agg, anode, VALUE_TYPE);
+						KEYSYM(pmap_update_node)(agg, anode, NULL, 0);
 						clear_agg = 0;
 					}
-					_stp_add_agg(agg, anode, &n->node, VALUE_TYPE);
+					KEYSYM(pmap_update_node)(agg, anode, &n->node, 1);
 				}
 			}
 		}
 		MAP_UNLOCK(map);
 	}
 	if (anode && !clear_agg) 
-		return MAP_GET_VAL(anode);
+		return MAP_GET_VAL(KEYSYM(get_map_node)(anode));
 
 	/* key not found */
 	return NULLRET;
@@ -300,8 +316,8 @@ static VALTYPE KEYSYM(_stp_pmap_get) (PMAP pmap, ALLKEYSD(key))
 
 static MAP KEYSYM(_stp_pmap_agg) (PMAP pmap)
 {
-	return _stp_pmap_agg(pmap, KEYSYM(pmap_copy_keys),
-			     KEYSYM(pmap_key_cmp), VALUE_TYPE);
+	return _stp_pmap_agg(pmap, KEYSYM(pmap_update_node),
+			     KEYSYM(pmap_key_cmp));
 }
 
 static int KEYSYM(_stp_pmap_del) (PMAP pmap, ALLKEYSD(key))

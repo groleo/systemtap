@@ -75,20 +75,6 @@ static unsigned int str_hash(const char *key1)
  */
 
 
-static int
-_stp_map_normalize_key_size(int key_size)
-{
-	return (key_size + 3) & ~3; //ALIGN(key_size,4);
-}
-
-static int
-_stp_map_normalize_data_size(int data_size, int type)
-{
-	if (data_size == 0)
-		data_size = map_sizes[type];
-	return (data_size + 3) & ~3; //ALIGN(data_size,4);
-}
-
 static void*
 _stp_map_kzalloc(size_t size, int cpu)
 {
@@ -112,11 +98,9 @@ _stp_map_kzalloc(size_t size, int cpu)
  */
 
 static int
-_stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
-	      int data_size, int cpu)
+_stp_map_init(MAP m, unsigned max_entries, int wrap, int node_size, int cpu)
 {
 	unsigned i;
-	int node_size;
 
 	INIT_MLIST_HEAD(&m->pool);
 	INIT_MLIST_HEAD(&m->head);
@@ -125,10 +109,6 @@ _stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
 
 	m->maxnum = max_entries;
 	m->wrap = wrap;
-
-	key_size = _stp_map_normalize_key_size(key_size);
-	data_size = _stp_map_normalize_data_size(data_size, type);
-	node_size = key_size + data_size;
 
 	/* It would be nice to allocate the nodes in one big chunk, but
 	 * sometimes they're big, and there may be a lot of them, so memory
@@ -140,11 +120,7 @@ _stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
 
 		mlist_add(&node->lnode, &m->pool);
 		INIT_MHLIST_NODE(&node->hnode);
-		node->data_offset = key_size;
 	}
-
-	if (type == STAT)
-		m->hist.type = HIST_NONE;
 
 	if (_stp_map_initialize_lock(m) != 0)
 		return -1;
@@ -154,21 +130,15 @@ _stp_map_init(MAP m, unsigned max_entries, int wrap, int type, int key_size,
 
 
 static MAP
-_stp_map_new(unsigned max_entries, int wrap, int type, int key_size,
-	     int data_size, int cpu)
+_stp_map_new(unsigned max_entries, int wrap, int node_size, int cpu)
 {
 	MAP m;
-
-	if (type >= END) {
-		_stp_error("unknown map type %d\n", type);
-		return NULL;
-	}
 
 	m = _stp_map_kzalloc(sizeof(struct map_root), cpu);
 	if (m == NULL)
 		return NULL;
 
-	if (_stp_map_init(m, max_entries, wrap, type, key_size, data_size, cpu)) {
+	if (_stp_map_init(m, max_entries, wrap, node_size, cpu)) {
 		_stp_map_del(m);
 		return NULL;
 	}
@@ -176,8 +146,7 @@ _stp_map_new(unsigned max_entries, int wrap, int type, int key_size,
 }
 
 static PMAP
-_stp_pmap_new(unsigned max_entries, int wrap, int type, int key_size,
-	      int data_size)
+_stp_pmap_new(unsigned max_entries, int wrap, int node_size)
 {
 	int i;
 	MAP m;
@@ -189,16 +158,14 @@ _stp_pmap_new(unsigned max_entries, int wrap, int type, int key_size,
 
 	/* Allocate the per-cpu maps.  */
 	for_each_possible_cpu(i) {
-		m = _stp_map_new(max_entries, wrap, type,
-				 key_size, data_size, i);
+		m = _stp_map_new(max_entries, wrap, node_size, i);
 		if (m == NULL)
 			goto err1;
                 _stp_pmap_set_map(pmap, m, i);
 	}
 
 	/* Allocate the aggregate map.  */
-	m = _stp_map_new(max_entries, wrap, type,
-			 key_size, data_size, -1);
+	m = _stp_map_new(max_entries, wrap, node_size, -1);
 	if (m == NULL)
 		goto err1;
         _stp_pmap_set_agg(pmap, m);
@@ -533,90 +500,15 @@ static void _stp_map_sortn(MAP map, int n, int keynum, int dir,
 }
 
 static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead,
-				     struct map_node *ptr, map_copy_fn copy, int type)
+				     struct map_node *ptr, map_update_fn update)
 {
 	struct map_node *aptr;
 	/* copy keys and aggregate */
 	aptr = _new_map_create(agg, ahead);
 	if (aptr == NULL)
 		return NULL;
-	(*copy)(aptr, ptr);
-	switch (type) {
-	case INT64:
-		_new_map_set_int64(agg,
-				   aptr,
-				   *(int64_t *)map_node_data(ptr),
-				   0);
-		break;
-	case STRING:
-		_new_map_set_str(agg,
-				 aptr,
-				 (char *)map_node_data(ptr),
-				 0);
-		break;
-	case STAT: {
-		stat_data *sd1 = (stat_data *)map_node_data(aptr);
-		stat_data *sd2 = (stat_data *)map_node_data(ptr);
-		Hist st = &agg->hist;
-		sd1->count = sd2->count;
-		sd1->sum = sd2->sum;
-		sd1->min = sd2->min;
-		sd1->max = sd2->max;
-		if (st->type != HIST_NONE) {
-			int j;
-			for (j = 0; j < st->buckets; j++)
-				sd1->histogram[j] = sd2->histogram[j];
-		}
-		break;
-	}
-	default:
-		_stp_error("Attempted to aggregate map of type %d\n", type);
-	}
+	(*update)(agg, aptr, ptr, 0);
 	return aptr;
-}
-
-static void _stp_add_agg(MAP agg, struct map_node *aptr, struct map_node *ptr, int type)
-{
-	switch (type) {
-	case INT64:
-		_new_map_set_int64(agg,
-				   aptr,
-				   *(int64_t *)map_node_data(ptr),
-				   1);
-		break;
-	case STRING:
-		_new_map_set_str(agg,
-				 aptr,
-				 (char *)map_node_data(ptr),
-				 1);
-		break;
-	case STAT: {
-		stat_data *sd1 = (stat_data *)map_node_data(aptr);
-		stat_data *sd2 = (stat_data *)map_node_data(ptr);
-		Hist st = &agg->hist;
-		if (sd1->count == 0) {
-			sd1->count = sd2->count;
-			sd1->min = sd2->min;
-			sd1->max = sd2->max;
-			sd1->sum = sd2->sum;
-		} else {
-			sd1->count += sd2->count;
-			sd1->sum += sd2->sum;
-			if (sd2->min < sd1->min)
-				sd1->min = sd2->min;
-			if (sd2->max > sd1->max)
-				sd1->max = sd2->max;
-		}
-		if (st->type != HIST_NONE) {
-			int j;
-			for (j = 0; j < st->buckets; j++)
-				sd1->histogram[j] += sd2->histogram[j];
-		}
-		break;
-	}
-	default:
-		_stp_error("Attempted to aggregate map of type %d\n", type);
-	}
 }
 
 /** Aggregate per-cpu maps.
@@ -628,7 +520,7 @@ static void _stp_add_agg(MAP agg, struct map_node *aptr, struct map_node *ptr, i
  * @param map A pointer to a pmap.
  * @returns a pointer to the aggregated map. Null on failure.
  */
-static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp, int type)
+static MAP _stp_pmap_agg (PMAP pmap, map_update_fn update, map_cmp_fn cmp)
 {
 	int i, hash;
 	MAP m, agg;
@@ -638,7 +530,7 @@ static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp, int type)
 	int quit = 0;
 
 	agg = _stp_pmap_get_agg(pmap);
-	
+
         /* FIXME. we either clear the aggregation map or clear each local map */
 	/* every time we aggregate. which would be best? */
 	_stp_map_clear (agg);
@@ -659,9 +551,9 @@ static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp, int type)
 					}
 				}
 				if (match)
-					_stp_add_agg(agg, aptr, ptr, type);
+					(*update)(agg, aptr, ptr, 1);
 				else {
-					if (!_stp_new_agg(agg, ahead, ptr, copy, type)) {
+					if (!_stp_new_agg(agg, ahead, ptr, update)) {
                                                 MAP_UNLOCK(m);
                                                 agg = NULL;
 						goto out;
@@ -676,33 +568,6 @@ static MAP _stp_pmap_agg (PMAP pmap, map_copy_fn copy, map_cmp_fn cmp, int type)
 
 out:
 	return agg;
-}
-
-/* #define _stp_pmap_printn(map,n,fmt) _stp_map_printn (_stp_pmap_agg(map), n, fmt) */
-/* #define _stp_pmap_print(map,fmt) _stp_map_printn(_stp_pmap_agg(map),0,fmt) */
-
-static void _new_map_clear_node (MAP map, struct map_node *m, int type)
-{
-	switch (type) {
-	case INT64:
-		*(int64_t *)map_node_data(m) = 0;
-		break;
-	case STRING:
-		*(char *)map_node_data(m) = 0;
-		break;
-	case STAT:
-	{
-		stat_data *sd = (stat_data *)map_node_data(m);
-		Hist st = &map->hist;
-		sd->count = 0;
-		if (st->type != HIST_NONE) {
-			int j;
-			for (j = 0; j < st->buckets; j++)
-				sd->histogram[j] = 0;
-		}
-		break;
-	}
-	}
 }
 
 static struct map_node *_new_map_create (MAP map, struct mhlist_head *head)
@@ -740,40 +605,37 @@ static void _new_map_del_node (MAP map, struct map_node *n)
 	map->num--;
 }
 
-static int _new_map_set_int64 (MAP map, struct map_node *n, int64_t val, int add)
+static int _new_map_set_int64 (MAP map, int64_t *dst, int64_t val, int add)
 {
-	if (map == NULL || n == NULL)
+	if (map == NULL || dst == NULL)
 		return -2;
 
 	if (add)
-		*(int64_t *)map_node_data(n) += val;
+		*dst += val;
 	else
-		*(int64_t *)map_node_data(n) = val;
+		*dst = val;
 
 	return 0;
 }
 
-static int _new_map_set_str (MAP map, struct map_node *n, char *val, int add)
+static int _new_map_set_str (MAP map, char *dst, char *val, int add)
 {
-	if (map == NULL ||  n == NULL)
+	if (map == NULL || dst == NULL)
 		return -2;
 
 	if (add)
-		str_add((void *)map_node_data(n), val);
+		str_add(dst, val);
 	else
-		str_copy((void *)map_node_data(n), val);
+		str_copy(dst, val);
 
 	return 0;
 }
 
-static int _new_map_set_stat (MAP map, struct map_node *n, int64_t val, int add)
+static int _new_map_set_stat (MAP map, struct stat_data *sd, int64_t val, int add)
 {
-	stat_data *sd;
-
-	if (map == NULL || n == NULL)
+	if (map == NULL || sd == NULL)
 		return -2;
 
-	sd = (stat_data *)map_node_data(n);
 	if (!add) {
 		Hist st = &map->hist;
 		sd->count = 0;
@@ -784,6 +646,46 @@ static int _new_map_set_stat (MAP map, struct map_node *n, int64_t val, int add)
 		}
 	}
 	__stp_stat_add (&map->hist, sd, val);
+	return 0;
+}
+
+static int _new_map_copy_stat (MAP map, struct stat_data *sd1, struct stat_data *sd2, int add)
+{
+	Hist st = &map->hist;
+
+	if (map == NULL || sd1 == NULL)
+		return -2;
+
+	if (sd2 == NULL) {
+		sd1->count = 0;
+		if (st->type != HIST_NONE) {
+			int j;
+			for (j = 0; j < st->buckets; j++)
+				sd1->histogram[j] = 0;
+		}
+	} else if (add && sd1->count > 0 && sd2->count > 0) {
+		sd1->count += sd2->count;
+		sd1->sum += sd2->sum;
+		if (sd2->min < sd1->min)
+			sd1->min = sd2->min;
+		if (sd2->max > sd1->max)
+			sd1->max = sd2->max;
+		if (st->type != HIST_NONE) {
+			int j;
+			for (j = 0; j < st->buckets; j++)
+				sd1->histogram[j] += sd2->histogram[j];
+		}
+	} else {
+		sd1->count = sd2->count;
+		sd1->sum = sd2->sum;
+		sd1->min = sd2->min;
+		sd1->max = sd2->max;
+		if (st->type != HIST_NONE) {
+			int j;
+			for (j = 0; j < st->buckets; j++)
+				sd1->histogram[j] = sd2->histogram[j];
+		}
+	}
 	return 0;
 }
 

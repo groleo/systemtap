@@ -46,30 +46,35 @@
 #define VSTYPE char*
 #define VALNAME str
 #define VALN s
-#define MAP_SET_VAL(a,b,c,d) _new_map_set_str(a,b,c,d)
-#define MAP_GET_VAL(n) ((char *)map_node_data(n))
+#define VALSTOR char value[MAP_STRING_LENGTH]
+#define MAP_GET_VAL(node) ((node)->value)
+#define MAP_SET_VAL(map,node,val,add) _new_map_set_str(map,MAP_GET_VAL(node),val,add)
+#define MAP_COPY_VAL(map,node,val,add) MAP_SET_VAL(map,node,val,add)
 #define NULLRET ""
 #elif VALUE_TYPE == INT64
 #define VALTYPE int64_t
 #define VSTYPE int64_t
 #define VALNAME int64
 #define VALN i
-#define MAP_SET_VAL(a,b,c,d) _new_map_set_int64(a,b,c,d)
-#define MAP_GET_VAL(n) (*(int64_t *)map_node_data(n))
+#define VALSTOR int64_t value
+#define MAP_GET_VAL(node) ((node)->value)
+#define MAP_SET_VAL(map,node,val,add) _new_map_set_int64(map,&MAP_GET_VAL(node),val,add)
+#define MAP_COPY_VAL(map,node,val,add) MAP_SET_VAL(map,node,val,add)
 #define NULLRET (int64_t)0
 #elif VALUE_TYPE == STAT
 #define VALTYPE stat_data*
 #define VSTYPE int64_t
 #define VALNAME stat_data
 #define VALN x
-#define MAP_SET_VAL(a,b,c,d) _new_map_set_stat(a,b,c,d)
-#define MAP_GET_VAL(n) ((stat_data *)map_node_data(n))
+#define VALSTOR stat_data value
+#define MAP_GET_VAL(node) (&(node)->value)
+#define MAP_SET_VAL(map,node,val,add) _new_map_set_stat(map,MAP_GET_VAL(node),val,add)
+#define MAP_COPY_VAL(map,node,val,add) _new_map_copy_stat(map,MAP_GET_VAL(node),val,add)
 #define NULLRET (stat_data*)0
 #else
 #error Need to define VALUE_TYPE as STRING, STAT, or INT64
 #endif /* VALUE_TYPE */
 
-//#define MAP_SET_VAL(a,b,c,d) _new_map_set_##VALNAME(a,b,c,d)
 
 #if defined (KEY1_TYPE)
 #define KEY_ARITY 1
@@ -353,6 +358,10 @@ struct KEYSYM(map_node) {
 #endif
 #endif
 #endif
+
+	VALSTOR;
+	/* NB: the value must be last, because in the case of
+	 * stat_data we dynamically size its histogram[].  */
 };
 
 static inline struct KEYSYM(map_node)*
@@ -379,7 +388,7 @@ static key_data KEYSYM(map_get_key) (struct map_node *mn, int n, int *type)
 	if (n < 1) {
 		if (type)
 			*type = VALUE_TYPE;
-		return (key_data)MAP_GET_VAL(mn);
+		return (key_data)MAP_GET_VAL(m);
 	}
 
 	if (n > KEY_ARITY) {
@@ -502,7 +511,7 @@ static char *KEYSYM(_stp_map_key_get_str) (struct map_node *mn, int n)
  */
 static VALTYPE KEYSYM(JOIN(_stp_map_get,VALNAME))(struct map_node *m)
 {
-	return m ? MAP_GET_VAL(m) : 0;
+	return m ? MAP_GET_VAL(KEYSYM(get_map_node)(m)) : 0;
 }
 
 static void KEYSYM(_stp_map_sort) (MAP map, int keynum, int dir)
@@ -615,8 +624,8 @@ static unsigned int KEYSYM(hash) (ALLKEYSD(key))
 #if VALUE_TYPE == INT64 || VALUE_TYPE == STRING
 static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap)
 {
-	MAP m = _stp_map_new (max_entries, wrap, VALUE_TYPE,
-			      sizeof(struct KEYSYM(map_node)), 0, -1);
+	MAP m = _stp_map_new (max_entries, wrap,
+			      sizeof(struct KEYSYM(map_node)), -1);
 	return m;
 }
 #else
@@ -641,8 +650,8 @@ static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap, int htype, ...)
 
 	switch (htype) {
 	case HIST_NONE:
-		m = _stp_map_new (max_entries, wrap, STAT,
-				  sizeof(struct KEYSYM(map_node)), 0, -1);
+		m = _stp_map_new_hstat (max_entries, wrap,
+					sizeof(struct KEYSYM(map_node)));
 		break;
 	case HIST_LOG:
 		m = _stp_map_new_hstat_log (max_entries, wrap,
@@ -681,7 +690,7 @@ static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 
 	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY_EQ_P(n)) {
-			return MAP_SET_VAL(map, &n->node, val, add);
+			return MAP_SET_VAL(map, n, val, add);
 		}
 	}
 	/* key not found */
@@ -689,7 +698,7 @@ static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 	if (n == NULL)
 		return -1;
 	KEYCPY(n);
-	return MAP_SET_VAL(map, &n->node, val, 0);
+	return MAP_SET_VAL(map, n, val, 0);
 }
 
 static int KEYSYM(_stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val)
@@ -718,7 +727,7 @@ static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 
 	mhlist_for_each_entry(n, e, head, node.hnode) {
 		if (KEY_EQ_P(n)) {
-			return MAP_GET_VAL(&n->node);
+			return MAP_GET_VAL(n);
 		}
 	}
 	/* key not found */
@@ -855,7 +864,9 @@ static int KEYSYM(_stp_map_exists) (MAP map, ALLKEYSD(key))
 #undef VALTYPE
 #undef VSTYPE
 #undef VALN
+#undef VALSTOR
 
+#undef MAP_COPY_VAL
 #undef MAP_SET_VAL
 #undef MAP_GET_VAL
 #undef NULLRET
