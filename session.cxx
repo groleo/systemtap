@@ -1758,6 +1758,10 @@ systemtap_session::print_error (const semantic_error& e)
             }
           else message << *e.tok2;
         }
+      if (e.whatman() != "")
+        {
+          message << _("elaboration at man 3stap error::") << e.whatman();
+        }
       message << endl;
       message_str[i] = message.str();
     }

@@ -354,6 +354,11 @@ parser::print_error  (const parse_error &pe)
     session.print_error_source (cerr, align_parse_error, tok);
   }
 
+  if (pe.whatman() != "")
+    {
+      cerr << _("elaboration at man 3stap error::") << pe.whatman() << endl;
+    }
+
   num_errors ++;
 }
 
