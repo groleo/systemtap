@@ -17,10 +17,6 @@ AM_CPPFLAGS = -DBINDIR='"$(bindir)"' \
 AM_CFLAGS = -D_GNU_SOURCE -fexceptions -Wall -Werror -Wunused -Wformat=2 -W
 AM_CXXFLAGS = -Wall -Werror
 
-man_MANS = stapprobes.3stap stapfuncs.3stap stapvars.3stap stapex.3stap \
-dtrace.1 stap-merge.1\
-stappaths.7
-
 bin_SCRIPTS = stap-report
 pkglibexec_SCRIPTS = stap-env
 oldinclude_HEADERS = includes/sys/sdt.h includes/sys/sdt-config.h
@@ -29,7 +25,6 @@ bin_PROGRAMS =
 
 if BUILD_TRANSLATOR
 bin_PROGRAMS += stap
-man_MANS += stap.1
 bin_SCRIPTS += dtrace
 
 pkglibexec_PROGRAMS =
@@ -38,7 +33,6 @@ if HAVE_NSS
 pkglibexec_PROGRAMS += stap-sign-module stap-authorize-cert
 
 if BUILD_SERVER
-man_MANS += stap-server.8
 pkglibexec_PROGRAMS += stap-serverd stap-gen-cert
 bin_SCRIPTS += stap-server
 pkglibexec_SCRIPTS += stap-start-server stap-stop-server
@@ -310,9 +304,8 @@ if BUILD_SERVER
 	rm -rf $(DESTDIR)$(localstatedir)/run/stap-server
 	rm -f $(DESTDIR)$(localstatedir)/log/stap-server/log
 endif
-	(cd $(srcdir)/man; for f in *.3*; do rm -rf "$(DESTDIR)$(man3dir)/$$f"; done)
 
-SUBDIRS = . stapdyn staprun doc po
+SUBDIRS = . stapdyn staprun doc man po
 # NB: the gcov target above uses this to enumarate linked binaries' build directories
 DIST_SUBDIRS = testsuite $(SUBDIRS)
 EXTRA_DIST = m4/ChangeLog

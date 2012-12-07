@@ -626,9 +626,9 @@ AC_DEFINE_UNQUOTED(STAP_PREFIX, "$stap_prefix", [configure prefix location])
 AC_SUBST(STAP_PREFIX, "$stap_prefix")
 
 AC_CONFIG_HEADERS([config.h:config.in])
-AC_CONFIG_FILES([Makefile doc/Makefile \
+AC_CONFIG_FILES([Makefile doc/Makefile man/Makefile \
 doc/beginners/Makefile doc/SystemTap_Tapset_Reference/Makefile \
-stappaths.7 \
+man/stappaths.7 \
 initscript/config.systemtap initscript/config.stap-server \
 initscript/systemtap initscript/stap-server ])
 AC_CONFIG_SUBDIRS(testsuite)

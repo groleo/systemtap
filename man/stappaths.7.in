@@ -22,8 +22,8 @@ This manual page was generated on @DATE@ for systemtap @VERSION@.
 The following section will list the main paths in systemtap that are 
 important to know and may be required to reference.
 .TP
-Tapset Path: @prefix@/share/systemtap/tapset/
-Systemtap data directory for the standard probe-alias / function library,
+@prefix@/share/systemtap/tapset/
+The directory for the standard probe-alias / function tapset library,
 unless overridden by the
 .I SYSTEMTAP_TAPSET
 environment variable or the
@@ -36,19 +36,20 @@ and
 .IR function::* (3stap)
 manual pages.
 .TP
-Runtime Path: @prefix@/share/systemtap/runtime/
+@prefix@/share/systemtap/runtime/
 The runtime sources, unless overridden by the
 .I SYSTEMTAP_RUNTIME
 environment variable.
 .TP
-Staprun Path: @prefix@/bin/staprun
+@prefix@/bin/staprun
 The auxiliary program supervising module loading, interaction, and
 unloading.
 .TP
-Stapio Path: @libexecdir@/systemtap/stapio
-The Systemtap module input and output handler.
+@libexecdir@/systemtap/stapio
+The auxiliary program for module input and output handling.
 .TP
-sdt.h Path: @oldincludedir@/sys/sdt.h
+@oldincludedir@/sys/sdt.h
+Location of the <sys/sdt.h> headers.
 .TP
 Kernel debuginfo Path: /usr/lib/debug/lib/modules/$(uname \-r)/
 The location of kernel debugging information when packaged into the
