@@ -52,22 +52,11 @@ struct _Hist {
 };
 typedef struct _Hist *Hist;
 
-/** Stat struct. Maps do not need this */
-struct _Stat {
-	struct _Hist hist;
-
-	/*
-	 * The stat data is per-cpu data.
-	 */
-#ifdef __KERNEL__
-	stat_data *sd;
-#else
-	void *sd;
-	int size;
+/* The specific runtimes define struct _Stat and its alloc/free */
+#if defined(__KERNEL__)
+#include "linux/stat_runtime.h"
+#elif defined(__DYNINST__)
+#include "dyninst/stat_runtime.h"
 #endif
-	/* aggregated data */   
-	stat_data *agg;  
-};
 
-typedef struct _Stat *Stat;
 #endif /* _STAT_H_ */

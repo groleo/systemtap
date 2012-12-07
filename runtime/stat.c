@@ -27,7 +27,7 @@
  * @verbatim
 #define NEED_STAT_LOCKS
 @endverbatim
- * This will insert per-cpu spinlocks around all accesses to Stat data, 
+ * This will insert per-cpu spinlocks around all accesses to Stat data,
  * which will reduce performance some.
  *
  * Stats keep track of count, sum, min and max. Average is computed
@@ -39,12 +39,6 @@
  */
 
 #include "stat-common.c"
-
-#if defined(__KERNEL__)
-#include "linux/stat_runtime.h"
-#elif defined(__DYNINST__)
-#include "dyninst/stat_runtime.h"
-#endif
 
 
 /** Initialize a Stat.
@@ -58,7 +52,7 @@
  * For HIST_LINEAR, the following additional parametrs are required:
  * @param start - An integer. The start of the histogram.
  * @param stop - An integer. The stopping value. Should be > start.
- * @param interval - An integer. The interval. 
+ * @param interval - An integer. The interval.
  */
 static Stat _stp_stat_init (int type, ...)
 {
@@ -68,7 +62,7 @@ static Stat _stp_stat_init (int type, ...)
 	if (type != HIST_NONE) {
 		va_list ap;
 		va_start (ap, type);
-		
+
 		if (type == HIST_LOG) {
 			buckets = HIST_LOG_BUCKETS;
 		} else {
@@ -82,30 +76,16 @@ static Stat _stp_stat_init (int type, ...)
 		}
 		va_end (ap);
 	}
-	/* Called from module_init, so user context, may sleep alloc. */
-	st = (Stat) _stp_kmalloc_gfp (sizeof(struct _Stat), STP_ALLOC_SLEEP_FLAGS);
+
+	size = buckets * sizeof(int64_t) + sizeof(stat_data);
+	st = _stp_stat_alloc (size);
 	if (st == NULL)
 		return NULL;
-	
-	size = buckets * sizeof(int64_t) + sizeof(stat_data);	
-#ifdef __KERNEL__
-	st->sd = (stat_data *) _stp_alloc_percpu (size);
-#else  /* !__KERNEL__ */
-	/* Allocate an array of stat_data structures. Note that the
-	 * memory must be initialized to zero. */
-	st->size = size;
-	st->sd = _stp_kzalloc_gfp(size * _stp_runtime_num_contexts,
-				       STP_ALLOC_SLEEP_FLAGS);
-#endif	/* !__KERNEL__ */
-	if (st->sd == NULL)
-		goto exit1;
-	
-	st->agg = (stat_data *)_stp_kzalloc_gfp(size, STP_ALLOC_SLEEP_FLAGS);
-	if (st->agg == NULL)
-		goto exit2;
 
-	if (_stp_stat_initialize_locks(st) != 0)
-		goto exit3;
+	if (_stp_stat_initialize_locks(st) != 0) {
+		_stp_stat_free(st);
+		return NULL;
+	}
 
 	st->hist.type = type;
 	st->hist.start = start;
@@ -113,18 +93,6 @@ static Stat _stp_stat_init (int type, ...)
 	st->hist.interval = interval;
 	st->hist.buckets = buckets;
 	return st;
-
-exit3:
-	_stp_kfree(st->agg);
-exit2:
-#ifdef __KERNEL__
-	_stp_free_percpu (st->sd);
-#else
-	_stp_kfree(st->sd);
-#endif
-exit1:
-	_stp_kfree (st);
-	return NULL;
 }
 
 /** Delete Stat.
@@ -136,16 +104,10 @@ static void _stp_stat_del (Stat st)
 {
 	if (st) {
 		_stp_stat_destroy_locks(st);
-#ifdef __KERNEL__
-		_stp_free_percpu (st->sd);
-#else  /* !__KERNEL__ */
-		_stp_kfree(st->sd);
-#endif /* !__KERNEL__ */
-		_stp_kfree (st->agg);
-		_stp_kfree (st);
+		_stp_stat_free(st);
 	}
 }
-	
+
 /** Add to a Stat.
  * Add an int64 to a Stat.
  *
@@ -183,7 +145,7 @@ static void _stp_stat_clear_data (Stat st, stat_data *sd)
 static stat_data *_stp_stat_get (Stat st, int clear)
 {
 	int i, j;
-	stat_data *agg = st->agg;
+	stat_data *agg = _stp_stat_get_agg(st);
 	stat_data *sd;
 	STAT_LOCK(agg);
 	_stp_stat_clear_data (st, agg);
