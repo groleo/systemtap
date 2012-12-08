@@ -35,12 +35,6 @@
 #define HASH_TABLE_SIZE (1<<HASH_TABLE_BITS)
 #endif
 
-/* The maximum number of keys allowed. Reducing this can save a small
-amount of memory. Do not increase above 5. */
-#ifndef MAX_KEY_ARITY
-#define MAX_KEY_ARITY 5
-#endif
-
 /** Maximum length of strings in maps. This sets the amount of space
     reserved for each string.  This should match MAXSTRINGLEN.  If
     MAP_STRING_LENGTH is less than MAXSTRINGLEN, a user could get
@@ -147,21 +141,13 @@ typedef int (*map_cmp_fn)(struct map_node *dst, struct map_node *src);
 /************* prototypes for map.c ****************/
 
 static int int64_eq_p(int64_t key1, int64_t key2);
-void int64_copy(void *dest, int64_t val);
-void int64_add(void *dest, int64_t val);
-int64_t int64_get(void *ptr);
-void stat_copy(void *dest, stat_data *src);
-void stat_add(void *dest, stat_data *src);
-stat_data *stat_get(void *ptr);
 static unsigned int int64_hash(const int64_t v);
-char * str_get(void *ptr);
 static void str_copy(char *dest, char *src);
 static void str_add(void *dest, char *val);
 static int str_eq_p(char *key1, char *key2);
 static unsigned int str_hash(const char *key1);
 static MAP _stp_map_new(unsigned max_entries, int wrap, int node_size, int cpu);
 static PMAP _stp_pmap_new(unsigned max_entries, int wrap, int node_size);
-static int msb64(int64_t x);
 static MAP _stp_map_new_hstat(unsigned max_entries, int wrap, int node_size);
 static MAP _stp_map_new_hstat_log(unsigned max_entries, int wrap, int node_size);
 static MAP _stp_map_new_hstat_linear(unsigned max_entries, int wrap, int node_size,
@@ -171,7 +157,6 @@ static struct map_node * _stp_map_start(MAP map);
 static struct map_node * _stp_map_iter(MAP map, struct map_node *m);
 static void _stp_map_del(MAP map);
 static void _stp_map_clear(MAP map);
-void _stp_map_print(MAP map, const char *fmt);
 
 static struct map_node *_new_map_create (MAP map, struct mhlist_head *head);
 static int _new_map_set_int64 (MAP map, int64_t *dst, int64_t val, int add);

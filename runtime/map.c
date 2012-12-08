@@ -18,13 +18,6 @@
 #include "stat-common.c"
 #include "map-stat.c"
 
-static int map_sizes[] = {
-        sizeof(int64_t),
-        MAP_STRING_LENGTH,
-        sizeof(stat_data),
-        0
-};
-
 static unsigned int int64_hash (const int64_t v)
 {
 	return (unsigned int)hash_long (((unsigned long)v) ^ stap_hash_seed, HASH_TABLE_BITS);
