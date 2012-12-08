@@ -19,10 +19,10 @@ run "dmesg | egrep 'stap|systemtap' | tail -n 10"
 run "cat /proc/cpuinfo | egrep 'processor|vendor_id|model name'"
 if [ -x /usr/bin/dpkg ]; then
   # debian/ubuntu
-  run "dpkg --list | egrep 'systemtap|elfutils|kernel|gcc' | awk '{print \$2,\$3}' | sort"
+  run "dpkg --list | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi' | awk '{print \$2,\$3}' | sort"
 elif [ -x /usr/bin/rpm -o -x /bin/rpm ]; then
   # fedora/rhel/suse/...
-  run "rpm -qa --qf '%{name}-%{version} %{release}.%{arch}\\t%{buildtime:date}@%{buildhost}\\n' | egrep 'systemtap|elfutils|kernel|gcc' | sort"
+  run "rpm -qa --qf '%{name}-%{version} %{release}.%{arch}\\t%{buildtime:date}@%{buildhost}\\n' | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi' | sort"
 elif [ -f /var/log/packages ]; then
   # slackware
   run "cat /var/log/packages | egrep 'systemtap|elfutils|kernel|gcc' | sort -k9"
