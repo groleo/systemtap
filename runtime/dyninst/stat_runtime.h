@@ -59,8 +59,8 @@ static Stat _stp_stat_alloc(size_t stat_data_size)
 	if (stat_data_size < sizeof(stat_data))
 		return NULL;
 
-	/* This is done as one big allocation, then
-	 * assigning offptrs to each sub-piece.  */
+	/* NB: This is done as one big allocation, then assigning offptrs to
+	 * each sub-piece.  (See _stp_pmap_new for more explanation) */
 	st = mem = calloc(1, total_size);
 	if (st == NULL)
 		return NULL;

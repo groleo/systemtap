@@ -167,6 +167,7 @@ static PMAP _stp_pmap_new_hstat_linear (unsigned max_entries, int wrap,
 					int interval);
 static PMAP _stp_pmap_new_hstat_log (unsigned max_entries, int wrap, int node_size);
 static PMAP _stp_pmap_new_hstat (unsigned max_entries, int wrap, int node_size);
+static void _stp_pmap_del(PMAP pmap);
 static MAP _stp_pmap_agg (PMAP pmap, map_update_fn update, map_cmp_fn cmp);
 static struct map_node *_stp_new_agg(MAP agg, struct mhlist_head *ahead,
 				     struct map_node *ptr, map_update_fn update);
