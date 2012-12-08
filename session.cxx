@@ -1760,7 +1760,7 @@ systemtap_session::print_error (const semantic_error& e)
         }
       if (e.whatman() != "")
         {
-          message << _("elaboration at man 3stap error::") << e.whatman();
+          message << _F("\tMore error information at man page error::%s(7stap)", e.whatman().c_str());
         }
       message << endl;
       message_str[i] = message.str();

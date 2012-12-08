@@ -801,10 +801,9 @@ passes_0_4 (systemtap_session &s)
                       << endl;
 
   if (rc && ! s.try_server ())
-    cerr << _("Pass 4: compilation failed.  Try again with another '--vp 0001' option.") << endl;
-    //cerr << "Pass 4: compilation failed.  "
-    //     << "Try again with another '--vp 0001' option."
-    //     << endl;
+    cerr << _("Pass 4: compilation failed.  Try again with another '--vp 0001' option.") << endl
+         << _("\tMore error information at man page error::pass4(7stap)") << endl;
+
   else
     {
       // Update cache. Cache cleaning is kicked off at the beginning of this function.

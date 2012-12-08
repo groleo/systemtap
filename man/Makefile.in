@@ -543,7 +543,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-man
+install-data-am: install-data-local install-man
 
 install-dvi: install-dvi-am
 
@@ -596,17 +596,29 @@ uninstall-man: uninstall-man1 uninstall-man3 uninstall-man7 \
 
 .PHONY: all all-am check check-am clean clean-generic distclean \
 	distclean-generic dvi dvi-am html html-am info info-am install \
-	install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-man1 install-man3 install-man7 install-man8 \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-generic pdf pdf-am ps ps-am uninstall uninstall-am \
-	uninstall-man uninstall-man1 uninstall-man3 uninstall-man7 \
-	uninstall-man8
+	install-am install-data install-data-am install-data-local \
+	install-dvi install-dvi-am install-exec install-exec-am \
+	install-html install-html-am install-info install-info-am \
+	install-man install-man1 install-man3 install-man7 \
+	install-man8 install-pdf install-pdf-am install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-generic pdf pdf-am ps ps-am uninstall \
+	uninstall-am uninstall-man uninstall-man1 uninstall-man3 \
+	uninstall-man7 uninstall-man8
 
+
+# NB: this doesn't work, apparently because make doesn't like
+# file names with :: in them, misinterpreting them as some kind
+# of make rule.
+#
+# man7_MANS = error::reporting.7stap error::pass4.7stap
+
+install-data-local:
+	$(MKDIR_P) $(DESTDIR)$(man7dir)
+	for f in $(srcdir)/*.7stap; do \
+		$(INSTALL_DATA) "$$f" "$(DESTDIR)$(man7dir)"; \
+	done
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

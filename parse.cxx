@@ -356,7 +356,7 @@ parser::print_error  (const parse_error &pe)
 
   if (pe.whatman() != "")
     {
-      cerr << _("elaboration at man 3stap error::") << pe.whatman() << endl;
+      cerr << _F("\tMore error information at man page error::%s(7stap)", pe.whatman().c_str()) << endl;
     }
 
   num_errors ++;
