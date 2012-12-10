@@ -500,6 +500,7 @@ exit 0
 %{_libexecdir}/%{name}/stap-sign-module
 %{_libexecdir}/%{name}/stap-authorize-cert
 %{_libexecdir}/%{name}/stap-env
+%{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
 %{_mandir}/man8/stap-server.8*
 %{_sysconfdir}/rc.d/init.d/stap-server
@@ -523,6 +524,7 @@ exit 0
 %{_datadir}/%{name}/runtime
 %{_datadir}/%{name}/tapset
 %{_mandir}/man1/stap.1*
+%{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
 %doc README README.unprivileged AUTHORS NEWS COPYING
 %if %{with_bundled_elfutils}
@@ -547,6 +549,7 @@ exit 0
 %dir %{_libdir}/%{name}
 %{_libdir}/%{name}/staplog.so*
 %endif
+%{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
 %{_mandir}/man8/staprun.8*
 %doc README README.security AUTHORS NEWS COPYING
@@ -568,6 +571,7 @@ exit 0
 %{_mandir}/man1/stap.1*
 %{_mandir}/man1/stap-merge.1*
 %{_mandir}/man3/*
+%{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
 %dir %{_datadir}/%{name}
 %{_datadir}/%{name}/tapset
