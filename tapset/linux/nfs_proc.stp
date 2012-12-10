@@ -718,7 +718,8 @@ probe nfs.proc2.read_setup = kernel.function("nfs_proc_read_setup") !,
                        module("nfs").function("nfs_proc_read_setup")?,
                        module("nfsv2").function("nfs_proc_read_setup")?
 {
-	client = NFS_CLIENT($data->inode)
+	inode = @defined($data->header) ? $data->header->inode : $data->inode
+	client = NFS_CLIENT(inode)
 	server_ip = get_ip_from_client(client)
 	prot = get_prot_from_client(client)
         version =2
@@ -746,7 +747,8 @@ probe nfs.proc3.read_setup = kernel.function("nfs3_proc_read_setup") !,
                        module("nfs").function("nfs3_proc_read_setup")?,
                        module("nfsv3").function("nfs3_proc_read_setup")?
 {
-	client = NFS_CLIENT($data->inode)
+	inode = @defined($data->header) ? $data->header->inode : $data->inode
+	client = NFS_CLIENT(inode)
 	server_ip = get_ip_from_client(client)
 	prot = get_prot_from_client(client)
         version =3
@@ -775,7 +777,8 @@ probe nfs.proc4.read_setup = kernel.function("nfs4_proc_read_setup") !,
                        module("nfs").function("nfs4_proc_read_setup")?,
                        module("nfsv4").function("nfs4_proc_read_setup")?
 {
-	client = NFS_CLIENT($data->inode)
+	inode = @defined($data->header) ? $data->header->inode : $data->inode
+	client = NFS_CLIENT(inode)
 	server_ip = get_ip_from_client(client)
 	prot = get_prot_from_client(client)
         version =4
@@ -956,7 +959,8 @@ probe nfs.proc2.write_setup = kernel.function("nfs_proc_write_setup") !,
                               module("nfs").function("nfs_proc_write_setup") ?,
                               module("nfsv2").function("nfs_proc_write_setup") ?
 {
-	client = NFS_CLIENT($data->inode)
+	inode = @defined($data->header) ? $data->header->inode : $data->inode
+	client = NFS_CLIENT(inode)
 	server_ip = get_ip_from_client(client)
 	prot = get_prot_from_client(client)
         version =2
@@ -987,7 +991,8 @@ probe nfs.proc3.write_setup = kernel.function("nfs3_proc_write_setup") !,
                               module("nfs").function("nfs3_proc_write_setup") ?,
                               module("nfsv3").function("nfs3_proc_write_setup") ?
 {
-	client = NFS_CLIENT($data->inode)
+	inode = @defined($data->header) ? $data->header->inode : $data->inode
+	client = NFS_CLIENT(inode)
 	server_ip = get_ip_from_client(client)
 	prot = get_prot_from_client(client)
         version =3
@@ -1017,7 +1022,8 @@ probe nfs.proc4.write_setup = kernel.function("nfs4_proc_write_setup") !,
                               module("nfs").function("nfs4_proc_write_setup") ?,
                               module("nfsv4").function("nfs4_proc_write_setup") ?
 {
-	client = NFS_CLIENT($data->inode)
+	inode = @defined($data->header) ? $data->header->inode : $data->inode
+	client = NFS_CLIENT(inode)
 	server_ip = get_ip_from_client(client)
 	prot = get_prot_from_client(client)
         version =4
@@ -1025,8 +1031,8 @@ probe nfs.proc4.write_setup = kernel.function("nfs4_proc_write_setup") !,
         count = $data->args->count
         offset = $data->args->offset
 	how = @choose_defined($how, $data->args->stable)
-        bitmask0 = __nfsv4_bitmask($data->inode,0)
-        bitmask1 = __nfsv4_bitmask($data->inode,1)
+        bitmask0 = __nfsv4_bitmask(inode,0)
+        bitmask1 = __nfsv4_bitmask(inode,1)
 	//timestamp = $jiffies
 	
 	name = "nfs.proc4.write_setup"
@@ -1202,7 +1208,8 @@ probe nfs.proc3.commit_setup = kernel.function("nfs3_proc_commit_setup") !,
                               module("nfs").function("nfs3_proc_commit_setup") ?,
                               module("nfsv3").function("nfs3_proc_commit_setup") ?
 {
-	client = NFS_CLIENT($data->inode)
+	inode = @defined($data->header) ? $data->header->inode : $data->inode
+	client = NFS_CLIENT(inode)
 	server_ip = get_ip_from_client(client)
 	prot = get_prot_from_client(client)
         version =3
@@ -1231,15 +1238,16 @@ probe nfs.proc4.commit_setup = kernel.function("nfs4_proc_commit_setup") !,
                               module("nfs").function("nfs4_proc_commit_setup") ?,
                               module("nfsv4").function("nfs4_proc_commit_setup") ?
 {
-	client = NFS_CLIENT($data->inode)
+	inode = @defined($data->header) ? $data->header->inode : $data->inode
+	client = NFS_CLIENT(inode)
 	server_ip = get_ip_from_client(client)
 	prot = get_prot_from_client(client)
         version =4
 
         count = $data->args->count
         offset = $data->args->offset
-        bitmask0 = __nfsv4_bitmask($data->inode,0)
-        bitmask1 = __nfsv4_bitmask($data->inode,1)
+        bitmask0 = __nfsv4_bitmask(inode,0)
+        bitmask1 = __nfsv4_bitmask(inode,1)
 	//timestamp = $jiffies
 	
 	name = "nfs.proc4.commit_setup"
