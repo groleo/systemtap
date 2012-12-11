@@ -95,7 +95,7 @@ stapdfa::stapdfa (const string& func_name, const string& re)
     failRE = p.parse();
   }
 
-  regex_parser p(re);
+  regex_parser p(".*" + re); // TODOXXX avoid adding this when not needed
   ast = prepare_rule(p.parse ()); // must be retained for re2c's reference
 
   // compile ast to DFA
