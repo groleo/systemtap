@@ -39,6 +39,40 @@ function pp:string ()
 %}
 
 /**
+ * sfunction ppfunc - Returns the function name parsed from pp()
+ *
+ * Description: This returns the function name from the current pp().
+ * Not all pp() have functions in them, in which case "" is returned.
+ */
+function ppfunc:string ()
+%{ /* pure */ /* unprivileged */
+	char *ptr, *start;
+
+	/* This is based on the pre-2.0 behavior of probefunc(), but without
+	 * the _stp_snprint_addr fallback, so we're purely pp()-based.
+	 *
+	 * The obsolete inline("...") syntax is dropped, but in its place we'll
+	 * look for function names in statement("...") form.
+	 */
+
+	STAP_RETVALUE[0] = '\0';
+	start = strstr(CONTEXT->probe_point, "function(\"");
+	ptr = start + 10;
+	if (!start) {
+		start = strstr(CONTEXT->probe_point, "statement(\"");
+		ptr = start + 11;
+	}
+
+	if (start) {
+		int len = MAXSTRINGLEN;
+		char *dst = STAP_RETVALUE;
+		while (*ptr != '@' && *ptr != '"' && --len > 0 && *ptr)
+			*dst++ = *ptr++;
+		*dst = 0;
+	}
+%}
+
+/**
  * sfunction probe_type - The low level probe handler type of the current probe.
  *
  * Description: Returns a short string describing the low level probe handler
