@@ -115,9 +115,9 @@ static int _stp_runtime_num_contexts;
 
 #include "debug.h"
 
-#include "shm.c"
 #include "io.c"
 #include "alloc.c"
+#include "shm.c"
 #include "print.h"
 #include "stp_string.c"
 #include "arith.c"

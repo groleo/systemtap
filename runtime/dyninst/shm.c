@@ -36,6 +36,13 @@ static void _stp_shm_finalize(void);
 static void _stp_shm_destroy(void);
 
 
+#ifdef DEBUG_SHM
+#define shm_dbug(fmt, args...) _stp_dbug(__FUNCTION__, __LINE__, fmt, ##args)
+#else
+#define shm_dbug(fmt, args...)
+#endif
+
+
 // Create and initialize the shared memory for this module.
 static const char *_stp_shm_init(void)
 {
@@ -85,6 +92,7 @@ static const char *_stp_shm_init(void)
 	_stp_shm_size = page_size;
 	_stp_shm_allocated = 0;
 	_stp_shm_base = base;
+	shm_dbug("initialized %s @ %p", _stp_shm_name, _stp_shm_base);
 	return _stp_shm_name;
 
 err_fd:
@@ -125,6 +133,9 @@ static int _stp_shm_connect(const char *name)
 
 	if (fd >= 0)
 		close(fd);
+
+	if (rc == 0)
+		shm_dbug("connected %s @ %p", _stp_shm_name, _stp_shm_base);
 	return rc;
 }
 
@@ -203,8 +214,7 @@ static void _stp_shm_finalize(void)
 		close(_stp_shm_fd);
 		_stp_shm_fd = -1;
 	}
-
-	// TODO verbose-log how much was allocated?
+	shm_dbug("mapped %zi bytes, used %zi", _stp_shm_size, _stp_shm_allocated);
 }
 
 
