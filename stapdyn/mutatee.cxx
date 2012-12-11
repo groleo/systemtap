@@ -193,6 +193,13 @@ mutatee::instrument_dynprobe_target(BPatch_object* object,
             {
               vector<BPatch_point*>* exits =
                 points[i]->getFunction()->findPoint(BPatch_locExit);
+              if (!exits || exits->empty())
+                {
+                  stapwarn() << "couldn't find a return point from "
+                             << lex_cast_hex(address) << ", " << target.path
+                             << "+" << lex_cast_hex(probe.offset) << endl;
+                  continue;
+                }
               return_points.insert(return_points.end(),
                                    exits->begin(), exits->end());
             }
