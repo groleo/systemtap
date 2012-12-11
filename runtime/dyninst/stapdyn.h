@@ -52,6 +52,9 @@ extern int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...);
 
 extern uint64_t stp_dyninst_probe_flags(uint64_t index);
 
+extern const char* stp_dyninst_shm_init(void);
+extern int stp_dyninst_shm_connect(const char* name);
+
 
 #ifdef __cplusplus
 }

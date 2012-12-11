@@ -115,6 +115,7 @@ static int _stp_runtime_num_contexts;
 
 #include "debug.h"
 
+#include "shm.c"
 #include "io.c"
 #include "alloc.c"
 #include "print.h"
@@ -182,14 +183,31 @@ static void stp_dyninst_ctor(void)
 
 static int _stp_runtime_contexts_init(void);
 
+const char* stp_dyninst_shm_init(void)
+{
+    return _stp_shm_init();
+}
+
+int stp_dyninst_shm_connect(const char* name)
+{
+    return _stp_shm_connect(name);
+}
+
 int stp_dyninst_session_init(void)
 {
+    int rc;
+
     /* We don't have a chance to indicate errors in the ctor, so do it here. */
     if (_stp_mem_fd < 0) {
 	return -errno;
     }
-    
-    int rc = _stp_runtime_contexts_init();
+
+    /* Just in case stapdyn didn't do it (e.g. an old version), make sure our
+     * shared memory is initialized before we do anything else.  */
+    if (stp_dyninst_shm_init() == NULL)
+	return -ENOMEM;
+
+    rc = _stp_runtime_contexts_init();
     if (rc != 0)
 	return rc;
 
@@ -200,6 +218,7 @@ int stp_dyninst_session_init(void)
     rc = systemtap_module_init();
     if (rc == 0) {
 	stp_dyninst_master = getpid();
+	_stp_shm_finalize();
     }
     return rc;
 }
@@ -217,6 +236,8 @@ __attribute__((destructor))
 static void stp_dyninst_dtor(void)
 {
     stp_dyninst_session_exit();
+
+    _stp_shm_destroy();
 
     if (_stp_mem_fd != -1) {
 	close (_stp_mem_fd);
