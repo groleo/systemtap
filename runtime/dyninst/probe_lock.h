@@ -59,7 +59,7 @@ stp_lock_probe(const struct stp_probe_lock *locks, unsigned num_locks)
 	return 1;
 
 skip:
-	atomic_inc(&skipped_count);
+	atomic_inc(skipped_count());
 #ifdef STP_TIMING
 	atomic_inc(locks[i].skipped);
 #endif

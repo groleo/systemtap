@@ -123,15 +123,15 @@ common_probe_entryfn_prologue (systemtap_session& s,
       // XXX: may need porting to platforms where task_struct is not
       // at bottom of kernel stack NB: see also
       // CONFIG_DEBUG_STACKOVERFLOW
-      s.op->newline() << "atomic_inc (& skipped_count);";
+      s.op->newline() << "atomic_inc (skipped_count());";
       s.op->newline() << "#ifdef STP_TIMING";
-      s.op->newline() << "atomic_inc (& skipped_count_lowstack);";
+      s.op->newline() << "atomic_inc (skipped_count_lowstack());";
       s.op->newline() << "#endif";
       s.op->newline() << "goto probe_epilogue;";
       s.op->newline(-1) << "}";
     }
 
-  s.op->newline() << "if (atomic_read (&session_state) != " << statestr << ")";
+  s.op->newline() << "if (atomic_read (session_state()) != " << statestr << ")";
   s.op->newline(1) << "goto probe_epilogue;";
   s.op->indent(-1);
 
@@ -140,10 +140,10 @@ common_probe_entryfn_prologue (systemtap_session& s,
     {
       s.op->newline() << "if (!c) {";
       s.op->newline(1) << "#if !INTERRUPTIBLE";
-      s.op->newline() << "atomic_inc (& skipped_count);";
+      s.op->newline() << "atomic_inc (skipped_count());";
       s.op->newline() << "#endif";
       s.op->newline() << "#ifdef STP_TIMING";
-      s.op->newline() << "atomic_inc (& skipped_count_reentrant);";
+      s.op->newline() << "atomic_inc (skipped_count_reentrant());";
       s.op->newline() << "#ifdef DEBUG_REENTRANCY";
       s.op->newline() << "_stp_warn (\"Skipped %s\\n\", " << probe << "->pp);";
       s.op->newline() << "#endif";
@@ -154,10 +154,10 @@ common_probe_entryfn_prologue (systemtap_session& s,
 
   s.op->newline() << "if (atomic_inc_return (& c->busy) != 1) {";
   s.op->newline(1) << "#if !INTERRUPTIBLE";
-  s.op->newline() << "atomic_inc (& skipped_count);";
+  s.op->newline() << "atomic_inc (skipped_count());";
   s.op->newline() << "#endif";
   s.op->newline() << "#ifdef STP_TIMING";
-  s.op->newline() << "atomic_inc (& skipped_count_reentrant);";
+  s.op->newline() << "atomic_inc (skipped_count_reentrant());";
   s.op->newline() << "#ifdef DEBUG_REENTRANCY";
   s.op->newline() << "_stp_warn (\"Skipped %s due to %s residency on cpu %u\\n\", "
                << probe << "->pp, c->probe_point ?: \"?\", smp_processor_id());";
@@ -271,8 +271,8 @@ common_probe_entryfn_epilogue (systemtap_session& s,
       s.op->newline() << "if (interval > STP_OVERLOAD_INTERVAL) {";
       s.op->newline(1) << "if (c->cycles_sum > STP_OVERLOAD_THRESHOLD) {";
       s.op->newline(1) << "_stp_error (\"probe overhead exceeded threshold\");";
-      s.op->newline() << "atomic_set (&session_state, STAP_SESSION_ERROR);";
-      s.op->newline() << "atomic_inc (&error_count);";
+      s.op->newline() << "atomic_set (session_state(), STAP_SESSION_ERROR);";
+      s.op->newline() << "atomic_inc (error_count());";
       s.op->newline(-1) << "}";
 
       s.op->newline() << "c->cycles_base = cycles_atend;";
@@ -296,7 +296,7 @@ common_probe_entryfn_epilogue (systemtap_session& s,
   s.op->indent(1);
   if (s.suppress_handler_errors) // PR 13306
     { 
-      s.op->newline() << "atomic_inc (& error_count);";
+      s.op->newline() << "atomic_inc (error_count());";
     }
   else
     {
@@ -305,9 +305,9 @@ common_probe_entryfn_epilogue (systemtap_session& s,
       s.op->newline(-1) << "else";
       s.op->newline(1) << "_stp_softerror (\"%s\", c->last_error);";
       s.op->indent(-1);
-      s.op->newline() << "atomic_inc (& error_count);";
-      s.op->newline() << "if (atomic_read (& error_count) > MAXERRORS) {";
-      s.op->newline(1) << "atomic_set (& session_state, STAP_SESSION_ERROR);";
+      s.op->newline() << "atomic_inc (error_count());";
+      s.op->newline() << "if (atomic_read (error_count()) > MAXERRORS) {";
+      s.op->newline(1) << "atomic_set (session_state(), STAP_SESSION_ERROR);";
       s.op->newline() << "_stp_exit ();";
       s.op->newline(-1) << "}";
     }
@@ -324,8 +324,8 @@ common_probe_entryfn_epilogue (systemtap_session& s,
   if (! s.suppress_handler_errors) // PR 13306
     {
       // Check for excessive skip counts.
-      s.op->newline() << "if (unlikely (atomic_read (& skipped_count) > MAXSKIPPED)) {";
-      s.op->newline(1) << "if (unlikely (pseudo_atomic_cmpxchg(& session_state, STAP_SESSION_RUNNING, STAP_SESSION_ERROR) == STAP_SESSION_RUNNING))";
+      s.op->newline() << "if (unlikely (atomic_read (skipped_count()) > MAXSKIPPED)) {";
+      s.op->newline(1) << "if (unlikely (pseudo_atomic_cmpxchg(session_state(), STAP_SESSION_RUNNING, STAP_SESSION_ERROR) == STAP_SESSION_RUNNING))";
       s.op->newline() << "_stp_error (\"Skipped too many probes, check MAXSKIPPED or try again with stap -t for more details.\");";
       s.op->newline(-1) << "}";
     }
@@ -5099,19 +5099,19 @@ dwarf_derived_probe_group::emit_module_refresh (systemtap_session& s)
   s.op->newline(-1) << "} else if (sdp->registered_p == 1 && relocated_addr == 0) {";
   s.op->newline(1) << "if (sdp->return_p) {";
   s.op->newline(1) << "unregister_kretprobe (&kp->u.krp);";
-  s.op->newline() << "atomic_add (kp->u.krp.nmissed, & skipped_count);";
+  s.op->newline() << "atomic_add (kp->u.krp.nmissed, skipped_count());";
   s.op->newline() << "#ifdef STP_TIMING";
   s.op->newline() << "if (kp->u.krp.nmissed)";
   s.op->newline(1) << "_stp_warn (\"Skipped due to missed kretprobe/1 on '%s': %d\\n\", sdp->probe->pp, kp->u.krp.nmissed);";
   s.op->newline(-1) << "#endif";
-  s.op->newline() << "atomic_add (kp->u.krp.kp.nmissed, & skipped_count);";
+  s.op->newline() << "atomic_add (kp->u.krp.kp.nmissed, skipped_count());";
   s.op->newline() << "#ifdef STP_TIMING";
   s.op->newline() << "if (kp->u.krp.kp.nmissed)";
   s.op->newline(1) << "_stp_warn (\"Skipped due to missed kretprobe/2 on '%s': %lu\\n\", sdp->probe->pp, kp->u.krp.kp.nmissed);";
   s.op->newline(-1) << "#endif";
   s.op->newline(-1) << "} else {";
   s.op->newline(1) << "unregister_kprobe (&kp->u.kp);";
-  s.op->newline() << "atomic_add (kp->u.kp.nmissed, & skipped_count);";
+  s.op->newline() << "atomic_add (kp->u.kp.nmissed, skipped_count());";
   s.op->newline() << "#ifdef STP_TIMING";
   s.op->newline() << "if (kp->u.kp.nmissed)";
   s.op->newline(1) << "_stp_warn (\"Skipped due to missed kprobe on '%s': %lu\\n\", sdp->probe->pp, kp->u.kp.nmissed);";
@@ -5172,12 +5172,12 @@ dwarf_derived_probe_group::emit_module_exit (systemtap_session& s)
   s.op->newline() << "#if !defined(STAPCONF_UNREGISTER_KPROBES)";
   s.op->newline(1) << "unregister_kretprobe (&kp->u.krp);";
   s.op->newline() << "#endif";
-  s.op->newline() << "atomic_add (kp->u.krp.nmissed, & skipped_count);";
+  s.op->newline() << "atomic_add (kp->u.krp.nmissed, skipped_count());";
   s.op->newline() << "#ifdef STP_TIMING";
   s.op->newline() << "if (kp->u.krp.nmissed)";
   s.op->newline(1) << "_stp_warn (\"Skipped due to missed kretprobe/1 on '%s': %d\\n\", sdp->probe->pp, kp->u.krp.nmissed);";
   s.op->newline(-1) << "#endif";
-  s.op->newline() << "atomic_add (kp->u.krp.kp.nmissed, & skipped_count);";
+  s.op->newline() << "atomic_add (kp->u.krp.kp.nmissed, skipped_count());";
   s.op->newline() << "#ifdef STP_TIMING";
   s.op->newline() << "if (kp->u.krp.kp.nmissed)";
   s.op->newline(1) << "_stp_warn (\"Skipped due to missed kretprobe/2 on '%s': %lu\\n\", sdp->probe->pp, kp->u.krp.kp.nmissed);";
@@ -5186,7 +5186,7 @@ dwarf_derived_probe_group::emit_module_exit (systemtap_session& s)
   s.op->newline() << "#if !defined(STAPCONF_UNREGISTER_KPROBES)";
   s.op->newline(1) << "unregister_kprobe (&kp->u.kp);";
   s.op->newline() << "#endif";
-  s.op->newline() << "atomic_add (kp->u.kp.nmissed, & skipped_count);";
+  s.op->newline() << "atomic_add (kp->u.kp.nmissed, skipped_count());";
   s.op->newline() << "#ifdef STP_TIMING";
   s.op->newline() << "if (kp->u.kp.nmissed)";
   s.op->newline(1) << "_stp_warn (\"Skipped due to missed kprobe on '%s': %lu\\n\", sdp->probe->pp, kp->u.kp.nmissed);";
@@ -8375,12 +8375,12 @@ kprobe_derived_probe_group::emit_module_exit (systemtap_session& s)
   s.op->newline() << "#if !defined(STAPCONF_UNREGISTER_KPROBES)";
   s.op->newline(1) << "unregister_kretprobe (&kp->u.krp);";
   s.op->newline() << "#endif";
-  s.op->newline() << "atomic_add (kp->u.krp.nmissed, & skipped_count);";
+  s.op->newline() << "atomic_add (kp->u.krp.nmissed, skipped_count());";
   s.op->newline() << "#ifdef STP_TIMING";
   s.op->newline() << "if (kp->u.krp.nmissed)";
   s.op->newline(1) << "_stp_warn (\"Skipped due to missed kretprobe/1 on '%s': %d\\n\", sdp->probe->pp, kp->u.krp.nmissed);";
   s.op->newline(-1) << "#endif";
-  s.op->newline() << "atomic_add (kp->u.krp.kp.nmissed, & skipped_count);";
+  s.op->newline() << "atomic_add (kp->u.krp.kp.nmissed, skipped_count());";
   s.op->newline() << "#ifdef STP_TIMING";
   s.op->newline() << "if (kp->u.krp.kp.nmissed)";
   s.op->newline(1) << "_stp_warn (\"Skipped due to missed kretprobe/2 on '%s': %lu\\n\", sdp->probe->pp, kp->u.krp.kp.nmissed);";
@@ -8389,7 +8389,7 @@ kprobe_derived_probe_group::emit_module_exit (systemtap_session& s)
   s.op->newline() << "#if !defined(STAPCONF_UNREGISTER_KPROBES)";
   s.op->newline(1) << "unregister_kprobe (&kp->u.kp);";
   s.op->newline() << "#endif";
-  s.op->newline() << "atomic_add (kp->u.kp.nmissed, & skipped_count);";
+  s.op->newline() << "atomic_add (kp->u.kp.nmissed, skipped_count());";
   s.op->newline() << "#ifdef STP_TIMING";
   s.op->newline() << "if (kp->u.kp.nmissed)";
   s.op->newline(1) << "_stp_warn (\"Skipped due to missed kprobe on '%s': %lu\\n\", sdp->probe->pp, kp->u.kp.nmissed);";

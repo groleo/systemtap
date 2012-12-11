@@ -119,8 +119,8 @@ static int stap_uprobe_change_plus (struct task_struct *tsk, unsigned long reloc
       #endif
       /* NB: duplicates common_entryfn_epilogue,
 	 but then this is not a probe entry fn epilogue. */
-      if (unlikely (atomic_inc_return (& skipped_count) > MAXSKIPPED)) {
-        if (unlikely (pseudo_atomic_cmpxchg(& session_state, STAP_SESSION_RUNNING, STAP_SESSION_ERROR) == STAP_SESSION_RUNNING))
+      if (unlikely (atomic_inc_return (skipped_count()) > MAXSKIPPED)) {
+        if (unlikely (pseudo_atomic_cmpxchg(session_state(), STAP_SESSION_RUNNING, STAP_SESSION_ERROR) == STAP_SESSION_RUNNING))
         _stp_error ("Skipped too many probes, check MAXSKIPPED or try again with stap -t for more details.");
       }
     }

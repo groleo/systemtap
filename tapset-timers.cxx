@@ -121,8 +121,8 @@ timer_derived_probe_group::emit_module_decls (systemtap_session& s)
 
   s.op->newline() << "static void enter_timer_probe (unsigned long val) {";
   s.op->newline(1) << "struct stap_timer_probe* stp = & stap_timer_probes [val];";
-  s.op->newline() << "if ((atomic_read (&session_state) == STAP_SESSION_STARTING) ||";
-  s.op->newline() << "    (atomic_read (&session_state) == STAP_SESSION_RUNNING))";
+  s.op->newline() << "if ((atomic_read (session_state()) == STAP_SESSION_STARTING) ||";
+  s.op->newline() << "    (atomic_read (session_state()) == STAP_SESSION_RUNNING))";
   s.op->newline(1) << "mod_timer (& stp->timer_list, jiffies + ";
   emit_interval (s.op);
   s.op->line() << ");";
@@ -262,8 +262,8 @@ hrtimer_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline() << "struct stap_hrtimer_probe *stp = container_of(timer, struct stap_hrtimer_probe, hrtimer);";
 
       // Update the timer with the next trigger time
-      s.op->newline() << "if ((atomic_read (&session_state) == STAP_SESSION_STARTING) ||";
-      s.op->newline() << "    (atomic_read (&session_state) == STAP_SESSION_RUNNING)) {";
+      s.op->newline() << "if ((atomic_read (session_state()) == STAP_SESSION_STARTING) ||";
+      s.op->newline() << "    (atomic_read (session_state()) == STAP_SESSION_RUNNING)) {";
       s.op->newline(1) << "_stp_hrtimer_update(stp);";
       s.op->newline() << "rc = HRTIMER_RESTART;";
       s.op->newline(-1) << "}";
@@ -285,8 +285,8 @@ hrtimer_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline() << "struct stap_hrtimer_probe *stp = value.sival_ptr;";
 
       // Update the timer with the next trigger time
-      s.op->newline() << "if ((atomic_read (&session_state) == STAP_SESSION_STARTING) ||";
-      s.op->newline() << "    (atomic_read (&session_state) == STAP_SESSION_RUNNING)) {";
+      s.op->newline() << "if ((atomic_read (session_state()) == STAP_SESSION_STARTING) ||";
+      s.op->newline() << "    (atomic_read (session_state()) == STAP_SESSION_RUNNING)) {";
       s.op->newline(1) << "_stp_hrtimer_update(stp);";
       s.op->newline(-1) << "}";
 

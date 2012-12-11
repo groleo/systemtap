@@ -258,8 +258,8 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline(1) << "c->ips.procfs_data = &pdata;";
       s.op->newline(-1) << "else {";
 
-      s.op->newline(1) << "if (unlikely (atomic_inc_return (& skipped_count) > MAXSKIPPED)) {";
-      s.op->newline(1) << "atomic_set (& session_state, STAP_SESSION_ERROR);";
+      s.op->newline(1) << "if (unlikely (atomic_inc_return (skipped_count()) > MAXSKIPPED)) {";
+      s.op->newline(1) << "atomic_set (session_state(), STAP_SESSION_ERROR);";
       s.op->newline() << "_stp_exit ();";
       s.op->newline(-1) << "}";
       s.op->newline() << "atomic_dec (& c->busy);";
@@ -316,8 +316,8 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline(1) << "c->ips.procfs_data = &pdata;";
       s.op->newline(-1) << "else {";
 
-      s.op->newline(1) << "if (unlikely (atomic_inc_return (& skipped_count) > MAXSKIPPED)) {";
-      s.op->newline(1) << "atomic_set (& session_state, STAP_SESSION_ERROR);";
+      s.op->newline(1) << "if (unlikely (atomic_inc_return (skipped_count()) > MAXSKIPPED)) {";
+      s.op->newline(1) << "atomic_set (session_state(), STAP_SESSION_ERROR);";
       s.op->newline() << "_stp_exit ();";
       s.op->newline(-1) << "}";
       s.op->newline() << "atomic_dec (& c->busy);";

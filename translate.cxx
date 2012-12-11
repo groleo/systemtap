@@ -1644,6 +1644,14 @@ c_unparser::emit_module_init ()
       o->newline() << "if (rc) goto out;";
   }
 
+  // Now that kernel version and permissions are correct,
+  // initialize the global session states before anything else.
+  o->newline() << "rc = stp_session_init();";
+  o->newline() << "if (rc) {";
+  o->newline(1) << "_stp_error (\"couldn't initialize the main session (rc %d)\", rc);";
+  o->newline() << "goto out;";
+  o->newline(-1) << "}";
+
   // initialize gettimeofday (if needed)
   o->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";
   o->newline() << "rc = _stp_init_time();";  // Kick off the Big Bang.
@@ -1658,7 +1666,7 @@ c_unparser::emit_module_init ()
   o->newline() << "(void) probe_point;";
   o->newline() << "(void) i;";
   o->newline() << "(void) j;";
-  o->newline() << "atomic_set (&session_state, STAP_SESSION_STARTING);";
+  o->newline() << "atomic_set (session_state(), STAP_SESSION_STARTING);";
   // This signals any other probes that may be invoked in the next little
   // while to abort right away.  Currently running probes are allowed to
   // terminate.  These may set STAP_SESSION_ERROR!
@@ -1720,7 +1728,7 @@ c_unparser::emit_module_init ()
       o->indent(-1);
       // NB: we need to be in the error state so timers can shutdown cleanly,
       // and so end probes don't run.  OTOH, error probes can run.
-      o->newline() << "atomic_set (&session_state, STAP_SESSION_ERROR);";
+      o->newline() << "atomic_set (session_state(), STAP_SESSION_ERROR);";
       if (i>0)
         for (int j=i-1; j>=0; j--)
           g[j]->emit_module_exit (*session);
@@ -1729,9 +1737,9 @@ c_unparser::emit_module_init ()
     }
 
   // All registrations were successful.  Consider the system started.
-  o->newline() << "if (atomic_read (&session_state) == STAP_SESSION_STARTING)";
+  o->newline() << "if (atomic_read (session_state()) == STAP_SESSION_STARTING)";
   // NB: only other valid state value is ERROR, in which case we don't
-  o->newline(1) << "atomic_set (&session_state, STAP_SESSION_RUNNING);";
+  o->newline(1) << "atomic_set (session_state(), STAP_SESSION_RUNNING);";
 
   // Run all post-session starting code.
   for (unsigned i=0; i<g.size(); i++)
@@ -1757,7 +1765,7 @@ c_unparser::emit_module_init ()
     }
 
   // For any partially registered/unregistered kernel facilities.
-  o->newline() << "atomic_set (&session_state, STAP_SESSION_STOPPED);";
+  o->newline() << "atomic_set (session_state(), STAP_SESSION_STOPPED);";
   o->newline() << "#ifdef STAPCONF_SYNCHRONIZE_SCHED";
   o->newline() << "synchronize_sched();";
   o->newline() << "#endif";
@@ -1802,13 +1810,13 @@ c_unparser::emit_module_exit ()
   // If we aborted startup, then everything has been cleaned up already, and
   // module_exit shouldn't even have been called.  But since it might be, let's
   // beat a hasty retreat to avoid double uninitialization.
-  o->newline() << "if (atomic_read (&session_state) == STAP_SESSION_STARTING)";
+  o->newline() << "if (atomic_read (session_state()) == STAP_SESSION_STARTING)";
   o->newline(1) << "return;";
   o->indent(-1);
 
-  o->newline() << "if (atomic_read (&session_state) == STAP_SESSION_RUNNING)";
+  o->newline() << "if (atomic_read (session_state()) == STAP_SESSION_RUNNING)";
   // NB: only other valid state value is ERROR, in which case we don't
-  o->newline(1) << "atomic_set (&session_state, STAP_SESSION_STOPPING);";
+  o->newline(1) << "atomic_set (session_state(), STAP_SESSION_STOPPING);";
   o->indent(-1);
   // This signals any other probes that may be invoked in the next little
   // while to abort right away.  Currently running probes are allowed to
@@ -1836,7 +1844,7 @@ c_unparser::emit_module_exit ()
   o->newline() << "_stp_runtime_context_wait();";
 
   // cargo cult epilogue
-  o->newline() << "atomic_set (&session_state, STAP_SESSION_STOPPED);";
+  o->newline() << "atomic_set (session_state(), STAP_SESSION_STOPPED);";
   o->newline() << "#ifdef STAPCONF_SYNCHRONIZE_SCHED";
   o->newline() << "synchronize_sched();";
   o->newline() << "#endif";
@@ -1898,13 +1906,13 @@ c_unparser::emit_module_exit ()
   o->newline() << "#endif";
 
   // print final error/skipped counts if non-zero
-  o->newline() << "if (atomic_read (& skipped_count) || "
-               << "atomic_read (& error_count) || "
-               << "atomic_read (& skipped_count_reentrant)) {"; // PR9967
+  o->newline() << "if (atomic_read (skipped_count()) || "
+               << "atomic_read (error_count()) || "
+               << "atomic_read (skipped_count_reentrant())) {"; // PR9967
   o->newline(1) << "_stp_warn (\"Number of errors: %d, "
                 << "skipped probes: %d\\n\", "
-                << "(int) atomic_read (& error_count), "
-                << "(int) atomic_read (& skipped_count));";
+                << "(int) atomic_read (error_count()), "
+                << "(int) atomic_read (skipped_count()));";
   o->newline() << "#ifdef STP_TIMING";
   o->newline() << "{";
   o->newline(1) << "int ctr;";
@@ -1916,13 +1924,13 @@ c_unparser::emit_module_exit ()
       o->newline() << "if (ctr) _stp_warn (\"Skipped due to global '%s' lock timeout: %d\\n\", "
                    << lex_cast_qstring(orig_vn) << ", ctr);"; 
     }
-  o->newline() << "ctr = atomic_read (& skipped_count_lowstack);";
+  o->newline() << "ctr = atomic_read (skipped_count_lowstack());";
   o->newline() << "if (ctr) _stp_warn (\"Skipped due to low stack: %d\\n\", ctr);";
-  o->newline() << "ctr = atomic_read (& skipped_count_reentrant);";
+  o->newline() << "ctr = atomic_read (skipped_count_reentrant());";
   o->newline() << "if (ctr) _stp_warn (\"Skipped due to reentrancy: %d\\n\", ctr);";
-  o->newline() << "ctr = atomic_read (& skipped_count_uprobe_reg);";
+  o->newline() << "ctr = atomic_read (skipped_count_uprobe_reg());";
   o->newline() << "if (ctr) _stp_warn (\"Skipped due to uprobe register failure: %d\\n\", ctr);";
-  o->newline() << "ctr = atomic_read (& skipped_count_uprobe_unreg);";
+  o->newline() << "ctr = atomic_read (skipped_count_uprobe_unreg());";
   o->newline() << "if (ctr) _stp_warn (\"Skipped due to uprobe unregister failure: %d\\n\", ctr);";
   o->newline(-1) << "}";
   o->newline () << "#endif";
