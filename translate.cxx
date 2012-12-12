@@ -957,9 +957,7 @@ translator_output::line ()
 void
 c_unparser::emit_common_header ()
 {
-  // Common (static atomic) state of the stap session.
   o->newline();
-  o->newline() << "#include \"common_session_state.h\"";
 
   // Per CPU context for probes. Includes common shared state held for
   // all probes (defined in common_probe_context), the probe locals (union)
@@ -1113,7 +1111,12 @@ c_unparser::emit_common_header ()
   // Use a separate union for compiled-printf locals, no nesting required.
   emit_compiled_printf_locals ();
 
-  o->newline(-1) << "};\n";
+  o->newline(-1) << "};\n"; // end of struct context
+
+  o->newline() << "#include \"runtime_context.h\"";
+
+  // Common (static atomic) state of the stap session.
+  o->newline() << "#include \"common_session_state.h\"";
 
   emit_map_type_instantiations ();
 
@@ -6653,7 +6656,6 @@ translate_pass (systemtap_session& s)
 
       s.up->emit_common_header (); // context etc.
 
-      s.op->newline() << "#include \"runtime_context.h\"";
       if (s.need_unwind)
 	s.op->newline() << "#include \"stack.c\"";
 

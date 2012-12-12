@@ -214,7 +214,8 @@ static void _stp_shm_finalize(void)
 		close(_stp_shm_fd);
 		_stp_shm_fd = -1;
 	}
-	shm_dbug("mapped %zi bytes, used %zi", _stp_shm_size, _stp_shm_allocated);
+	shm_dbug("mapped %zi bytes @ %p, used %zi", _stp_shm_size,
+		 _stp_shm_base, _stp_shm_allocated);
 }
 
 

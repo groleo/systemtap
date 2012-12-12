@@ -136,6 +136,35 @@ static void systemtap_module_exit(void);
 static unsigned long stap_hash_seed; /* Init during module startup */
 
 
+static int stp_pthread_mutex_init_shared(pthread_mutex_t *mutex)
+{
+	int rc;
+	pthread_mutexattr_t attr;
+
+	rc = pthread_mutexattr_init(&attr);
+	if (rc != 0) {
+	    _stp_error("pthread_mutexattr_init failed");
+	    return rc;
+	}
+
+	rc = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	if (rc != 0) {
+	    _stp_error("pthread_mutexattr_setpshared failed");
+	    goto err_attr;
+	}
+
+	rc = pthread_mutex_init(mutex, &attr);
+	if (rc != 0) {
+	    _stp_error("pthread_mutex_init failed");
+	    goto err_attr;
+	}
+
+err_attr:
+	(void)pthread_mutexattr_destroy(&attr);
+	return rc;
+}
+
+
 /*
  * For stapdyn to work in a multiprocess environment, the module must be
  * prepared to be loaded multiple times in different processes.  Thus, we have

@@ -27,6 +27,11 @@ struct stp_runtime_session {
 	// use offptr_t instead of regular pointers.
 	Stat _probe_timing[STP_PROBE_COUNT];
 #endif
+
+	// NB: the context includes a number of pointers, which wouldn't be
+	// kosher for shared memory, but it's ok as long as they're only set
+	// and dereferenced within each separate handler invocation.
+	struct context _context[]; // variably-sized to cpu count
 };
 
 static inline struct stp_runtime_session* _stp_session(void)
@@ -77,12 +82,23 @@ static inline Stat probe_timing(size_t index)
 #endif
 
 
+static inline struct context* stp_session_context(size_t index)
+{
+	// Do some simple bounds-checking.  Translator-generated code
+	// should never get this wrong, but better to be safe.
+	index = clamp_t(size_t, index, 0, _stp_runtime_num_contexts - 1);
+	return &_stp_session()->_context[index];
+}
+
+
 static int stp_session_init(void)
 {
 	size_t i;
 
 	// Reserve space for the session at the beginning of shared memory.
-	void *session = _stp_shm_zalloc(sizeof(struct stp_runtime_session));
+	size_t session_size = sizeof(struct stp_runtime_session)
+		+ sizeof(struct context) * _stp_runtime_num_contexts;
+	void *session = _stp_shm_zalloc(session_size);
 	if (!session)
 		return -ENOMEM;
 
