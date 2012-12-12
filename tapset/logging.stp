@@ -47,7 +47,7 @@ function warn (msg:string) %{ /* unprivileged */
  * running ones may complete their work.
  */
 function exit () %{ /* unprivileged */
-    atomic_set (&session_state, STAP_SESSION_STOPPING);
+    atomic_set (session_state(), STAP_SESSION_STOPPING);
     _stp_exit ();
 %}
 
