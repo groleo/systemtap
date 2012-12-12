@@ -81,6 +81,7 @@ regex_to_stapdfa (systemtap_session *s, const string& input, unsigned& counter)
 // ------------------------------------------------------------------------
 
 RegExp *stapdfa::failRE = NULL;
+RegExp *stapdfa::padRE = NULL;
 
 stapdfa::stapdfa ()
 {
@@ -94,8 +95,12 @@ stapdfa::stapdfa (const string& func_name, const string& re)
     regex_parser p("[\\000-\\377]");
     failRE = p.parse();
   }
+  if (!padRE) {
+    regex_parser p(".*");
+    padRE = p.parse();
+  }
 
-  regex_parser p(".*" + re); // TODOXXX avoid adding this when not needed
+  regex_parser p(re);
   ast = prepare_rule(p.parse ()); // must be retained for re2c's reference
 
   // compile ast to DFA
@@ -143,6 +148,9 @@ stapdfa::emit_matchop (translator_output *o, const string& match_expr)
 RegExp *
 stapdfa::prepare_rule (RegExp *expr)
 {
+  // Enable regex match to start at any point in the string:
+  if (!expr->anchored) expr = new CatOp (padRE, expr);
+
 #define CODE_YES "{ return 1; }"
 #define CODE_NO "{ return 0; }"
   SubStr codeYes(CODE_YES);

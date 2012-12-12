@@ -37,7 +37,9 @@ private:
   std::string func_name;
   re2c::RegExp *ast;
   re2c::DFA *content;
-  static re2c::RegExp *failRE; // TODOXXX hacky thing to attach {return 0;} to
+  static re2c::RegExp *failRE; // hacky thing to attach {return 0;} to
+  static re2c::RegExp *padRE; // hacky thing to pad the output on the left
+  // TODOXXX I hope RegExp instances are really reusable!
 };
 
 std::ostream& operator << (std::ostream &o, const stapdfa& d);

@@ -353,8 +353,12 @@ RegExp *doAlt(RegExp *e1, RegExp *e2)
 
 RegExp *mkAlt(RegExp *e1, RegExp *e2)
 {
-	AltOp *a;
+  AltOp *a;
+  RegExp *r;
 	MatchOp *m1, *m2;
+
+        /* preserve correct anchoring through optimizations: */
+        bool anchored = e1->anchored && e2->anchored;
 
 	if ((a = (AltOp*) e1->isA(AltOp::type)))
 	{
@@ -376,7 +380,9 @@ RegExp *mkAlt(RegExp *e1, RegExp *e2)
 		e2 = NULL;
 	}
 
-	return doAlt(merge(m1, m2), doAlt(e1, e2));
+	r = doAlt(merge(m1, m2), doAlt(e1, e2));
+        r->anchored = anchored;
+        return r;
 }
 
 const char *AltOp::type = "AltOp";
@@ -920,7 +926,7 @@ RuleOp::RuleOp(RegExp *e, RegExp *c, Token *t, uint a)
 	, code(t)
 	, line(0)
 {
-	;
+	anchored = e->anchored;
 }
 
 RuleOp* RuleOp::copy(uint a) const

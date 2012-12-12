@@ -128,11 +128,12 @@ class RegExp
 
 public:
 	uint	size;
+        bool    anchored; // optimization flag -- always safe to set to false
 	
 	static free_list<RegExp*> vFreeList;
 
 public:
-	RegExp() : size(0)
+	RegExp() : size(0), anchored(false)
 	{
 		vFreeList.insert(this);
 	}
@@ -320,6 +321,8 @@ public:
 		: exp1(e1)
 		, exp2(e2)
 	{
+        	// anchored enabled iff e1 enables it
+        	anchored = e1->anchored;
 	}
 
 	const char *typeOf()
@@ -368,6 +371,8 @@ public:
 		: exp1(e1)
 		, exp2(e2)
 	{
+        	// anchored enabled only when both alternatives enable it
+        	anchored = e1->anchored && e2->anchored;
 	}
 
 	const char *typeOf()
@@ -413,6 +418,8 @@ public:
 	CloseOp(RegExp *e)
 		: exp(e)
 	{
+        	// anchored enabled iff e enables it
+        	anchored = e->anchored;
 	}
 
 	const char *typeOf()
@@ -460,6 +467,8 @@ public:
 		, min(lb)
 		, max(ub)
 	{
+        	// anchored enabled iff we *have* to match an anchored e
+        	anchored = e->anchored && lb > 0;
 	}
 
 	const char *typeOf()
