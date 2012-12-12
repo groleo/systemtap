@@ -17,3 +17,10 @@
 
 # FIXME -- indefinite repetition should not fail via reading past the end
 0:.*:stuffs
+
+# FIXME -- make sure the following works correctly (however it's supposed to)
+2:$^:
+2:$.*:
+# TODO -- what's the right thing to do for the above??
+1:$a^:a
+1:$.*:a
