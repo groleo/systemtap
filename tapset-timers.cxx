@@ -103,7 +103,7 @@ timer_derived_probe_group::emit_module_decls (systemtap_session& s)
 
   s.op->newline() << "static struct stap_timer_probe {";
   s.op->newline(1) << "struct timer_list timer_list;";
-  s.op->newline() << "struct stap_probe * const probe;";
+  s.op->newline() << "const struct stap_probe * const probe;";
   s.op->newline() << "unsigned intrv, ms, rnd;";
   s.op->newline(-1) << "} stap_timer_probes [" << probes.size() << "] = {";
   s.op->indent(1);
@@ -405,7 +405,7 @@ profile_derived_probe_group::emit_module_decls (systemtap_session& s)
   // open-code the same logic here.
 
   s.op->newline() << "static void enter_all_profile_probes (struct pt_regs *regs) {";
-  s.op->newline(1) << "struct stap_probe * probe = "
+  s.op->newline(1) << "const struct stap_probe * probe = "
                    << common_probe_init (probes[0]) << ";";
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "probe",
 				 "stp_probe_type_profile_timer");

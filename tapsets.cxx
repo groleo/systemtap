@@ -84,7 +84,7 @@ common_probe_entryfn_prologue (systemtap_session& s,
 			       string probe_type, bool overload_processing)
 {
   s.op->newline() << "#ifdef STP_ALIBI";
-  s.op->newline() << "atomic_inc(&(" << probe << "->alibi));";
+  s.op->newline() << "atomic_inc(probe_alibi(" << probe << "->index));";
   s.op->newline() << "#else";
 
   s.op->newline() << "struct context* __restrict__ c;";
@@ -93,7 +93,7 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline() << "#endif";
 
   s.op->newline() << "#ifdef STP_TIMING";
-  s.op->newline() << "Stat stat = " << probe << "->timing;";
+  s.op->newline() << "Stat stat = probe_timing(" << probe << "->index);";
   s.op->newline() << "#endif";
   if (overload_processing && !s.runtime_usermode_p())
     s.op->newline() << "#if defined(STP_TIMING) || defined(STP_OVERLOAD)";
@@ -4826,8 +4826,8 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
 #undef CALCIT
 
   s.op->newline() << "const unsigned long address;";
-  s.op->newline() << "struct stap_probe * const probe;";
-  s.op->newline() << "struct stap_probe * const entry_probe;";
+  s.op->newline() << "const struct stap_probe * const probe;";
+  s.op->newline() << "const struct stap_probe * const entry_probe;";
   s.op->newline(-1) << "} stap_dwarf_probes[] = {";
   s.op->indent(1);
 
@@ -4909,7 +4909,7 @@ dwarf_derived_probe_group::emit_module_decls (systemtap_session& s)
   // XXX: it would be nice to give a more verbose error though; BUG_ON later?
   s.op->line() << "];";
 
-  s.op->newline() << "struct stap_probe *sp = entry ? sdp->entry_probe : sdp->probe;";
+  s.op->newline() << "const struct stap_probe *sp = entry ? sdp->entry_probe : sdp->probe;";
   s.op->newline() << "if (sp) {";
   s.op->indent(1);
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sp",
@@ -8119,7 +8119,7 @@ kprobe_derived_probe_group::emit_module_decls (systemtap_session& s)
 #undef CALCIT
 
   s.op->newline() << "unsigned long address;";
-  s.op->newline() << "struct stap_probe * const probe;";
+  s.op->newline() << "const struct stap_probe * const probe;";
   s.op->newline(-1) << "} stap_dwarfless_probes[] = {";
   s.op->indent(1);
 
@@ -8698,7 +8698,7 @@ hwbkpt_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "const unsigned long address;";
   s.op->newline() << "uint8_t atype;";
   s.op->newline() << "unsigned int len;";
-  s.op->newline() << "struct stap_probe * const probe;";
+  s.op->newline() << "const struct stap_probe * const probe;";
   s.op->newline() << "} stap_hwbkpt_probes[] = {";
   s.op->indent(1);
 
@@ -9500,7 +9500,7 @@ tracepoint_derived_probe_group::emit_module_decls (systemtap_session& s)
         }
       s.op->newline() << ")";
       s.op->newline(-2) << "{";
-      s.op->newline(1) << "struct stap_probe * const probe = "
+      s.op->newline(1) << "const struct stap_probe * const probe = "
                        << common_probe_init (p) << ";";
       common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "probe",
 				     "stp_probe_type_tracepoint");

@@ -816,7 +816,7 @@ utrace_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "struct stap_utrace_probe {";
   s.op->indent(1);
   s.op->newline() << "struct stap_task_finder_target tgt;";
-  s.op->newline() << "struct stap_probe * const probe;";
+  s.op->newline() << "const struct stap_probe * const probe;";
   s.op->newline() << "int engine_attached;";
   s.op->newline() << "enum utrace_derived_probe_flags flags;";
   s.op->newline() << "struct utrace_engine_ops ops;";

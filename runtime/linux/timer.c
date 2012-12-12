@@ -18,7 +18,7 @@ static unsigned long stap_hrtimer_resolution = 0;
 
 struct stap_hrtimer_probe {
 	struct hrtimer hrtimer;
-	struct stap_probe * const probe;
+	const struct stap_probe * const probe;
 	int64_t intrv;
 	int64_t rnd;
 };

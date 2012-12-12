@@ -22,7 +22,7 @@ struct stap_hrtimer_probe {
 	struct sigevent sigev;
 	timer_t timer_id;
 	struct itimerspec its;
-	struct stap_probe * const probe;
+	const struct stap_probe * const probe;
 	int64_t intrv;
 	int64_t rnd;
 };

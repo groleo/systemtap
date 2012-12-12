@@ -109,7 +109,7 @@ struct stapiu_consumer {
 	loff_t offset; /* the probe offset within the inode */
 	loff_t sdt_sem_offset; /* the semaphore offset from process->base */
 
-	struct stap_probe * const probe;
+	const struct stap_probe * const probe;
 };
 
 

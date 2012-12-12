@@ -180,7 +180,7 @@ itrace_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "struct stap_itrace_probe {";
   s.op->indent(1);
   s.op->newline() << "struct stap_task_finder_target tgt;";
-  s.op->newline() << "struct stap_probe * const probe;";
+  s.op->newline() << "const struct stap_probe * const probe;";
   s.op->newline() << "int single_step;";
   s.op->newline(-1) << "};";
   s.op->newline() << "static void enter_itrace_probe(struct stap_itrace_probe *p, struct pt_regs *regs, void *data);";

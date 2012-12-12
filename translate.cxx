@@ -1695,14 +1695,6 @@ c_unparser::emit_module_init ()
       o->newline() << "rwlock_init (& global." << c_globalname (v->name) << "_lock);";
     }
 
-  // initialize each Stat used for timing information
-  o->newline() << "#ifdef STP_TIMING";
-  o->newline() << "for (i = 0; i < ARRAY_SIZE(stap_probes); ++i)";
-  o->newline(1) << "stap_probes[i].timing = _stp_stat_init (HIST_NONE);";
-  // NB: we don't check for null return here, but instead at
-  // passage to probe handlers and at final printing.
-  o->newline(-1) << "#endif";
-
   // Print a message to the kernel log about this module.  This is
   // intended to help debug problems with systemtap modules.
   if (! session->runtime_usermode_p())
@@ -1879,16 +1871,16 @@ c_unparser::emit_module_exit ()
   o->newline() << "#if defined(STP_TIMING) || defined(STP_ALIBI)";
   o->newline() << "_stp_printf(\"----- probe hit report: \\n\");";
   o->newline() << "for (i = 0; i < ARRAY_SIZE(stap_probes); ++i) {";
-  o->newline(1) << "struct stap_probe *const p = &stap_probes[i];";
+  o->newline(1) << "const struct stap_probe *const p = &stap_probes[i];";
   o->newline() << "#ifdef STP_ALIBI";
-  o->newline() << "int alibi = atomic_read(&(p->alibi));";
+  o->newline() << "int alibi = atomic_read(probe_alibi(i));";
   o->newline() << "if (alibi)";
   o->newline(1) << "_stp_printf (\"%s, (%s), hits: %d,%s\\n\",";
   o->newline(2) << "p->pp, p->location, alibi, p->derivation);";
   o->newline(-3) << "#endif"; // STP_ALIBI
   o->newline() << "#ifdef STP_TIMING";
-  o->newline() << "if (likely (p->timing)) {"; // NB: check for null stat object
-  o->newline(1) << "struct stat_data *stats = _stp_stat_get (p->timing, 0);";
+  o->newline() << "if (likely (probe_timing(i))) {"; // NB: check for null stat object
+  o->newline(1) << "struct stat_data *stats = _stp_stat_get (probe_timing(i), 0);";
   o->newline() << "if (stats->count) {";
   o->newline(1) << "int64_t avg = _stp_div64 (NULL, stats->sum, stats->count);";
   o->newline() << "_stp_printf (\"%s, (%s), hits: %lld, "
@@ -1898,7 +1890,7 @@ c_unparser::emit_module_exit ()
   o->newline() << "(long long) stats->min, (long long) avg, (long long) stats->max,";
   o->newline() << "p->derivation);";
   o->newline(-3) << "}";
-  o->newline() << "_stp_stat_del (p->timing);";
+  o->newline() << "_stp_stat_del (probe_timing(i));";
   o->newline(-1) << "}";
   o->newline() << "#endif"; // STP_TIMING
   o->newline(-1) << "}";
@@ -6648,6 +6640,9 @@ translate_pass (systemtap_session& s)
       if (s.need_unwind)
 	s.op->newline() << "#define STP_NEED_UNWIND_DATA 1";
 
+      // Emit the total number of probes (not regarding merged probe handlers)
+      s.op->newline() << "#define STP_PROBE_COUNT " << s.probes.size();
+
       s.op->newline() << "#include \"runtime.h\"";
 
       // Emit embeds ahead of time, in case they affect context layout
@@ -6754,18 +6749,9 @@ translate_pass (systemtap_session& s)
             clog << "*" << endl;                                                \
         }
 
-      s.op->newline() << "static struct stap_probe {";
-      s.op->newline(1) << "void (* const ph) (struct context*);";
-      s.op->newline() << "#ifdef STP_ALIBI";
-      s.op->newline() << "atomic_t alibi;";
-      s.op->newline() << "#define STAP_PROBE_INIT_ALIBI() "
-                      << ".alibi=ATOMIC_INIT(0),";
-      s.op->newline() << "#else";
-      s.op->newline() << "#define STAP_PROBE_INIT_ALIBI()";
-      s.op->newline() << "#endif";
-      s.op->newline() << "#ifdef STP_TIMING";
-      s.op->newline() << "Stat timing;";
-      s.op->newline() << "#endif";
+      s.op->newline() << "struct stap_probe {";
+      s.op->newline(1) << "size_t index;";
+      s.op->newline() << "void (* const ph) (struct context*);";
       s.op->newline() << "#if defined(STP_TIMING) || defined(STP_ALIBI)";
       CALCIT(location);
       CALCIT(derivation);
@@ -6781,19 +6767,18 @@ translate_pass (systemtap_session& s)
       s.op->newline() << "#else";
       s.op->newline() << "#define STAP_PROBE_INIT_NAME(PN)";
       s.op->newline() << "#endif";
-      s.op->newline() << "#define STAP_PROBE_INIT(PH, PP, PN, L, D) "
-                      << "{ .ph=(PH), .pp=(PP), "
+      s.op->newline() << "#define STAP_PROBE_INIT(I, PH, PP, PN, L, D) "
+                      << "{ .index=(I), .ph=(PH), .pp=(PP), "
                       << "STAP_PROBE_INIT_NAME(PN) "
-                      << "STAP_PROBE_INIT_ALIBI() "
                       << "STAP_PROBE_INIT_TIMING(L, D) "
                       << "}";
-      s.op->newline(-1) << "} stap_probes[] = {";
+      s.op->newline(-1) << "} static const stap_probes[] = {";
       s.op->indent(1);
       for (unsigned i=0; i<s.probes.size(); ++i)
         {
           derived_probe* p = s.probes[i];
           p->session_index = i;
-          s.op->newline() << "STAP_PROBE_INIT(&" << p->name << ", "
+          s.op->newline() << "STAP_PROBE_INIT(" << i << ", &" << p->name << ", "
                           << lex_cast_qstring (*p->sole_location()) << ", "
                           << lex_cast_qstring (*p->script_location()) << ", "
                           << lex_cast_qstring (p->tok->location) << ", "
