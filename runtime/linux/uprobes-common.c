@@ -115,7 +115,7 @@ static int stap_uprobe_change_plus (struct task_struct *tsk, unsigned long reloc
     /* NB: handled_p implies slotted_p */
     if (unlikely (! handled_p)) {
       #ifdef STP_TIMING
-      atomic_inc (& skipped_count_uprobe_reg);
+      atomic_inc (skipped_count_uprobe_reg());
       #endif
       /* NB: duplicates common_entryfn_epilogue,
 	 but then this is not a probe entry fn epilogue. */
