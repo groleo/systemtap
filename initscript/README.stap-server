@@ -84,7 +84,7 @@ to specify servers to be managed.
 
 2.3.4 -u user-name
  Each stap-server instance is normally run by the user name 'stap-server',
- unless otherwise configured (see 3.2 Configuation Files). This option
+ unless otherwise configured (see 3.2 Configuration Files). This option
  specifies the user name used to run the server(s). The user name specified
  must be a member of the group 'stap-server'.
 
@@ -105,7 +105,7 @@ to specify servers to be managed.
 
 2.3.8 -D macro[=value]
  This options specifies a macro definition to be used by the server when and
- is analagous to the -D option os 'stap'. See stap(1) for more details.
+ is analogous to the -D option os 'stap'. See stap(1) for more details.
 
 2.3.9 -i
  This option is a shortcut which specifies one server for each kernel
@@ -302,7 +302,7 @@ bash script fragment. The following variables may be set.
 
 5.1.2 Unprivileged Users (Module Signing)
   If the stap-server service will be used to service requests for unprivileged
-  users (the --privile option) it must also sign compiled modules using
+  users (the --privilege option) it must also sign compiled modules using
   a trusted signing certificate.
 
 5.1.3 Certification
@@ -394,8 +394,8 @@ bash script fragment. The following variables may be set.
   In both cases the name of the resulting module will be printed, but it will
   not be loaded.
 
-6. Usage Eamples
-================
+6. Usage Examples
+=================
 
 6.1 Package Installation
 ------------------------
