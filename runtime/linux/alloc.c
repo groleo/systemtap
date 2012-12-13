@@ -407,7 +407,21 @@ static void *_stp_kmalloc_node_gfp(size_t size, int node, gfp_t gfp_mask)
 }
 static void *_stp_kzalloc_node_gfp(size_t size, int node, gfp_t gfp_mask)
 {
-	return _stp_kmalloc_node_gfp(size, node, gfp_mask | __GFP_ZERO);
+	/* This used to be simply:
+	 *   return _stp_kmalloc_node_gfp(size, node, gfp_mask | __GFP_ZERO);
+	 * but rhel5-era kernels BUG out on that flag. (PR14957)
+	 *
+	 * We could make a big #if-alternation for kernels which have support
+	 * for kzalloc_node (kernel commit 979b0fea), as in _stp_kzalloc_gfp,
+	 * but IMO that's needlessly complex.
+	 *
+	 * So for now, just malloc and zero it manually.
+	 */
+	void *ret = _stp_kmalloc_node_gfp(size, node, gfp_mask);
+	if (likely(ret)) {
+		memset (ret, 0, size);
+	}
+	return ret;
 }
 static void *_stp_kmalloc_node(size_t size, int node)
 {
