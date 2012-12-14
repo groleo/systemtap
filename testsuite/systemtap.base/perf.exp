@@ -1,0 +1,81 @@
+set test "perf"
+
+proc cleanup_handler { verbose } {
+    catch {exec rm -f towers.x}
+}
+
+set stap_path $env(SYSTEMTAP_PATH)/stap
+set exepath "[pwd]/towers.x"
+set flags ""
+
+set subtest "process()"
+
+set res [target_compile $srcdir/$subdir/towers.c $exepath executable $flags]
+if { $res != "" } {
+    verbose "target_compile failed: $res" 2
+    fail "$test compiling towers.c"
+    cleanup_handler $verbose
+    return
+} else {
+    pass "$test compiling towers.c"
+}
+
+spawn $stap_path -c $exepath -e "
+global towers_n
+global XXX_n
+probe perf.type(0).config(0).process(\"$exepath\")
+{
+ towers_n += 1
+}
+
+probe perf.type(0).config(0).process(\"XXX\") 
+{ 
+ XXX_n += 1
+}
+"
+
+# there is no "XXX" process so this probe should have been ignored
+set ok 0
+expect {
+    -timeout 180
+    -re {towers_n=0x[0-9a-f][0-9a-f]} { incr ok; exp_continue }
+    -re {XXX_n=0x0} { incr ok; exp_continue }
+    timeout { fail "$test (timeout)" }
+    eof { }
+}
+
+catch {close}; catch {wait}
+
+if {$ok == 2} {
+    pass "$test $subtest"
+} else {
+    fail "$test $subtest ($ok)"
+}
+
+set subtest "process"
+
+spawn $stap_path -c $exepath -e "
+global towers_n
+probe perf.type(0).config(0).process
+{
+ towers_n += 1
+}
+"
+
+set ok 0
+expect {
+    -timeout 180
+    -re {towers_n=0x[0-9a-f][0-9a-f]} { incr ok; exp_continue }
+    timeout { fail "$test (timeout)" }
+    eof { }
+}
+
+catch {close}; catch {wait}
+
+if {$ok == 1} {
+    pass "$test $subtest"
+} else {
+    fail "$test $subtest ($ok)"
+}
+
+cleanup_handler $verbose

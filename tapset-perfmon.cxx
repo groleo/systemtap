@@ -1,5 +1,5 @@
 // tapset for HW performance monitoring
-// Copyright (C) 2005-2010 Red Hat Inc.
+// Copyright (C) 2005-2012 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
 // Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
@@ -10,10 +10,12 @@
 
 #include "session.h"
 #include "tapsets.h"
+#include "task_finder.h"
 #include "translate.h"
 #include "util.h"
 
 #include <string>
+#include <wordexp.h>
 
 extern "C" {
 #define __STDC_FORMAT_MACROS
@@ -28,6 +30,7 @@ static const string TOK_PERF("perf");
 static const string TOK_TYPE("type");
 static const string TOK_CONFIG("config");
 static const string TOK_SAMPLE("sample");
+static const string TOK_PROCESS("process");
 
 
 // ------------------------------------------------------------------------
@@ -41,7 +44,9 @@ struct perf_derived_probe: public derived_probe
   int64_t event_type;
   int64_t event_config;
   int64_t interval;
-  perf_derived_probe (probe* p, probe_point* l, int64_t type, int64_t config, int64_t i);
+  bool has_process;
+  string process_name;
+  perf_derived_probe (probe* p, probe_point* l, int64_t type, int64_t config, int64_t i, bool pp, string pn);
   virtual void join_group (systemtap_session& s);
 };
 
@@ -57,9 +62,13 @@ struct perf_derived_probe_group: public generic_dpg<perf_derived_probe>
 perf_derived_probe::perf_derived_probe (probe* p, probe_point* l,
                                         int64_t type,
                                         int64_t config,
-                                        int64_t i):
+                                        int64_t i,
+					bool process_p,
+					string process_n):
+  
   derived_probe (p, l, true /* .components soon rewritten */),
-  event_type (type), event_config (config), interval (i)
+  event_type (type), event_config (config), interval (i),
+  has_process (process_p), process_name (process_n)
 {
   vector<probe_point::component*>& comps = this->sole_location()->components;
   comps.clear();
@@ -67,6 +76,7 @@ perf_derived_probe::perf_derived_probe (probe* p, probe_point* l,
   comps.push_back (new probe_point::component (TOK_TYPE, new literal_number(type)));
   comps.push_back (new probe_point::component (TOK_CONFIG, new literal_number (config)));
   comps.push_back (new probe_point::component (TOK_SAMPLE, new literal_number (interval)));
+  comps.push_back (new probe_point::component (TOK_PROCESS, new literal_string (process_name)));
 }
 
 
@@ -76,6 +86,9 @@ perf_derived_probe::join_group (systemtap_session& s)
   if (! s.perf_derived_probes)
     s.perf_derived_probes = new perf_derived_probe_group ();
   s.perf_derived_probes->enroll (this);
+
+  enable_task_finder(s);
+
 }
 
 
@@ -85,7 +98,8 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
   if (probes.empty()) return;
 
   s.op->newline() << "/* ---- perf probes ---- */";
-  s.op->newline() << "#include \"linux/perf.c\"";
+  s.op->newline() << "#include <linux/perf_event.h>";
+  s.op->newline() << "#include \"linux/perf.h\"";
   s.op->newline();
 
   /* declarations */
@@ -106,6 +120,23 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
     }
   s.op->newline();
 
+  // Output task finder callback routine that gets called for all
+  // perf probe types.
+  s.op->newline() << "static int _stp_perf_probe_cb(struct stap_task_finder_target *tgt, struct task_struct *tsk, int register_p, int process_p) {";
+  s.op->indent(1);
+  s.op->newline() << "int rc = 0;";
+  s.op->newline() << "struct stap_perf_probe *p = container_of(tgt, struct stap_perf_probe, tgt);";
+
+  s.op->newline() << "_stp_printf(\"XXX %d %d\\n\", current->pid, task_pid_nr_ns(tsk,task_active_pid_ns(current->parent)));";
+  s.op->newline() << "if (register_p) ";
+  s.op->indent(1);
+
+  s.op->newline() << "rc = _stp_perf_init(p, tsk);";
+  s.op->newline(-1) << "else";
+  s.op->newline(1) << "_stp_perf_del(p);";
+  s.op->newline(-1) << "return rc;";
+  s.op->newline(-1) << "}";
+
   /* data structures */
   s.op->newline() << "static struct stap_perf_probe stap_perf_probes ["
                   << probes.size() << "] = {";
@@ -119,6 +150,31 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
                        << "{ .sample_period=" << probes[i]->interval << "ULL }},";
       s.op->newline() << ".callback=enter_perf_probe_" << i << ", ";
       s.op->newline() << ".probe=" << common_probe_init (probes[i]) << ", ";
+
+      string l_process_name;
+      if (probes[i]->has_process)
+	{
+	  if (probes[i]->process_name.length() == 0)
+	    {
+	      wordexp_t words;
+	      int rc = wordexp(s.cmd.c_str(), &words, WRDE_NOCMD|WRDE_UNDEF);
+	      if (rc || words.we_wordc <= 0)
+		throw semantic_error(_("unspecified process probe is invalid without a -c COMMAND"));
+	      l_process_name = words.we_wordv[0];
+	      wordfree (& words);
+	    }
+	  else
+	    l_process_name = probes[i]->process_name;
+
+	  s.op->line() << " .tgt={";
+	  s.op->line() << " .procname=\"" << l_process_name << "\",";
+	  s.op->line() << " .pid=0,";
+	  s.op->line() << " .callback=&_stp_perf_probe_cb,";
+	  s.op->line() << " },";
+	  s.op->newline() << ".per_thread=" << "1, ";
+	}
+      else
+	s.op->newline() << ".per_thread=" << "0, ";
       s.op->newline(-1) << "},";
     }
   s.op->newline(-1) << "};";
@@ -159,6 +215,10 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "(*stp->probe->ph) (c);";
   common_probe_entryfn_epilogue (s, true);
   s.op->newline(-1) << "}";
+
+  s.op->newline();
+  s.op->newline() << "#include \"linux/perf.c\"";
+  s.op->newline();
 }
 
 
@@ -169,7 +229,7 @@ perf_derived_probe_group::emit_module_init (systemtap_session& s)
 
   s.op->newline() << "for (i=0; i<" << probes.size() << "; i++) {";
   s.op->newline(1) << "struct stap_perf_probe* stp = & stap_perf_probes [i];";
-  s.op->newline() << "rc = _stp_perf_init(stp);";
+  s.op->newline() << "rc = _stp_perf_init(stp, 0);";
   s.op->newline() << "if (rc) {";
   s.op->newline(1) << "probe_point = stp->probe->pp;";
   s.op->newline() << "for (j=0; j<i; j++) {";
@@ -177,6 +237,7 @@ perf_derived_probe_group::emit_module_init (systemtap_session& s)
   s.op->newline(-1) << "}"; // for unwind loop
   s.op->newline() << "break;";
   s.op->newline(-1) << "}"; // if-error
+  s.op->newline() << "rc = stap_register_task_finder_target(&stp->tgt);";
   s.op->newline(-1) << "}"; // for loop
 }
 
@@ -232,12 +293,16 @@ perf_builder::build(systemtap_session & sess,
   else if (period < 1)
     throw semantic_error(_("invalid perf sample period ") + lex_cast(period),
                          parameters.find(TOK_SAMPLE)->second->tok);
+  bool proc_p;
+  string proc_n;
+  proc_p = has_null_param(parameters, TOK_PROCESS)
+    || get_param(parameters, TOK_PROCESS, proc_n);
 
   if (sess.verbose > 1)
     clog << _F("perf probe type=%" PRId64 " config=%" PRId64 " period=%" PRId64, type, config, period) << endl;
 
   finished_results.push_back
-    (new perf_derived_probe(base, location, type, config, period));
+    (new perf_derived_probe(base, location, type, config, period, proc_p, proc_n));
 }
 
 
@@ -252,6 +317,8 @@ register_tapset_perf(systemtap_session& s)
   match_node* event = perf->bind_num(TOK_TYPE)->bind_num(TOK_CONFIG);
   event->bind(builder);
   event->bind_num(TOK_SAMPLE)->bind(builder);
+  event->bind_str(TOK_PROCESS)->bind(builder);
+  event->bind(TOK_PROCESS)->bind(builder);
 }
 
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */

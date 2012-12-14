@@ -1,5 +1,10 @@
 * What's new in version 2.1
 
+- Perf event probes may now be bound to a specific task using the
+  process-name part:  probe perf.type(0).config(0).process("NAME") { }
+  If the probed process name is not specified, then it is inferred
+  from the -c CMD argument.  
+
 - Some error messages now refer to additional information that is found
   in man pages.  These are generally named error::FOO(7stap) and may be
   read via
