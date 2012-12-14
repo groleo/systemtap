@@ -163,6 +163,13 @@ be used to override limit parameters described below.
 Add the given make directive to the kernel module build's make invocation.
 These can be used to add or override kconfig options.
 .TP
+.BI \-a " ARCH"
+Use a cross-compilation mode for the given target architecture.  This requires
+access to the cross-compiler and the kernel build tree, and goes along
+with the
+.BR "\-B CROSS_COMPILE=arch\-tool\-prefix\-" " and " "\-r /build/tree"
+options.
+.TP
 .BI \-\-modinfo " NAME=VALUE"
 Add the name/value pair as a MODULE_INFO macro call to the generated module.
 This may be useful to inform or override various module-related checks in
