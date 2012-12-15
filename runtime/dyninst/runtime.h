@@ -135,6 +135,7 @@ static void systemtap_module_exit(void);
 
 static unsigned long stap_hash_seed; /* Init during module startup */
 
+typedef pthread_rwlock_t rwlock_t; /* for globals */
 
 static int stp_pthread_mutex_init_shared(pthread_mutex_t *mutex)
 {
@@ -161,6 +162,34 @@ static int stp_pthread_mutex_init_shared(pthread_mutex_t *mutex)
 
 err_attr:
 	(void)pthread_mutexattr_destroy(&attr);
+	return rc;
+}
+
+static int stp_pthread_rwlock_init_shared(pthread_rwlock_t *rwlock)
+{
+	int rc;
+	pthread_rwlockattr_t attr;
+
+	rc = pthread_rwlockattr_init(&attr);
+	if (rc != 0) {
+	    _stp_error("pthread_rwlockattr_init failed");
+	    return rc;
+	}
+
+	rc = pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	if (rc != 0) {
+	    _stp_error("pthread_rwlockattr_setpshared failed");
+	    goto err_attr;
+	}
+
+	rc = pthread_rwlock_init(rwlock, &attr);
+	if (rc != 0) {
+	    _stp_error("pthread_rwlock_init failed");
+	    goto err_attr;
+	}
+
+err_attr:
+	(void)pthread_rwlockattr_destroy(&attr);
 	return rc;
 }
 

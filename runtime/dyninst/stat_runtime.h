@@ -61,7 +61,7 @@ static Stat _stp_stat_alloc(size_t stat_data_size)
 
 	/* NB: This is done as one big allocation, then assigning offptrs to
 	 * each sub-piece.  (See _stp_pmap_new for more explanation) */
-	st = mem = calloc(1, total_size);
+	st = mem = _stp_shm_zalloc(total_size);
 	if (st == NULL)
 		return NULL;
 
@@ -78,7 +78,7 @@ static Stat _stp_stat_alloc(size_t stat_data_size)
 
 static void _stp_stat_free(Stat st)
 {
-	free(st);
+	_stp_shm_free(st);
 }
 
 static inline stat_data* _stp_stat_get_agg(Stat st)

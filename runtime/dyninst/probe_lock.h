@@ -12,19 +12,13 @@
 
 #include <pthread.h>
 
-typedef pthread_rwlock_t rwlock_t;
-
 struct stp_probe_lock {
 	#ifdef STP_TIMING
 	atomic_t *skipped;
 	#endif
-	rwlock_t *lock;
+	pthread_rwlock_t *lock;
 	unsigned write_p;
 };
-
-
-#define rwlock_init(x) \
-	pthread_rwlock_init(x, NULL)
 
 
 static void

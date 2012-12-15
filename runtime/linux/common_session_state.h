@@ -43,6 +43,18 @@ static inline Stat probe_timing(size_t index)
 #endif
 
 
+// Globals are declared and initialized in the translator.
+static struct stp_globals stp_global;
+
+#define global(name)		(stp_global.name)
+#define global_set(name, val)	(global(name) = (val))
+#define global_lock(name)	(&global(name ## _lock))
+#define global_lock_init(name)	rwlock_init(global_lock(name))
+#ifdef STP_TIMING
+#define global_skipped(name)	(&global(name ## _lock_skip_count))
+#endif
+
+
 static int stp_session_init(void)
 {
 	size_t i;

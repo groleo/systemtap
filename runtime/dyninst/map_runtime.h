@@ -101,7 +101,7 @@ static void _stp_map_del(MAP map)
 		return;
 
 	__stp_map_del(map);
-	free(map);
+	_stp_shm_free(map);
 }
 
 static void _stp_pmap_del(PMAP pmap)
@@ -116,7 +116,7 @@ static void _stp_pmap_del(PMAP pmap)
 	for_each_possible_cpu(i)
 		__stp_map_del(_stp_pmap_get_map (pmap, i));
 	__stp_map_del(_stp_pmap_get_agg(pmap));
-	_stp_kfree(pmap);
+	_stp_shm_free(pmap);
 }
 
 
@@ -167,7 +167,7 @@ _stp_map_new(unsigned max_entries, int wrap, int node_size,
 	/* NB: Allocate the map in one big chuck.
 	 * (See _stp_pmap_new for more explanation) */
 	size_t map_size = sizeof(struct map_root) + node_size * max_entries;
-	m = calloc(1, map_size);
+	m = _stp_shm_zalloc(map_size);
 	if (m == NULL)
 		return NULL;
 
@@ -206,7 +206,7 @@ _stp_pmap_new(unsigned max_entries, int wrap, int node_size)
 	size_t total_size = pmap_size +
 		map_size * (_stp_runtime_num_contexts + 1);
 
-	map_mem = pmap = calloc(1, total_size);
+	map_mem = pmap = _stp_shm_zalloc(total_size);
 	if (pmap == NULL)
 		return NULL;
 	map_mem += pmap_size;

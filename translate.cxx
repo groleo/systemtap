@@ -406,7 +406,7 @@ public:
     if (local)
       return "l->" + c_name();
     else
-      return "global." + c_name();
+      return "global(" + c_name() + ")";
   }
 
   virtual string hist() const
@@ -431,7 +431,7 @@ public:
         if (! local)
           return ""; // module_param
         else
-	  return value() + "[0] = '\\0';";
+          return value() + "[0] = '\\0';";
       case pe_long:
         if (! local)
           return ""; // module_param
@@ -441,7 +441,10 @@ public:
         {
           // See also mapvar::init().
 
-          string prefix = value() + " = _stp_stat_init (";
+          if (local)
+            throw semantic_error(_F("unsupported local stats init for %s", value().c_str()));
+
+          string prefix = "global_set(" + c_name() + ", _stp_stat_init (";
           // Check for errors during allocation.
           string suffix = "if (" + value () + " == NULL) rc = -ENOMEM;";
 
@@ -466,7 +469,7 @@ public:
               throw semantic_error(_F("unsupported stats type for %s", value().c_str()));
             }
 
-          prefix = prefix + "); ";
+          prefix = prefix + ")); ";
           return string (prefix + suffix);
         }
 
@@ -753,7 +756,11 @@ struct mapvar
 
   string init () const
   {
-    string prefix = value() + " = " + function_keysym("new") + " ("
+    if (local)
+      throw semantic_error(_F("unsupported local map init for %s", value().c_str()));
+
+    string prefix = "global_set(" + c_name() + ", ";
+    prefix += function_keysym("new") + " ("
       + (maxsize > 0 ? lex_cast(maxsize) : "MAXMAPENTRIES")
       + ((wrap == true) ? ", 1" : ", 0");
 
@@ -784,7 +791,7 @@ struct mapvar
 	  }
       }
 
-    prefix = prefix + "); ";
+    prefix = prefix + ")); ";
     return (prefix + suffix);
   }
 
@@ -1115,14 +1122,7 @@ c_unparser::emit_common_header ()
 
   o->newline() << "#include \"runtime_context.h\"";
 
-  // Common (static atomic) state of the stap session.
-  o->newline() << "#include \"common_session_state.h\"";
-
   emit_map_type_instantiations ();
-
-  o->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";
-  o->newline() << "#include \"time.c\"";  // Don't we all need more?
-  o->newline() << "#endif";
 
   emit_compiled_printfs();
 
@@ -1489,14 +1489,13 @@ c_unparser::emit_global_param (vardecl *v)
   if (v->arity == 0 && v->type == pe_long)
     {
       o->newline() << "module_param_named (" << v->name << ", "
-                   << "global." << vn << ", int64_t, 0);";
+                   << "global(" << vn << "), int64_t, 0);";
     }
   else if (v->arity == 0 && v->type == pe_string)
     {
       // NB: no special copying is needed.
       o->newline() << "module_param_string (" << v->name << ", "
-                   << "global." << vn
-                   << ", MAXSTRINGLEN, 0);";
+                   << "global(" << vn << "), MAXSTRINGLEN, 0);";
     }
 }
 
@@ -1506,12 +1505,33 @@ c_unparser::emit_global (vardecl *v)
 {
   string vn = c_globalname (v->name);
 
-  if (v->arity == 0)
-    o->newline() << c_typename (v->type) << " " << vn << ";";
-  else if (v->type == pe_stats)
-    o->newline() << "PMAP " << vn << ";";
+  string type;
+  if (v->arity > 0)
+    type = (v->type == pe_stats) ? "PMAP" : "MAP";
   else
-    o->newline() << "MAP " << vn << ";";
+    type = c_typename (v->type);
+
+  if (session->runtime_usermode_p())
+    {
+      // In stapdyn mode, the stat/map/pmap pointers are stored as offptr_t in
+      // shared memory.  However, we can keep a little type safety by emitting
+      // FOO_typed and using typeof(FOO_typed) in the global() macros.
+      bool offptr_p  = (v->type == pe_stats) || (v->arity > 0);
+      string stored_type = offptr_p ? "offptr_t" : type;
+
+      // NB: The casted_type is in the unused side of a __builtin_choose_expr
+      // for non-offptr types, so it doesn't matter what we put for them, as
+      // long as it passes syntax long enough for gcc to choose the other expr.
+      string casted_type = offptr_p ? type : "void*";
+
+      o->newline() << "union {";
+      o->newline(1) << casted_type << " " << vn << "_typed;";
+      o->newline() << stored_type << " " << vn << ";";
+      o->newline(-1) << "};";
+    }
+  else
+    o->newline() << type << " " << vn << ";";
+
   o->newline() << "rwlock_t " << vn << "_lock;";
   o->newline() << "#ifdef STP_TIMING";
   o->newline() << "atomic_t " << vn << "_lock_skip_count;";
@@ -1522,20 +1542,14 @@ c_unparser::emit_global (vardecl *v)
 void
 c_unparser::emit_global_init (vardecl *v)
 {
-  string vn = c_globalname (v->name);
-
-  if (v->arity == 0) // can only statically initialize some scalars
+  // We can only statically initialize some scalars.
+  if (v->arity == 0 && v->init)
     {
-      if (v->init)
-	{
-	  o->newline() << "." << vn << " = ";
-	  v->init->visit(this);
-          o->line() << ",";
-	}
+      o->newline() << "." << c_globalname (v->name) << " = ";
+      v->init->visit(this);
+      o->line() << ",";
     }
-  o->newline() << "#ifdef STP_TIMING";
-  o->newline() << "." << vn << "_lock_skip_count = ATOMIC_INIT(0),";
-  o->newline() << "#endif";
+  // The lock and lock_skip_count are handled in emit_module_init.
 }
 
 
@@ -1685,6 +1699,8 @@ c_unparser::emit_module_init ()
       vardecl* v = session->globals[i];
       if (v->index_types.size() > 0)
 	o->newline() << getmap (v).init();
+      else if (v->init && session->runtime_usermode_p())
+	c_assign(getvar (v).value(), v->init, "global initialization");
       else
 	o->newline() << getvar (v).init();
       // NB: in case of failure of allocation, "rc" will be set to non-zero.
@@ -1695,7 +1711,10 @@ c_unparser::emit_module_init ()
       o->newline() << "goto out;";
       o->newline(-1) << "}";
 
-      o->newline() << "rwlock_init (& global." << c_globalname (v->name) << "_lock);";
+      o->newline() << "global_lock_init(" << c_globalname (v->name) << ");";
+      o->newline() << "#ifdef STP_TIMING";
+      o->newline() << "atomic_set(global_skipped(" << c_globalname (v->name) << "), 0);";
+      o->newline() << "#endif";
     }
 
   // Print a message to the kernel log about this module.  This is
@@ -1915,7 +1934,7 @@ c_unparser::emit_module_exit ()
     {
       string orig_vn = session->globals[i]->name;
       string vn = c_globalname (orig_vn);
-      o->newline() << "ctr = atomic_read (& global." << vn << "_lock_skip_count);";
+      o->newline() << "ctr = atomic_read (global_skipped(" << vn << "));";
       o->newline() << "if (ctr) _stp_warn (\"Skipped due to global '%s' lock timeout: %d\\n\", "
                    << lex_cast_qstring(orig_vn) << ", ctr);"; 
     }
@@ -2191,7 +2210,12 @@ c_unparser::emit_lock_decls(const varuse_collecting_visitor& vut)
   if (session->verbose > 1)
     clog << "probe " << *current_probe->sole_location() << " locks ";
 
-  o->newline() << "static const struct stp_probe_lock locks[] = {";
+  // We can only make this static in kernel mode.  In stapdyn mode,
+  // the globals and their locks are in shared memory.
+  o->newline();
+  if (!session->runtime_usermode_p())
+    o->line() << "static ";
+  o->line() << "const struct stp_probe_lock locks[] = {";
   o->indent(1);
 
   for (unsigned i = 0; i < session->globals.size(); i++)
@@ -2226,10 +2250,10 @@ c_unparser::emit_lock_decls(const varuse_collecting_visitor& vut)
 	}
 
       o->newline() << "{";
-      o->newline(1) << ".lock = &global." + c_globalname(v->name) + "_lock,";
+      o->newline(1) << ".lock = global_lock(" + c_globalname(v->name) + "),";
       o->newline() << ".write_p = " << (write_p ? 1 : 0) << ",";
       o->newline() << "#ifdef STP_TIMING";
-      o->newline() << ".skipped = &global." << c_globalname (v->name) << "_lock_skip_count,";
+      o->newline() << ".skipped = global_skipped(" << c_globalname (v->name) << "),";
       o->newline() << "#endif";
       o->newline(-1) << "},";
 
@@ -6659,25 +6683,46 @@ translate_pass (systemtap_session& s)
       if (s.need_unwind)
 	s.op->newline() << "#include \"stack.c\"";
 
+      if (s.globals.size()>0)
+	{
+	  s.op->newline() << "struct stp_globals {";
+	  s.op->indent(1);
+	  for (unsigned i=0; i<s.globals.size(); i++)
+	    {
+	      s.up->emit_global (s.globals[i]);
+	    }
+	  s.op->newline(-1) << "};";
+
+	  // We only need to statically initialize globals in kernel modules,
+	  // where module parameters may want to override the script's value.  In
+	  // stapdyn, the globals are actually part of the dynamic shared memory.
+	  if (!s.runtime_usermode_p())
+	    {
+	      s.op->newline();
+	      s.op->newline() << "static struct stp_globals stp_global = {";
+	      s.op->newline(1);
+	      for (unsigned i=0; i<s.globals.size(); i++)
+		{
+		  assert_no_interrupts();
+		  s.up->emit_global_init (s.globals[i]);
+		}
+	      s.op->newline(-1) << "};";
+	    }
+
+	  s.op->assert_0_indent();
+	}
+      else if (s.runtime_usermode_p())
+        // stp_runtime_session wants to incorporate globals, but it can be empty
+	s.op->newline() << "struct stp_globals {};";
+
+      // Common (static atomic) state of the stap session.
+      s.op->newline() << "#include \"common_session_state.h\"";
+
       s.op->newline() << "#include \"probe_lock.h\" ";
 
-      if (s.globals.size()>0) {
-        s.op->newline() << "static struct {";
-        s.op->indent(1);
-        for (unsigned i=0; i<s.globals.size(); i++)
-          {
-            s.up->emit_global (s.globals[i]);
-          }
-        s.op->newline(-1) << "} global = {";
-        s.op->newline(1);
-        for (unsigned i=0; i<s.globals.size(); i++)
-          {
-            assert_no_interrupts();
-            s.up->emit_global_init (s.globals[i]);
-          }
-        s.op->newline(-1) << "};";
-        s.op->assert_0_indent();
-      }
+      s.op->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";
+      s.op->newline() << "#include \"time.c\"";  // Don't we all need more?
+      s.op->newline() << "#endif";
 
       for (map<string,functiondecl*>::iterator it = s.functions.begin(); it != s.functions.end(); it++)
 	{
