@@ -26,11 +26,13 @@
 #endif
 typedef char string_t[MAXSTRINGLEN];
 
+#if !defined(STAP_SUPPRESS_TIME_LIMITS_ENABLE)
 #ifndef MAXACTION
 #define MAXACTION 1000
 #endif
 #ifndef MAXACTION_INTERRUPTIBLE
 #define MAXACTION_INTERRUPTIBLE (MAXACTION * 10)
+#endif
 #endif
 #ifndef TRYLOCKDELAY
 #define TRYLOCKDELAY 10 /* microseconds */
@@ -65,7 +67,7 @@ typedef char string_t[MAXSTRINGLEN];
 /* We allow the user to completely turn overload processing off
    (as opposed to tuning it by overriding the values above) by
    running:  stap -DSTP_NO_OVERLOAD {other options}.  */
-#if !defined(STP_NO_OVERLOAD) && !defined(STAP_NO_OVERLOAD)
+#if !defined(STP_NO_OVERLOAD) && !defined(STAP_NO_OVERLOAD) && !defined(STAP_SUPPRESS_TIME_LIMITS)
 #define STP_OVERLOAD
 #endif
 

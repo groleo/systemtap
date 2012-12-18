@@ -46,14 +46,18 @@ stp_lock_probe(const struct stp_probe_lock *locks, unsigned num_locks)
 	for (i = 0; i < num_locks; ++i) {
 		if (locks[i].write_p)
 			while (!write_trylock(locks[i].lock)) {
+#if !defined(STAP_SUPPRESS_TIME_LIMITS_ENABLE)
 				if (++retries > MAXTRYLOCK)
 					goto skip;
+#endif
 				udelay (TRYLOCKDELAY);
 			}
 		else
 			while (!read_trylock(locks[i].lock)) {
+#if !defined(STAP_SUPPRESS_TIME_LIMITS_ENABLE)
 				if (++retries > MAXTRYLOCK)
 					goto skip;
+#endif
 				udelay (TRYLOCKDELAY);
 			}
 	}

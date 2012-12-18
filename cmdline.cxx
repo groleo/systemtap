@@ -51,6 +51,7 @@ struct option stap_long_options[] = {
   { "rlimit-fsize", 1, NULL, LONG_OPT_RLIMIT_FSIZE },
   { "sysroot", 1, NULL, LONG_OPT_SYSROOT },
   { "sysenv", 1, NULL, LONG_OPT_SYSENV },
+  { "suppress-time-limits", 0, NULL, LONG_OPT_SUPPRESS_TIME_LIMITS },
   { "runtime", 1, NULL, LONG_OPT_RUNTIME },
   { NULL, 0, NULL, 0 }
 };

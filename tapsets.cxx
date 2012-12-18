@@ -192,11 +192,13 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline() << "c->regparm = 0;";
   s.op->newline() << "#endif";
 
-  s.op->newline() << "#if INTERRUPTIBLE";
-  s.op->newline() << "c->actionremaining = MAXACTION_INTERRUPTIBLE;";
-  s.op->newline() << "#else";
-  s.op->newline() << "c->actionremaining = MAXACTION;";
-  s.op->newline() << "#endif";
+  if(!s.suppress_time_limits){
+    s.op->newline() << "#if INTERRUPTIBLE";
+    s.op->newline() << "c->actionremaining = MAXACTION_INTERRUPTIBLE;";
+    s.op->newline() << "#else";
+    s.op->newline() << "c->actionremaining = MAXACTION;";
+    s.op->newline() << "#endif";
+  }
   // NB: The following would actually be incorrect.
   // That's because cycles_sum/cycles_base values are supposed to survive
   // between consecutive probes.  Periodically (STP_OVERLOAD_INTERVAL

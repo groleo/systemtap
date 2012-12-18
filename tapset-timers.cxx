@@ -429,7 +429,10 @@ profile_derived_probe_group::emit_module_decls (systemtap_session& s)
           s.op->newline() << "#ifdef STP_NEED_PROBE_NAME";
           s.op->newline() << "c->probe_name = probe->pn;";
           s.op->newline() << "#endif";
-          s.op->newline() << "c->actionremaining = MAXACTION;";
+	   if(!s.suppress_time_limits)
+	     {
+	       s.op->newline() << "c->actionremaining = MAXACTION;";
+	     }
         }
       s.op->newline() << "if (c->last_error == NULL) probe->ph (c);";
     }

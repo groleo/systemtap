@@ -193,6 +193,7 @@ public:
   bool dump_probe_types;
   int download_dbinfo;
   bool suppress_handler_errors;
+  bool suppress_time_limits;
 
   enum { kernel_runtime, dyninst_runtime } runtime_mode;
   bool runtime_usermode_p() const { return runtime_mode == dyninst_runtime; }

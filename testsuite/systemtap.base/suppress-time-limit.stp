@@ -1,0 +1,4 @@
+global i
+probe begin { for(i = 0; i < 100000; i++){}}
+probe begin(1) {exit()}
+probe end,error {println(i)}

@@ -153,6 +153,7 @@ systemtap_session::systemtap_session ():
   native_build = true; // presumed
   sysroot = "";
   update_release_sysroot = false;
+  suppress_time_limits = false;
 
   /*  adding in the XDG_DATA_DIRS variable path,
    *  this searches in conjunction with SYSTEMTAP_TAPSET
@@ -318,6 +319,7 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   sysroot = other.sysroot;
   update_release_sysroot = other.update_release_sysroot;
   sysenv = other.sysenv;
+  suppress_time_limits = other.suppress_time_limits;
 
   include_path = other.include_path;
   runtime_path = other.runtime_path;
@@ -565,6 +567,8 @@ systemtap_session::usage (int exitcode)
     "              where the value on a remote system differs.  Path\n"
     "              variables (e.g. PATH, LD_LIBRARY_PATH) are assumed to be\n"
     "              relative to the sysroot.\n"
+    "   --suppress-time-limits\n"
+    "              disable -DSTP_NO_OVERLOAD -DMAXACTION and -DMAXTRYACTION limits\n"
     , compatible.c_str()) << endl
   ;
 
@@ -1213,6 +1217,20 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 
 	      break;
 	  }
+
+	case LONG_OPT_SUPPRESS_TIME_LIMITS: //require guru_mode to use
+	  if (guru_mode == false)
+	    {
+	      cerr << _F("ERROR %s requires guru mode (-g)", "--suppress-time-limits") << endl;
+	      return 1;
+	    }
+	  else
+	    {
+	      suppress_time_limits = true;
+	      server_args.push_back (string ("--suppress-time-limits"));
+	      c_macros.push_back (string ("STAP_SUPPRESS_TIME_LIMITS_ENABLE"));
+	      break;
+	    }
 
 	case LONG_OPT_RUNTIME:
           if (optarg == string("kernel"))

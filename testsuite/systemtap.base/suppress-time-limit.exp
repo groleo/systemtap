@@ -1,0 +1,43 @@
+set test "suppress-time-limit"
+spawn stap -g --suppress-time-limits $srcdir/$subdir/$test.stp
+set ok 0
+set ko 0
+# Testing that -g --suppress-time-limits works properly
+# by looping 100000 time and confirming the number of iterations
+# to what we expect.
+# The default setting only allows for 10000, so we want to test
+# against a value significantly larger than that.
+expect {
+    -timeout 30
+    -re {^100000\r\n} { incr ok; exp_continue }
+    timeout { fail "$test active (timeout)" }
+    eof { }
+}
+catch {close}; catch {wait}
+# The actual comparing of active values to what we expect.
+# For debugging purposes, output the value of the variables
+# so we can see which value failed (if any)
+if {$ok == 1} then {
+    pass "$test active ($ok)"
+} else {
+    fail "$test active ($ok)"
+}
+# Testing the case which should fail, without the new option,
+# and comparing the number of iterations to what we expect (ie 9997).
+spawn stap $srcdir/$subdir/$test.stp
+expect {
+    -timeout 30
+    -re {^ERROR:[^\r\n]*\r\n} { incr ko; exp_continue }
+    -re {^9997\r\n} { incr ko; exp_continue }
+    eof { }
+    timeout { fail "$test passive (timeout)" }
+}
+catch {close}; catch {wait}
+# The actual comparing of passive values to what we expect.
+# For debugging purposes, output the value of the variables
+# so we can see which value failed (if any)
+if {$ko == 2} then {
+    pass "$test passive ($ko)"
+} else {
+    fail "$test passive ($ko)"
+}

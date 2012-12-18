@@ -582,6 +582,11 @@ remote system differs.  Path variables (e.g. PATH, LD_LIBRARY_PATH) are assumed
 to be relative to the directory provided by \fI\-\-sysroot\fR, if provided.
 
 .TP
+.BI \-\-suppress\-time\-limits
+Disable \-DSTP_NO_OVERLOAD \-MAXACTION \-MAXTRYLOCK options.  This option
+requires guru mode.
+
+.TP
 .BI \-\-runtime "=MODE"
 Set the pass-5 runtime mode.  Valid options are \fIkernel\fR (default)
 and \fIdyninst\fR.  See
