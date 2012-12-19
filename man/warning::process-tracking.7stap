@@ -1,0 +1,29 @@
+.\" t
+.TH WARNING::PROCESS-TRACKING 7stap
+.SH NAME
+warning::process-tracking \- process-tracking facilities are not available
+
+.SH DESCRIPTION
+This warning,
+.SAMPLE
+WARNING: process-tracking facilities are not available in this kernel
+.ESAMPLE
+and the related message,
+.SAMPLE
+WARNING: cannot track target in process '...'
+.ESAMPLE 
+both occur at runtime when running on a kernel (generally an older
+version) that has neither utrace functionality nor an acceptable
+substitute.
+.PP
+The script should still load and run. However, probes that rely on
+availability of process-tracking facilities will silently fail to
+trigger.
+.PP
+If process-tracking functionality is absolutely necessary, either a
+kernel version newer than 3.5 is needed, or an older version must be
+compiled with appropriate utrace patches.
+
+.SH SEE ALSO
+.IR stap (1),
+.IR error::reporting (7stap)
