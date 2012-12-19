@@ -220,6 +220,8 @@ static int _stp_vma_munmap_cb(struct stap_task_finder_target *tgt,
 	return 0;
 }
 
+#endif
+
 /* Initializes the vma tracker. */
 static int _stp_vma_init(void)
 {
@@ -256,7 +258,6 @@ static int _stp_vma_init(void)
 #endif
 	return rc;
 }
-#endif
 
 /* Get rid of the vma tracker (memory). */
 static void _stp_vma_done(void)

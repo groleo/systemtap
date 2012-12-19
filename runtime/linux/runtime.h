@@ -180,6 +180,9 @@ static void *kallsyms___lock_task_sighand;
 #if (defined(CONFIG_UTRACE) || defined(STAPCONF_UTRACE_VIA_TRACEPOINTS))
 #define HAVE_TASK_FINDER
 #include "task_finder.c"
+#else
+/* stub functionality that fails gracefully */
+#include "task_finder_stubs.c"
 #endif
 
 #include "sym.c"
