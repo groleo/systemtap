@@ -1,5 +1,7 @@
 set test "perf"
 
+if {! [installtest_p]} { untested "$test"; return }
+
 proc cleanup_handler { verbose } {
     catch {exec rm -f towers.x}
 }
