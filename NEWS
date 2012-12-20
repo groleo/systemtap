@@ -18,9 +18,10 @@
 
 - Some error messages and warnings now refer to additional information
   that is found in man pages.  These are generally named
-  error::FOO(7stap) or warning::FOO(7stap) and may be read via
-     % man 7stap error::FOO
-     % man 7stap warning::FOO
+  error::FOO or warning::BAR (in the 7stap man page section)
+  and may be read via
+     % man error::FOO
+     % man warning::FOO
 
 - The dyninst backend's runtime has been improved to allow much more
   concurrency when probing multithreaded processes.
