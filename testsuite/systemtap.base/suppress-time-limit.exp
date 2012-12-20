@@ -1,4 +1,7 @@
 set test "suppress-time-limit"
+
+if {! [installtest_p]} { untested "$test"; return }
+
 spawn stap -g --suppress-time-limits $srcdir/$subdir/$test.stp
 set ok 0
 set ko 0
