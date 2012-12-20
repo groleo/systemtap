@@ -7,7 +7,8 @@
    appropriate. */
 
 static void stap_task_finder_unavailable(void) {
-  _stp_error("process-tracking facilities are not available in this kernel, aborting");
+  _stp_error("process-tracking is not available in this kernel"
+             " [man warning::process-tracking]");
 }
 
 struct stap_task_finder_target;
@@ -71,7 +72,9 @@ stap_register_task_finder_target(struct stap_task_finder_target *new_tgt)
 static int
 stap_start_task_finder(void)
 {
-  _stp_warn("process-tracking facilities are not available in this kernel");
+  _stp_warn("process-tracking is not available in this kernel"
+            " [man warning::process-tracking]");
+
   return 0;
 }
 
