@@ -12,10 +12,10 @@ kernel or OS version changes
 The systemtap runtime and embedded-C fragments in the tapset library
 are designed to be portable across a wide range of OS versions.  However,
 incompatibilities can occur when some OS changes occur, such as kernel
-modifications that change functions, types, or macros, that are referenced 
-used by systemtap.  Use of a fresh upstream build of systemtap often 
-relevant includes fixes quickly, so try getting or making an updated build.
-Report the problem to the systemtap developers.
+modifications that change functions, types, or macros referenced 
+by systemtap.  Upstream builds of systemtap are often quickly updated to 
+include relevant fixes, so try getting or making an updated build.
+If the issue persists, report the problem to the systemtap developers.
 
 .TP
 buggy embedded-C code in user script

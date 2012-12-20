@@ -5,7 +5,7 @@ error::inode-uprobes \- limitations of inode-uprobes
 
 .SH DESCRIPTION
 
-The uprobes kernel facility appeared in linux 3.5 aims to supplant the
+The uprobes kernel facility introduced in Linux 3.5 aims to supplant the
 earlier out-of-tree utrace patch to enable user-space probing.  There
 have been some functional limitations in inode-uprobes that preclude
 some systemtap constructs.  Over time, we hope these regressions will
