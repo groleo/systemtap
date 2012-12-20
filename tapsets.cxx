@@ -6757,7 +6757,7 @@ dwarf_builder::build(systemtap_session & sess,
           if (kernel_supports_inode_uprobes(sess) &&
               !kernel_supports_inode_uretprobes(sess))
             throw semantic_error
-              (_("process return probes not available with inode-based uprobes"));
+              (_("process return probes not available [man error::inode-uprobes]"));
         }
 
       // There is a similar check in pass 4 (buildrun), but it is
@@ -7281,7 +7281,7 @@ struct uprobe_builder: public derived_probe_builder
     int64_t process, address;
 
     if (kernel_supports_inode_uprobes(sess))
-      throw semantic_error (_("absolute process probes not available with inode-based uprobes"));
+      throw semantic_error (_("absolute process probes not available [man error::inode-uprobes]"));
 
     bool b1 = get_param (parameters, TOK_PROCESS, process);
     (void) b1;
