@@ -1,0 +1,55 @@
+.\" t
+.TH WARNING::DEBUGINFO 7stap 
+.SH NAME
+warning::debuginfo \- systemtap missing-debuginfo warnings
+
+.SH DESCRIPTION
+For many symbolic probing operations, systemtap needs DWARF debuginfo for
+the relevant binaries.  This often includes resolving function/statement
+probes, or $context variables in related handlers.  DWARF debuginfo may
+be found in the original binaries built during compilation, or may have 
+been split into separate files.  The
+.IR SYSTEMTAP_DEBUGINFO_PATH
+environment variable affects where systemtap looks for these files.
+.PP
+If your operating system came from a distributor, check with them if
+debuginfo packages or variants are available.  If your distributor does
+not have debuginfo-equipped binaries at all, you may need to rebuild it.
+
+.TP
+kernel debuginfo
+For scripts that target the kernel, systemtap may search for the
+.IR vmlinux
+file created during its original build.  This is distinct from the 
+boot-loader's compressed/stripped 
+.IR vmlinuz
+file, and much larger.  If you have a hand-built kernel, make sure
+it was built with the
+.IR CONFIG_DEBUG_INFO=y
+option.  
+
+.TP
+process debuginfo
+For scripts that target user-space, systemtap may search for debuginfo.
+If you have hand-built binaries, use 
+.IR "CFLAGS=-g -O2"
+to compile them.
+
+.SH AUTOMATION
+
+On some platforms, systemtap may advise what commands to run, in order
+to download needed debuginfo.  Another possibility is to invoke systemtap
+with the
+.IR \-\-download\-debuginfo
+flag.
+The
+.IR stap-prep
+script included with systemtap may be able to download the 
+appropriate kernel debuginfo.
+
+.SH SEE ALSO
+.IR stap (1),
+.IR stappaths (7),
+.IR strip (1),
+.IR error::reporting (7stap)
+.IR error::contextvars (7stap)

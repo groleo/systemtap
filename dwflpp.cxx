@@ -141,6 +141,8 @@ dwflpp::get_module_dwarf(bool required, bool report)
       if (i)
         msg += string(": ") + dwfl_errmsg (i);
 
+      msg += " [man warning::debuginfo]";
+
       /* add module_name to list to find rpm */
       find_debug_rpms(sess, module_name.c_str());
 
