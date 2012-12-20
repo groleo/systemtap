@@ -839,8 +839,7 @@ passes_0_4 (systemtap_session &s)
                       << endl;
 
   if (rc && ! s.try_server ())
-    cerr << _("Pass 4: compilation failed.  Try again with another '--vp 0001' option.") << endl
-         << _("\tMore error information at [man error::pass4].") << endl;
+    cerr << _("Pass 4: compilation failed. [man error::pass4]") << endl;
 
   else
     {
