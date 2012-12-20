@@ -1,5 +1,11 @@
 * What's new in version 2.1
 
+- The translator now eliminates duplicate tapset files between its
+  preferred directory (as configured during the build with --prefix=/
+  or specified with the -I /path option), and files it may find under
+  $XDG_DATA_DIRS.  This should eliminate a class of conflicts between
+  parallel system- and hand-built systemtap installations.
+
 - The translator accepts a --suppress-time-limits option, which defeats
   time-related constraints, to allows probe handlers to run for indefinite
   periods.  It requires the guru mode (-g) flag to work.  Add the earlier
