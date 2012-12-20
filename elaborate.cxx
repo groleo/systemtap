@@ -695,13 +695,7 @@ match_node::try_suffix_expansion (systemtap_session& s,
           catch (const recursive_expansion_error &e)
             {
               // Re-throw:
-              throw semantic_error(e); // XXX might change to contain manpage
-            }
-          catch (const semantic_error_manpage &e)
-            {
-              // Adjust source coordinate and re-throw:
-              if (! loc->optional)
-                throw semantic_error_manpage(e.whatman(), e.what(), loc->components[pos]->tok);
+              throw semantic_error(e);
             }
           catch (const semantic_error &e)
             {
@@ -972,13 +966,6 @@ derive_probes (systemtap_session& s,
 	    {
 	      s.pattern_root->find_and_build (s, p, loc, 0, dps); // <-- actual derivation!
 	    }
-          catch (const semantic_error_manpage& e)
-	    {
-              if (!loc->optional)
-                throw semantic_error_manpage(e);
-              else /* tolerate failure for optional probe */
-	        continue;
-	    }
           catch (const semantic_error& e)
 	    {
               if (!loc->optional)
@@ -1022,10 +1009,7 @@ derive_probes (systemtap_session& s,
           // and print a more appropriate message.
           if (rethrow_errors)
             {
-              // XXX this is a hack -- relying on the fact that
-              // a semantic_error_manpage with "" as the manpage
-              // will be treated exactly like an ordinary semantic_error:
-              throw semantic_error_manpage("", e.what(), e.tok1, e.tok2);
+              throw semantic_error(e);
             }
 	  // Only output in listing if -vv is supplied:
           else if (!s.listing_mode || (s.listing_mode && s.verbose > 1))

@@ -354,11 +354,6 @@ parser::print_error  (const parse_error &pe)
     session.print_error_source (cerr, align_parse_error, tok);
   }
 
-  if (pe.whatman() != "")
-    {
-      cerr << _F("\tMore error information at man page error::%s(7stap)", pe.whatman().c_str()) << endl;
-    }
-
   num_errors ++;
 }
 

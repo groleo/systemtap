@@ -64,25 +64,6 @@ struct parse_error: public std::runtime_error
     runtime_error (msg), tok (t), skip_some (true) {}
   parse_error (const std::string& msg, bool skip):
     runtime_error (msg), tok (0), skip_some (skip) {}
-
-  virtual std::string whatman() const { return ""; }
-};
-
-struct parse_error_manpage: public parse_error {
-  const std::string manpage;
-
-  ~parse_error_manpage () throw () {}
-
-  parse_error_manpage (const std::string& manpage, const std::string& msg):
-    parse_error (msg), manpage(manpage) {}
-  parse_error_manpage (const std::string& manpage, const std::string& msg,
-                       const token* t):
-    parse_error (msg, t), manpage(manpage) {}
-  parse_error_manpage (const std::string& manpage, const std::string& msg,
-                       bool skip):
-    parse_error (msg, skip), manpage(manpage) {}
-
-  virtual std::string whatman() const { return manpage; }
 };
 
 

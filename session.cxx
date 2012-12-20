@@ -1778,10 +1778,6 @@ systemtap_session::print_error (const semantic_error& e)
             }
           else message << *e.tok2;
         }
-      if (e.whatman() != "")
-        {
-          message << _F("\tMore error information at man page error::%s(7stap)", e.whatman().c_str());
-        }
       message << endl;
       message_str[i] = message.str();
     }

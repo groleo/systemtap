@@ -39,24 +39,6 @@ struct semantic_error: public std::runtime_error
   semantic_error (const std::string& msg, const token* t1,
                   const token* t2):
     runtime_error (msg), tok1 (t1), tok2 (t2), chain (0) {}
-
-  virtual std::string whatman() const { return ""; }
-};
-
-struct semantic_error_manpage: public semantic_error {
-  const std::string manpage;
-
-  ~semantic_error_manpage () throw () {}
-
-  semantic_error_manpage (const std::string& manpage, const std::string& msg,
-                          const token* t1=0):
-    semantic_error(msg, t1), manpage (manpage) {}
-
-  semantic_error_manpage (const std::string& manpage, const std::string& msg,
-                          const token* t1, const token* t2):
-    semantic_error(msg, t1, t2), manpage (manpage) {}
-
-  virtual std::string whatman() const { return manpage; }
 };
 
 // ------------------------------------------------------------------------
