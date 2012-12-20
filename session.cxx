@@ -155,6 +155,18 @@ systemtap_session::systemtap_session ():
   update_release_sysroot = false;
   suppress_time_limits = false;
 
+  // PR12443: put compiled-in / -I paths in front, to be preferred during 
+  // tapset duplicate-file elimination
+  const char* s_p = getenv ("SYSTEMTAP_TAPSET");
+  if (s_p != NULL)
+  {
+    include_path.push_back (s_p);
+  }
+  else
+  {
+    include_path.push_back (string(PKGDATADIR) + "/tapset");
+  }
+
   /*  adding in the XDG_DATA_DIRS variable path,
    *  this searches in conjunction with SYSTEMTAP_TAPSET
    *  to locate stap scripts, either can be disabled if 
@@ -170,16 +182,6 @@ systemtap_session::systemtap_session ():
     {
       include_path.push_back(*i + "/systemtap/tapset");
     }
-  }
-
-  const char* s_p = getenv ("SYSTEMTAP_TAPSET");
-  if (s_p != NULL)
-  {
-    include_path.push_back (s_p);
-  }
-  else
-  {
-    include_path.push_back (string(PKGDATADIR) + "/tapset");
   }
 
   const char* s_r = getenv ("SYSTEMTAP_RUNTIME");

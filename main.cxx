@@ -458,6 +458,7 @@ passes_0_4 (systemtap_session &s)
   // but since .stpm files can consist only of '@define' constructs,
   // we can parse each one without reference to the others.
   set<pair<dev_t, ino_t> > seen_library_macro_files;
+  set<string> seen_library_macro_files_names;
 
   for (unsigned i=0; i<s.include_path.size(); i++)
     {
@@ -494,13 +495,30 @@ passes_0_4 (systemtap_session &s)
                 {
                   pair<dev_t,ino_t> here = make_pair(tapset_file_stat.st_dev,
                                                      tapset_file_stat.st_ino);
-                  if (seen_library_macro_files.find(here)
-                      != seen_library_macro_files.end())
-                    continue;
+                  if (seen_library_macro_files.find(here) != seen_library_macro_files.end()) {
+                    if (s.verbose>2)
+                      clog << _F("Skipping tapset \"%s\", duplicate inode.", globbuf.gl_pathv[j]) << endl;
+                    continue; 
+                  }
                   seen_library_macro_files.insert (here);
                 }
 
-              // XXX: privilege only for /usr/share/systemtap?
+              // PR12443: duplicate-eliminate harder
+              string full_path = globbuf.gl_pathv[j];
+              string tapset_base = s.include_path[i]; // not dir; it has arch suffixes too
+              if (full_path.size() > tapset_base.size()) {
+                string tail_part = full_path.substr(tapset_base.size());
+                if (seen_library_macro_files_names.find (tail_part) != seen_library_macro_files_names.end()) {
+                  if (s.verbose>2)
+                      clog << _F("Skipping tapset \"%s\", duplicate name.", globbuf.gl_pathv[j]) << endl;
+                  continue;
+                }
+                seen_library_macro_files_names.insert (tail_part);
+              }
+
+              if (s.verbose>2)
+                clog << _F("Processing tapset \"%s\"", globbuf.gl_pathv[j]) << endl;
+
               stapfile* f = parse_library_macros (s, globbuf.gl_pathv[j]);
               if (f == 0)
                 s.print_warning("macro tapset '" + string(globbuf.gl_pathv[j])
@@ -522,6 +540,7 @@ passes_0_4 (systemtap_session &s)
 
   // Next, gather and parse the library files.
   set<pair<dev_t, ino_t> > seen_library_files;
+  set<string> seen_library_files_names;
 
   for (unsigned i=0; i<s.include_path.size(); i++)
     {
@@ -558,10 +577,29 @@ passes_0_4 (systemtap_session &s)
                 {
                   pair<dev_t,ino_t> here = make_pair(tapset_file_stat.st_dev,
                                                      tapset_file_stat.st_ino);
-                  if (seen_library_files.find(here) != seen_library_files.end())
-                    continue;
+                  if (seen_library_files.find(here) != seen_library_files.end()) {
+                    if (s.verbose>2)
+                      clog << _F("Skipping tapset \"%s\", duplicate inode.", globbuf.gl_pathv[j]) << endl;
+                    continue; 
+                  }
                   seen_library_files.insert (here);
                 }
+
+              // PR12443: duplicate-eliminate harder
+              string full_path = globbuf.gl_pathv[j];
+              string tapset_base = s.include_path[i]; // not dir; it has arch suffixes too
+              if (full_path.size() > tapset_base.size()) {
+                string tail_part = full_path.substr(tapset_base.size());
+                if (seen_library_files_names.find (tail_part) != seen_library_files_names.end()) {
+                  if (s.verbose>2)
+                      clog << _F("Skipping tapset \"%s\", duplicate name.", globbuf.gl_pathv[j]) << endl;
+                  continue;
+                }
+                seen_library_files_names.insert (tail_part);
+              }
+
+              if (s.verbose>2)
+                clog << _F("Processing tapset \"%s\"", globbuf.gl_pathv[j]) << endl;
 
               // XXX: privilege only for /usr/share/systemtap?
               stapfile* f = parse (s, globbuf.gl_pathv[j], true);
