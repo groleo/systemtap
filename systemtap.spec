@@ -502,6 +502,7 @@ exit 0
 %{_libexecdir}/%{name}/stap-env
 %{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
+%{_mandir}/man7/warning*
 %{_mandir}/man8/stap-server.8*
 %{_sysconfdir}/rc.d/init.d/stap-server
 %config(noreplace) %{_sysconfdir}/logrotate.d/stap-server
@@ -526,6 +527,7 @@ exit 0
 %{_mandir}/man1/stap.1*
 %{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
+%{_mandir}/man7/warning*
 %doc README README.unprivileged AUTHORS NEWS COPYING
 %if %{with_bundled_elfutils}
 %dir %{_libdir}/%{name}
@@ -551,6 +553,7 @@ exit 0
 %endif
 %{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
+%{_mandir}/man7/warning*
 %{_mandir}/man8/staprun.8*
 %doc README README.security AUTHORS NEWS COPYING
 
@@ -573,6 +576,7 @@ exit 0
 %{_mandir}/man3/*
 %{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
+%{_mandir}/man7/warning*
 %dir %{_datadir}/%{name}
 %{_datadir}/%{name}/tapset
 
