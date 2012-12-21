@@ -601,8 +601,12 @@ passes_0_4 (systemtap_session &s)
               if (s.verbose>2)
                 clog << _F("Processing tapset \"%s\"", globbuf.gl_pathv[j]) << endl;
 
-              // XXX: privilege only for /usr/share/systemtap?
-              stapfile* f = parse (s, globbuf.gl_pathv[j], true);
+              // NB: we don't need to restrict privilege only for /usr/share/systemtap, i.e., 
+              // excluding user-specified $XDG_DATA_DIRS.  That's because stapdev gets
+              // root-equivalent privileges anyway; stapsys and stapusr use a remote compilation
+              // with a trusted environment, where client-side $XDG_DATA_DIRS are not passed.
+
+              stapfile* f = parse (s, globbuf.gl_pathv[j], true /* privileged */);
               if (f == 0)
                 s.print_warning("tapset '" + string(globbuf.gl_pathv[j])
                                 + "' has errors, and will be skipped."); // TODOXXX internationalization?
