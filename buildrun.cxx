@@ -606,7 +606,7 @@ uprobes_pass (systemtap_session& s)
 
   if (s.kernel_config["CONFIG_UTRACE"] != string("y"))
     {
-      clog << _("user-space facilities not available without kernel CONFIG_UTRACE or CONFIG_TRACEPOINTS/CONFIG_ARCH_SUPPORTS_UPROBES/CONFIG_UPROBES") << endl;
+      clog << _("user-space process-tracking facilities not available [man error::process-tracking]") << endl;
       s.set_try_server ();
       return 1;
     }

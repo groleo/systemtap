@@ -8,7 +8,7 @@
 
 static void stap_task_finder_unavailable(void) {
   _stp_error("process-tracking is not available in this kernel"
-             " [man warning::process-tracking]");
+             " [man error::process-tracking]");
 }
 
 struct stap_task_finder_target;
@@ -73,7 +73,7 @@ static int
 stap_start_task_finder(void)
 {
   _stp_warn("process-tracking is not available in this kernel"
-            " [man warning::process-tracking]");
+            " [man error::process-tracking]");
 
   return 0;
 }
