@@ -1,0 +1,16 @@
+[Unit]
+Description=Systemtap Compile Server
+Documentation=man:stap-server(8)
+Wants=avahi-daemon.service
+After=network.target avahi-daemon.service
+ 
+[Service]
+Type=oneshot
+User=stap-server
+ExecStart=/usr/bin/stap-server start
+ExecRestart=/usr/bin/stap-server restart
+ExecStop=/usr/bin/stap-server stop
+RemainAfterExit=yes 
+ 
+[Install]
+WantedBy=multi-user.target
