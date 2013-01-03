@@ -1,5 +1,5 @@
 // session functions
-// Copyright (C) 2010-2012 Red Hat Inc.
+// Copyright (C) 2010-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -399,7 +399,7 @@ void
 systemtap_session::version ()
 {
   clog << _F("Systemtap translator/driver (version %s/%s, %s)\n"
-             "Copyright (C) 2005-2012 Red Hat, Inc. and others\n"
+             "Copyright (C) 2005-2013 Red Hat, Inc. and others\n"
              "This is free software; see the source for copying conditions.",
              VERSION, dwfl_version(NULL), STAP_EXTENDED_VERSION) << endl;
   clog << _("enabled features:")

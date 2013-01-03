@@ -7,7 +7,7 @@
  * Public License (GPL); either version 2, or (at your option) any
  * later version.
  *
- * Copyright (C) 2007-2012 Red Hat Inc.
+ * Copyright (C) 2007-2013 Red Hat Inc.
  */
 
 #include "staprun.h"
@@ -215,7 +215,7 @@ void parse_args(int argc, char **argv)
 			break;
 		case 'V':
                         err(_("Systemtap module loader/runner (version %s, %s)\n"
-                              "Copyright (C) 2005-2012 Red Hat, Inc. and others\n"
+                              "Copyright (C) 2005-2013 Red Hat, Inc. and others\n"
                               "This is free software; see the source for copying conditions.\n"),
                             VERSION, STAP_EXTENDED_VERSION);
                         _exit(1);
