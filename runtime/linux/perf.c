@@ -42,6 +42,11 @@ static long _stp_perf_init (struct stap_perf_probe *stp, struct task_struct* tas
 								     , NULL
 #endif
 								     );
+	    if (IS_ERR(stp->per_thread_event)) {
+		long rc = PTR_ERR(stp->per_thread_event);
+		stp->per_thread_event = NULL;
+		return rc;
+	      }
 	  }
 	}
 	else {
