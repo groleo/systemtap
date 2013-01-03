@@ -20,7 +20,7 @@ set script_template {
 
 # First try reading from address 0, which should fail.
 set test "atomic1"
-set error {kernel read fault at 0x[^\r]+}
+set error {read fault .* at 0x[^\r]+}
 set script [format $script_template "atomic_long" "0"]
 stap_run_error $test 1 $error "0\r\n" -e $script
 
@@ -90,7 +90,7 @@ stap_run_error $test 0 $error "5\r\n" -ge $script
 
 # First try reading from address 0, which should fail.
 set test "atomic5"
-set error {kernel read fault at 0x[^\r]+}
+set error {read fault .* at 0x[^\r]+}
 set script [format $script_template "atomic" "0"]
 stap_run_error $test 1 $error "0\r\n" -e $script
 

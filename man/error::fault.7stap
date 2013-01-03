@@ -1,0 +1,38 @@
+.\" t
+.TH ERROR::FAULT 7stap 
+.SH NAME
+error::fault \- memory access faults
+
+.\" macros
+.de SAMPLE
+.br
+.RS
+.nf
+.nh
+..
+.de ESAMPLE
+.hy
+.fi
+.RE
+..
+
+
+.SH DESCRIPTION
+
+Read or write faults can occur during the operation of a systemtap
+script, if the script causes dereferencing of a pointer that turns out
+to be invalid.  This can be caused by using context variables that do
+not happen to have valid values, or perhaps references to memory that
+is unavailable at that moment due to paging.
+.PP
+These fault conditions are benign because they are caught by the
+systemtap runtime, which cleanly terminates the script.  If quick
+termination is not desired, consider using the
+.IR \-\-suppress\-handler\-errors " or " \-DMAXERRORS=NN
+stap options, or wrapping relevant parts of the probe handlers in a
+.IR try / catch
+block.
+
+.SH SEE ALSO
+.IR stap (1),
+.IR error::reporting (7stap)

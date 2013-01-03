@@ -6556,9 +6556,9 @@ void translate_runtime(systemtap_session& s)
                                         "without is_myproc checking for pid %d (euid %d)"));
 
   s.op->newline() << "#define STAP_MSG_LOC2C_01 "
-                  << lex_cast_qstring(_("kernel read fault at 0x%p (%s)"));
+                  << lex_cast_qstring(_("read fault [man error::fault] at 0x%p (%s)"));
   s.op->newline() << "#define STAP_MSG_LOC2C_02 "
-                  << lex_cast_qstring(_("kernel write fault at 0x%p (%s)"));
+                  << lex_cast_qstring(_("write fault [man error::fault] at 0x%p (%s)"));
   s.op->newline() << "#define STAP_MSG_LOC2C_03 "
                   << lex_cast_qstring(_("divide by zero in DWARF operand (%s)"));
 }
