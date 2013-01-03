@@ -297,14 +297,14 @@ static int _stp_build_id_check (struct _stp_module *m,
 	basename = m->path;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
-      _stp_error ("Build-id mismatch: \"%s\" vs. \"%s\" byte %d (0x%02x vs 0x%02x) address %#lx rc %d\n",
+      _stp_error ("Build-id mismatch [man error::buildid]: \"%s\" vs. \"%s\" byte %d (0x%02x vs 0x%02x) address %#lx rc %d\n",
 		  m->name, basename, j, theory, practice, notes_addr, rc);
       return 1;
 #else
       /* This branch is a surrogate for kernels affected by Fedora bug
        * #465873. */
       _stp_warn (KERN_WARNING
-		 "Build-id mismatch: \"%s\" vs. \"%s\" byte %d (0x%02x vs 0x%02x) rc %d\n",
+		 "Build-id mismatch [man error::buildid]: \"%s\" vs. \"%s\" byte %d (0x%02x vs 0x%02x) rc %d\n",
 		 m->name, basename, j, theory, practice, rc);
 #endif
       break;
