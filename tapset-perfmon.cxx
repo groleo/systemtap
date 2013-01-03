@@ -1,7 +1,6 @@
 // tapset for HW performance monitoring
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
-// Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -127,7 +126,7 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "int rc = 0;";
   s.op->newline() << "struct stap_perf_probe *p = container_of(tgt, struct stap_perf_probe, tgt);";
 
-  s.op->newline() << "_stp_printf(\"XXX %d %d\\n\", current->pid, task_pid_nr_ns(tsk,task_active_pid_ns(current->parent)));";
+  // s.op->newline() << "_stp_printf(\"XXX %d %d\\n\", current->pid, task_pid_nr_ns(tsk,task_active_pid_ns(current->parent)));";
   s.op->newline() << "if (register_p) ";
   s.op->indent(1);
 
@@ -167,6 +166,7 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
 	    l_process_name = probes[i]->process_name;
 
 	  s.op->line() << " .tgt={";
+          s.op->line() << " .purpose=\"perfctr\",";
 	  s.op->line() << " .procname=\"" << l_process_name << "\",";
 	  s.op->line() << " .pid=0,";
 	  s.op->line() << " .callback=&_stp_perf_probe_cb,";

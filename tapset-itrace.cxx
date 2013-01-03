@@ -1,7 +1,6 @@
 // tapset for timers
-// Copyright (C) 2005-2009 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
-// Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -148,6 +147,7 @@ itrace_derived_probe_group::emit_probe_decl (systemtap_session& s,
 {
   s.op->newline() << "{";
   s.op->line() << " .tgt={";
+  s.op->line() << " .purpose=\"itrace\",";
 
   if (p->has_path)
     {

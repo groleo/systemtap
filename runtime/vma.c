@@ -1,7 +1,7 @@
 /* -*- linux-c -*- 
  * VMA tracking and lookup functions.
  *
- * Copyright (C) 2005-2010 Red Hat Inc.
+ * Copyright (C) 2005-2013 Red Hat Inc.
  * Copyright (C) 2006 Intel Corporation.
  *
  * This file is part of systemtap, and is free software.  You can
@@ -240,6 +240,7 @@ static int _stp_vma_init(void)
                 // callback should be sufficient).
                 .pid = 0,
                 .procname = NULL,
+                .purpose = "vma tracking",
                 .callback = &_stp_vma_exec_cb,
                 .mmap_callback = &_stp_vma_mmap_cb,
                 .munmap_callback = &_stp_vma_munmap_cb,

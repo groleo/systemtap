@@ -1,5 +1,5 @@
 // tapset resolution
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
 // Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
@@ -7367,6 +7367,7 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
           // NB: it's essential that make_pbm_key() use all of and
           // only the same fields as we're about to emit.
           s.op->line() << " .finder={";
+          s.op->line() << "  .purpose=\"uprobes\",";
           if (p->pid != 0)
             s.op->line() << " .pid=" << p->pid << ",";
 
@@ -7638,6 +7639,7 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
           module_index[key] = module_index_ctr++;
           s.op->newline() << "{";
           s.op->line() << " .finder={";
+          s.op->line() << "  .purpose=\"inode-uprobes\",";          
           if (p->pid != 0)
             s.op->line() << " .pid=" << p->pid << ",";
 

@@ -55,6 +55,7 @@ struct stap_task_finder_target {
 /* public: */
 	pid_t pid;
 	const char *procname;
+        const char *purpose;
 	stap_task_finder_callback callback;
 	stap_task_finder_mmap_callback mmap_callback;
 	stap_task_finder_munmap_callback munmap_callback;

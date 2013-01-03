@@ -85,6 +85,7 @@ struct stap_task_finder_target {
 /* public: */
 	pid_t pid;
 	const char *procname;
+        const char *purpose;
 	stap_task_finder_callback callback;
 	stap_task_finder_mmap_callback mmap_callback;
 	stap_task_finder_munmap_callback munmap_callback;
@@ -603,8 +604,9 @@ __stp_call_callbacks(struct stap_task_finder_target *tgt,
 
 		rc = cb_tgt->callback(cb_tgt, tsk, register_p, process_p);
 		if (rc != 0) {
-			_stp_error("callback for %d failed: %d",
-				   (int)tsk->pid, rc);
+			_stp_warn("task_finder %s%scallback for task %d failed: %d",
+                                  (cb_tgt->purpose?:""), (cb_tgt->purpose?" ":""),
+                                  (int)tsk->pid, rc);
 		}
 	}
 }
@@ -641,8 +643,9 @@ __stp_call_mmap_callbacks(struct stap_task_finder_target *tgt,
 		rc = cb_tgt->mmap_callback(cb_tgt, tsk, path, dentry,
 					  addr, length, offset, vm_flags);
 		if (rc != 0) {
-			_stp_error("mmap callback for %d failed: %d",
-				   (int)tsk->pid, rc);
+			_stp_warn("task_finder mmap %s%scallback for task %d failed: %d",
+                                  (cb_tgt->purpose?:""), (cb_tgt->purpose?" ":""),
+                                  (int)tsk->pid, rc);
 		}
 	}
 }
@@ -761,8 +764,9 @@ __stp_call_munmap_callbacks(struct stap_task_finder_target *tgt,
 
 		rc = cb_tgt->munmap_callback(cb_tgt, tsk, addr, length);
 		if (rc != 0) {
-			_stp_error("munmap callback for %d failed: %d",
-				   (int)tsk->pid, rc);
+			_stp_warn("task_finder munmap %s%scallback for task %d failed: %d",
+                                  (cb_tgt->purpose?:""), (cb_tgt->purpose?" ":""),
+                                  (int)tsk->pid, rc);
 		}
 	}
 }
@@ -789,8 +793,9 @@ __stp_call_mprotect_callbacks(struct stap_task_finder_target *tgt,
 		rc = cb_tgt->mprotect_callback(cb_tgt, tsk, addr, length,
 					       prot);
 		if (rc != 0) {
-			_stp_error("mprotect callback for %d failed: %d",
-				   (int)tsk->pid, rc);
+			_stp_warn("task_finder mprotect %s%scallback for task %d failed: %d",
+                                  (cb_tgt->purpose?:""), (cb_tgt->purpose?" ":""),
+                                  (int)tsk->pid, rc);
 		}
 	}
 }
