@@ -225,7 +225,7 @@ translate_constant (struct location_context *ctx, int indent,
 	    return NULL;
 	  }
 	loc->type = loc_value;
-	obstack_printf (ctx->pool, "%*saddr = %#" PRIx64 "UL;\n",
+	obstack_printf (ctx->pool, "%*saddr = (" UTYPE ")%#" PRIx64 "ULL;\n",
 			indent * 2, "", value);
 	obstack_1grow (ctx->pool, '\0');
 	loc->address.program = obstack_finish (ctx->pool);
