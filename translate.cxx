@@ -21,6 +21,8 @@
 #include "runtime/k_syms.h"
 #include "dwflpp.h"
 
+#include "re2c-migrate/regcomp.h"
+
 #include <cstdlib>
 #include <iostream>
 #include <set>
@@ -3927,16 +3929,15 @@ c_tmpcounter::visit_regex_query (regex_query* e)
 void
 c_unparser::visit_regex_query (regex_query* e)
 {
-  // TODOXXX implement the actual matching code
-  o->line() << "({";
+  o->line() << "(";
   o->indent(1);
-  o->newline() << "_stp_printf(\"TODO: matching string %s to regex %s\\n\", ";
+  o->newline();
+  if (e->op == "!~") o->line() << "!";
+  stapdfa *dfa = session->dfas[((literal_string *)e->right)->value];
+  dfa->emit_matchop_start (o);
   e->left->visit(this);
-  o->line() << ", ";
-  e->right->visit(this); // TODOXXX here we would refer to the appropriate regcomp table entry instead of computing the rhs
-  o->line() << ");";
-  o->line() << " 0;"; // TODOXXX stub feature -- we fail automatically
-  o->newline(-1) << "})";
+  dfa->emit_matchop_end (o);
+  o->newline(-1) << ")";
 }
 
 void
@@ -6760,6 +6761,14 @@ translate_pass (systemtap_session& s)
       s.op->newline() << "#ifdef STAP_NEED_GETTIMEOFDAY";
       s.op->newline() << "#include \"time.c\"";  // Don't we all need more?
       s.op->newline() << "#endif";
+
+      for (map<string,stapdfa*>::iterator it = s.dfas.begin(); it != s.dfas.end(); it++)
+        {
+          assert_no_interrupts();
+          s.op->newline();
+          it->second->emit_declaration (s.op);
+        }
+      s.op->assert_0_indent();
 
       for (map<string,functiondecl*>::iterator it = s.functions.begin(); it != s.functions.end(); it++)
 	{

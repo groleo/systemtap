@@ -72,21 +72,15 @@ stapdfa *
 regex_to_stapdfa (systemtap_session *s, const string& input, unsigned& counter)
 {
   if (s->dfas.find(input) != s->dfas.end())
-    return &(s->dfas[input]);
+    return s->dfas[input];
 
-  stapdfa d("__stp_dfa" + lex_cast(counter++), input);
-  return &(s->dfas[input] = d);
+  return s->dfas[input] = new stapdfa ("__stp_dfa" + lex_cast(counter++), input);
 }
 
 // ------------------------------------------------------------------------
 
 RegExp *stapdfa::failRE = NULL;
 RegExp *stapdfa::padRE = NULL;
-
-stapdfa::stapdfa ()
-{
-  content = NULL;
-}
 
 stapdfa::stapdfa (const string& func_name, const string& re)
   : orig_input(re), func_name(func_name)
@@ -139,10 +133,17 @@ stapdfa::emit_declaration (translator_output *o)
 }
 
 void
-stapdfa::emit_matchop (translator_output *o, const string& match_expr)
+stapdfa::emit_matchop_start (translator_output *o)
 {
   // TODOXXX eventually imitate visit_functioncall in translate.cxx??
-  o->line() << "(" << func_name << " (" << match_expr << ")" << ")";
+  o->line() << "(" << func_name << " (";
+}
+
+void
+stapdfa::emit_matchop_end (translator_output *o)
+{
+  // TODOXXX eventually imitate visit_functioncall in translate.cxx??
+  o->line() << ")" << ")";
 }
 
 RegExp *

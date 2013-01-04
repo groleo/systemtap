@@ -16,6 +16,8 @@
 #include "util.h"
 #include "task_finder.h"
 
+#include "re2c-migrate/regcomp.h"
+
 extern "C" {
 #include <sys/utsname.h>
 #include <fnmatch.h>
@@ -1460,6 +1462,42 @@ void embeddedcode_info_pass (systemtap_session& s)
 // ------------------------------------------------------------------------
 
 
+// Simple visitor that collects all the regular expressions in the
+// file and adds them to the session DFA table.
+
+struct regex_collecting_visitor: public functioncall_traversing_visitor
+{
+protected:
+  systemtap_session& session;
+
+public:
+  regex_collecting_visitor (systemtap_session& s): session(s) { }
+
+  void visit_regex_query (regex_query *q) {
+    functioncall_traversing_visitor::visit_regex_query (q); // TODOXXX test necessity
+
+    string re = ((literal_string *)q->right)->value; /* parser ensured rhs is a literal */
+    regex_to_stapdfa (&session, re, session.dfa_counter);
+  }
+};
+
+// Go through the regex match invocations and generate corresponding DFAs.
+void gen_dfa_table (systemtap_session& s)
+{
+  regex_collecting_visitor rcv(s); // TODOXXX
+
+  for (unsigned i=0; i<s.probes.size(); i++)
+    {
+      s.probes[i]->body->visit (& rcv);
+
+      if (s.probes[i]->sole_location()->condition)
+        s.probes[i]->sole_location()->condition->visit (& rcv);
+    }
+}
+
+// ------------------------------------------------------------------------
+
+
 static int semantic_pass_symbols (systemtap_session&);
 static int semantic_pass_optimize1 (systemtap_session&);
 static int semantic_pass_optimize2 (systemtap_session&);
@@ -1619,7 +1657,6 @@ semantic_pass_symbols (systemtap_session& s)
 
   return s.num_errors(); // all those print_error calls
 }
-
 
 
 // Keep unread global variables for probe end value display.
@@ -1895,7 +1932,7 @@ semantic_pass (systemtap_session& s)
       if (rc == 0) rc = semantic_pass_conditions (s);
       if (rc == 0) rc = semantic_pass_optimize1 (s);
       if (rc == 0) rc = semantic_pass_types (s);
-      // TODOXXX if (rc == 0) generate regcomp table for surviving regexes (using a new visitor) -- or maybe piggyback on the type resolution stuff?
+      if (rc == 0) gen_dfa_table(s); // TODOXXX set rc?
       if (rc == 0) add_global_var_display (s);
       if (rc == 0) rc = semantic_pass_optimize2 (s);
       if (rc == 0) rc = semantic_pass_vars (s);

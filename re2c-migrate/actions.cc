@@ -741,7 +741,8 @@ std::string& Scanner::unescape(SubStr& str_in, std::string& str_out) const
 
 Range * Scanner::getRange(SubStr &s) const
 {
-	uint lb = unescape(s), ub, xlb, xub, c;
+	// uint lb = unescape(s), ub, xlb, xub, c;
+	uint lb = unescape(s), ub, xlb, c;
 
 	if (s.len < 2 || *s.str != '-')
 	{
@@ -761,7 +762,7 @@ Range * Scanner::getRange(SubStr &s) const
 		}
 		
 		xlb = xlat(lb);
-		xub = xlat(ub);
+		// xub = xlat(ub);
 		
 		for(c = lb; c <= ub; c++)
 		{

@@ -294,7 +294,8 @@ public:
   std::vector<derived_probe*> probes; // see also *_probes groups below
   std::vector<embeddedcode*> embeds;
   std::map<std::string, statistic_decl> stat_decls;
-  std::map<std::string, stapdfa> dfas;
+  std::map<std::string, stapdfa*> dfas;
+  unsigned dfa_counter; // used to give unique names
   // track things that are removed
   std::vector<vardecl*> unused_globals;
   std::vector<derived_probe*> unused_probes; // see also *_probes groups below

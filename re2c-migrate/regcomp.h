@@ -26,11 +26,12 @@ namespace re2c {
 
 struct stapdfa {
   std::string orig_input;
-  stapdfa (); // TODOXXX get rid of need for this
   stapdfa (const std::string& func_name, const std::string& re);
   ~stapdfa ();
   void emit_declaration (translator_output *o);
-  void emit_matchop (translator_output *o, const std::string& match_expr);
+  // void emit_matchop (translator_output *o, const std::string& match_expr);
+  void emit_matchop_start (translator_output *o);
+  void emit_matchop_end (translator_output *o);
   void print (std::ostream& o) const;
 private:
   re2c::RegExp *prepare_rule(re2c::RegExp *raw);
@@ -57,7 +58,7 @@ struct dfa_parse_error: public std::runtime_error
 };
 
 /* Retrieves the corresponding dfa from s->dfas if it is already created: */
-stapdfa *regex_to_stapdfa (systemtap_session *s, const std::string& input);
+stapdfa *regex_to_stapdfa (systemtap_session *s, const std::string& input, unsigned& counter);
 
 #endif
 

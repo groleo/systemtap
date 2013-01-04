@@ -70,7 +70,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am_regtest_OBJECTS = regtest-regcomp.$(OBJEXT) \
 	regtest-regtest.$(OBJEXT) regtest-actions.$(OBJEXT) \
 	regtest-code.$(OBJEXT) regtest-dfa.$(OBJEXT) \
-	regtest-substr.$(OBJEXT) regtest-translate.$(OBJEXT) \
+	regtest-substr.$(OBJEXT) regtest-regtranslate.$(OBJEXT) \
 	regtest-globals.$(OBJEXT) regtest-util_STANDALONE.$(OBJEXT) \
 	regtest-translator_output_STANDALONE.$(OBJEXT)
 regtest_OBJECTS = $(am_regtest_OBJECTS)
@@ -269,7 +269,7 @@ AUTOMAKE_OPTIONS = dejagnu
 
 # check_SCRIPTS = regcomp.base/regtest.in.0 regcomp.base/regtest.in.1
 regtest_SOURCES = regcomp.cxx regtest.cxx actions.cc code.cc dfa.cc \
-	substr.cc translate.cc globals.cc util_STANDALONE.cxx \
+	substr.cc regtranslate.cc globals.cc util_STANDALONE.cxx \
 	translator_output_STANDALONE.cxx
 regtest_CXXFLAGS = $(AM_CXXFLAGS) -DREGCOMP_STANDALONE
 
@@ -330,8 +330,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-globals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-regcomp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-regtest.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-regtranslate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-substr.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-translate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-translator_output_STANDALONE.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-util_STANDALONE.Po@am__quote@
 
@@ -433,19 +433,19 @@ regtest-substr.obj: substr.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-substr.obj `if test -f 'substr.cc'; then $(CYGPATH_W) 'substr.cc'; else $(CYGPATH_W) '$(srcdir)/substr.cc'; fi`
 
-regtest-translate.o: translate.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-translate.o -MD -MP -MF $(DEPDIR)/regtest-translate.Tpo -c -o regtest-translate.o `test -f 'translate.cc' || echo '$(srcdir)/'`translate.cc
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-translate.Tpo $(DEPDIR)/regtest-translate.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='translate.cc' object='regtest-translate.o' libtool=no @AMDEPBACKSLASH@
+regtest-regtranslate.o: regtranslate.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-regtranslate.o -MD -MP -MF $(DEPDIR)/regtest-regtranslate.Tpo -c -o regtest-regtranslate.o `test -f 'regtranslate.cc' || echo '$(srcdir)/'`regtranslate.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-regtranslate.Tpo $(DEPDIR)/regtest-regtranslate.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='regtranslate.cc' object='regtest-regtranslate.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-translate.o `test -f 'translate.cc' || echo '$(srcdir)/'`translate.cc
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-regtranslate.o `test -f 'regtranslate.cc' || echo '$(srcdir)/'`regtranslate.cc
 
-regtest-translate.obj: translate.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-translate.obj -MD -MP -MF $(DEPDIR)/regtest-translate.Tpo -c -o regtest-translate.obj `if test -f 'translate.cc'; then $(CYGPATH_W) 'translate.cc'; else $(CYGPATH_W) '$(srcdir)/translate.cc'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-translate.Tpo $(DEPDIR)/regtest-translate.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='translate.cc' object='regtest-translate.obj' libtool=no @AMDEPBACKSLASH@
+regtest-regtranslate.obj: regtranslate.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-regtranslate.obj -MD -MP -MF $(DEPDIR)/regtest-regtranslate.Tpo -c -o regtest-regtranslate.obj `if test -f 'regtranslate.cc'; then $(CYGPATH_W) 'regtranslate.cc'; else $(CYGPATH_W) '$(srcdir)/regtranslate.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-regtranslate.Tpo $(DEPDIR)/regtest-regtranslate.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='regtranslate.cc' object='regtest-regtranslate.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-translate.obj `if test -f 'translate.cc'; then $(CYGPATH_W) 'translate.cc'; else $(CYGPATH_W) '$(srcdir)/translate.cc'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-regtranslate.obj `if test -f 'regtranslate.cc'; then $(CYGPATH_W) 'regtranslate.cc'; else $(CYGPATH_W) '$(srcdir)/regtranslate.cc'; fi`
 
 regtest-globals.o: globals.cc
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-globals.o -MD -MP -MF $(DEPDIR)/regtest-globals.Tpo -c -o regtest-globals.o `test -f 'globals.cc' || echo '$(srcdir)/'`globals.cc

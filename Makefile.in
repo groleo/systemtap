@@ -169,7 +169,12 @@ loc2c_test_LINK = $(CCLD) $(loc2c_test_CFLAGS) $(CFLAGS) \
 @BUILD_TRANSLATOR_TRUE@	stap-privilege.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	stap-cmdline.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	stap-tapset-dynprobe.$(OBJEXT) \
-@BUILD_TRANSLATOR_TRUE@	$(am__objects_1)
+@BUILD_TRANSLATOR_TRUE@	stap-regcomp.$(OBJEXT) \
+@BUILD_TRANSLATOR_TRUE@	stap-actions.$(OBJEXT) \
+@BUILD_TRANSLATOR_TRUE@	stap-code.$(OBJEXT) stap-dfa.$(OBJEXT) \
+@BUILD_TRANSLATOR_TRUE@	stap-substr.$(OBJEXT) \
+@BUILD_TRANSLATOR_TRUE@	stap-regtranslate.$(OBJEXT) \
+@BUILD_TRANSLATOR_TRUE@	stap-globals.$(OBJEXT) $(am__objects_1)
 stap_OBJECTS = $(am_stap_OBJECTS)
 stap_LINK = $(CXXLD) $(stap_CXXFLAGS) $(CXXFLAGS) $(stap_LDFLAGS) \
 	$(LDFLAGS) -o $@
@@ -474,7 +479,15 @@ oldinclude_HEADERS = includes/sys/sdt.h includes/sys/sdt-config.h
 @BUILD_TRANSLATOR_TRUE@	tapset-utrace.cxx task_finder.cxx \
 @BUILD_TRANSLATOR_TRUE@	dwflpp.cxx rpm_finder.cxx setupdwfl.cxx \
 @BUILD_TRANSLATOR_TRUE@	remote.cxx privilege.cxx cmdline.cxx \
-@BUILD_TRANSLATOR_TRUE@	tapset-dynprobe.cxx $(am__append_10)
+@BUILD_TRANSLATOR_TRUE@	tapset-dynprobe.cxx \
+@BUILD_TRANSLATOR_TRUE@	re2c-migrate/regcomp.cxx \
+@BUILD_TRANSLATOR_TRUE@	re2c-migrate/actions.cc \
+@BUILD_TRANSLATOR_TRUE@	re2c-migrate/code.cc \
+@BUILD_TRANSLATOR_TRUE@	re2c-migrate/dfa.cc \
+@BUILD_TRANSLATOR_TRUE@	re2c-migrate/substr.cc \
+@BUILD_TRANSLATOR_TRUE@	re2c-migrate/regtranslate.cc \
+@BUILD_TRANSLATOR_TRUE@	re2c-migrate/globals.cc \
+@BUILD_TRANSLATOR_TRUE@	$(am__append_10)
 @BUILD_TRANSLATOR_TRUE@noinst_HEADERS = sdt_types.h
 @BUILD_TRANSLATOR_TRUE@stap_LDADD = @stap_LIBS@ @sqlite3_LIBS@ \
 @BUILD_TRANSLATOR_TRUE@	@LIBINTL@ $(am__append_9) \
@@ -561,7 +574,7 @@ all: $(BUILT_SOURCES) config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
 .SUFFIXES:
-.SUFFIXES: .c .cxx .o .obj
+.SUFFIXES: .c .cc .cxx .o .obj
 am--refresh: Makefile
 	@:
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -805,15 +818,19 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/loc2c_test-loc2c-test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/loc2c_test-loc2c.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-actions.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-buildrun.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-cache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-cmdline.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-code.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-coveragedb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-csclient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-cscommon.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-dfa.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-dwarf_wrappers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-dwflpp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-elaborate.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-globals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-hash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-loc2c.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-main.Po@am__quote@
@@ -821,11 +838,14 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-nsscommon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-parse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-privilege.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-regcomp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-regtranslate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-remote.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-rpm_finder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-session.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-setupdwfl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-staptree.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-substr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-tapset-been.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-tapset-dynprobe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-tapset-itrace.Po@am__quote@
@@ -925,14 +945,14 @@ stap-mdfour.obj: mdfour.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CFLAGS) $(CFLAGS) -c -o stap-mdfour.obj `if test -f 'mdfour.c'; then $(CYGPATH_W) 'mdfour.c'; else $(CYGPATH_W) '$(srcdir)/mdfour.c'; fi`
 
-.cxx.o:
+.cc.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
 
-.cxx.obj:
+.cc.obj:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
@@ -1345,6 +1365,104 @@ stap-tapset-dynprobe.obj: tapset-dynprobe.cxx
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-tapset-dynprobe.obj `if test -f 'tapset-dynprobe.cxx'; then $(CYGPATH_W) 'tapset-dynprobe.cxx'; else $(CYGPATH_W) '$(srcdir)/tapset-dynprobe.cxx'; fi`
 
+stap-regcomp.o: re2c-migrate/regcomp.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-regcomp.o -MD -MP -MF $(DEPDIR)/stap-regcomp.Tpo -c -o stap-regcomp.o `test -f 're2c-migrate/regcomp.cxx' || echo '$(srcdir)/'`re2c-migrate/regcomp.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-regcomp.Tpo $(DEPDIR)/stap-regcomp.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/regcomp.cxx' object='stap-regcomp.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-regcomp.o `test -f 're2c-migrate/regcomp.cxx' || echo '$(srcdir)/'`re2c-migrate/regcomp.cxx
+
+stap-regcomp.obj: re2c-migrate/regcomp.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-regcomp.obj -MD -MP -MF $(DEPDIR)/stap-regcomp.Tpo -c -o stap-regcomp.obj `if test -f 're2c-migrate/regcomp.cxx'; then $(CYGPATH_W) 're2c-migrate/regcomp.cxx'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/regcomp.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-regcomp.Tpo $(DEPDIR)/stap-regcomp.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/regcomp.cxx' object='stap-regcomp.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-regcomp.obj `if test -f 're2c-migrate/regcomp.cxx'; then $(CYGPATH_W) 're2c-migrate/regcomp.cxx'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/regcomp.cxx'; fi`
+
+stap-actions.o: re2c-migrate/actions.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-actions.o -MD -MP -MF $(DEPDIR)/stap-actions.Tpo -c -o stap-actions.o `test -f 're2c-migrate/actions.cc' || echo '$(srcdir)/'`re2c-migrate/actions.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-actions.Tpo $(DEPDIR)/stap-actions.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/actions.cc' object='stap-actions.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-actions.o `test -f 're2c-migrate/actions.cc' || echo '$(srcdir)/'`re2c-migrate/actions.cc
+
+stap-actions.obj: re2c-migrate/actions.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-actions.obj -MD -MP -MF $(DEPDIR)/stap-actions.Tpo -c -o stap-actions.obj `if test -f 're2c-migrate/actions.cc'; then $(CYGPATH_W) 're2c-migrate/actions.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/actions.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-actions.Tpo $(DEPDIR)/stap-actions.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/actions.cc' object='stap-actions.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-actions.obj `if test -f 're2c-migrate/actions.cc'; then $(CYGPATH_W) 're2c-migrate/actions.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/actions.cc'; fi`
+
+stap-code.o: re2c-migrate/code.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-code.o -MD -MP -MF $(DEPDIR)/stap-code.Tpo -c -o stap-code.o `test -f 're2c-migrate/code.cc' || echo '$(srcdir)/'`re2c-migrate/code.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-code.Tpo $(DEPDIR)/stap-code.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/code.cc' object='stap-code.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-code.o `test -f 're2c-migrate/code.cc' || echo '$(srcdir)/'`re2c-migrate/code.cc
+
+stap-code.obj: re2c-migrate/code.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-code.obj -MD -MP -MF $(DEPDIR)/stap-code.Tpo -c -o stap-code.obj `if test -f 're2c-migrate/code.cc'; then $(CYGPATH_W) 're2c-migrate/code.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/code.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-code.Tpo $(DEPDIR)/stap-code.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/code.cc' object='stap-code.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-code.obj `if test -f 're2c-migrate/code.cc'; then $(CYGPATH_W) 're2c-migrate/code.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/code.cc'; fi`
+
+stap-dfa.o: re2c-migrate/dfa.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-dfa.o -MD -MP -MF $(DEPDIR)/stap-dfa.Tpo -c -o stap-dfa.o `test -f 're2c-migrate/dfa.cc' || echo '$(srcdir)/'`re2c-migrate/dfa.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-dfa.Tpo $(DEPDIR)/stap-dfa.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/dfa.cc' object='stap-dfa.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-dfa.o `test -f 're2c-migrate/dfa.cc' || echo '$(srcdir)/'`re2c-migrate/dfa.cc
+
+stap-dfa.obj: re2c-migrate/dfa.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-dfa.obj -MD -MP -MF $(DEPDIR)/stap-dfa.Tpo -c -o stap-dfa.obj `if test -f 're2c-migrate/dfa.cc'; then $(CYGPATH_W) 're2c-migrate/dfa.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/dfa.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-dfa.Tpo $(DEPDIR)/stap-dfa.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/dfa.cc' object='stap-dfa.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-dfa.obj `if test -f 're2c-migrate/dfa.cc'; then $(CYGPATH_W) 're2c-migrate/dfa.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/dfa.cc'; fi`
+
+stap-substr.o: re2c-migrate/substr.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-substr.o -MD -MP -MF $(DEPDIR)/stap-substr.Tpo -c -o stap-substr.o `test -f 're2c-migrate/substr.cc' || echo '$(srcdir)/'`re2c-migrate/substr.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-substr.Tpo $(DEPDIR)/stap-substr.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/substr.cc' object='stap-substr.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-substr.o `test -f 're2c-migrate/substr.cc' || echo '$(srcdir)/'`re2c-migrate/substr.cc
+
+stap-substr.obj: re2c-migrate/substr.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-substr.obj -MD -MP -MF $(DEPDIR)/stap-substr.Tpo -c -o stap-substr.obj `if test -f 're2c-migrate/substr.cc'; then $(CYGPATH_W) 're2c-migrate/substr.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/substr.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-substr.Tpo $(DEPDIR)/stap-substr.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/substr.cc' object='stap-substr.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-substr.obj `if test -f 're2c-migrate/substr.cc'; then $(CYGPATH_W) 're2c-migrate/substr.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/substr.cc'; fi`
+
+stap-regtranslate.o: re2c-migrate/regtranslate.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-regtranslate.o -MD -MP -MF $(DEPDIR)/stap-regtranslate.Tpo -c -o stap-regtranslate.o `test -f 're2c-migrate/regtranslate.cc' || echo '$(srcdir)/'`re2c-migrate/regtranslate.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-regtranslate.Tpo $(DEPDIR)/stap-regtranslate.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/regtranslate.cc' object='stap-regtranslate.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-regtranslate.o `test -f 're2c-migrate/regtranslate.cc' || echo '$(srcdir)/'`re2c-migrate/regtranslate.cc
+
+stap-regtranslate.obj: re2c-migrate/regtranslate.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-regtranslate.obj -MD -MP -MF $(DEPDIR)/stap-regtranslate.Tpo -c -o stap-regtranslate.obj `if test -f 're2c-migrate/regtranslate.cc'; then $(CYGPATH_W) 're2c-migrate/regtranslate.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/regtranslate.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-regtranslate.Tpo $(DEPDIR)/stap-regtranslate.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/regtranslate.cc' object='stap-regtranslate.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-regtranslate.obj `if test -f 're2c-migrate/regtranslate.cc'; then $(CYGPATH_W) 're2c-migrate/regtranslate.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/regtranslate.cc'; fi`
+
+stap-globals.o: re2c-migrate/globals.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-globals.o -MD -MP -MF $(DEPDIR)/stap-globals.Tpo -c -o stap-globals.o `test -f 're2c-migrate/globals.cc' || echo '$(srcdir)/'`re2c-migrate/globals.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-globals.Tpo $(DEPDIR)/stap-globals.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/globals.cc' object='stap-globals.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-globals.o `test -f 're2c-migrate/globals.cc' || echo '$(srcdir)/'`re2c-migrate/globals.cc
+
+stap-globals.obj: re2c-migrate/globals.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-globals.obj -MD -MP -MF $(DEPDIR)/stap-globals.Tpo -c -o stap-globals.obj `if test -f 're2c-migrate/globals.cc'; then $(CYGPATH_W) 're2c-migrate/globals.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/globals.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-globals.Tpo $(DEPDIR)/stap-globals.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/globals.cc' object='stap-globals.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-globals.obj `if test -f 're2c-migrate/globals.cc'; then $(CYGPATH_W) 're2c-migrate/globals.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/globals.cc'; fi`
+
 stap-nsscommon.o: nsscommon.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-nsscommon.o -MD -MP -MF $(DEPDIR)/stap-nsscommon.Tpo -c -o stap-nsscommon.o `test -f 'nsscommon.cxx' || echo '$(srcdir)/'`nsscommon.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-nsscommon.Tpo $(DEPDIR)/stap-nsscommon.Po
@@ -1596,6 +1714,20 @@ stap_sign_module-util.obj: util.cxx
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util.cxx' object='stap_sign_module-util.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_sign_module_CPPFLAGS) $(CPPFLAGS) $(stap_sign_module_CXXFLAGS) $(CXXFLAGS) -c -o stap_sign_module-util.obj `if test -f 'util.cxx'; then $(CYGPATH_W) 'util.cxx'; else $(CYGPATH_W) '$(srcdir)/util.cxx'; fi`
+
+.cxx.o:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
+
+.cxx.obj:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 install-oldincludeHEADERS: $(oldinclude_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(oldinclude_HEADERS)'; test -n "$(oldincludedir)" || list=; \
