@@ -1,0 +1,27 @@
+global script_path
+set script_path $srcdir/$subdir/regex.stp
+
+proc stap_test_regex {expected re match} {
+    global script_path
+    set test "regex $expected $re $match"
+
+    eval spawn stap $script_path $re $match
+    set got -1
+    expect {
+        -timeout 60
+        -re {answer: 1 0} {set got 1}
+        -re {answer: 0 1} {set got 0}
+    }
+    set results [wait]
+    # TODOXXX: also expect and test for other results
+    # TODOXXX: also expect and test for errors
+
+    if {$expected == $got} then {
+        pass $test
+    } else {
+        fail "$test (wrong answer)"
+    }
+}
+
+stap_test_regex 1 foo f
+stap_test_regex 0 foo bar

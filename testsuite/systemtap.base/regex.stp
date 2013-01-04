@@ -1,0 +1,4 @@
+probe begin {
+      printf ("answer: %d %d\n", @1 =~ @2, @1 !~ @2)
+      exit ()
+}
