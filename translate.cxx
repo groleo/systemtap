@@ -1897,8 +1897,8 @@ c_unparser::emit_module_exit ()
   o->newline() << "#ifdef STP_ALIBI";
   o->newline() << "int alibi = atomic_read(probe_alibi(i));";
   o->newline() << "if (alibi)";
-  o->newline(1) << "_stp_printf (\"%s, (%s), hits: %d,%s\\n\",";
-  o->newline(2) << "p->pp, p->location, alibi, p->derivation);";
+  o->newline(1) << "_stp_printf (\"%s, (%s), hits: %d,%s, index: %d\\n\",";
+  o->newline(2) << "p->pp, p->location, alibi, p->derivation, i);";
   o->newline(-3) << "#endif"; // STP_ALIBI
   o->newline() << "#ifdef STP_TIMING";
   o->newline() << "if (likely (probe_timing(i))) {"; // NB: check for null stat object
@@ -1907,10 +1907,10 @@ c_unparser::emit_module_exit ()
   o->newline(1) << "int64_t avg = _stp_div64 (NULL, stats->sum, stats->count);";
   o->newline() << "_stp_printf (\"%s, (%s), hits: %lld, "
 	       << (!session->runtime_usermode_p() ? "cycles" : "nsecs")
-	       << ": %lldmin/%lldavg/%lldmax,%s\\n\",";
+	       << ": %lldmin/%lldavg/%lldmax,%s, index: %d\\n\",";
   o->newline(2) << "p->pp, p->location, (long long) stats->count,";
   o->newline() << "(long long) stats->min, (long long) avg, (long long) stats->max,";
-  o->newline() << "p->derivation);";
+  o->newline() << "p->derivation, i);";
   o->newline(-3) << "}";
   o->newline() << "_stp_stat_del (probe_timing(i));";
   o->newline(-1) << "}";
