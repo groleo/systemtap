@@ -1,5 +1,5 @@
 // C++ interface to dwfl
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
 // Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
@@ -326,7 +326,7 @@ dwflpp::setup_kernel(const string& name, systemtap_session & s, bool debuginfo_n
         string dir = string(sess.sysroot + "/lib/modules/" + sess.kernel_release );
         find_debug_rpms(sess, dir.c_str());
       }
-      throw semantic_error (_F("missing %s kernel/module debuginfo under '%s'",
+      throw semantic_error (_F("missing %s kernel/module debuginfo [man warning::debuginfo] under '%s'",
                                 sess.architecture.c_str(), sess.kernel_build_tree.c_str()));
     }
   Dwfl *dwfl = dwfl_ptr.get()->dwfl;
@@ -364,7 +364,7 @@ dwflpp::setup_kernel(const vector<string> &names, bool debuginfo_needed)
         string dir = string(sess.sysroot + "/lib/modules/" + sess.kernel_release );
         find_debug_rpms(sess, dir.c_str());
       }
-      throw semantic_error (_F("missing %s kernel/module debuginfo under '%s'",
+      throw semantic_error (_F("missing %s kernel/module debuginfo [man warning::debuginfo] under '%s'",
                                sess.architecture.c_str(), sess.kernel_build_tree.c_str()));
     }
 
@@ -1662,7 +1662,7 @@ dwflpp::iterate_over_srcfile_lines (char const * srcfile,
             }
 
           stringstream advice;
-          advice << _F("multiple addresses for %s:%d", srcfile, lineno);
+          advice << _F("multiple addresses for %s:%d [man error::dwarf]", srcfile, lineno);
           if (lo_try > 0 || hi_try > 0)
             {
               //TRANSLATORS: Here we are trying to advise what source file 
@@ -1743,7 +1743,7 @@ dwflpp::iterate_over_labels (Dwarf_Die *begin_die,
                         {
                           sess.print_warning(_F("label '%s' at address %s (dieoffset: %s) is not "
                                                 "contained by its scope '%s' (dieoffset: %s) -- bad"
-                                                " debuginfo?", name, lex_cast_hex(stmt_addr).c_str(),
+                                                " debuginfo? [man error::dwarf]", name, lex_cast_hex(stmt_addr).c_str(),
                                                 lex_cast_hex(dwarf_dieoffset(&die)).c_str(),
                                                 (dwarf_diename(&scope) ?: "<unknown>"),
                                                 lex_cast_hex(dwarf_dieoffset(&scope)).c_str()));
@@ -2266,7 +2266,7 @@ dwflpp::find_variable_and_frame_base (vector<Dwarf_Die>& scopes,
       stringstream alternatives;
       print_locals (scopes, alternatives);
       if (e->cu_name == "")
-        throw semantic_error (_F("unable to find local '%s', dieoffset %s in %s, near pc %s %s %s %s (%s)",
+        throw semantic_error (_F("unable to find local '%s', [man error::dwarf] dieoffset %s in %s, near pc %s %s %s %s (%s)",
                                  local.c_str(),
                                  lex_cast_hex(dwarf_dieoffset(scope_die)).c_str(),
                                  module_name.c_str(),
@@ -2280,7 +2280,7 @@ dwflpp::find_variable_and_frame_base (vector<Dwarf_Die>& scopes,
                                        + alternatives.str())).c_str()),
                               e->tok);
       else
-        throw semantic_error (_F("unable to find global '%s', dieoffset %s in %s, %s %s %s (%s)",
+        throw semantic_error (_F("unable to find global '%s', [man error::dwarf] dieoffset %s in %s, %s %s %s (%s)",
                                  local.c_str(),
                                  lex_cast_hex(dwarf_dieoffset(scope_die)).c_str(),
                                  module_name.c_str(),
@@ -2410,13 +2410,13 @@ dwflpp::translate_location(struct obstack *pool,
       /* Fall through.  */
 
     case 0:			/* Shouldn't happen.  */
-      throw semantic_error (_F("not accessible at this address (%s, dieoffset: %s)",
+      throw semantic_error (_F("not accessible at this address [man error::dwarf] (%s, dieoffset: %s)",
                                lex_cast_hex(pc).c_str(), lex_cast_hex(dwarf_dieoffset(die)).c_str()),
                                e->tok);
 
     default:			/* Shouldn't happen.  */
     case -1:
-      throw semantic_error (_F("dwarf_getlocation_addr failed, %s", dwarf_errmsg(-1)), e->tok);
+      throw semantic_error (_F("dwarf_getlocation_addr failed [man error::dwarf] , %s", dwarf_errmsg(-1)), e->tok);
     }
 
   Dwarf_Op *cfa_ops;
@@ -3035,7 +3035,7 @@ dwflpp::literal_stmt_for_local (vector<Dwarf_Die>& scopes,
 				       NULL, &addr_loc, 1, &tail, NULL, NULL);
 	}
       else
-        throw semantic_error (_F("failed to retrieve location attribute for '%s' (dieoffset: %s)",
+        throw semantic_error (_F("failed to retrieve location attribute for '%s' [man error::dwarf] (dieoffset: %s)",
                                  local.c_str(), lex_cast_hex(dwarf_dieoffset(&vardie)).c_str()), e->tok);
     }
   else
@@ -3045,7 +3045,7 @@ dwflpp::literal_stmt_for_local (vector<Dwarf_Die>& scopes,
 
   Dwarf_Die typedie;
   if (dwarf_attr_die (&vardie, DW_AT_type, &typedie) == NULL)
-    throw semantic_error(_F("failed to retrieve type attribute for '%s' (dieoffset: %s)", local.c_str(), lex_cast_hex(dwarf_dieoffset(&vardie)).c_str()), e->tok);
+    throw semantic_error(_F("failed to retrieve type attribute for '%s' [man error::dwarf] (dieoffset: %s)", local.c_str(), lex_cast_hex(dwarf_dieoffset(&vardie)).c_str()), e->tok);
 
   translate_components (&pool, &tail, pc, e, &vardie, &typedie);
 
@@ -3079,7 +3079,7 @@ dwflpp::type_die_for_local (vector<Dwarf_Die>& scopes,
   find_variable_and_frame_base (scopes, pc, local, e, &vardie, &attr_mem);
 
   if (dwarf_attr_die (&vardie, DW_AT_type, typedie) == NULL)
-    throw semantic_error(_F("failed to retrieve type attribute for '%s'", local.c_str()), e->tok);
+    throw semantic_error(_F("failed to retrieve type attribute for '%s' [man error::dwarf]", local.c_str()), e->tok);
 
   translate_components (NULL, NULL, pc, e, &vardie, typedie);
   return typedie;
@@ -3107,7 +3107,7 @@ dwflpp::literal_stmt_for_return (Dwarf_Die *scope_die,
                                                    &locops);
   if (nlocops < 0)
     {
-      throw semantic_error(_F("failed to retrieve return value location for %s (%s)",
+      throw semantic_error(_F("failed to retrieve return value location for %s [man error::dwarf] (%s)",
                           (dwarf_diename(scope_die) ?: "<unknown>"),
                           (dwarf_diename(cu) ?: "<unknown>")), e->tok);
     }
@@ -3129,7 +3129,7 @@ dwflpp::literal_stmt_for_return (Dwarf_Die *scope_die,
 
   Dwarf_Die vardie = *scope_die, typedie;
   if (dwarf_attr_die (&vardie, DW_AT_type, &typedie) == NULL)
-    throw semantic_error(_F("failed to retrieve return value type attribute for %s (%s)",
+    throw semantic_error(_F("failed to retrieve return value type attribute for %s [man error::dwarf] (%s)",
                            (dwarf_diename(&vardie) ?: "<unknown>"),
                            (dwarf_diename(cu) ?: "<unknown>")), e->tok);
 
@@ -3160,7 +3160,7 @@ dwflpp::type_die_for_return (Dwarf_Die *scope_die,
 {
   Dwarf_Die vardie = *scope_die;
   if (dwarf_attr_die (&vardie, DW_AT_type, typedie) == NULL)
-    throw semantic_error(_F("failed to retrieve return value type attribute for %s (%s)",
+    throw semantic_error(_F("failed to retrieve return value type attribute for %s [man error::dwarf] (%s)",
                            (dwarf_diename(&vardie) ?: "<unknown>"),
                            (dwarf_diename(cu) ?: "<unknown>")), e->tok);
 
