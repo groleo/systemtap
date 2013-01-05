@@ -1,4 +1,12 @@
-#include <config.h>
+// dwarf location-list-to-c translator
+// Copyright (C) 2005-2013 Red Hat Inc.
+//
+// This file is part of systemtap, and is free software.  You can
+// redistribute it and/or modify it under the terms of the GNU General
+// Public License (GPL); either version 2, or (at your option) any
+// later version.
+
+#include "config.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <obstack.h>
@@ -347,7 +355,7 @@ translate (struct location_context *ctx, int indent,
       goto underflow;							      \
     int var = stack_depth
 #define PUSH 		(deepen (), stack_depth++)
-#define STACK(idx)	(stack_depth - 1 - (idx))
+#define STACK(idx)  ({int z = (stack_depth - 1 - (idx)); assert (z >= 0); z;})
 
   /* Don't put stack operations in the arguments to this.  */
 #define push(fmt, ...) \
@@ -561,7 +569,7 @@ translate (struct location_context *ctx, int indent,
 		STACK (-1), STACK (0),
 		STACK (0), STACK (1),
 		STACK (1), STACK (2),
-		STACK (3), STACK (-1));
+		STACK (2), STACK (-1));
 	  break;
 
 
