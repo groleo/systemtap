@@ -36,5 +36,6 @@ script collects useful system/kernel information that helps describe
 the OS environment; please include its output.
 
 .SH SEE ALSO
-.IR stap (1)
+.IR stap (1),
+.IR http://sourceware.org/systemtap/wiki/
 
