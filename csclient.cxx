@@ -361,6 +361,7 @@ badCertHandler(void *arg, PRFileDesc *sslSocket)
       if (! tmpArena) 
 	{
 	  fprintf (stderr, _("Out of memory\n"));
+	  SECITEM_FreeItem(& subAltName, PR_FALSE);
 	  secStatus = SECSuccess; /* Not a fatal error here */
 	  break;
 	}
