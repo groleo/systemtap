@@ -63,7 +63,9 @@ int main(int argc, char *argv [])
           o.newline() << "{";
           o.indent(1);
           o.newline() << "int ans = ";
-          d.emit_matchop (&o, match_expr); // TODOXXX escape argv[3]
+          d.emit_matchop_start (&o);
+          o.line() << match_expr; // TODOXXX escape argv[3]
+          d.emit_matchop_end (&o);
           o.line() << ";";
           o.newline() << "printf(\"match %s\\n\", ans ? \"succeed\" : \"fail\");";
           if (test_type == 1) {
