@@ -185,6 +185,7 @@ set restricted_probe_types [list \
   "perf.type(number).config(number).sample(number)" \
   "perf.type(number).config(number).process" \
   "perf.type(number).config(number).process(string)" \
+  "perf.type(number).config(number).process(string).counter(string)" \
   "process(number).insn" \
   "process(number).insn.block" \
   "process(string).insn.block" \

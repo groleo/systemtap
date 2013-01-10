@@ -26,6 +26,8 @@ struct stap_uprobe_spec {
   unsigned return_p:1;
   unsigned long address;
   unsigned long sdt_sem_offset;
+  long perf_counters_dim;
+  long (*perf_counters) [];
   const struct stap_probe * const probe;
  };
 

@@ -121,6 +121,7 @@ struct typeresolution_info: public visitor
   void visit_cast_op (cast_op* e);
   void visit_defined_op (defined_op* e);
   void visit_entry_op (entry_op* e);
+  void visit_perf_op (perf_op* e);
 };
 
 
@@ -163,7 +164,7 @@ struct derived_probe: public probe
   // From within unparser::emit_probe, initialized any extra variables
   // in this probe's context locals.
 
-  virtual void emit_probe_local_init (translator_output*) {}
+  virtual void emit_probe_local_init (systemtap_session& s, translator_output*) {}
   // From within unparser::emit_probe, emit any extra processing block
   // for this probe.
 
@@ -188,6 +189,9 @@ public:
 
   // Location of semaphores to activate sdt probes
   Dwarf_Addr sdt_semaphore_addr;
+
+  // perf.counter probes that this probe references
+  std::vector<derived_probe*> perf_counter_refs;
 
   // index into session.probes[], set and used during translation
   unsigned session_index;

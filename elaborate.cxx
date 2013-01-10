@@ -4485,6 +4485,18 @@ typeresolution_info::visit_cast_op (cast_op* e)
 
 
 void
+typeresolution_info::visit_perf_op (perf_op* e)
+{
+  // A perf_op should already be resolved
+  if (t == pe_stats || t == pe_string)
+    invalid (e->tok, t);
+
+  t = pe_long;
+  e->operand->visit (this);
+}
+
+
+void
 typeresolution_info::visit_arrayindex (arrayindex* e)
 {
 

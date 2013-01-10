@@ -118,4 +118,49 @@ static void _stp_perf_del (struct stap_perf_probe *stp)
 }
 
 
+/*
+The first call to _stp_perf_init, via systemtap_module_init at runtime, is for
+setting up aggregate counters.  Per thread counters need to be setup when the
+thread is known.  This is done by calling _stp_perf_init later when the thread
+is known.  A per thread perf counter is defined by a counter("var") suffix on
+the perf probe.  It is defined by perf_builder.  This counter is read on demand 
+via the "@perf("var")" builtin which is treated as an expression right hand side
+which reads the perf counter associated with the previously defined perf
+counter.  It is expanded by dwarf_var_expanding_visitor
+*/
+
+static int _stp_perf_read_init (unsigned i, struct task_struct* task)
+{
+  /* Choose the stap_perf_probes entry */
+  struct stap_perf_probe* stp = & stap_perf_probes[i];
+
+  return _stp_perf_init (stp, task);
+}
+
+
+long _stp_perf_read (int ncpu, unsigned i)
+{
+  /* Choose the stap_perf_probes entry */
+  struct stap_perf_probe* stp;
+  u64 enabled, running;
+
+  if (i > sizeof(stap_perf_probes)/sizeof(struct stap_perf_probe))
+    {
+      _stp_error ("_stp_perf_read\n");
+      return 0;
+    }
+  stp = & stap_perf_probes[i]; 
+    
+  if (stp == NULL || stp->per_thread_event == NULL)
+    {
+      _stp_error ("_stp_perf_read\n");
+      return 0;
+    }
+
+  might_sleep();
+  return perf_event_read_value (stp->per_thread_event, &enabled, &running);
+
+}
+
+
 #endif /* _PERF_C_ */

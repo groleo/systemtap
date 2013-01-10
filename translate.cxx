@@ -196,6 +196,7 @@ struct c_unparser: public unparser, public visitor
   void visit_cast_op (cast_op* e);
   void visit_defined_op (defined_op* e);
   void visit_entry_op (entry_op* e);
+  void visit_perf_op (perf_op* e);
 };
 
 // A shadow visitor, meant to generate temporary variable declarations
@@ -2152,7 +2153,8 @@ c_unparser::emit_probe (derived_probe* v)
         v->emit_privilege_assertion (o);
 
       // emit probe local initialization block
-      v->emit_probe_local_init(o);
+
+      v->emit_probe_local_init(*this->session, o);
 
       // emit all read/write locks for global variables
       if (v->needs_global_locks ())
@@ -4254,6 +4256,13 @@ void
 c_unparser::visit_entry_op (entry_op* e)
 {
   throw semantic_error(_("cannot translate general @entry expression"), e->tok);
+}
+
+
+void
+c_unparser::visit_perf_op (perf_op* e)
+{
+  throw semantic_error(_("cannot translate general @perf expression"), e->tok);
 }
 
 
@@ -6639,6 +6648,9 @@ translate_pass (systemtap_session& s)
       // This is at the very top of the file.
       // All "static" defines (not dependend on session state).
       s.op->newline() << "#include \"runtime_defines.h\"";
+      if (s.perf_derived_probes)
+	s.op->newline() << "#define _HAVE_PERF_ 1";
+      s.op->newline() << "#include \"linux/perf_read.h\"";
 
       // Generated macros describing the privilege level required to load/run this module.
       s.op->newline() << "#define STP_PR_STAPUSR 0x" << hex << pr_stapusr << dec;

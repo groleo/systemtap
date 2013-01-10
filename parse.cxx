@@ -180,6 +180,7 @@ private: // nonterminals
   target_symbol *parse_target_symbol (const token* t);
   expression* parse_entry_op (const token* t);
   expression* parse_defined_op (const token* t);
+  expression* parse_perf_op (const token* t);
   expression* parse_expression ();
   expression* parse_assignment ();
   expression* parse_ternary ();
@@ -3325,6 +3326,9 @@ expression* parser::parse_symbol ()
       if (name == "@entry")
         return parse_entry_op (t);
 
+      if (name == "@perf")
+        return parse_perf_op (t);
+
       if (name.size() > 0 && name[0] == '@')
 	{
 	  stat_op *sop = new stat_op;
@@ -3615,6 +3619,21 @@ expression* parser::parse_entry_op (const token* t)
   eop->operand = parse_expression ();
   expect_op(")");
   return eop;
+}
+
+
+// Parse a @perf().  Given head token has already been consumed.
+expression* parser::parse_perf_op (const token* t)
+{
+  perf_op* pop = new perf_op;
+  pop->tok = t;
+  expect_op("(");
+  pop->operand = parse_literal ();
+  if (pop->operand->tok->type != tok_string
+      || pop->operand->tok->content.length() == 0)
+    throw parse_error (_("expected 'string'"));
+  expect_op(")");
+  return pop;
 }
 
 

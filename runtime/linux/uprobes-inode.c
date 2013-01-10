@@ -1,6 +1,6 @@
 /* -*- linux-c -*-
  * Common functions for using inode-based uprobes
- * Copyright (C) 2011 Red Hat Inc.
+ * Copyright (C) 2011, 2012 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -104,7 +104,11 @@ struct stapiu_consumer {
 	loff_t offset; /* the probe offset within the inode */
 	loff_t sdt_sem_offset; /* the semaphore offset from process->base */
 
-	const struct stap_probe * const probe;
+  	// List of perf counters used by each probe
+  	// This list is an index into struct stap_perf_probe,
+        long perf_counters_dim;
+        long (*perf_counters) [];
+        const struct stap_probe * const probe;
 };
 
 
@@ -336,13 +340,18 @@ stapiu_target_unreg(struct stapiu_target *target)
 
 /* Register all uprobe consumers of a target.  */
 static int
-stapiu_target_reg(struct stapiu_target *target)
+stapiu_target_reg(struct stapiu_target *target, struct task_struct* task)
 {
 	int ret = 0;
 	struct stapiu_consumer *c;
 
 	list_for_each_entry(c, &target->consumers, target_consumer) {
 		if (! c->registered) {
+			int i;
+			for (i=0; i < c->perf_counters_dim; i++) {
+			  if ((*(c->perf_counters))[i] > -1)
+			    _stp_perf_read_init ((*(c->perf_counters))[i], task);
+		        }
 			ret = stapiu_register(target->inode, c);
 			if (ret) {
 				c->registered = 0;
@@ -475,7 +484,7 @@ stapiu_change_plus(struct stapiu_target* target, struct task_struct *task,
 
 		/* OK, we've checked the target's buildid. Now
 		 * register all its consumers. */
-		rc = stapiu_target_reg(target);
+		rc = stapiu_target_reg(target, task);
 		if (rc) {
 			/* Be sure to release the inode on failure. */
 			iput(target->inode);
