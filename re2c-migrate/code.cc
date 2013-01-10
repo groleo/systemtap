@@ -1,12 +1,19 @@
 /* $Id$ */
+
+/*
+ Author for null_stream stuff: Marcus Boerger <helly@users.sourceforge.net>
+*/
+
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <ctype.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <time.h>
+#include <assert.h>
 #include "substr.h"
 #include "globals.h"
 #include "dfa.h"
@@ -725,7 +732,7 @@ void Rule::emit(std::ostream &o, uint ind, bool &, const std::string& condName) 
 {
 	if (DFlag)
 	{
-		o << state->label << " [label=\"" << sourceFileInfo.fname << ":" << rule->code->line << "\"]\n";
+		o << state->label << " [label=\"" << rule->code->line << "\"]\n";
 		return;
 	}
 
@@ -741,14 +748,11 @@ void Rule::emit(std::ostream &o, uint ind, bool &, const std::string& condName) 
 		genSetCondition(o, ind, rule->code->newcond);
 	}
 
-	RuleLine rl(*rule);
-
 	if (!yySetupRule.empty() && !rule->code->autogen)
 	{
 		o << indent(ind) << yySetupRule << "\n";
 	}
 
-	o << file_info(rule->code->source, &rl);
 	o << indent(ind);
 	if (rule->code->autogen)
 	{
@@ -759,7 +763,6 @@ void Rule::emit(std::ostream &o, uint ind, bool &, const std::string& condName) 
 		o << rule->code->text;
 	}
 	o << "\n";
-	o << outputFileInfo;
 }
 
 static void doLinear(std::ostream &o, uint ind, Span *s, uint n, const State *from, const State *next, bool &readCh, uint mask)
@@ -1773,6 +1776,54 @@ void DFA::prepare()
 	head->action = NULL;
 }
 
+/* TODOXXX: this stuff is needed for DFA::emit */
+
+template<class _E, class _Tr = std::char_traits<_E> >
+class basic_null_streambuf
+	: public std::basic_streambuf<_E, _Tr>
+{
+public:
+	basic_null_streambuf()
+		: std::basic_streambuf<_E, _Tr>()
+	{
+	}	
+};
+
+typedef basic_null_streambuf<char> null_streambuf;
+
+template<class _E, class _Tr = std::char_traits<_E> >
+class basic_null_stream
+	: public std::basic_ostream<_E, _Tr>
+{
+public:
+	basic_null_stream()
+		: std::basic_ostream<_E, _Tr>(null_buf = new basic_null_streambuf<_E, _Tr>())
+	{
+	}
+	
+	virtual ~basic_null_stream()
+	{
+		delete null_buf;
+	}
+
+	basic_null_stream& put(_E)
+	{
+		// nothing to do
+		return *this;
+	}
+	
+	basic_null_stream& write(const _E *, std::streamsize)
+	{
+		// nothing to do
+		return *this;
+	}
+
+protected:
+	basic_null_streambuf<_E, _Tr> * null_buf;
+};
+
+typedef basic_null_stream<char> null_stream;
+
 
 void DFA::emit(std::ostream &o, uint& ind, const RegExpMap* specMap, const std::string& condName, bool isLastCond, bool& bPrologBrace)
 {
@@ -1834,7 +1885,6 @@ void DFA::emit(std::ostream &o, uint& ind, const RegExpMap* specMap, const std::
 	// Generate prolog
 	if (bProlog)
 	{
-		o << "\n" << outputFileInfo;
 
 		if (DFlag)
 		{
@@ -2162,20 +2212,10 @@ void genHeader(std::ostream &o, uint ind, const RegExpMap& specMap)
 		o.write(ctime(&now), 24);
 	}
 	o << " */\n";
-	o << headerFileInfo;
 	o << "\n";
 	// now the type(s)
 	genTypes(typesInline, ind, specMap);
 	o << typesInline;
-}
-
-std::ostream& operator << (std::ostream& o, const file_info& li)
-{
-	if (li.ln && !iFlag)
-	{
-		o << "#line " << li.ln->get_line() << " \"" << li.fname << "\"\n";
-	}
-	return o;
 }
 
 void Scanner::config(const Str& cfg, int num)

@@ -6,16 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "stream_lc.h"
 #include "code_names.h"
 #include "re.h"
 
 namespace re2c
 {
-
-file_info sourceFileInfo;
-file_info outputFileInfo;
-file_info headerFileInfo;
 
 bool bFlag = false;
 bool cFlag = false;

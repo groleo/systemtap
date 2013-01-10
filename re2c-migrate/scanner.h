@@ -21,8 +21,7 @@ struct ScannerState
 	bool    in_parse;
 };
 
-class Scanner:
-	public line_number, private ScannerState
+class Scanner: private ScannerState
 {
 private:
 	std::istream&	in;

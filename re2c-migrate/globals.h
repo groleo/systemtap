@@ -6,17 +6,12 @@
 #include <set>
 #include <algorithm>
 #include <string>
-#include "stream_lc.h"
 #include "code_names.h"
 
 namespace re2c
 {
 
 enum BUFFERSIZE { BSIZE = 8192};
-
-extern file_info sourceFileInfo;
-extern file_info outputFileInfo;
-extern file_info headerFileInfo;
 
 extern bool bFlag;
 extern bool cFlag;

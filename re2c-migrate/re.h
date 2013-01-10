@@ -288,23 +288,6 @@ private:
 #endif
 };
 
-class RuleLine: public line_number
-{
-public:
-
-	RuleLine(const RuleOp& _op)
-		: op(_op)
-	{
-	}
-
-	uint get_line() const
-	{
-		return op.code->line;
-	}
-
-	const RuleOp& op;
-};
-
 RegExp *mkAlt(RegExp*, RegExp*);
 
 class AltOp: public RegExp
