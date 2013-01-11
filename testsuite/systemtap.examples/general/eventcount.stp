@@ -11,8 +11,10 @@
 # or stap eventcount.stp -x PID [...probe points...]
 # or stap eventcount.stp -G comm=EXECNAME [...probe points...]
 #
-# Optionally, specify a periodic screen update, every NNN seconds
+# Optionally, override periodic screen update, every NNN seconds (default 10)
 # stap eventcount.stp -G period=NNN [...probe points...]
+# ... or cumulative totals
+# stap eventcount.stp -G period=0 [...probe points...]
 #
 # Optionally, specify cumulative mode for periodic updates
 # stap eventcount.stp -G period=NNN -G cumulative=1 [...probe points...]
@@ -20,7 +22,7 @@
 # Optionally, specify sorting by event-count rather than task-id
 # stap eventcount.stp -G sort=count [...probe points...]
 
-global period=0
+global period=10
 global cumulative=0
 global comm=""
 global sort="tid"
@@ -86,32 +88,39 @@ probe begin {
       else msg = "unfiltered";
       printf("Starting event counting at %s, %s\n",
              tz_ctime(gettimeofday_s()), msg)
+      if (period)
+        printf("%s reporting every %d s\n",
+               cumulative ? "Cumulative" : "Incremental",
+               period)
+      else
+        printf("One-time cumulative reporting at script termination (^C)\n")
 }
 global start_ms
 
 function report () {
   elapsed_ms = gettimeofday_ms() - start_ms
   if (elapsed_ms < 0) elapsed_ms=1
-  printf("Total time elapsed: %d ms, %d events total, %d after filtering.\n",
+  printf("%s time elapsed: %d ms, %d events, %d after filtering.\n",
+         (cumulative ? "Cumulative" : "Period"),
          elapsed_ms, @count(totalc), @count(filteredc))
 
-  printf("%-25s %-30s %s\n", "TID", "EVENT", "COUNT (RATE Hz)")
-  printf("%-25s %-30s %s\n", "---", "-----", "---------------")
+  printf("%-24s %-38s %s\n", "TID", "EVENT", "COUNT (RATE Hz)")
+  printf("%-24s %-38s %s\n", "---", "-----", "---------------")
   if (sort == "count")
     foreach([tid, name] in c-)
-      printf("%-25s %-30s %d (%d.%02d)\n", tid, name,
+      printf("%-24s %-38s %d (%d.%02d)\n", tid, name,
            @count(c[tid, name]),
            (@count(c[tid,name])*100000/elapsed_ms)/100,
            (@count(c[tid,name])*100000/elapsed_ms)%100)
   else if (sort == "tid")
     foreach([tid+, name] in c)
-      printf("%-25s %-30s %d (%d.%02d)\n", tid, name,
+      printf("%-24s %-38s %d (%d.%02d)\n", tid, name,
            @count(c[tid, name]),
            (@count(c[tid,name])*100000/elapsed_ms)/100,
            (@count(c[tid,name])*100000/elapsed_ms)%100)
   else # unsorted
     foreach([tid, name] in c)
-      printf("%-25s %-30s %d (%d.%02d)\n", tid, name,
+      printf("%-24s %-38s %d (%d.%02d)\n", tid, name,
            @count(c[tid, name]),
            (@count(c[tid,name])*100000/elapsed_ms)/100,
            (@count(c[tid,name])*100000/elapsed_ms)%100)
@@ -119,15 +128,19 @@ function report () {
 }
 
 probe end {
-  printf("Finished event counting at %s.\n", tz_ctime(gettimeofday_s()))
   report()
+  printf("Finished event counting at %s.\n", tz_ctime(gettimeofday_s()))
 }
 
 probe timer.s(1) {
       if (period <= 0) next
       if ((gettimeofday_s() % period) == 0) {
          report()
-         if (! cumulative)
-            delete c
+         if (! cumulative) {
+             delete c
+             delete filteredc
+             delete totalc
+             start_ms = gettimeofday_ms()
+         }
       }
 }
