@@ -12,10 +12,13 @@
 
 global seeks, oldsec
 
-probe ioblock.request {
+probe ioblock_trace.request {
+  if (size == 0) next
+  sectorsize = $q->limits->logical_block_size
+  # printf("%s %s\n", devname, rw ? "w" : "r")
   sec = sector
   seeks[devname] <<< sec - oldsec[devname]
-  oldsec[devname] = sector
+  oldsec[devname] = sector + (size/sectorsize)
 }
 
 probe end {
