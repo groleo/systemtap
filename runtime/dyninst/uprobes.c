@@ -1,6 +1,6 @@
 /* -*- linux-c -*-
  * Common functions for using dyninst-based uprobes
- * Copyright (C) 2012 Red Hat Inc.
+ * Copyright (C) 2012-2013 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -13,9 +13,13 @@
 
 /* STAPDU: SystemTap Dyninst Uprobes */
 
+// loc2c-generated code assumes pt_regs are available, so use this to make
+// sure we always have *something* for it to dereference...
+static struct pt_regs stapdu_dummy_uregs = {0};
+
 /* These functions implement the ABI in stapdyn.h
  *
- * NB: tapsets.cxx will generate two arrays used here:
+ * NB: The translator will generate two arrays used here:
  *   struct stapdu_target stapdu_targets[];
  *   struct stapdu_probe stapdu_probes[];
  */
@@ -67,6 +71,9 @@ uint64_t stp_dyninst_probe_flags(uint64_t index)
 	return stapdu_probes[index].flags;
 }
 
+int enter_dyninst_uprobe(uint64_t index, struct pt_regs *regs)
+	__attribute__((weak));
+
 int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...)
 {
 	struct pt_regs regs = {0};
@@ -116,10 +123,10 @@ int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...)
 
 	va_end(varegs);
 
-
-	return enter_dyninst_uprobe(index, &regs);
+	if (enter_dyninst_uprobe)
+		return enter_dyninst_uprobe(index, &regs);
+	return -1;
 }
-
 
 #endif /* _UPROBES_DYNINST_C_ */
 

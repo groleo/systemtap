@@ -1,5 +1,5 @@
 // stapdyn probe declarations
-// Copyright (C) 2012 Red Hat Inc.
+// Copyright (C) 2012-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -22,6 +22,7 @@ struct dynprobe_location {
     uint64_t index;     // The index as counted by the module.
     uint64_t offset;    // The file offset of the probe's address.
     uint64_t semaphore; // The file offset of the probe's semaphore.
+    uint64_t flags;	// The probe's flags.
     bool return_p;      // This is flagged as a return probe
 
     dynprobe_location(uint64_t index, uint64_t offset,

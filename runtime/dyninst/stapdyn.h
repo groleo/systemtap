@@ -1,5 +1,5 @@
 /* stapdyn interface header
- * Copyright (C) 2012 Red Hat Inc.
+ * Copyright (C) 2012-2013 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -45,10 +45,15 @@ extern int enter_dyninst_uprobe(uint64_t index, struct pt_regs *regs);
  * first the original PC, then DWARF-ordered registers.  */
 extern int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...);
 
+extern int enter_dyninst_utrace_probe(uint64_t index, struct pt_regs *regs);
 
 /* STAP 2.x : */
 
 #define STAPDYN_PROBE_FLAG_RETURN	0x1
+#define STAPDYN_PROBE_FLAG_PROC_BEGIN	0x2
+#define STAPDYN_PROBE_FLAG_PROC_END	0x4
+#define STAPDYN_PROBE_FLAG_THREAD_BEGIN	0x8
+#define STAPDYN_PROBE_FLAG_THREAD_END	0x10
 
 extern uint64_t stp_dyninst_probe_flags(uint64_t index);
 

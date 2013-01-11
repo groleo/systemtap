@@ -1,5 +1,5 @@
 // stapdyn mutator functions
-// Copyright (C) 2012 Red Hat Inc.
+// Copyright (C) 2012-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -37,6 +37,39 @@ g_dynamic_library_callback(BPatch_thread *thread,
   for (size_t i = 0; i < g_mutators.size(); ++i)
     g_mutators[i]->dynamic_library_callback(thread, module, load);
 }
+
+
+static void 
+g_post_fork_callback(BPatch_thread *parent, BPatch_thread *child)
+{
+  for (size_t i = 0; i < g_mutators.size(); ++i)
+    g_mutators[i]->post_fork_callback(parent, child);
+}
+
+
+static void 
+g_exit_callback(BPatch_thread *proc, BPatch_exitType type)
+{
+  for (size_t i = 0; i < g_mutators.size(); ++i)
+    g_mutators[i]->exit_callback(proc, type);
+}
+
+
+static void 
+g_thread_create_callback(BPatch_process *proc, BPatch_thread *thread)
+{
+  for (size_t i = 0; i < g_mutators.size(); ++i)
+    g_mutators[i]->thread_create_callback(proc, thread);
+}
+
+
+static void 
+g_thread_destroy_callback(BPatch_process *proc, BPatch_thread *thread)
+{
+  for (size_t i = 0; i < g_mutators.size(); ++i)
+    g_mutators[i]->thread_destroy_callback(proc, thread);
+}
+
 
 static void
 g_signal_handler(int signal)
@@ -92,6 +125,23 @@ mutator::~mutator ()
   g_mutators.erase(find(g_mutators.begin(), g_mutators.end(), this));
 }
 
+
+// Do probes matching 'flag' exist?
+bool
+mutator::matching_probes_exist(uint64_t flag)
+{
+  for (size_t i = 0; i < targets.size(); ++i)
+    {
+      for (size_t j = 0; j < targets[i].probes.size(); ++j)
+        {
+	  if (targets[i].probes[j].flags & flag)
+	    return true;
+	}
+    }
+  return false;
+}
+
+
 // Load the stap module and initialize all probe info.
 bool
 mutator::load ()
@@ -110,7 +160,27 @@ mutator::load ()
   if ((rc = find_dynprobes(module, targets)))
     return rc;
   if (!targets.empty())
-    patch.registerDynLibraryCallback(g_dynamic_library_callback);
+    {
+      patch.registerDynLibraryCallback(g_dynamic_library_callback);
+
+      // Do we need a fork callback?
+      if (matching_probes_exist(STAPDYN_PROBE_FLAG_PROC_BEGIN))
+	patch.registerPostForkCallback(g_post_fork_callback);
+
+      // Do we need a exit callback?
+      if (matching_probes_exist(STAPDYN_PROBE_FLAG_PROC_END))
+	patch.registerExitCallback(g_exit_callback);
+
+      // Do we need a thread create callback?
+      if (matching_probes_exist(STAPDYN_PROBE_FLAG_THREAD_BEGIN))
+	patch.registerThreadEventCallback(BPatch_threadCreateEvent,
+					  g_thread_create_callback);
+
+      // Do we need a thread destroy callback?
+      if (matching_probes_exist(STAPDYN_PROBE_FLAG_THREAD_END))
+	patch.registerThreadEventCallback(BPatch_threadDestroyEvent,
+					  g_thread_destroy_callback);
+    }
 
   return true;
 }
@@ -150,7 +220,7 @@ mutator::create_process(const string& command)
       return false;
     }
 
-  boost::shared_ptr<mutatee> m(new mutatee(app));
+  boost::shared_ptr<mutatee> m(new mutatee(&patch, app));
   mutatees.push_back(m);
   target_mutatee = m;
   p_target_created = true;
@@ -181,7 +251,7 @@ mutator::attach_process(pid_t pid)
       return false;
     }
 
-  boost::shared_ptr<mutatee> m(new mutatee(app));
+  boost::shared_ptr<mutatee> m(new mutatee(&patch, app));
   mutatees.push_back(m);
   target_mutatee = m;
   p_target_created = false;
@@ -358,6 +428,74 @@ mutator::dynamic_library_callback(BPatch_thread *thread,
   for (size_t i = 0; i < mutatees.size(); ++i)
     if (*mutatees[i] == process)
       mutatees[i]->instrument_object_dynprobes(module->getObject(), targets);
+}
+
+
+// Callback to respond to post fork events.  Check if it matches our
+// targets, and handle accordingly.
+void
+mutator::post_fork_callback(BPatch_thread *parent, BPatch_thread *child)
+{
+  if (!child || !parent)
+    return;
+
+  BPatch_process* child_process = child->getProcess();
+  BPatch_process* parent_process = parent->getProcess();
+
+  staplog(1) << "post fork, parent " << parent_process->getPid()
+	     << ", child " << child_process->getPid() << endl;
+
+  // FIXME: Here's we've got a problem. With post fork, we've got a
+  // new process, and this current code is designed for one process
+  // only.
+}
+
+
+void
+mutator::exit_callback(BPatch_thread *proc,
+		       BPatch_exitType type __attribute__((unused)))
+{
+  if (!proc)
+    return;
+
+  // 'proc' is the thread that requested the exit, not necessarily the
+  // main thread.
+  BPatch_process* process = proc->getProcess();
+
+  staplog(1) << "exit callback, pid = " << process->getPid() << endl;
+  for (size_t i = 0; i < mutatees.size(); ++i)
+    {
+      if (*mutatees[i] == process)
+	mutatees[i]->exit_callback(proc);
+    }
+}
+
+
+void
+mutator::thread_create_callback(BPatch_process *proc, BPatch_thread *thread)
+{
+  if (!proc || !thread)
+    return;
+
+  for (size_t i = 0; i < mutatees.size(); ++i)
+    {
+      if (*mutatees[i] == proc)
+	mutatees[i]->thread_callback(thread, true);
+    }
+}
+
+
+void
+mutator::thread_destroy_callback(BPatch_process *proc, BPatch_thread *thread)
+{
+  if (!proc || !thread)
+    return;
+
+  for (size_t i = 0; i < mutatees.size(); ++i)
+    {
+      if (*mutatees[i] == proc)
+	mutatees[i]->thread_callback(thread, false);
+    }
 }
 
 

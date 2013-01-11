@@ -85,10 +85,10 @@ bin_PROGRAMS = $(am__EXEEXT_1)
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_AVAHI_TRUE@@HAVE_NSS_TRUE@am__append_24 = $(avahi_LIBS)
 @BUILD_TRANSLATOR_TRUE@noinst_PROGRAMS = loc2c-test$(EXEEXT)
 subdir = .
-DIST_COMMON = INSTALL NEWS README AUTHORS $(srcdir)/Makefile.in \
-	$(srcdir)/Makefile.am $(top_srcdir)/configure \
-	$(am__configure_deps) $(srcdir)/config.in \
-	$(top_srcdir)/includes/sys/sdt-config.h.in \
+DIST_COMMON = INSTALL NEWS README AUTHORS ChangeLog \
+	$(srcdir)/Makefile.in $(srcdir)/Makefile.am \
+	$(top_srcdir)/configure $(am__configure_deps) \
+	$(srcdir)/config.in $(top_srcdir)/includes/sys/sdt-config.h.in \
 	$(top_srcdir)/initscript/config.systemtap.in \
 	$(top_srcdir)/initscript/config.stap-server.in \
 	$(top_srcdir)/initscript/systemtap.in \
@@ -167,7 +167,9 @@ loc2c_test_LINK = $(CCLD) $(loc2c_test_CFLAGS) $(CFLAGS) \
 @BUILD_TRANSLATOR_TRUE@	stap-setupdwfl.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	stap-remote.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	stap-privilege.$(OBJEXT) \
-@BUILD_TRANSLATOR_TRUE@	stap-cmdline.$(OBJEXT) $(am__objects_1)
+@BUILD_TRANSLATOR_TRUE@	stap-cmdline.$(OBJEXT) \
+@BUILD_TRANSLATOR_TRUE@	stap-tapset-dynprobe.$(OBJEXT) \
+@BUILD_TRANSLATOR_TRUE@	$(am__objects_1)
 stap_OBJECTS = $(am_stap_OBJECTS)
 stap_LINK = $(CXXLD) $(stap_CXXFLAGS) $(CXXFLAGS) $(stap_LDFLAGS) \
 	$(LDFLAGS) -o $@
@@ -472,7 +474,7 @@ oldinclude_HEADERS = includes/sys/sdt.h includes/sys/sdt-config.h
 @BUILD_TRANSLATOR_TRUE@	tapset-utrace.cxx task_finder.cxx \
 @BUILD_TRANSLATOR_TRUE@	dwflpp.cxx rpm_finder.cxx setupdwfl.cxx \
 @BUILD_TRANSLATOR_TRUE@	remote.cxx privilege.cxx cmdline.cxx \
-@BUILD_TRANSLATOR_TRUE@	$(am__append_10)
+@BUILD_TRANSLATOR_TRUE@	tapset-dynprobe.cxx $(am__append_10)
 @BUILD_TRANSLATOR_TRUE@noinst_HEADERS = sdt_types.h
 @BUILD_TRANSLATOR_TRUE@stap_LDADD = @stap_LIBS@ @sqlite3_LIBS@ \
 @BUILD_TRANSLATOR_TRUE@	@LIBINTL@ $(am__append_9) \
@@ -825,6 +827,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-setupdwfl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-staptree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-tapset-been.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-tapset-dynprobe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-tapset-itrace.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-tapset-mark.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-tapset-netfilter.Po@am__quote@
@@ -1327,6 +1330,20 @@ stap-cmdline.obj: cmdline.cxx
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='cmdline.cxx' object='stap-cmdline.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-cmdline.obj `if test -f 'cmdline.cxx'; then $(CYGPATH_W) 'cmdline.cxx'; else $(CYGPATH_W) '$(srcdir)/cmdline.cxx'; fi`
+
+stap-tapset-dynprobe.o: tapset-dynprobe.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-tapset-dynprobe.o -MD -MP -MF $(DEPDIR)/stap-tapset-dynprobe.Tpo -c -o stap-tapset-dynprobe.o `test -f 'tapset-dynprobe.cxx' || echo '$(srcdir)/'`tapset-dynprobe.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-tapset-dynprobe.Tpo $(DEPDIR)/stap-tapset-dynprobe.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='tapset-dynprobe.cxx' object='stap-tapset-dynprobe.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-tapset-dynprobe.o `test -f 'tapset-dynprobe.cxx' || echo '$(srcdir)/'`tapset-dynprobe.cxx
+
+stap-tapset-dynprobe.obj: tapset-dynprobe.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-tapset-dynprobe.obj -MD -MP -MF $(DEPDIR)/stap-tapset-dynprobe.Tpo -c -o stap-tapset-dynprobe.obj `if test -f 'tapset-dynprobe.cxx'; then $(CYGPATH_W) 'tapset-dynprobe.cxx'; else $(CYGPATH_W) '$(srcdir)/tapset-dynprobe.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-tapset-dynprobe.Tpo $(DEPDIR)/stap-tapset-dynprobe.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='tapset-dynprobe.cxx' object='stap-tapset-dynprobe.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-tapset-dynprobe.obj `if test -f 'tapset-dynprobe.cxx'; then $(CYGPATH_W) 'tapset-dynprobe.cxx'; else $(CYGPATH_W) '$(srcdir)/tapset-dynprobe.cxx'; fi`
 
 stap-nsscommon.o: nsscommon.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-nsscommon.o -MD -MP -MF $(DEPDIR)/stap-nsscommon.Tpo -c -o stap-nsscommon.o `test -f 'nsscommon.cxx' || echo '$(srcdir)/'`nsscommon.cxx

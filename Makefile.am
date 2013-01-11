@@ -46,7 +46,8 @@ stap_SOURCES = main.cxx session.cxx \
 	tapset-been.cxx tapset-procfs.cxx tapset-timers.cxx tapset-netfilter.cxx \
 	tapset-perfmon.cxx tapset-mark.cxx tapset-itrace.cxx \
 	tapset-utrace.cxx task_finder.cxx dwflpp.cxx rpm_finder.cxx \
-	setupdwfl.cxx remote.cxx privilege.cxx cmdline.cxx
+	setupdwfl.cxx remote.cxx privilege.cxx cmdline.cxx \
+	tapset-dynprobe.cxx
 noinst_HEADERS = sdt_types.h
 stap_LDADD = @stap_LIBS@ @sqlite3_LIBS@ @LIBINTL@
 stap_DEPENDENCIES =

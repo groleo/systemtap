@@ -13,6 +13,7 @@
 #include "elaborate.h"
 #include "tapsets.h"
 #include "task_finder.h"
+#include "tapset-dynprobe.h"
 #include "translate.h"
 #include "session.h"
 #include "util.h"
@@ -7234,7 +7235,9 @@ uprobe_derived_probe::join_group (systemtap_session& s)
   if (! s.uprobe_derived_probes)
     s.uprobe_derived_probes = new uprobe_derived_probe_group ();
   s.uprobe_derived_probes->enroll (this);
-  if (!s.runtime_usermode_p())
+  if (s.runtime_usermode_p())
+    enable_dynprobes(s);
+  else
     enable_task_finder(s);
 
   // Ask buildrun.cxx to build extra module if needed, and
@@ -7727,63 +7730,20 @@ uprobe_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
   emit_module_maxuprobes (s);
   s.op->newline() << "#include \"dyninst/uprobes.h\"";
 
-  // Assign "task-finder" numbers as we build up the stapdu_target table.
-  // This means we process probes[] in two passes.
-  map <string,unsigned> module_index;
-  unsigned module_index_ctr = 0;
-
-  // Discover and declare file targets
-  s.op->newline() << "static const struct stapdu_target stapdu_targets[] = {";
-  s.op->indent(1);
-  for (unsigned i=0; i<probes.size(); i++)
+  // Let the dynprobe_derived_probe_group handle outputting targets
+  // and probes. This allows us to merge different types of probes.
+  s.op->newline() << "static struct stapdu_probe stapdu_probes[];";
+  for (unsigned i = 0; i < probes.size(); i++)
     {
       uprobe_derived_probe *p = probes[i];
-      string pbmkey = make_pbm_key (p);
-      if (module_index.find (pbmkey) == module_index.end())
-        {
-          module_index[pbmkey] = module_index_ctr++;
 
-          s.op->newline() << "{";
-          // NB: it's essential that make_pbm_key() use all of and
-          // only the same fields as we're about to emit.
-          s.op->line() << " .path=" << lex_cast_qstring(p->module) << ",";
-          // XXX pid/procname filtering?
-          s.op->line() << " },";
-        }
+      dynprobe_add_uprobe(s, p->module, p->addr, p->sdt_semaphore_addr,
+			  (p->has_return ? "STAPDYN_PROBE_FLAG_RETURN" : "0"),
+			  common_probe_init(p));
     }
-  s.op->newline(-1) << "};";
-  s.op->assert_0_indent();
-
   // loc2c-generated code assumes pt_regs are available, so use this to make
   // sure we always have *something* for it to dereference...
-  s.op->newline() << "static struct pt_regs stapdu_dummy_uregs = {0};";
-
-  // Declare the individual probes
-  s.op->newline() << "static struct stapdu_probe stapdu_probes[] = {";
-  s.op->indent(1);
-  for (unsigned i=0; i<probes.size(); i++)
-    {
-      uprobe_derived_probe *p = probes[i];
-      unsigned index = module_index[make_pbm_key(p)];
-      s.op->newline() << "{";
-      s.op->line() << " .target=" << index << ",";
-      s.op->line() << " .offset=" << lex_cast_hex(p->addr) << "ULL,";
-      if (p->sdt_semaphore_addr)
-        s.op->line() << " .semaphore="
-                     << lex_cast_hex(p->sdt_semaphore_addr) << "ULL,";
-
-      s.op->line() << " .flags=0";
-      if (p->has_return)
-        s.op->line() << "|STAPDYN_PROBE_FLAG_RETURN";
-      s.op->line() << ",";
-
-      s.op->line() << " .probe=" << common_probe_init (p) << ",";
-      s.op->line() << " },";
-    }
-  s.op->newline(-1) << "};";
-  s.op->assert_0_indent();
-
-  s.op->newline() << "#include \"dyninst/uprobes.c\"";
+  s.op->newline() << "static struct pt_regs stapdu_dummy_uregs;";
 
   // Write the probe handler.
   // NB: not static, so dyninst can find it
@@ -10096,6 +10056,7 @@ all_session_groups(systemtap_session& s)
   // groups that use the task_finder.
   DOONE(utrace);
   DOONE(itrace);
+  DOONE(dynprobe);
   DOONE(task_finder);
 #undef DOONE
   return g;

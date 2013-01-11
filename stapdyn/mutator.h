@@ -1,5 +1,5 @@
 // stapdyn mutator functions
-// Copyright (C) 2012 Red Hat Inc.
+// Copyright (C) 2012-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -52,6 +52,9 @@ class mutator {
     // Check the status of all mutatees
     bool update_mutatees();
 
+    // Do probes matching 'flag' exist?
+    bool matching_probes_exist(uint64_t flag);
+
   public:
 
     mutator (const std::string& module_name);
@@ -75,6 +78,14 @@ class mutator {
     void dynamic_library_callback(BPatch_thread *thread,
                                   BPatch_module *module,
                                   bool load);
+
+    // Callback to respond to post fork events.  Check if it matches
+    // our targets, and handle accordingly.
+    void post_fork_callback(BPatch_thread *parent, BPatch_thread *child);
+    void exit_callback(BPatch_thread *thread, BPatch_exitType type);
+
+    void thread_create_callback(BPatch_process *proc, BPatch_thread *thread);
+    void thread_destroy_callback(BPatch_process *proc, BPatch_thread *thread);
 
     // Callback to respond to signals.
     void signal_callback(int signal);
