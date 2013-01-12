@@ -23,13 +23,13 @@ if { $res != "" } {
 spawn $stap_path -c $exepath -e "
 global towers_n
 global XXX_n
-# perf.hw.cpu_cycles = perf.type(0).config(0)
+
 probe perf.hw.cpu_cycles.process(\"$exepath\")
 {
  towers_n += 1
 }
 
-probe perf.type(0).config(0).process(\"XXX\") 
+probe perf.hw.cpu_cycles.process(\"XXX\") 
 { 
  XXX_n += 1
 }
@@ -57,7 +57,8 @@ set subtest "process"
 
 spawn $stap_path -c $exepath -e "
 global towers_n
-probe perf.type(0).config(0).process
+
+probe perf.hw.cpu_cycles.process
 {
  towers_n += 1
 }
@@ -86,23 +87,27 @@ target_compile $srcdir/$subdir/towers.c $exepath executable "additional_flags=-g
 spawn $stap_path -c $exepath -e "
 global towers
 global main
-# perf.hw.instructions = perf.type(0).config(1)
-probe perf.type(0).config(1).process(\"$exepath\").counter(\"a\")
+
+probe perf.hw.instructions.process(\"$exepath\").counter(\"a\")
 {
  counter_a += 1
 }
-probe perf.type(0).config(1).process(\"$exepath\").counter(\"b\")
+
+probe perf.hw.instructions.process(\"$exepath\").counter(\"b\")
 {
  counter_b += 1
 }
+
 probe process(\"$exepath\").statement(\"towers@towers.c\")
 {
  towers <<< @perf(\"a\")
 }
+
 probe process(\"$exepath\").statement(\"main@towers.c\")
 {
  main <<< @perf(\"b\")
 }
+
 probe end
 {
  printf(\"count main=%d\\ncount towers=%d\\ncounter %d/%d\\n\", @count(main), @count(towers), counter_a, counter_b)
@@ -129,15 +134,18 @@ catch {close}; catch {wait}
 spawn $stap_path -c $exepath -e "
 global main
 global counter_a
-probe perf.type(0).config(1).counter(\"a\")
+
+probe perf.hw.instructions.counter(\"a\")
 {
  counter_a += 1
 }
+
 probe process(\"$exepath\").statement(\"main@towers.c\")
 {
  # counter \"a\" has no defined process so the default is $exepath
  main <<< @perf(\"a\")
 }
+
 probe end
 {
  printf(\"count main=%d\\n\", @count(main))
@@ -161,7 +169,9 @@ set subtest "error check"
 
 spawn $stap_path -e "
 global x
-probe perf.type(0).config(0).process(\"$exepath\").counter(\"a\") {} 
+
+probe perf.hw.cpu_cycles.process(\"$exepath\").counter(\"a\") {} 
+
 probe process(\"$exepath\").function(\"main\")
 {
  # wrong type
@@ -178,7 +188,9 @@ expect {
 
 spawn $stap_path -e "
 global x
-probe perf.type(0).config(0).process(\"/bin/ls\").counter(\"b\") {}
+
+probe perf.hw.cpu_cycles.process(\"/bin/ls\").counter(\"b\") {}
+
 probe process(\"$exepath\").function(\"main\")
 {
  # wrong process
@@ -194,7 +206,9 @@ expect {
 
 spawn $stap_path -e "
 global x
-probe perf.type(0).config(0).process(\"/bin/ls\").counter(\"b\") {}
+
+probe perf.hw.cpu_cycles.process(\"/bin/ls\").counter(\"b\") {}
+
 probe process(\"$exepath\").function(\"main\")
 {
  # no counter id
@@ -210,7 +224,8 @@ expect {
 
 spawn $stap_path -e "
 global x
-probe perf.type(0).config(0).process(\"/bin/ls\").counter(\"\") {}
+
+probe perf.hw.cpu_cycles.process(\"/bin/ls\").counter(\"\") {}
 "
 
 expect {
