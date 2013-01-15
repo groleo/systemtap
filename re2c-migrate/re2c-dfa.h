@@ -1,6 +1,6 @@
 /* $Id$ */
-#ifndef _dfa_h
-#define _dfa_h
+#ifndef _re2c_dfa_h
+#define _re2c_dfa_h
 
 #include <iosfwd>
 #include <map>

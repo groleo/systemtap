@@ -12,7 +12,7 @@ check_PROGRAMS += regtest
 # check_SCRIPTS = regcomp.base/regtest.in.0 regcomp.base/regtest.in.1
 
 regtest_SOURCES = regcomp.cxx regtest.cxx
-regtest_SOURCES += actions.cc code.cc dfa.cc regtranslate.cc re2c-globals.cxx
+regtest_SOURCES += actions.cc code.cc re2c-dfa.cxx regtranslate.cc re2c-globals.cxx
 regtest_SOURCES += util_STANDALONE.cxx translator_output_STANDALONE.cxx
 regtest_CXXFLAGS = $(AM_CXXFLAGS) -DREGCOMP_STANDALONE
 

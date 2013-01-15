@@ -21,7 +21,7 @@
 #include "scanner.h"
 #include "re2c-globals.h"
 #include "re.h"
-#include "dfa.h"
+#include "re2c-dfa.h"
 
 using namespace std;
 using namespace re2c;

@@ -2,7 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 #include "re2c-globals.h"
-#include "dfa.h"
+#include "re2c-dfa.h"
 
 namespace re2c
 {

@@ -3,7 +3,7 @@
 #define _code_h
 
 #include "re.h"
-#include "dfa.h"
+#include "re2c-dfa.h"
 
 namespace re2c
 {

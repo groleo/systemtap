@@ -17,7 +17,7 @@
 #include <string>
 #include <map>
 #include "re2c-globals.h"
-#include "dfa.h"
+#include "re2c-dfa.h"
 #include "parser.h"
 #include "code.h"
 
