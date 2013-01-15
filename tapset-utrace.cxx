@@ -672,6 +672,9 @@ struct utrace_builder: public derived_probe_builder
       }
     else if (has_null_param (parameters, TOK_SYSCALL))
       {
+	if (sess.runtime_usermode_p())
+	  throw semantic_error (_("process.syscall probes not available with the dyninst runtime"));
+
 	if (has_null_param (parameters, TOK_RETURN))
 	  flags = UDPF_SYSCALL_RETURN;
 	else
@@ -1161,7 +1164,7 @@ utrace_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
   s.op->newline(1) << "struct stapdu_probe *sup = &stapdu_probes[index];";
 
   common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
-                                 "stp_probe_type_uprobe");
+                                 "stp_probe_type_utrace");
   s.op->newline() << "c->uregs = regs ?: &stapdu_dummy_uregs;";
   s.op->newline() << "c->user_mode_p = 1;";
   // XXX: once we have regs, check how dyninst sets the IP

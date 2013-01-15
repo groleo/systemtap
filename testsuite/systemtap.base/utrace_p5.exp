@@ -125,6 +125,11 @@ proc run_cat_5_sec {} {
     return 0;
 }
 
+proc wait_5_sec {} {
+    after 5000;
+    return 0;
+}
+
 # Compile our multi-threaded test program.
 set res [target_compile $multi_srcpath $multi_exepath executable $multi_flags]
 if { $res != "" } {
@@ -195,6 +200,26 @@ if {![utrace_p]} {
 	-e $script
 }
 
+set TEST_NAME "UTRACE_P5_05_cmd"
+if {![utrace_p]} {
+    untested "$TEST_NAME : no kernel utrace support found"
+} elseif {![installtest_p]} {
+    untested "$TEST_NAME"
+} else {
+    set script [format $thread_begin_script $multi_exepath]
+    foreach runtime [get_runtime_list] {
+	set test "$TEST_NAME"
+	if {$runtime != ""} {
+	    set test "${test}_${runtime}"
+	    stap_run $test wait_5_sec $thread_begin_script_output \
+		-e $script --runtime=$runtime -c $multi_exepath
+	} else {
+	    stap_run $test wait_5_sec $thread_begin_script_output \
+		-e $script -c $multi_exepath
+	}
+    }
+}
+
 set TEST_NAME "UTRACE_P5_06"
 if {![utrace_p]} {
     untested "$TEST_NAME : no kernel utrace support found"
@@ -204,6 +229,26 @@ if {![utrace_p]} {
     set script [format $thread_end_script $multi_exepath]
     stap_run $TEST_NAME run_utrace_p5_multi $thread_end_script_output \
 	-e $script
+}
+
+set TEST_NAME "UTRACE_P5_06_cmd"
+if {![utrace_p]} {
+    untested "$TEST_NAME : no kernel utrace support found"
+} elseif {![installtest_p]} {
+    untested "$TEST_NAME"
+} else {
+    set script [format $thread_end_script $multi_exepath]
+    foreach runtime [get_runtime_list] {
+	set test "$TEST_NAME"
+	if {$runtime != ""} {
+	    set test "${test}_${runtime}"
+	    stap_run $test wait_5_sec $thread_end_script_output \
+		-e $script --runtime=$runtime -c $multi_exepath
+	} else {
+	    stap_run $test wait_5_sec $thread_end_script_output \
+		-e $script -c $multi_exepath
+	}
+    }
 }
 
 set TEST_NAME "UTRACE_P5_07"
