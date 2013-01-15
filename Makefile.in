@@ -85,10 +85,10 @@ bin_PROGRAMS = $(am__EXEEXT_1)
 @BUILD_SERVER_TRUE@@BUILD_TRANSLATOR_TRUE@@HAVE_AVAHI_TRUE@@HAVE_NSS_TRUE@am__append_24 = $(avahi_LIBS)
 @BUILD_TRANSLATOR_TRUE@noinst_PROGRAMS = loc2c-test$(EXEEXT)
 subdir = .
-DIST_COMMON = INSTALL NEWS README AUTHORS ChangeLog \
-	$(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/configure $(am__configure_deps) \
-	$(srcdir)/config.in $(top_srcdir)/includes/sys/sdt-config.h.in \
+DIST_COMMON = INSTALL NEWS README AUTHORS $(srcdir)/Makefile.in \
+	$(srcdir)/Makefile.am $(top_srcdir)/configure \
+	$(am__configure_deps) $(srcdir)/config.in \
+	$(top_srcdir)/includes/sys/sdt-config.h.in \
 	$(top_srcdir)/initscript/config.systemtap.in \
 	$(top_srcdir)/initscript/config.stap-server.in \
 	$(top_srcdir)/initscript/systemtap.in \
@@ -2080,6 +2080,7 @@ dist-gzip:
 	(cd $(srcdir); git archive --prefix=systemtap-$(VERSION)/ --format=tar HEAD) | gzip > systemtap-$(VERSION).tar.gz
 
 rpm: dist-gzip
+	if [ `id -u` = 0 ]; then echo NOTE: do not run this as root; exit 1; fi
 	mkdir -p `rpm --eval %_specdir`
 	mkdir -p `rpm --eval %_srcrpmdir`
 	mkdir -p `rpm --eval %_rpmdir`
