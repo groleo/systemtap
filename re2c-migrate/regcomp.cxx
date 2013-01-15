@@ -8,7 +8,6 @@
 //
 // ... TODOXXX additional blurb for re2c ...
 
-// TODOXXX support for standalone regcomp without ugly duplicate code
 #include "regcomp.h"
 #include "../translate.h"
 #include "../session.h"
@@ -18,11 +17,100 @@
 #include <cstdlib>
 #include <string>
 
+using namespace std;
+
+// ---------------------------------------------------------------------
+
+// TODOXXX support for standalone regcomp without ugly duplicate code
+#ifdef REGCOMP_STANDALONE
+
+extern "C" {
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdarg.h>
+}
+
+/* just the bare minimum required for regtest */
+
+std::string autosprintf(const char* format, ...)
+{
+  va_list args;
+  char *str;
+  va_start (args, format);
+  int rc = vasprintf (&str, format, args);
+  if (rc < 0)
+    {
+      va_end(args);
+      return _F("autosprintf/vasprintf error %d", rc);
+    }
+  string s = str;
+  va_end (args);
+  free (str);
+  return s; /* by copy */
+}
+
+translator_output::translator_output (ostream& f):
+  buf(0), o2 (0), o (f), tablevel (0)
+{
+}
+
+
+translator_output::translator_output (const string& filename, size_t bufsize):
+  buf (new char[bufsize]),
+  o2 (new ofstream (filename.c_str ())),
+  o (*o2),
+  tablevel (0),
+  filename (filename)
+{
+  o2->rdbuf()->pubsetbuf(buf, bufsize);
+}
+
+
+translator_output::~translator_output ()
+{
+  delete o2;
+  delete [] buf;
+}
+
+
+ostream&
+translator_output::newline (int indent)
+{
+  if (!  (indent > 0 || tablevel >= (unsigned)-indent)) o.flush ();
+  assert (indent > 0 || tablevel >= (unsigned)-indent);
+
+  tablevel += indent;
+  o << "\n";
+  for (unsigned i=0; i<tablevel; i++)
+    o << "  ";
+  return o;
+}
+
+
+void
+translator_output::indent (int indent)
+{
+  if (!  (indent > 0 || tablevel >= (unsigned)-indent)) o.flush ();
+  assert (indent > 0 || tablevel >= (unsigned)-indent);
+  tablevel += indent;
+}
+
+
+ostream&
+translator_output::line ()
+{
+  return o;
+}
+
+#endif
+
+// ---------------------------------------------------------------------
+
 #include "re2c-globals.h"
 #include "re2c-dfa.h"
 #include "re2c-regex.h"
 
-using namespace std;
 using namespace re2c;
 
 class regex_parser {
