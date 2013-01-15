@@ -17,6 +17,7 @@
 %else
 %{!?with_dyninst: %global with_dyninst 0}
 %endif
+%{!?with_systemd: %global with_systemd 0}
 
 Name: systemtap
 Version: 2.1
@@ -368,6 +369,19 @@ mv $RPM_BUILD_ROOT%{_datadir}/doc/systemtap/SystemTap_Beginners_Guide docs.insta
 %endif
 %endif
 
+%if 0%{?with_systemd}
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}
+touch $RPM_BUILD_ROOT%{_unitdir}/stap-server.service
+install -m 644 stap-server.service $RPM_BUILD_ROOT%{_unitdir}/stap-server.service
+mkdir -p $RPM_BUILD_ROOT/usr/lib/tmpfiles.d
+install -m 644 stap-server.conf $RPM_BUILD_ROOT/usr/lib/tmpfiles.d/stap-server.conf
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/stap-server
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/stap-server
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/stap-server
+touch $RPM_BUILD_ROOT%{_localstatedir}/log/stap-server/log
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/systemtap
+mkdir -p $RPM_BULID_ROOT%{_localstatedir}/run/systemtap
+%else
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
 install -m 755 initscript/systemtap $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/systemtap
@@ -376,7 +390,6 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/systemtap/script.d
 install -m 644 initscript/config.systemtap $RPM_BUILD_ROOT%{_sysconfdir}/systemtap/config
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/systemtap
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/systemtap
-
 install -m 755 initscript/stap-server $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/stap-server
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/stap-server/conf.d
@@ -387,6 +400,7 @@ mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/stap-server
 touch $RPM_BUILD_ROOT%{_localstatedir}/log/stap-server/log
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d
 install -m 644 initscript/logrotate.stap-server $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/stap-server
+%endif
 
 %clean
 rm -rf ${RPM_BUILD_ROOT}
@@ -404,12 +418,15 @@ getent passwd stap-server >/dev/null || \
   useradd -c "Systemtap Compile Server" -g stap-server -d %{_localstatedir}/lib/stap-server -m -r -s /sbin/nologin stap-server
 test -e ~stap-server && chmod 755 ~stap-server
 
+%if 0%{?with_systemd}
+%else
 if [ ! -f ~stap-server/.systemtap/rc ]; then
   mkdir -p ~stap-server/.systemtap
   chown stap-server:stap-server ~stap-server/.systemtap
   echo "--rlimit-as=614400000 --rlimit-cpu=60 --rlimit-nproc=20 --rlimit-stack=1024000 --rlimit-fsize=51200000" > ~stap-server/.systemtap/rc
   chown stap-server:stap-server ~stap-server/.systemtap/rc
 fi
+%endif
 exit 0
 
 %post server
@@ -424,7 +441,11 @@ if test ! -e ~stap-server/.systemtap/ssl/server/stap.cert; then
    runuser -s /bin/sh - stap-server -c %{_libexecdir}/%{name}/stap-gen-cert >/dev/null
 fi
 # Activate the service
-/sbin/chkconfig --add stap-server
+%if 0%{?with_systemd}
+     /bin/systemctl enable stap-server.service >/dev/null 2>&1 || :
+%else
+    /sbin/chkconfig --add stap-server
+%endif
 exit 0
 
 %triggerin client -- systemtap-server
@@ -440,8 +461,13 @@ exit 0
 # Check that this is the actual deinstallation of the package, as opposed to
 # just removing the old package on upgrade.
 if [ $1 = 0 ] ; then
-    /sbin/service stap-server stop >/dev/null 2>&1
-    /sbin/chkconfig --del stap-server
+    %if 0%{?with_systemd}
+       /bin/systemctl --no-reload disable stap-server.service >/dev/null 2>&1 || :
+       /bin/systemctl stop stap-server.service >/dev/null 2>&1 || :
+    %else
+        /sbin/service stap-server stop >/dev/null 2>&1
+    	/sbin/chkconfig --del stap-server
+    %endif
 fi
 exit 0
 
@@ -449,20 +475,33 @@ exit 0
 # Check whether this is an upgrade of the package.
 # If so, restart the service if it's running
 if [ "$1" -ge "1" ] ; then
-    /sbin/service stap-server condrestart >/dev/null 2>&1 || :
+    %if 0%{?with_systemd}
+    	/bin/systemctl restart stap-server.service >/dev/null 2>&1 || :
+    %else
+        /sbin/service stap-server condrestart >/dev/null 2>&1 || :
+    %endif
 fi
 exit 0
 
 %post initscript
-/sbin/chkconfig --add systemtap
+%if 0%{?with_systemd}
+    /bin/systemctl enable stap-server.service >/dev/null 2>&1 || :
+%else
+    /sbin/chkconfig --add systemtap
+%endif
 exit 0
 
 %preun initscript
 # Check that this is the actual deinstallation of the package, as opposed to
 # just removing the old package on upgrade.
 if [ $1 = 0 ] ; then
-    /sbin/service systemtap stop >/dev/null 2>&1
-    /sbin/chkconfig --del systemtap
+    %if 0%{?with_systemd}
+    	/bin/systemctl --no-reload disable stap-server.service >/dev/null 2>&1 || :
+	/bin/systemctl stop stap-server.service >/dev/null 2>&1 || :
+    %else
+        /sbin/service systemtap stop >/dev/null 2>&1
+    	/sbin/chkconfig --del systemtap
+    %endif
 fi
 exit 0
 
@@ -470,7 +509,11 @@ exit 0
 # Check whether this is an upgrade of the package.
 # If so, restart the service if it's running
 if [ "$1" -ge "1" ] ; then
-    /sbin/service systemtap condrestart >/dev/null 2>&1 || :
+    %if 0%{?with_systemd}
+        /bin/systemctl restart stap-server.service >/dev/null 2>&1 || :
+    %else
+        /sbin/service systemtap condrestart >/dev/null 2>&1 || :
+    %endif
 fi
 exit 0
 
@@ -504,11 +547,14 @@ exit 0
 %{_mandir}/man7/stappaths.7*
 %{_mandir}/man7/warning*
 %{_mandir}/man8/stap-server.8*
+%if 0%{with_systemd}
+%else
 %{_sysconfdir}/rc.d/init.d/stap-server
 %config(noreplace) %{_sysconfdir}/logrotate.d/stap-server
 %dir %{_sysconfdir}/stap-server
 %dir %{_sysconfdir}/stap-server/conf.d
 %config(noreplace) %{_sysconfdir}/sysconfig/stap-server
+%endif
 %dir %attr(0750,stap-server,stap-server) %{_localstatedir}/lib/stap-server
 %dir %attr(0755,stap-server,stap-server) %{_localstatedir}/log/stap-server
 %ghost %config(noreplace) %attr(0644,stap-server,stap-server) %{_localstatedir}/log/stap-server/log
@@ -584,11 +630,16 @@ exit 0
 
 %files initscript
 %defattr(-,root,root)
-%{_sysconfdir}/rc.d/init.d/systemtap
-%dir %{_sysconfdir}/systemtap
-%dir %{_sysconfdir}/systemtap/conf.d
-%dir %{_sysconfdir}/systemtap/script.d
-%config(noreplace) %{_sysconfdir}/systemtap/config
+%if 0%{?with_systemd}
+  %{_unitdir}/stap-server.service
+  /usr/lib/tmpfiles.d/stap-server.conf
+%else
+  %{_sysconfdir}/rc.d/init.d/systemtap
+  %dir %{_sysconfdir}/systemtap
+  %dir %{_sysconfdir}/systemtap/conf.d
+  %dir %{_sysconfdir}/systemtap/script.d
+  %config(noreplace) %{_sysconfdir}/systemtap/config
+%endif
 %dir %{_localstatedir}/cache/systemtap
 %ghost %{_localstatedir}/run/systemtap
 %doc initscript/README.systemtap
