@@ -380,7 +380,7 @@ mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/stap-server
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/stap-server
 touch $RPM_BUILD_ROOT%{_localstatedir}/log/stap-server/log
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/systemtap
-mkdir -p $RPM_BULID_ROOT%{_localstatedir}/run/systemtap
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/systemtap
 %else
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
 install -m 755 initscript/systemtap $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
