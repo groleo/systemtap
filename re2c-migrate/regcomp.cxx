@@ -18,10 +18,9 @@
 #include <cstdlib>
 #include <string>
 
-#include "scanner.h"
 #include "re2c-globals.h"
-#include "re.h"
 #include "re2c-dfa.h"
+#include "re2c-regex.h"
 
 using namespace std;
 using namespace re2c;

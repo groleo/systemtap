@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "re.h"
+#include "re2c-regex.h"
 
 #ifndef HAVE_STRNDUP
 

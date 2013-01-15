@@ -4,7 +4,7 @@
 
 #include <iosfwd>
 #include <map>
-#include "re.h"
+#include "re2c-regex.h"
 
 namespace re2c
 {

@@ -2,7 +2,7 @@
 #ifndef _code_h
 #define _code_h
 
-#include "re.h"
+#include "re2c-regex.h"
 #include "re2c-dfa.h"
 
 namespace re2c

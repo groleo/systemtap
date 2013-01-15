@@ -18,7 +18,7 @@
 #include <map>
 #include "re2c-globals.h"
 #include "re2c-dfa.h"
-#include "parser.h"
+#include "re2c-regex.h"
 #include "code.h"
 
 namespace re2c
