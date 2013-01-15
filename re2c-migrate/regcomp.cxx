@@ -19,7 +19,7 @@
 #include <string>
 
 #include "scanner.h"
-#include "substr.h"
+#include "re2c-globals.h"
 #include "re.h"
 #include "dfa.h"
 

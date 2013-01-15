@@ -5,12 +5,18 @@
 #include <iomanip>
 #include <cctype>
 
-#include "globals.h"
+#include "re2c-globals.h"
 #include "parser.h"
 #include "dfa.h"
 
 namespace re2c
 {
+
+// moved here from globals.h
+
+uint nRealChars = 256;
+
+// ------------------------------------------------------------
 
 void Symbol::ClearTable()
 {

@@ -70,8 +70,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am_regtest_OBJECTS = regtest-regcomp.$(OBJEXT) \
 	regtest-regtest.$(OBJEXT) regtest-actions.$(OBJEXT) \
 	regtest-code.$(OBJEXT) regtest-dfa.$(OBJEXT) \
-	regtest-substr.$(OBJEXT) regtest-regtranslate.$(OBJEXT) \
-	regtest-globals.$(OBJEXT) regtest-util_STANDALONE.$(OBJEXT) \
+	regtest-regtranslate.$(OBJEXT) regtest-re2c-globals.$(OBJEXT) \
+	regtest-util_STANDALONE.$(OBJEXT) \
 	regtest-translator_output_STANDALONE.$(OBJEXT)
 regtest_OBJECTS = $(am_regtest_OBJECTS)
 regtest_LDADD = $(LDADD)
@@ -269,7 +269,7 @@ AUTOMAKE_OPTIONS = dejagnu
 
 # check_SCRIPTS = regcomp.base/regtest.in.0 regcomp.base/regtest.in.1
 regtest_SOURCES = regcomp.cxx regtest.cxx actions.cc code.cc dfa.cc \
-	substr.cc regtranslate.cc globals.cc util_STANDALONE.cxx \
+	regtranslate.cc re2c-globals.cxx util_STANDALONE.cxx \
 	translator_output_STANDALONE.cxx
 regtest_CXXFLAGS = $(AM_CXXFLAGS) -DREGCOMP_STANDALONE
 
@@ -327,11 +327,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-actions.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-code.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-dfa.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-globals.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-re2c-globals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-regcomp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-regtest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-regtranslate.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-substr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-translator_output_STANDALONE.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-util_STANDALONE.Po@am__quote@
 
@@ -419,20 +418,6 @@ regtest-dfa.obj: dfa.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-dfa.obj `if test -f 'dfa.cc'; then $(CYGPATH_W) 'dfa.cc'; else $(CYGPATH_W) '$(srcdir)/dfa.cc'; fi`
 
-regtest-substr.o: substr.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-substr.o -MD -MP -MF $(DEPDIR)/regtest-substr.Tpo -c -o regtest-substr.o `test -f 'substr.cc' || echo '$(srcdir)/'`substr.cc
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-substr.Tpo $(DEPDIR)/regtest-substr.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='substr.cc' object='regtest-substr.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-substr.o `test -f 'substr.cc' || echo '$(srcdir)/'`substr.cc
-
-regtest-substr.obj: substr.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-substr.obj -MD -MP -MF $(DEPDIR)/regtest-substr.Tpo -c -o regtest-substr.obj `if test -f 'substr.cc'; then $(CYGPATH_W) 'substr.cc'; else $(CYGPATH_W) '$(srcdir)/substr.cc'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-substr.Tpo $(DEPDIR)/regtest-substr.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='substr.cc' object='regtest-substr.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-substr.obj `if test -f 'substr.cc'; then $(CYGPATH_W) 'substr.cc'; else $(CYGPATH_W) '$(srcdir)/substr.cc'; fi`
-
 regtest-regtranslate.o: regtranslate.cc
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-regtranslate.o -MD -MP -MF $(DEPDIR)/regtest-regtranslate.Tpo -c -o regtest-regtranslate.o `test -f 'regtranslate.cc' || echo '$(srcdir)/'`regtranslate.cc
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-regtranslate.Tpo $(DEPDIR)/regtest-regtranslate.Po
@@ -447,19 +432,19 @@ regtest-regtranslate.obj: regtranslate.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-regtranslate.obj `if test -f 'regtranslate.cc'; then $(CYGPATH_W) 'regtranslate.cc'; else $(CYGPATH_W) '$(srcdir)/regtranslate.cc'; fi`
 
-regtest-globals.o: globals.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-globals.o -MD -MP -MF $(DEPDIR)/regtest-globals.Tpo -c -o regtest-globals.o `test -f 'globals.cc' || echo '$(srcdir)/'`globals.cc
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-globals.Tpo $(DEPDIR)/regtest-globals.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='globals.cc' object='regtest-globals.o' libtool=no @AMDEPBACKSLASH@
+regtest-re2c-globals.o: re2c-globals.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-re2c-globals.o -MD -MP -MF $(DEPDIR)/regtest-re2c-globals.Tpo -c -o regtest-re2c-globals.o `test -f 're2c-globals.cxx' || echo '$(srcdir)/'`re2c-globals.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-re2c-globals.Tpo $(DEPDIR)/regtest-re2c-globals.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-globals.cxx' object='regtest-re2c-globals.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-globals.o `test -f 'globals.cc' || echo '$(srcdir)/'`globals.cc
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-re2c-globals.o `test -f 're2c-globals.cxx' || echo '$(srcdir)/'`re2c-globals.cxx
 
-regtest-globals.obj: globals.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-globals.obj -MD -MP -MF $(DEPDIR)/regtest-globals.Tpo -c -o regtest-globals.obj `if test -f 'globals.cc'; then $(CYGPATH_W) 'globals.cc'; else $(CYGPATH_W) '$(srcdir)/globals.cc'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-globals.Tpo $(DEPDIR)/regtest-globals.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='globals.cc' object='regtest-globals.obj' libtool=no @AMDEPBACKSLASH@
+regtest-re2c-globals.obj: re2c-globals.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-re2c-globals.obj -MD -MP -MF $(DEPDIR)/regtest-re2c-globals.Tpo -c -o regtest-re2c-globals.obj `if test -f 're2c-globals.cxx'; then $(CYGPATH_W) 're2c-globals.cxx'; else $(CYGPATH_W) '$(srcdir)/re2c-globals.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-re2c-globals.Tpo $(DEPDIR)/regtest-re2c-globals.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-globals.cxx' object='regtest-re2c-globals.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-globals.obj `if test -f 'globals.cc'; then $(CYGPATH_W) 'globals.cc'; else $(CYGPATH_W) '$(srcdir)/globals.cc'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-re2c-globals.obj `if test -f 're2c-globals.cxx'; then $(CYGPATH_W) 're2c-globals.cxx'; else $(CYGPATH_W) '$(srcdir)/re2c-globals.cxx'; fi`
 
 regtest-util_STANDALONE.o: util_STANDALONE.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-util_STANDALONE.o -MD -MP -MF $(DEPDIR)/regtest-util_STANDALONE.Tpo -c -o regtest-util_STANDALONE.o `test -f 'util_STANDALONE.cxx' || echo '$(srcdir)/'`util_STANDALONE.cxx

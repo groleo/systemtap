@@ -6,7 +6,7 @@
 #include <string>
 #include "token.h"
 #include "re.h"
-#include "globals.h"
+#include "re2c-globals.h"
 
 namespace re2c
 {

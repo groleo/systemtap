@@ -50,7 +50,7 @@ stap_SOURCES = main.cxx session.cxx \
 	tapset-dynprobe.cxx
 stap_SOURCES += re2c-migrate/regcomp.cxx \
 	re2c-migrate/actions.cc re2c-migrate/code.cc re2c-migrate/dfa.cc \
-	re2c-migrate/substr.cc re2c-migrate/regtranslate.cc re2c-migrate/globals.cc
+	re2c-migrate/regtranslate.cc re2c-migrate/re2c-globals.cxx
 noinst_HEADERS = sdt_types.h
 stap_LDADD = @stap_LIBS@ @sqlite3_LIBS@ @LIBINTL@
 stap_DEPENDENCIES =

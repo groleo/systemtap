@@ -14,14 +14,107 @@
 #include <sstream>
 #include <time.h>
 #include <assert.h>
-#include "substr.h"
-#include "globals.h"
+#include <string>
+#include <map>
+#include "re2c-globals.h"
 #include "dfa.h"
 #include "parser.h"
 #include "code.h"
 
 namespace re2c
 {
+
+// moved here from code_names.h
+
+class CodeNames: public std::map<std::string, std::string>
+{
+public:
+	std::string& operator [] (const char * what);
+};
+
+inline std::string& CodeNames::operator [] (const char * what)
+{
+	CodeNames::iterator it = find(std::string(what));
+	
+	if (it != end())
+	{
+		return it->second;
+	}
+	else
+	{
+		return insert(std::make_pair(std::string(what), std::string(what))).first->second;
+	}
+}
+
+// -------------------------------------------------------
+
+// moved here from globals.cc
+
+enum BUFFERSIZE { BSIZE = 8192};
+
+
+bool bFlag = false;
+bool cFlag = false;
+bool dFlag = false;
+bool fFlag = false;
+bool gFlag = false;
+bool rFlag = false;
+bool sFlag = false;
+
+bool bNoGenerationDate = false;
+
+bool bFirstPass  = true;
+bool bLastPass   = false;
+bool bUsedYYBitmap  = false;
+
+bool bUsedYYAccept  = false;
+bool bUsedYYMaxFill = false;
+bool bUsedYYMarker  = true;
+
+bool bEmitYYCh       = true;
+bool bUseStartLabel  = false;
+bool bUseStateNext   = false;
+bool bUseYYFill      = true;
+bool bUseYYFillParam = true;
+bool bUseYYFillCheck = true;
+bool bUseYYFillNaked = false;
+bool bUseYYSetConditionParam = true;
+bool bUseYYGetConditionNaked = false;
+bool bUseYYSetStateParam = true;
+bool bUseYYSetStateNaked = false;
+bool bUseYYGetStateNaked = false;
+
+std::string startLabelName;
+std::string labelPrefix("yy");
+std::string condPrefix("yyc_");
+std::string condEnumPrefix("yyc");
+std::string condDivider("/* *********************************** */");
+std::string condDividerParam("@@");
+std::string condGoto("goto @@;");
+std::string condGotoParam("@@");
+std::string yychConversion("");
+std::string yyFillLength("@@");
+std::string yySetConditionParam("@@");
+std::string yySetStateParam("@@");
+std::string yySetupRule("");
+uint maxFill = 1;
+uint next_label = 0;
+uint cGotoThreshold = 9;
+
+uint topIndent = 0;
+std::string indString("\t");
+bool yybmHexTable = false;
+bool bUseStateAbort = false;
+bool bWroteGetState = false;
+bool bWroteCondCheck = false;
+
+uint next_fill_index = 0;
+uint last_fill_index = 0;
+std::set<uint> vUsedLabels;
+CodeNames mapCodeName;
+std::string typesInline;
+
+// --------------------------------------------------------------------
 
 // there must be at least one span in list;  all spans must cover
 // same range

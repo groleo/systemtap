@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "globals.h"
-#include "substr.h"
+#include "re2c-globals.h"
 #include "dfa.h"
 
 namespace re2c

@@ -1,5 +1,5 @@
 /* $Id$ */
-#include "globals.h"
+#include "re2c-globals.h"
 
 namespace re2c
 {

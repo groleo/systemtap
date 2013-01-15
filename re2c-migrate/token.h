@@ -2,7 +2,7 @@
 #ifndef _token_h
 #define	_token_h
 
-#include "substr.h"
+#include "re2c-globals.h"
 
 namespace re2c
 {

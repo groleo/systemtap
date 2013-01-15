@@ -1,8 +1,12 @@
-/* $Id$ */
-#include <string.h>
+/* Moved here from main.cc: */
+
+#include <fstream>
+#include <iostream>
+#include <set>
 #include <stdlib.h>
-#include "substr.h"
-#include "globals.h"
+#include <string.h>
+
+#include "re.h"
 
 #ifndef HAVE_STRNDUP
 
@@ -19,6 +23,16 @@ char *strndup(const char *str, size_t len) throw ()
 
 namespace re2c
 {
+
+bool DFlag = false;
+bool eFlag = false;
+bool uFlag = false;
+bool wFlag = false;
+
+free_list<RegExp*> RegExp::vFreeList;
+free_list<Range*>  Range::vFreeList;
+
+// moved here from substr.h
 
 void SubStr::out(std::ostream& o) const
 {

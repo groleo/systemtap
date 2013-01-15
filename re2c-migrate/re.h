@@ -9,11 +9,58 @@
 #include <vector>
 #include <string>
 #include "token.h"
-#include "ins.h"
-#include "globals.h"
+#include "re2c-globals.h"
 
 namespace re2c
 {
+
+// moved here from ins.h
+
+typedef unsigned short Char;
+
+const uint CHAR = 0;
+const uint GOTO = 1;
+const uint FORK = 2;
+const uint TERM = 3;
+const uint CTXT = 4;
+
+union Ins {
+
+	struct
+	{
+		byte	tag;
+		byte	marked;
+		void	*link;
+	}
+
+	i;
+
+	struct
+	{
+		ushort	value;
+		ushort	bump;
+		void	*link;
+	}
+
+	c;
+};
+
+inline bool isMarked(Ins *i)
+{
+	return i->i.marked != 0;
+}
+
+inline void mark(Ins *i)
+{
+	i->i.marked = true;
+}
+
+inline void unmark(Ins *i)
+{
+	i->i.marked = false;
+}
+
+// ---------------------------------------------------------------------
 
 template<class _Ty>
 class free_list: protected std::set<_Ty>
