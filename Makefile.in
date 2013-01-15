@@ -171,7 +171,7 @@ loc2c_test_LINK = $(CCLD) $(loc2c_test_CFLAGS) $(CFLAGS) \
 @BUILD_TRANSLATOR_TRUE@	stap-tapset-dynprobe.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	stap-regcomp.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	stap-re2c-regex.$(OBJEXT) \
-@BUILD_TRANSLATOR_TRUE@	stap-code.$(OBJEXT) \
+@BUILD_TRANSLATOR_TRUE@	stap-re2c-emit.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	stap-re2c-dfa.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	stap-regtranslate.$(OBJEXT) \
 @BUILD_TRANSLATOR_TRUE@	stap-re2c-globals.$(OBJEXT) \
@@ -483,7 +483,7 @@ oldinclude_HEADERS = includes/sys/sdt.h includes/sys/sdt-config.h
 @BUILD_TRANSLATOR_TRUE@	tapset-dynprobe.cxx \
 @BUILD_TRANSLATOR_TRUE@	re2c-migrate/regcomp.cxx \
 @BUILD_TRANSLATOR_TRUE@	re2c-migrate/re2c-regex.cxx \
-@BUILD_TRANSLATOR_TRUE@	re2c-migrate/code.cc \
+@BUILD_TRANSLATOR_TRUE@	re2c-migrate/re2c-emit.cxx \
 @BUILD_TRANSLATOR_TRUE@	re2c-migrate/re2c-dfa.cxx \
 @BUILD_TRANSLATOR_TRUE@	re2c-migrate/regtranslate.cc \
 @BUILD_TRANSLATOR_TRUE@	re2c-migrate/re2c-globals.cxx \
@@ -821,7 +821,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-buildrun.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-cache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-cmdline.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-code.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-coveragedb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-csclient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-cscommon.Po@am__quote@
@@ -836,6 +835,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-parse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-privilege.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-re2c-dfa.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-re2c-emit.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-re2c-globals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-re2c-regex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stap-regcomp.Po@am__quote@
@@ -1392,19 +1392,19 @@ stap-re2c-regex.obj: re2c-migrate/re2c-regex.cxx
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-re2c-regex.obj `if test -f 're2c-migrate/re2c-regex.cxx'; then $(CYGPATH_W) 're2c-migrate/re2c-regex.cxx'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/re2c-regex.cxx'; fi`
 
-stap-code.o: re2c-migrate/code.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-code.o -MD -MP -MF $(DEPDIR)/stap-code.Tpo -c -o stap-code.o `test -f 're2c-migrate/code.cc' || echo '$(srcdir)/'`re2c-migrate/code.cc
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-code.Tpo $(DEPDIR)/stap-code.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/code.cc' object='stap-code.o' libtool=no @AMDEPBACKSLASH@
+stap-re2c-emit.o: re2c-migrate/re2c-emit.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-re2c-emit.o -MD -MP -MF $(DEPDIR)/stap-re2c-emit.Tpo -c -o stap-re2c-emit.o `test -f 're2c-migrate/re2c-emit.cxx' || echo '$(srcdir)/'`re2c-migrate/re2c-emit.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-re2c-emit.Tpo $(DEPDIR)/stap-re2c-emit.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/re2c-emit.cxx' object='stap-re2c-emit.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-code.o `test -f 're2c-migrate/code.cc' || echo '$(srcdir)/'`re2c-migrate/code.cc
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-re2c-emit.o `test -f 're2c-migrate/re2c-emit.cxx' || echo '$(srcdir)/'`re2c-migrate/re2c-emit.cxx
 
-stap-code.obj: re2c-migrate/code.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-code.obj -MD -MP -MF $(DEPDIR)/stap-code.Tpo -c -o stap-code.obj `if test -f 're2c-migrate/code.cc'; then $(CYGPATH_W) 're2c-migrate/code.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/code.cc'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-code.Tpo $(DEPDIR)/stap-code.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/code.cc' object='stap-code.obj' libtool=no @AMDEPBACKSLASH@
+stap-re2c-emit.obj: re2c-migrate/re2c-emit.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-re2c-emit.obj -MD -MP -MF $(DEPDIR)/stap-re2c-emit.Tpo -c -o stap-re2c-emit.obj `if test -f 're2c-migrate/re2c-emit.cxx'; then $(CYGPATH_W) 're2c-migrate/re2c-emit.cxx'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/re2c-emit.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stap-re2c-emit.Tpo $(DEPDIR)/stap-re2c-emit.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='re2c-migrate/re2c-emit.cxx' object='stap-re2c-emit.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-code.obj `if test -f 're2c-migrate/code.cc'; then $(CYGPATH_W) 're2c-migrate/code.cc'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/code.cc'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -c -o stap-re2c-emit.obj `if test -f 're2c-migrate/re2c-emit.cxx'; then $(CYGPATH_W) 're2c-migrate/re2c-emit.cxx'; else $(CYGPATH_W) '$(srcdir)/re2c-migrate/re2c-emit.cxx'; fi`
 
 stap-re2c-dfa.o: re2c-migrate/re2c-dfa.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stap_CPPFLAGS) $(CPPFLAGS) $(stap_CXXFLAGS) $(CXXFLAGS) -MT stap-re2c-dfa.o -MD -MP -MF $(DEPDIR)/stap-re2c-dfa.Tpo -c -o stap-re2c-dfa.o `test -f 're2c-migrate/re2c-dfa.cxx' || echo '$(srcdir)/'`re2c-migrate/re2c-dfa.cxx

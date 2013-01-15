@@ -1,5 +1,7 @@
 /* $Id$ */
 
+/* Implements additional functions having to do with emitting code. */
+
 /*
  Author for null_stream stuff: Marcus Boerger <helly@users.sourceforge.net>
 */
@@ -19,10 +21,54 @@
 #include "re2c-globals.h"
 #include "re2c-dfa.h"
 #include "re2c-regex.h"
-#include "code.h"
 
 namespace re2c
 {
+
+// moved here from code.h
+
+
+class BitMap
+{
+public:
+	static BitMap	*first;
+
+	const Go        *go;
+	const State     *on;
+	const BitMap    *next;
+	uint            i;
+	uint            m;
+
+public:
+	static const BitMap *find(const Go*, const State*);
+	static const BitMap *find(const State*);
+	static void gen(std::ostream&, uint ind, uint, uint);
+	static void stats();
+	BitMap(const Go*, const State*);
+	~BitMap();
+
+#if PEDANTIC
+	BitMap(const BitMap& oth)
+		: go(oth.go)
+		, on(oth.on)
+		, next(oth.next)
+		, i(oth.i)
+		, m(oth.m)
+	{
+	}
+	BitMap& operator = (const BitMap& oth)
+	{
+		new(this) BitMap(oth);
+		return *this;
+	}
+#endif
+};
+
+#ifdef _MSC_VER
+# pragma warning(disable: 4355) /* 'this' : used in base member initializer list */
+#endif
+
+// -------------------------------------------------------------
 
 // moved here from code_names.h
 
