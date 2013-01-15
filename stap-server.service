@@ -8,7 +8,7 @@ After=network.target avahi-daemon.service
 Type=oneshot
 User=stap-server
 ExecStart=/usr/bin/stap-server start
-ExecRestart=/usr/bin/stap-server restart
+ExecReload=/usr/bin/stap-server restart
 ExecStop=/usr/bin/stap-server stop
 RemainAfterExit=yes 
  
