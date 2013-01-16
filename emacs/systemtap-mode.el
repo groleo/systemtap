@@ -153,7 +153,8 @@
 (require 'simple)
 
 ;;;###autoload
-(define-derived-mode systemtap-mode prog-mode "SystemTap"
+; prog-mode is newer than emacs 23
+(define-derived-mode systemtap-mode fundamental-mode "SystemTap"
   "Major mode for editing SystemTap scripts.
 
 Key bindings:
