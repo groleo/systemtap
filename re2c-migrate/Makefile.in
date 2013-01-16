@@ -67,7 +67,7 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am_regtest_OBJECTS = regtest-regcomp.$(OBJEXT) \
+am_regtest_OBJECTS = regtest-stapregex.$(OBJEXT) \
 	regtest-regtest.$(OBJEXT) regtest-re2c-regex.$(OBJEXT) \
 	regtest-re2c-emit.$(OBJEXT) regtest-re2c-dfa.$(OBJEXT) \
 	regtest-re2c-globals.$(OBJEXT)
@@ -266,8 +266,8 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = dejagnu
 
 # check_SCRIPTS = regcomp.base/regtest.in.0 regcomp.base/regtest.in.1
-regtest_SOURCES = regcomp.cxx regtest.cxx re2c-regex.cxx re2c-emit.cxx \
-	re2c-dfa.cxx re2c-globals.cxx
+regtest_SOURCES = stapregex.cxx regtest.cxx re2c-regex.cxx \
+	re2c-emit.cxx re2c-dfa.cxx re2c-globals.cxx
 regtest_CXXFLAGS = $(AM_CXXFLAGS) -DREGCOMP_STANDALONE
 
 # Arrange for the top level git_version.h to be regenerated at every "make".
@@ -325,8 +325,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-re2c-emit.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-re2c-globals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-re2c-regex.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-regcomp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-regtest.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regtest-stapregex.Po@am__quote@
 
 .cxx.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -342,19 +342,19 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-regtest-regcomp.o: regcomp.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-regcomp.o -MD -MP -MF $(DEPDIR)/regtest-regcomp.Tpo -c -o regtest-regcomp.o `test -f 'regcomp.cxx' || echo '$(srcdir)/'`regcomp.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-regcomp.Tpo $(DEPDIR)/regtest-regcomp.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='regcomp.cxx' object='regtest-regcomp.o' libtool=no @AMDEPBACKSLASH@
+regtest-stapregex.o: stapregex.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-stapregex.o -MD -MP -MF $(DEPDIR)/regtest-stapregex.Tpo -c -o regtest-stapregex.o `test -f 'stapregex.cxx' || echo '$(srcdir)/'`stapregex.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-stapregex.Tpo $(DEPDIR)/regtest-stapregex.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='stapregex.cxx' object='regtest-stapregex.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-regcomp.o `test -f 'regcomp.cxx' || echo '$(srcdir)/'`regcomp.cxx
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-stapregex.o `test -f 'stapregex.cxx' || echo '$(srcdir)/'`stapregex.cxx
 
-regtest-regcomp.obj: regcomp.cxx
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-regcomp.obj -MD -MP -MF $(DEPDIR)/regtest-regcomp.Tpo -c -o regtest-regcomp.obj `if test -f 'regcomp.cxx'; then $(CYGPATH_W) 'regcomp.cxx'; else $(CYGPATH_W) '$(srcdir)/regcomp.cxx'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-regcomp.Tpo $(DEPDIR)/regtest-regcomp.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='regcomp.cxx' object='regtest-regcomp.obj' libtool=no @AMDEPBACKSLASH@
+regtest-stapregex.obj: stapregex.cxx
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-stapregex.obj -MD -MP -MF $(DEPDIR)/regtest-stapregex.Tpo -c -o regtest-stapregex.obj `if test -f 'stapregex.cxx'; then $(CYGPATH_W) 'stapregex.cxx'; else $(CYGPATH_W) '$(srcdir)/stapregex.cxx'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/regtest-stapregex.Tpo $(DEPDIR)/regtest-stapregex.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='stapregex.cxx' object='regtest-stapregex.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-regcomp.obj `if test -f 'regcomp.cxx'; then $(CYGPATH_W) 'regcomp.cxx'; else $(CYGPATH_W) '$(srcdir)/regcomp.cxx'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -c -o regtest-stapregex.obj `if test -f 'stapregex.cxx'; then $(CYGPATH_W) 'stapregex.cxx'; else $(CYGPATH_W) '$(srcdir)/stapregex.cxx'; fi`
 
 regtest-regtest.o: regtest.cxx
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(regtest_CXXFLAGS) $(CXXFLAGS) -MT regtest-regtest.o -MD -MP -MF $(DEPDIR)/regtest-regtest.Tpo -c -o regtest-regtest.o `test -f 'regtest.cxx' || echo '$(srcdir)/'`regtest.cxx

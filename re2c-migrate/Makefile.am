@@ -11,7 +11,7 @@ check_PROGRAMS += regtest
 
 # check_SCRIPTS = regcomp.base/regtest.in.0 regcomp.base/regtest.in.1
 
-regtest_SOURCES = regcomp.cxx regtest.cxx
+regtest_SOURCES = stapregex.cxx regtest.cxx
 regtest_SOURCES += re2c-regex.cxx re2c-emit.cxx re2c-dfa.cxx re2c-globals.cxx
 regtest_CXXFLAGS = $(AM_CXXFLAGS) -DREGCOMP_STANDALONE
 

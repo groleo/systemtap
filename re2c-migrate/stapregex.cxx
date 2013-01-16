@@ -8,7 +8,7 @@
 //
 // ... TODOXXX additional blurb for re2c ...
 
-#include "regcomp.h"
+#include "stapregex.h"
 #include "../translate.h"
 #include "../session.h"
 #include "../util.h"

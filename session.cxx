@@ -9,7 +9,7 @@
 #include "config.h"
 #include "session.h"
 #include "cache.h"
-#include "re2c-migrate/regcomp.h" // TODOXXX
+#include "re2c-migrate/stapregex.h" // TODOXXX
 #include "elaborate.h"
 #include "translate.h"
 #include "buildrun.h"

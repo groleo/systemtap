@@ -21,7 +21,7 @@
 #include "runtime/k_syms.h"
 #include "dwflpp.h"
 
-#include "re2c-migrate/regcomp.h"
+#include "re2c-migrate/stapregex.h"
 
 #include <cstdlib>
 #include <iostream>

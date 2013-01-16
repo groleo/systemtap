@@ -16,7 +16,7 @@
 #include "util.h"
 #include "task_finder.h"
 
-#include "re2c-migrate/regcomp.h"
+#include "re2c-migrate/stapregex.h"
 
 extern "C" {
 #include <sys/utsname.h>
