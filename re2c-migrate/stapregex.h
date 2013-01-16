@@ -6,21 +6,31 @@
 // Public License (GPL); either version 2, or (at your option) any
 // later version.
 //
-// ... TODOXXX additional blurb for re2c ...
+// ---
+//
+// This file incorporates code from the re2c project, which was
+// originally released into the public domain. Many thanks to the
+// developers of re2c for their work.
+//
+// As a courtesy to the original developers of re2c, please include
+// appropriate acknowledgment in future code derived from this file.
+// Information on the original re2c distribution can be found at:
+//
+//   http://sourceforge.net/projects/re2c/
+//
 
-#ifndef REGCOMP_H
-#define REGCOMP_H
+#ifndef STAPREGEX_H
+#define STAPREGEX_H
 
 #include <string>
 #include <iostream>
 #include <stdexcept>
 
-// TODOXXX support for REGCOMP_STANDALONE
 struct systemtap_session; /* from session.h */
 struct translator_output; /* from translate.h */
 namespace re2c {
-  class RegExp; /* from re2c */
-  class DFA; /* from re2c */
+  class RegExp; /* from re2c-regex.h */
+  class DFA; /* from re2c-dfa.h */
 };
 
 struct stapdfa {
@@ -28,7 +38,6 @@ struct stapdfa {
   stapdfa (const std::string& func_name, const std::string& re);
   ~stapdfa ();
   void emit_declaration (translator_output *o);
-  // void emit_matchop (translator_output *o, const std::string& match_expr);
   void emit_matchop_start (translator_output *o);
   void emit_matchop_end (translator_output *o);
   void print (std::ostream& o) const;
