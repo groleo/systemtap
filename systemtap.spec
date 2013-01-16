@@ -409,6 +409,11 @@ mkdir -p $RPM_BUILD_ROOT%{_emacs_sitelispdir}
 install -p -m 644 emacs/systemtap-mode.el* $RPM_BUILD_ROOT%{_emacs_sitelispdir}
 mkdir -p $RPM_BUILD_ROOT%{_emacs_sitestartdir}
 install -p -m 644 emacs/systemtap-init.el $RPM_BUILD_ROOT%{_emacs_sitestartdir}/systemtap-init.el
+for subdir in ftdetect ftplugin indent syntax
+do
+    mkdir -p $RPM_BUILD_ROOT%{_datadir}/vim/vimfiles/$subdir
+    install -p -m 644 vim/$subdir/*.vim $RPM_BUILD_ROOT%{_datadir}/vim/vimfiles/$subdir
+done
 %endif
 
 
@@ -596,6 +601,7 @@ exit 0
 %if %{with_emacsvim}
 %{_emacs_sitelispdir}/*.el*
 %{_emacs_sitestartdir}/systemtap-init.el
+%{_datadir}/vim/vimfiles/*/*.vim
 %endif
 
 
