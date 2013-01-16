@@ -13,7 +13,7 @@ endif
 
 setlocal iskeyword=@,48-57,_,$
 
-syn keyword stapStatement contained break continue return next delete containedin=stapBlock
+syn keyword stapStatement contained break continue return next delete try catch containedin=stapBlock
 syn keyword stapRepeat contained while for foreach in limit containedin=stapBlock
 syn keyword stapConditional contained if else containedin=stapBlock
 syn keyword stapDeclaration global probe function
@@ -58,11 +58,11 @@ syn region  stapCBlock fold matchgroup=stapCBlockDelims start="%{"rs=e end="%}"r
 
 syn region stapBlock fold matchgroup=stapBlockEnds start="{"rs=e end="}"re=s containedin=stapBlock
 
-syn keyword stapTodo contained TODO FIXME XXX
+" syn keyword stapTodo contained TODO FIXME XXX
 
-syn match stapComment "#.*" contains=stapTodo containedin=stapBlock
-syn match stapComment "//.*" contains=stapTodo containedin=stapBlock
-syn region stapComment matchgroup=stapComment start="/\*" end="\*/" contains=stapTodo,stapCommentBad containedin=stapBlock
+syn match stapComment "#.*" containedin=stapBlock
+syn match stapComment "//.*" containedin=stapBlock
+syn region stapComment matchgroup=stapComment start="/\*" end="\*/" contains=stapCommentBad containedin=stapBlock
 syn match stapCommentBad contained "/\*"
 
 " treat ^#! as special
