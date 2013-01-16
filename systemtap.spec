@@ -17,7 +17,7 @@
 %else
 %{!?with_dyninst: %global with_dyninst 0}
 %endif
-%{!?with_systemd: %global with_systemd 0}
+%{!?with_systemd: %global with_systemd 0%{?fedora} >= 19}
 %{!?with_emacsvim: %global with_emacsvim 1}
 
 Name: systemtap
