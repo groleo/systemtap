@@ -18,6 +18,7 @@
 %{!?with_dyninst: %global with_dyninst 0}
 %endif
 %{!?with_systemd: %global with_systemd 0}
+%{!?with_emacsvim: %global with_emacsvim 1}
 
 Name: systemtap
 Version: 2.1
@@ -93,6 +94,9 @@ BuildRequires: xmlto /usr/share/xmlto/format/fo/pdf
 BuildRequires: publican
 BuildRequires: /usr/share/publican/Common_Content/%{publican_brand}/defaults.cfg
 %endif
+%endif
+%if %{with_emacsvim}
+BuildRequires: emacs
 %endif
 
 # Install requirements
@@ -327,6 +331,10 @@ cd ..
 %configure %{?elfutils_config} %{dyninst_config} %{sqlite_config} %{crash_config} %{docs_config} %{pie_config} %{publican_config} %{rpm_config} --disable-silent-rules --with-extra-version="rpm %{version}-%{release}"
 make %{?_smp_mflags}
 
+%if %{with_emacsvim}
+%{_emacs_bytecompile} emacs/systemtap-mode.el
+%endif
+
 %install
 rm -rf ${RPM_BUILD_ROOT}
 make DESTDIR=$RPM_BUILD_ROOT install
@@ -395,6 +403,14 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/stap-server/conf.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
 install -m 644 initscript/config.stap-server $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/stap-server
 %endif
+
+%if %{with_emacsvim}
+mkdir -p $RPM_BUILD_ROOT%{_emacs_sitelispdir}
+install -p -m 644 emacs/systemtap-mode.el* $RPM_BUILD_ROOT%{_emacs_sitelispdir}
+mkdir -p $RPM_BUILD_ROOT%{_emacs_sitestartdir}
+install -p -m 644 emacs/systemtap-init.el $RPM_BUILD_ROOT%{_emacs_sitestartdir}/systemtap-init.el
+%endif
+
 
 %clean
 rm -rf ${RPM_BUILD_ROOT}
@@ -576,6 +592,10 @@ exit 0
 %if %{with_bundled_elfutils}
 %dir %{_libdir}/%{name}
 %{_libdir}/%{name}/lib*.so*
+%endif
+%if %{with_emacsvim}
+%{_emacs_sitelispdir}/*.el*
+%{_emacs_sitestartdir}/systemtap-init.el
 %endif
 
 
