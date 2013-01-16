@@ -150,6 +150,9 @@
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.stp\\'" . systemtap-mode))
 
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.stpm\\'" . systemtap-mode))
+
 (require 'simple)
 
 ;;;###autoload
