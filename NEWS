@@ -1,5 +1,7 @@
 * What's new in version 2.1
 
+- EMACS and VIM editor modes for systemtap source files are included / updated.
+
 - The translator now eliminates duplicate tapset files between its
   preferred directory (as configured during the build with --prefix=/
   or specified with the -I /path option), and files it may find under
