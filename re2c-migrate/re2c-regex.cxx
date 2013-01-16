@@ -14,7 +14,7 @@ namespace re2c
 
 // moved here from globals.h
 
-uint nRealChars = 256;
+unsigned nRealChars = 256;
 
 // ------------------------------------------------------------
 
@@ -84,7 +84,7 @@ const Ins* showIns(std::ostream &o, const Ins &i, const Ins &base)
 	return ret;
 }
 
-uint RegExp::fixedLength()
+unsigned RegExp::fixedLength()
 {
 	return ~0u;
 }
@@ -96,7 +96,7 @@ void NullOp::calcSize(Char*)
 	size = 0;
 }
 
-uint NullOp::fixedLength()
+unsigned NullOp::fixedLength()
 {
 	return 0;
 }
@@ -159,7 +159,7 @@ Range *doUnion(Range *r1, Range *r2)
 
 				if (!(r1 = r1->next))
 				{
-					uint ub = 0;
+					unsigned ub = 0;
 
 					for (; r2 && r2->lb <= s->ub; r2 = r2->next)
 						ub = r2->ub;
@@ -182,7 +182,7 @@ Range *doUnion(Range *r1, Range *r2)
 
 				if (!(r2 = r2->next))
 				{
-					uint ub = 0;
+					unsigned ub = 0;
 
 					for (; r1 && r1->lb <= s->ub; r1 = r1->next)
 						ub = r1->ub;
@@ -208,7 +208,7 @@ Range *doDiff(Range *r1, Range *r2)
 
 	for (; r1; r1 = r1->next)
 	{
-		uint lb = r1->lb;
+		unsigned lb = r1->lb;
 
 		for (; r2 && r2->ub <= r1->lb; r2 = r2->next)
 
@@ -259,12 +259,12 @@ void MatchOp::calcSize(Char *rep)
 	size = 1;
 
 	for (Range *r = match; r; r = r->next)
-		for (uint c = r->lb; c < r->ub; ++c)
+		for (unsigned c = r->lb; c < r->ub; ++c)
 			if (rep[c] == c)
 				++size;
 }
 
-uint MatchOp::fixedLength()
+unsigned MatchOp::fixedLength()
 {
 	return 1;
 }
@@ -274,11 +274,11 @@ void MatchOp::compile(Char *rep, Ins *i)
 	i->i.tag = CHAR;
 	i->i.link = &i[size];
 	Ins *j = &i[1];
-	uint bump = size;
+	unsigned bump = size;
 
 	for (Range *r = match; r; r = r->next)
 	{
-		for (uint c = r->lb; c < r->ub; ++c)
+		for (unsigned c = r->lb; c < r->ub; ++c)
 		{
 			if (rep[c] == c)
 			{
@@ -294,7 +294,7 @@ void MatchOp::split(CharSet &s)
 {
 	for (Range *r = match; r; r = r->next)
 	{
-		for (uint c = r->lb; c < r->ub; ++c)
+		for (unsigned c = r->lb; c < r->ub; ++c)
 		{
 			CharPtn *x = s.rep[c], *a = x->nxt;
 
@@ -400,10 +400,10 @@ void AltOp::calcSize(Char *rep)
 	size = exp1->size + exp2->size + 2;
 }
 
-uint AltOp::fixedLength()
+unsigned AltOp::fixedLength()
 {
-	uint l1 = exp1->fixedLength();
-	uint l2 = exp1->fixedLength();
+	unsigned l1 = exp1->fixedLength();
+	unsigned l2 = exp1->fixedLength();
 
 	if (l1 != l2 || l1 == ~0u)
 		return ~0u;
@@ -437,9 +437,9 @@ void CatOp::calcSize(Char *rep)
 	size = exp1->size + exp2->size;
 }
 
-uint CatOp::fixedLength()
+unsigned CatOp::fixedLength()
 {
-	uint l1, l2;
+	unsigned l1, l2;
 
 	if ((l1 = exp1->fixedLength()) != ~0u )
 		if ((l2 = exp2->fixedLength()) != ~0u)
@@ -533,13 +533,13 @@ void CloseVOp::split(CharSet &s)
 
 RegExp *expr(Scanner &);
 
-uint Scanner::unescape(SubStr &s) const
+unsigned Scanner::unescape(SubStr &s) const
 {
 	static const char * hex = "0123456789abcdef";
 	static const char * oct = "01234567";
 
 	s.len--;
-	uint c, ucb = 0;
+	unsigned c, ucb = 0;
 
 	if ((c = *s.str++) != '\\' || s.len == 0)
 	{
@@ -579,8 +579,8 @@ uint Scanner::unescape(SubStr &s) const
 				s.len -= 2;
 				s.str += 2;
 				
-				uint v = (uint)((p1 - hex) << 4) 
-				       + (uint)((p2 - hex));
+				unsigned v = (unsigned)((p1 - hex) << 4) 
+				       + (unsigned)((p2 - hex));
 	
 				return v;
 			}
@@ -594,7 +594,7 @@ uint Scanner::unescape(SubStr &s) const
 				return ~0u;
 			}
 
-			uint l = 0;
+			unsigned l = 0;
 						
 			if (s.str[0] == '0')
 			{
@@ -610,8 +610,8 @@ uint Scanner::unescape(SubStr &s) const
 							const char *u4 = strchr(hex, tolower(s.str[3]));
 							if (u3 && u4)
 							{
-								ucb = (uint)((u3 - hex) << 20)
-							        + (uint)((u4 - hex) << 16);
+								ucb = (unsigned)((u3 - hex) << 20)
+							        + (unsigned)((u4 - hex) << 16);
 								l++;
 							}
 						}
@@ -663,10 +663,10 @@ uint Scanner::unescape(SubStr &s) const
 				s.len -= 4;
 				s.str += 4;
 				
-				uint v = (uint)((p1 - hex) << 12) 
-				       + (uint)((p2 - hex) <<  8)
-				       + (uint)((p3 - hex) <<  4)
-				       + (uint)((p4 - hex))
+				unsigned v = (unsigned)((p1 - hex) << 12) 
+				       + (unsigned)((p2 - hex) <<  8)
+				       + (unsigned)((p3 - hex) <<  4)
+				       + (unsigned)((p4 - hex))
 				       + ucb;
 	
 				if (v >= nRealChars)
@@ -715,7 +715,7 @@ uint Scanner::unescape(SubStr &s) const
 				s.len -= 2;
 				s.str += 2;
 				
-				uint v = (uint)((p0 - oct) << 6) + (uint)((p1 - oct) << 3) + (uint)(p2 - oct);
+				unsigned v = (unsigned)((p0 - oct) << 6) + (unsigned)((p1 - oct) << 3) + (unsigned)(p2 - oct);
 	
 				return v;
 			}
@@ -732,7 +732,7 @@ std::string& Scanner::unescape(SubStr& str_in, std::string& str_out) const
 
 	while(str_in.len)
 	{
-		uint c = unescape(str_in);
+		unsigned c = unescape(str_in);
 
 		if (c > 0xFF)
 		{
@@ -747,8 +747,8 @@ std::string& Scanner::unescape(SubStr& str_in, std::string& str_out) const
 
 Range * Scanner::getRange(SubStr &s) const
 {
-	// uint lb = unescape(s), ub, xlb, xub, c;
-	uint lb = unescape(s), ub, xlb, c;
+	// unsigned lb = unescape(s), ub, xlb, xub, c;
+	unsigned lb = unescape(s), ub, xlb, c;
 
 	if (s.len < 2 || *s.str != '-')
 	{
@@ -762,7 +762,7 @@ Range * Scanner::getRange(SubStr &s) const
 
 		if (ub < lb)
 		{
-			uint tmp = lb;
+			unsigned tmp = lb;
 			lb = ub;
 			ub = tmp;
 		}
@@ -788,9 +788,9 @@ Range * Scanner::getRange(SubStr &s) const
 	return new Range(xlat(lb), xlat(ub) + 1);
 }
 
-RegExp * Scanner::matchChar(uint c) const
+RegExp * Scanner::matchChar(unsigned c) const
 {
-	uint xc = xlat(c);
+	unsigned xc = xlat(c);
 	return new MatchOp(new Range(xc, xc + 1));
 }
 
@@ -820,7 +820,7 @@ RegExp * Scanner::strToCaseInsensitiveRE(SubStr s) const
 	if (s.len == 0)
 		return new NullOp;
 
-	uint c = unescape(s);
+	unsigned c = unescape(s);
 
 	RegExp *re, *reL, *reU;
 
@@ -837,7 +837,7 @@ RegExp * Scanner::strToCaseInsensitiveRE(SubStr s) const
 
 	while (s.len > 0)
 	{
-		uint c = unescape(s);
+		unsigned c = unescape(s);
 
 		if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
 		{
@@ -925,7 +925,7 @@ RegExp * Scanner::mkDot() const
 
 const char *RuleOp::type = "RuleOp";
 
-RuleOp::RuleOp(RegExp *e, RegExp *c, Token *t, uint a)
+RuleOp::RuleOp(RegExp *e, RegExp *c, Token *t, unsigned a)
 	: exp(e)
 	, ctx(c)
 	, ins(NULL)
@@ -936,7 +936,7 @@ RuleOp::RuleOp(RegExp *e, RegExp *c, Token *t, uint a)
 	anchored = e->anchored;
 }
 
-RuleOp* RuleOp::copy(uint a) const
+RuleOp* RuleOp::copy(unsigned a) const
 {
 	Token *token = new Token(*code);
 	return new RuleOp(exp, ctx, token, a);
@@ -1022,7 +1022,7 @@ CharSet::CharSet()
 	, rep(new CharPtr[nRealChars])
 	, ptn(new CharPtn[nRealChars])
 {
-	for (uint j = 0; j < nRealChars; ++j)
+	for (unsigned j = 0; j < nRealChars; ++j)
 	{
 		rep[j] = &ptn[0];
 		ptn[j].nxt = &ptn[j + 1]; /* wrong for j=nRealChars but will be corrected below */
@@ -1044,12 +1044,12 @@ CharSet::~CharSet()
 DFA* genCode(RegExp *re)
 {
 	CharSet cs;
-	uint j;
+	unsigned j;
 
 	re->split(cs);
         /*
         std::cerr << std::endl << "CS.REP" << std::endl; 
-	    for(uint k = 0; k < nRealChars;){
+	    for(unsigned k = 0; k < nRealChars;){
 		for(j = k; ++k < nRealChars && cs.rep[k] == cs.rep[j];);
 		printSpan(std::cerr, j, k);
                 std::cerr << "\t" << cs.rep[j] - &cs.ptn[0] << std::endl;

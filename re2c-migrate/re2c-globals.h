@@ -17,65 +17,20 @@
 namespace re2c
 {
 
-// moved here from basics.h
-
-#if SIZEOF_CHAR == 1
-typedef unsigned char byte;
-#elif SIZEOF_SHORT == 1
-typedef unsigned short byte;
-#elif SIZEOF_INT == 1
-typedef unsigned int byte;
-#elif SIZEOF_LONG == 1
-typedef unsigned long byte;
-#else
-typedef unsigned char byte;
-#endif
-
-#if SIZEOF_CHAR == 2
-typedef unsigned char word;
-#elif SIZEOF_SHORT == 2
-typedef unsigned short word;
-#elif SIZEOF_INT == 2
-typedef unsigned int word;
-#elif SIZEOF_LONG == 2
-typedef unsigned long word;
-#else
-typedef unsigned short word;
-#endif
-
-#if SIZEOF_CHAR == 4
-typedef unsigned char dword;
-#elif SIZEOF_SHORT == 4
-typedef unsigned short dword;
-#elif SIZEOF_INT == 4
-typedef unsigned int dword;
-#elif SIZEOF_LONG == 4
-typedef unsigned long dword;
-#else
-typedef unsigned long dword;
-#endif
-
-typedef unsigned int uint;
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned long ulong;
-
-// ------------------------------------------------------------------
-
 extern bool DFlag;
 extern bool eFlag;
 extern bool uFlag;
 extern bool wFlag;
 
-extern const uint asc2asc[256];
-extern const uint asc2ebc[256];
-extern const uint ebc2asc[256];
+extern const unsigned asc2asc[256];
+extern const unsigned asc2ebc[256];
+extern const unsigned ebc2asc[256];
 
-extern const uint *xlat;
-extern const uint *talx;
+extern const unsigned *xlat;
+extern const unsigned *talx;
 
-extern char octCh(uint c);
-extern char hexCh(uint c);
+extern char octCh(unsigned c);
+extern char hexCh(unsigned c);
 
 // ------------------------------------------------------------
 
@@ -86,18 +41,18 @@ class SubStr
 public:
 	const char * str;
 	const char * const org;
-	uint         len;
+	unsigned         len;
 
 public:
 	friend bool operator==(const SubStr &, const SubStr &);
-	SubStr(const uchar*, uint);
-	SubStr(const char*, uint);
+	SubStr(const unsigned char*, unsigned);
+	SubStr(const char*, unsigned);
 	explicit SubStr(const char*);
 	SubStr(const SubStr&);
 	virtual ~SubStr();
 	void out(std::ostream&) const;
 	std::string to_string() const;
-	uint ofs() const;
+	unsigned ofs() const;
 
 #ifdef PEDANTIC
 protected:
@@ -125,11 +80,11 @@ inline std::ostream& operator<<(std::ostream& o, const SubStr* s)
 	return o << *s;
 }
 
-inline SubStr::SubStr(const uchar *s, uint l)
+inline SubStr::SubStr(const unsigned char *s, unsigned l)
 		: str((char*)s), org((char*)s), len(l)
 { }
 
-inline SubStr::SubStr(const char *s, uint l)
+inline SubStr::SubStr(const char *s, unsigned l)
 		: str(s), org(s), len(l)
 { }
 
@@ -149,7 +104,7 @@ inline std::string SubStr::to_string() const
 	return str && len ? std::string(str, len) : std::string();
 }
 
-inline uint SubStr::ofs() const
+inline unsigned SubStr::ofs() const
 {
 	return str - org;
 }

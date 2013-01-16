@@ -19,7 +19,6 @@
 struct systemtap_session; /* from session.h */
 struct translator_output; /* from translate.h */
 namespace re2c {
-  typedef unsigned int uint;
   class RegExp; /* from re2c */
   class DFA; /* from re2c */
 };

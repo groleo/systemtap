@@ -9,10 +9,10 @@
 namespace re2c
 {
 
-extern void prtCh(std::ostream&, uint);
-extern void prtHex(std::ostream&, uint);
-extern void prtChOrHex(std::ostream&, uint);
-extern void printSpan(std::ostream&, uint, uint);
+extern void prtCh(std::ostream&, unsigned);
+extern void prtHex(std::ostream&, unsigned);
+extern void prtChOrHex(std::ostream&, unsigned);
+extern void printSpan(std::ostream&, unsigned, unsigned);
 
 class DFA;
 
@@ -28,7 +28,7 @@ public:
 	Action(State*);
 	virtual ~Action();
 
-	virtual void emit(std::ostream&, uint, bool&, const std::string&) const = 0;
+	virtual void emit(std::ostream&, unsigned, bool&, const std::string&) const = 0;
 	virtual bool isRule() const;
 	virtual bool isMatch() const;
 	virtual bool isInitial() const;
@@ -52,18 +52,18 @@ class Match: public Action
 {
 public:
 	Match(State*);
-	void emit(std::ostream&, uint, bool&, const std::string&) const;
+	void emit(std::ostream&, unsigned, bool&, const std::string&) const;
 	bool isMatch() const;
 };
 
 class Enter: public Action
 {
 public:
-	uint	label;
+	unsigned	label;
 
 public:
-	Enter(State*, uint);
-	void emit(std::ostream&, uint, bool&, const std::string&) const;
+	Enter(State*, unsigned);
+	void emit(std::ostream&, unsigned, bool&, const std::string&) const;
 };
 
 class Initial: public Enter
@@ -72,8 +72,8 @@ public:
 	bool setMarker;
 
 public:
-	Initial(State*, uint, bool);
-	void emit(std::ostream&, uint, bool&, const std::string&) const;
+	Initial(State*, unsigned, bool);
+	void emit(std::ostream&, unsigned, bool&, const std::string&) const;
 	bool isInitial() const;
 };
 
@@ -81,11 +81,11 @@ class Save: public Match
 {
 
 public:
-	uint	selector;
+	unsigned	selector;
 
 public:
-	Save(State*, uint);
-	void emit(std::ostream&, uint, bool&, const std::string&) const;
+	Save(State*, unsigned);
+	void emit(std::ostream&, unsigned, bool&, const std::string&) const;
 	bool isMatch() const;
 };
 
@@ -94,24 +94,24 @@ class Move: public Action
 
 public:
 	Move(State*);
-	void emit(std::ostream&, uint, bool&, const std::string&) const;
+	void emit(std::ostream&, unsigned, bool&, const std::string&) const;
 };
 
 class Accept: public Action
 {
 
 public:
-	typedef std::map<uint, State*> RuleMap;
+	typedef std::map<unsigned, State*> RuleMap;
 
-	uint	nRules;
-	uint	*saves;
+	unsigned	nRules;
+	unsigned	*saves;
 	State	**rules;
 	RuleMap mapRules;
 
 public:
-	Accept(State*, uint, uint*, State**);
-	void emit(std::ostream&, uint, bool&, const std::string&) const;
-	void emitBinary(std::ostream &o, uint ind, uint l, uint r, bool &readCh) const;
+	Accept(State*, unsigned, unsigned*, State**);
+	void emit(std::ostream&, unsigned, bool&, const std::string&) const;
+	void emitBinary(std::ostream &o, unsigned ind, unsigned l, unsigned r, bool &readCh) const;
 	void genRuleMap();
 
 #ifdef PEDANTIC
@@ -139,7 +139,7 @@ public:
 
 public:
 	Rule(State*, RuleOp*);
-	void emit(std::ostream&, uint, bool&, const std::string&) const;
+	void emit(std::ostream&, unsigned, bool&, const std::string&) const;
 	bool isRule() const;
 
 #ifdef PEDANTIC
@@ -161,11 +161,11 @@ class Span
 {
 
 public:
-	uint	ub;
+	unsigned	ub;
 	State	*to;
 
 public:
-	uint show(std::ostream&, uint) const;
+	unsigned show(std::ostream&, unsigned) const;
 };
 
 class Go
@@ -182,20 +182,20 @@ public:
 	}
 
 public:
-	uint	nSpans; // number of spans
-	uint    wSpans; // number of spans in wide mode
-	uint    lSpans; // number of low (non wide) spans
-	uint    dSpans; // number of decision spans (decide between g and b mode)
-	uint    lTargets;
+	unsigned	nSpans; // number of spans
+	unsigned    wSpans; // number of spans in wide mode
+	unsigned    lSpans; // number of low (non wide) spans
+	unsigned    dSpans; // number of decision spans (decide between g and b mode)
+	unsigned    lTargets;
 	Span	*span;
 
 public:
-	void genGoto(  std::ostream&, uint ind, const State *from, const State *next, bool &readCh);
-	void genBase(  std::ostream&, uint ind, const State *from, const State *next, bool &readCh, uint mask) const;
-	void genLinear(std::ostream&, uint ind, const State *from, const State *next, bool &readCh, uint mask) const;
-	void genBinary(std::ostream&, uint ind, const State *from, const State *next, bool &readCh, uint mask) const;
-	void genSwitch(std::ostream&, uint ind, const State *from, const State *next, bool &readCh, uint mask) const;
-	void genCpGoto(std::ostream&, uint ind, const State *from, const State *next, bool &readCh) const;
+	void genGoto(  std::ostream&, unsigned ind, const State *from, const State *next, bool &readCh);
+	void genBase(  std::ostream&, unsigned ind, const State *from, const State *next, bool &readCh, unsigned mask) const;
+	void genLinear(std::ostream&, unsigned ind, const State *from, const State *next, bool &readCh, unsigned mask) const;
+	void genBinary(std::ostream&, unsigned ind, const State *from, const State *next, bool &readCh, unsigned mask) const;
+	void genSwitch(std::ostream&, unsigned ind, const State *from, const State *next, bool &readCh, unsigned mask) const;
+	void genCpGoto(std::ostream&, unsigned ind, const State *from, const State *next, bool &readCh) const;
 	void compact();
 	void unmap(Go*, const State*);
 };
@@ -204,12 +204,12 @@ class State
 {
 
 public:
-	uint	label;
+	unsigned	label;
 	RuleOp	*rule;
 	State	*next;
 	State	*link;
-	uint	depth;		// for finding SCCs
-	uint	kCount;
+	unsigned	depth;		// for finding SCCs
+	unsigned	kCount;
 	Ins 	**kernel;
 
 	bool    isPreCtxt;
@@ -220,7 +220,7 @@ public:
 public:
 	State();
 	~State();
-	void emit(std::ostream&, uint, bool&, const std::string&) const;
+	void emit(std::ostream&, unsigned, bool&, const std::string&) const;
 	friend std::ostream& operator<<(std::ostream&, const State&);
 	friend std::ostream& operator<<(std::ostream&, const State*);
 
@@ -251,9 +251,9 @@ class DFA
 {
 
 public:
-	uint	lbChar;
-	uint	ubChar;
-	uint	nStates;
+	unsigned	lbChar;
+	unsigned	ubChar;
+	unsigned	nStates;
 	State	*head, **tail;
 	State	*toDo;
 	const Ins     *free_ins;
@@ -261,20 +261,20 @@ public:
 
 protected:
 	bool    bSaveOnHead;
-	uint    *saves;
+	unsigned    *saves;
 	State   **rules;
 
 public:
-	DFA(Ins*, uint, uint, uint, const Char*);
+	DFA(Ins*, unsigned, unsigned, unsigned, const Char*);
 	~DFA();
 	void addState(State**, State*);
-	State *findState(Ins**, uint);
+	State *findState(Ins**, unsigned);
 	void split(State*);
 
 	void findSCCs();
 	void findBaseState();
 	void prepare();
-	void emit(std::ostream&, uint&, const RegExpMap*, const std::string&, bool, bool&);
+	void emit(std::ostream&, unsigned&, const RegExpMap*, const std::string&, bool, bool&);
 
 	friend std::ostream& operator<<(std::ostream&, const DFA&);
 	friend std::ostream& operator<<(std::ostream&, const DFA*);
@@ -335,10 +335,10 @@ inline bool Match::isMatch() const
 	return true;
 }
 
-inline Enter::Enter(State *s, uint l) : Action(s), label(l)
+inline Enter::Enter(State *s, unsigned l) : Action(s), label(l)
 { }
 
-inline Initial::Initial(State *s, uint l, bool b) : Enter(s, l), setMarker(b)
+inline Initial::Initial(State *s, unsigned l, bool b) : Enter(s, l), setMarker(b)
 { }
 
 inline bool Initial::isInitial() const
@@ -346,7 +346,7 @@ inline bool Initial::isInitial() const
 	return true;
 }
 
-inline Save::Save(State *s, uint i) : Match(s), selector(i)
+inline Save::Save(State *s, unsigned i) : Match(s), selector(i)
 { }
 
 inline bool Save::isMatch() const

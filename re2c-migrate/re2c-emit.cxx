@@ -36,13 +36,13 @@ public:
 	const Go        *go;
 	const State     *on;
 	const BitMap    *next;
-	uint            i;
-	uint            m;
+	unsigned            i;
+	unsigned            m;
 
 public:
 	static const BitMap *find(const Go*, const State*);
 	static const BitMap *find(const State*);
-	static void gen(std::ostream&, uint ind, uint, uint);
+	static void gen(std::ostream&, unsigned ind, unsigned, unsigned);
 	static void stats();
 	BitMap(const Go*, const State*);
 	~BitMap();
@@ -143,20 +143,20 @@ std::string yyFillLength("@@");
 std::string yySetConditionParam("@@");
 std::string yySetStateParam("@@");
 std::string yySetupRule("");
-uint maxFill = 1;
-uint next_label = 0;
-uint cGotoThreshold = 9;
+unsigned maxFill = 1;
+unsigned next_label = 0;
+unsigned cGotoThreshold = 9;
 
-uint topIndent = 0;
+unsigned topIndent = 0;
 std::string indString("\t");
 bool yybmHexTable = false;
 bool bUseStateAbort = false;
 bool bWroteGetState = false;
 bool bWroteCondCheck = false;
 
-uint next_fill_index = 0;
-uint last_fill_index = 0;
-std::set<uint> vUsedLabels;
+unsigned next_fill_index = 0;
+unsigned last_fill_index = 0;
+std::set<unsigned> vUsedLabels;
 CodeNames mapCodeName;
 std::string typesInline;
 
@@ -165,7 +165,7 @@ std::string typesInline;
 // there must be at least one span in list;  all spans must cover
 // same range
 
-static std::string indent(uint ind)
+static std::string indent(unsigned ind)
 {
 	std::string str;
 
@@ -193,7 +193,7 @@ std::string replaceParam(std::string str, const std::string& param, const _Ty& v
 	return str;
 }
 
-static void genYYFill(std::ostream &o, uint, uint need)
+static void genYYFill(std::ostream &o, unsigned, unsigned need)
 {
 	if (bUseYYFillParam)
 	{
@@ -239,7 +239,7 @@ static std::string genGetCondition()
 	}
 }
 
-static void genSetCondition(std::ostream& o, uint ind, const std::string& newcond)
+static void genSetCondition(std::ostream& o, unsigned ind, const std::string& newcond)
 {
 	if (bUseYYSetConditionParam)
 	{
@@ -251,7 +251,7 @@ static void genSetCondition(std::ostream& o, uint ind, const std::string& newcon
 	}
 }
 
-static std::string space(uint this_label)
+static std::string space(unsigned this_label)
 {
 	int nl = next_label > 999999 ? 6 : next_label > 99999 ? 5 : next_label > 9999 ? 4 : next_label > 999 ? 3 : next_label > 99 ? 2 : next_label > 9 ? 1 : 0;
 	int tl = this_label > 999999 ? 6 : this_label > 99999 ? 5 : this_label > 9999 ? 4 : this_label > 999 ? 3 : this_label > 99 ? 2 : this_label > 9 ? 1 : 0;
@@ -262,9 +262,9 @@ static std::string space(uint this_label)
 void Go::compact()
 {
 	// arrange so that adjacent spans have different targets
-	uint i = 0;
+	unsigned i = 0;
 
-	for (uint j = 1; j < nSpans; ++j)
+	for (unsigned j = 1; j < nSpans; ++j)
 	{
 		if (span[j].to != span[i].to)
 		{
@@ -281,7 +281,7 @@ void Go::compact()
 void Go::unmap(Go *base, const State *x)
 {
 	Span *s = span, *b = base->span, *e = &b[base->nSpans];
-	uint lb = 0;
+	unsigned lb = 0;
 	s->ub = 0;
 	s->to = NULL;
 
@@ -316,10 +316,10 @@ void Go::unmap(Go *base, const State *x)
 	nSpans = s - span;
 }
 
-static void doGen(const Go *g, const State *s, uint *bm, uint f, uint m)
+static void doGen(const Go *g, const State *s, unsigned *bm, unsigned f, unsigned m)
 {
 	Span *b = g->span, *e = &b[g->nSpans];
-	uint lb = 0;
+	unsigned lb = 0;
 
 	for (; b < e; ++b)
 	{
@@ -338,7 +338,7 @@ static void doGen(const Go *g, const State *s, uint *bm, uint f, uint m)
 static void prt(std::ostream& o, const Go *g, const State *s)
 {
 	Span *b = g->span, *e = &b[g->nSpans];
-	uint lb = 0;
+	unsigned lb = 0;
 
 	for (; b < e; ++b)
 	{
@@ -354,9 +354,9 @@ static void prt(std::ostream& o, const Go *g, const State *s)
 static bool matches(const Go *g1, const State *s1, const Go *g2, const State *s2)
 {
 	Span *b1 = g1->span, *e1 = &b1[g1->nSpans];
-	uint lb1 = 0;
+	unsigned lb1 = 0;
 	Span *b2 = g2->span, *e2 = &b2[g2->nSpans];
-	uint lb2 = 0;
+	unsigned lb2 = 0;
 
 	for (;;)
 	{
@@ -433,13 +433,13 @@ const BitMap *BitMap::find(const State *x)
 	return NULL;
 }
 
-void BitMap::gen(std::ostream &o, uint ind, uint lb, uint ub)
+void BitMap::gen(std::ostream &o, unsigned ind, unsigned lb, unsigned ub)
 {
 	if (first && bLastPass && bUsedYYBitmap)
 	{
 		o << indent(ind) << "static const unsigned char " << mapCodeName["yybm"] << "[] = {";
 
-		uint c = 1, n = ub - lb;
+		unsigned c = 1, n = ub - lb;
 		const BitMap *cb = first;
 
 		while((cb = cb->next) != NULL) {
@@ -447,13 +447,13 @@ void BitMap::gen(std::ostream &o, uint ind, uint lb, uint ub)
 		}
 		BitMap *b = first;
 
-		uint *bm = new uint[n];
+		unsigned *bm = new unsigned[n];
 		
-		for (uint i = 0, t = 1; b; i += n, t += 8)
+		for (unsigned i = 0, t = 1; b; i += n, t += 8)
 		{
-			memset(bm, 0, n * sizeof(uint));
+			memset(bm, 0, n * sizeof(unsigned));
 
-			for (uint m = 0x80; b && m; m >>= 1)
+			for (unsigned m = 0x80; b && m; m >>= 1)
 			{
 				b->i = i;
 				b->m = m;
@@ -466,7 +466,7 @@ void BitMap::gen(std::ostream &o, uint ind, uint lb, uint ub)
 				o << "\n" << indent(ind+1) << "/* table " << t << " .. " << std::min(c, t+7) << ": " << i << " */";
 			}
 
-			for (uint j = 0; j < n; ++j)
+			for (unsigned j = 0; j < n; ++j)
 			{
 				if (j % 8 == 0)
 				{
@@ -479,7 +479,7 @@ void BitMap::gen(std::ostream &o, uint ind, uint lb, uint ub)
 				}
 				else
 				{
-					o << std::setw(3) << (uint)bm[j];
+					o << std::setw(3) << (unsigned)bm[j];
 				}
 				o  << ", ";
 			}
@@ -494,7 +494,7 @@ void BitMap::gen(std::ostream &o, uint ind, uint lb, uint ub)
 
 void BitMap::stats()
 {
-	uint n = 0;
+	unsigned n = 0;
 
 	for (const BitMap *b = first; b; b = b->next)
 	{
@@ -507,7 +507,7 @@ void BitMap::stats()
 	first = NULL;
 }
 
-static void genGoTo(std::ostream &o, uint ind, const State *from, const State *to, bool & readCh)
+static void genGoTo(std::ostream &o, unsigned ind, const State *from, const State *to, bool & readCh)
 {
 	if (DFlag)
 	{
@@ -525,7 +525,7 @@ static void genGoTo(std::ostream &o, uint ind, const State *from, const State *t
 	vUsedLabels.insert(to->label);
 }
 
-static void genIf(std::ostream &o, uint ind, const char *cmp, uint v, bool &readCh)
+static void genIf(std::ostream &o, unsigned ind, const char *cmp, unsigned v, bool &readCh)
 {
 	o << indent(ind) << "if (";
 	if (readCh)
@@ -543,14 +543,14 @@ static void genIf(std::ostream &o, uint ind, const char *cmp, uint v, bool &read
 	o << ") ";
 }
 
-static void need(std::ostream &o, uint ind, uint n, bool & readCh, bool bSetMarker)
+static void need(std::ostream &o, unsigned ind, unsigned n, bool & readCh, bool bSetMarker)
 {
 	if (DFlag)
 	{
 		return;
 	}
 
-	uint fillIndex = next_fill_index;
+	unsigned fillIndex = next_fill_index;
 
 	if (fFlag)
 	{
@@ -605,7 +605,7 @@ static void need(std::ostream &o, uint ind, uint n, bool & readCh, bool bSetMark
 	}
 }
 
-void Match::emit(std::ostream &o, uint ind, bool &readCh, const std::string&) const
+void Match::emit(std::ostream &o, unsigned ind, bool &readCh, const std::string&) const
 {
 	if (DFlag)
 	{
@@ -634,7 +634,7 @@ void Match::emit(std::ostream &o, uint ind, bool &readCh, const std::string&) co
 	}
 }
 
-void Enter::emit(std::ostream &o, uint ind, bool &readCh, const std::string&) const
+void Enter::emit(std::ostream &o, unsigned ind, bool &readCh, const std::string&) const
 {
 	if (state->link)
 	{
@@ -657,7 +657,7 @@ void Enter::emit(std::ostream &o, uint ind, bool &readCh, const std::string&) co
 	}
 }
 
-void Initial::emit(std::ostream &o, uint ind, bool &readCh, const std::string&) const
+void Initial::emit(std::ostream &o, unsigned ind, bool &readCh, const std::string&) const
 {
 	if (!cFlag && !startLabelName.empty())
 	{
@@ -704,7 +704,7 @@ void Initial::emit(std::ostream &o, uint ind, bool &readCh, const std::string&) 
 	}
 }
 
-void Save::emit(std::ostream &o, uint ind, bool &readCh, const std::string&) const
+void Save::emit(std::ostream &o, unsigned ind, bool &readCh, const std::string&) const
 {
 	if (DFlag)
 	{
@@ -743,12 +743,12 @@ Move::Move(State *s) : Action(s)
 	;
 }
 
-void Move::emit(std::ostream &, uint, bool &, const std::string&) const
+void Move::emit(std::ostream &, unsigned, bool &, const std::string&) const
 {
 	;
 }
 
-Accept::Accept(State *x, uint n, uint *s, State **r)
+Accept::Accept(State *x, unsigned n, unsigned *s, State **r)
 		: Action(x), nRules(n), saves(s), rules(r)
 {
 	;
@@ -756,7 +756,7 @@ Accept::Accept(State *x, uint n, uint *s, State **r)
 
 void Accept::genRuleMap()
 {
-	for (uint i = 0; i < nRules; ++i)
+	for (unsigned i = 0; i < nRules; ++i)
 	{
 		if (saves[i] != ~0u)
 		{
@@ -765,11 +765,11 @@ void Accept::genRuleMap()
 	}
 }
 
-void Accept::emitBinary(std::ostream &o, uint ind, uint l, uint r, bool &readCh) const
+void Accept::emitBinary(std::ostream &o, unsigned ind, unsigned l, unsigned r, bool &readCh) const
 {
 	if (l < r)
 	{
-		uint m = (l + r) >> 1;
+		unsigned m = (l + r) >> 1;
 
 		assert(bUsedYYAccept);
 		o << indent(ind) << "if (" << mapCodeName["yyaccept"] << (r == l+1 ? " == " : " <= ") << m << ") {\n";
@@ -784,7 +784,7 @@ void Accept::emitBinary(std::ostream &o, uint ind, uint l, uint r, bool &readCh)
 	}
 }
 
-void Accept::emit(std::ostream &o, uint ind, bool &readCh, const std::string&) const
+void Accept::emit(std::ostream &o, unsigned ind, bool &readCh, const std::string&) const
 {
 	if (mapRules.size() > 0)
 	{
@@ -867,7 +867,7 @@ Rule::Rule(State *s, RuleOp *r) : Action(s), rule(r)
 	;
 }
 
-void Rule::emit(std::ostream &o, uint ind, bool &, const std::string& condName) const
+void Rule::emit(std::ostream &o, unsigned ind, bool &, const std::string& condName) const
 {
 	if (DFlag)
 	{
@@ -875,7 +875,7 @@ void Rule::emit(std::ostream &o, uint ind, bool &, const std::string& condName) 
 		return;
 	}
 
-	uint back = rule->ctx->fixedLength();
+	unsigned back = rule->ctx->fixedLength();
 
 	if (back != 0u)
 	{
@@ -904,7 +904,7 @@ void Rule::emit(std::ostream &o, uint ind, bool &, const std::string& condName) 
 	o << "\n";
 }
 
-static void doLinear(std::ostream &o, uint ind, Span *s, uint n, const State *from, const State *next, bool &readCh, uint mask)
+static void doLinear(std::ostream &o, unsigned ind, Span *s, unsigned n, const State *from, const State *next, bool &readCh, unsigned mask)
 {
 	for (;;)
 	{
@@ -979,12 +979,12 @@ static void doLinear(std::ostream &o, uint ind, Span *s, uint n, const State *fr
 	}
 }
 
-void Go::genLinear(std::ostream &o, uint ind, const State *from, const State *next, bool &readCh, uint mask) const
+void Go::genLinear(std::ostream &o, unsigned ind, const State *from, const State *next, bool &readCh, unsigned mask) const
 {
 	doLinear(o, ind, span, nSpans, from, next, readCh, mask);
 }
 
-static void printDotCharInterval(std::ostream &o, uint lastPrintableChar, uint chr, const State *from, const State *to, bool multipleIntervals)
+static void printDotCharInterval(std::ostream &o, unsigned lastPrintableChar, unsigned chr, const State *from, const State *to, bool multipleIntervals)
 {
 	o << from->label << " -> " << to->label;
 	o << " [label=";
@@ -1019,10 +1019,10 @@ static void printDotCharInterval(std::ostream &o, uint lastPrintableChar, uint c
 	o << "]";
 }
 
-static bool genCases(std::ostream &o, uint ind, uint lb, Span *s, bool &newLine, uint mask, const State *from, const State *to)
+static bool genCases(std::ostream &o, unsigned ind, unsigned lb, Span *s, bool &newLine, unsigned mask, const State *from, const State *to)
 {
 	bool used = false;
-	uint lastPrintableChar = 0;
+	unsigned lastPrintableChar = 0;
 
 	if (!newLine)
 	{
@@ -1089,7 +1089,7 @@ static bool genCases(std::ostream &o, uint ind, uint lb, Span *s, bool &newLine,
 	return used;
 }
 
-void Go::genSwitch(std::ostream &o, uint ind, const State *from, const State *next, bool &readCh, uint mask) const
+void Go::genSwitch(std::ostream &o, unsigned ind, const State *from, const State *next, bool &readCh, unsigned mask) const
 {
 	bool newLine = true;
 
@@ -1104,7 +1104,7 @@ void Go::genSwitch(std::ostream &o, uint ind, const State *from, const State *ne
 
 		t = &sP[0];
 
-		for (uint i = 0; i < nSpans; ++i)
+		for (unsigned i = 0; i < nSpans; ++i)
 		{
 			if (span[i].to != def)
 			{
@@ -1189,7 +1189,7 @@ void Go::genSwitch(std::ostream &o, uint ind, const State *from, const State *ne
 	}
 }
 
-static void doBinary(std::ostream &o, uint ind, Span *s, uint n, const State *from, const State *next, bool &readCh, uint mask)
+static void doBinary(std::ostream &o, unsigned ind, Span *s, unsigned n, const State *from, const State *next, bool &readCh, unsigned mask)
 {
 	if (n <= 4)
 	{
@@ -1197,7 +1197,7 @@ static void doBinary(std::ostream &o, uint ind, Span *s, uint n, const State *fr
 	}
 	else
 	{
-		uint h = n / 2;
+		unsigned h = n / 2;
 
 		genIf(o, ind, "<=", s[h - 1].ub - 1, readCh);
 		o << "{\n";
@@ -1208,13 +1208,13 @@ static void doBinary(std::ostream &o, uint ind, Span *s, uint n, const State *fr
 	}
 }
 
-void Go::genBinary(std::ostream &o, uint ind, const State *from, const State *next, bool &readCh, uint mask) const
+void Go::genBinary(std::ostream &o, unsigned ind, const State *from, const State *next, bool &readCh, unsigned mask) const
 {
 	if (mask)
 	{
 		Span * sc = new Span[wSpans];
 		
-		for (uint i = 0, j = 0; i < nSpans; i++)
+		for (unsigned i = 0, j = 0; i < nSpans; i++)
 		{
 			if (span[i].ub > 0xFF)
 			{
@@ -1232,7 +1232,7 @@ void Go::genBinary(std::ostream &o, uint ind, const State *from, const State *ne
 	}
 }
 
-void Go::genBase(std::ostream &o, uint ind, const State *from, const State *next, bool &readCh, uint mask) const
+void Go::genBase(std::ostream &o, unsigned ind, const State *from, const State *next, bool &readCh, unsigned mask) const
 {
 	if ((mask ? wSpans : nSpans) == 0)
 	{
@@ -1248,7 +1248,7 @@ void Go::genBase(std::ostream &o, uint ind, const State *from, const State *next
 	if ((mask ? wSpans : nSpans) > 8)
 	{
 		Span *bot = &span[0], *top = &span[nSpans - 1];
-		uint util;
+		unsigned util;
 
 		if (bot[0].to == top[0].to)
 		{
@@ -1283,7 +1283,7 @@ void Go::genBase(std::ostream &o, uint ind, const State *from, const State *next
 	}
 }
 
-void Go::genCpGoto(std::ostream &o, uint ind, const State *from, const State *next, bool &readCh) const
+void Go::genCpGoto(std::ostream &o, unsigned ind, const State *from, const State *next, bool &readCh) const
 {
 	std::string sYych;
 	
@@ -1311,8 +1311,8 @@ void Go::genCpGoto(std::ostream &o, uint ind, const State *from, const State *ne
 	o << indent(ind++) << "static void *" << mapCodeName["yytarget"] << "[256] = {\n";
 	o << indent(ind);
 
-	uint ch = 0;
-	for (uint i = 0; i < lSpans; ++i)
+	unsigned ch = 0;
+	for (unsigned i = 0; i < lSpans; ++i)
 	{
 		vUsedLabels.insert(span[i].to->label);
 		for(; ch < span[i].ub; ++ch)
@@ -1339,16 +1339,16 @@ void Go::genCpGoto(std::ostream &o, uint ind, const State *from, const State *ne
 	o << indent(--ind) << "}\n";
 }
 
-void Go::genGoto(std::ostream &o, uint ind, const State *from, const State *next, bool &readCh)
+void Go::genGoto(std::ostream &o, unsigned ind, const State *from, const State *next, bool &readCh)
 {
 	if ((gFlag || wFlag) && wSpans == ~0u)
 	{
-		uint nBitmaps = 0;
-		std::set<uint> vTargets;
+		unsigned nBitmaps = 0;
+		std::set<unsigned> vTargets;
 		wSpans = 0;
 		lSpans = 1;
 		dSpans = 0;
-		for (uint i = 0; i < nSpans; ++i)
+		for (unsigned i = 0; i < nSpans; ++i)
 		{
 			if (span[i].ub > 0xFF)
 			{
@@ -1391,7 +1391,7 @@ void Go::genGoto(std::ostream &o, uint ind, const State *from, const State *next
 	}
 	else if (bFlag)
 	{
-		for (uint i = 0; i < nSpans; ++i)
+		for (unsigned i = 0; i < nSpans; ++i)
 		{
 			State *to = span[i].to;
 
@@ -1433,7 +1433,7 @@ void Go::genGoto(std::ostream &o, uint ind, const State *from, const State *next
 					}
 					else
 					{
-						o << (uint) b->m;
+						o << (unsigned) b->m;
 					}
 					o << ") {\n";
 					genGoTo(o, ind+1, from, to, readCh);
@@ -1449,7 +1449,7 @@ void Go::genGoto(std::ostream &o, uint ind, const State *from, const State *next
 	genBase(o, ind, from, next, readCh, 0);
 }
 
-void State::emit(std::ostream &o, uint ind, bool &readCh, const std::string& condName) const
+void State::emit(std::ostream &o, unsigned ind, bool &readCh, const std::string& condName) const
 {
 	if (vUsedLabels.count(label))
 	{
@@ -1466,10 +1466,10 @@ void State::emit(std::ostream &o, uint ind, bool &readCh, const std::string& con
 	action->emit(o, ind, readCh, condName);
 }
 
-static uint merge(Span *x0, State *fg, State *bg)
+static unsigned merge(Span *x0, State *fg, State *bg)
 {
 	Span *x = x0, *f = fg->go.span, *b = bg->go.span;
-	uint nf = fg->go.nSpans, nb = bg->go.nSpans;
+	unsigned nf = fg->go.nSpans, nb = bg->go.nSpans;
 	State *prev = NULL, *to;
 	// NB: we assume both spans are for same range
 
@@ -1541,7 +1541,7 @@ static uint merge(Span *x0, State *fg, State *bg)
 	}
 }
 
-static const uint cInfinity = ~0u;
+static const unsigned cInfinity = ~0u;
 
 class SCC
 {
@@ -1550,7 +1550,7 @@ public:
 	State	**top, **stk;
 
 public:
-	SCC(uint);
+	SCC(unsigned);
 	~SCC();
 	void traverse(State*);
 
@@ -1569,7 +1569,7 @@ private:
 #endif
 };
 
-SCC::SCC(uint size)
+SCC::SCC(unsigned size)
 	: top(new State * [size])
 	, stk(top)
 {
@@ -1583,10 +1583,10 @@ SCC::~SCC()
 void SCC::traverse(State *x)
 {
 	*top = x;
-	uint k = ++top - stk;
+	unsigned k = ++top - stk;
 	x->depth = k;
 
-	for (uint i = 0; i < x->go.nSpans; ++i)
+	for (unsigned i = 0; i < x->go.nSpans; ++i)
 	{
 		State *y = x->go.span[i].to;
 
@@ -1629,7 +1629,7 @@ static bool state_is_in_non_trivial_SCC(const State* s)
 	// Note: (s->go.spans[i].to == s) is allowed, corresponds to s
 	// looping back to itself.
 	//
-	for (uint i = 0; i < s->go.nSpans; ++i)
+	for (unsigned i = 0; i < s->go.nSpans; ++i)
 	{
 		const State* t = s->go.span[i].to;
 	
@@ -1642,22 +1642,22 @@ static bool state_is_in_non_trivial_SCC(const State* s)
 	return false;
 }
 
-static uint maxDist(State *s)
+static unsigned maxDist(State *s)
 {
 	if (s->depth != cInfinity)
 	{
 		// Already calculated, just return result.
     	return s->depth;
 	}
-	uint mm = 0;
+	unsigned mm = 0;
 
-	for (uint i = 0; i < s->go.nSpans; ++i)
+	for (unsigned i = 0; i < s->go.nSpans; ++i)
 	{
 		State *t = s->go.span[i].to;
 
 		if (t)
 		{
-			uint m = 1;
+			unsigned m = 1;
 
 			if (!t->link) // marked as non-key state
 			{
@@ -1751,14 +1751,14 @@ void DFA::findBaseState()
 	{
 		if (!s->link)
 		{
-			for (uint i = 0; i < s->go.nSpans; ++i)
+			for (unsigned i = 0; i < s->go.nSpans; ++i)
 			{
 				State *to = s->go.span[i].to;
 
 				if (to && to->isBase)
 				{
 					to = to->go.span[0].to;
-					uint nSpans = merge(span, s, to);
+					unsigned nSpans = merge(span, s, to);
 
 					if (nSpans < s->go.nSpans)
 					{
@@ -1780,14 +1780,14 @@ void DFA::findBaseState()
 void DFA::prepare()
 {
 	State *s;
-	uint i;
+	unsigned i;
 
 	bUsedYYBitmap = false;
 
 	findSCCs();
 	head->link = head;
 
-	uint nRules = 0;
+	unsigned nRules = 0;
 
 	for (s = head; s; s = s->next)
 	{
@@ -1802,8 +1802,8 @@ void DFA::prepare()
 		}
 	}
 
-	uint nSaves = 0;
-	saves = new uint[nRules];
+	unsigned nSaves = 0;
+	saves = new unsigned[nRules];
 	memset(saves, ~0, (nRules)*sizeof(*saves));
 
 	// mark backtracking points
@@ -1964,7 +1964,7 @@ protected:
 typedef basic_null_stream<char> null_stream;
 
 
-void DFA::emit(std::ostream &o, uint& ind, const RegExpMap* specMap, const std::string& condName, bool isLastCond, bool& bPrologBrace)
+void DFA::emit(std::ostream &o, unsigned& ind, const RegExpMap* specMap, const std::string& condName, bool isLastCond, bool& bPrologBrace)
 {
 	bool bProlog = (!cFlag || !bWroteCondCheck);
 
@@ -1979,13 +1979,13 @@ void DFA::emit(std::ostream &o, uint& ind, const RegExpMap* specMap, const std::
 	// start_label corresponds to current condition.
 	// NOTE: prolog_label must be yy0 because of the !getstate:re2c handling
 	// in scanner.re
-	uint prolog_label = next_label;
+	unsigned prolog_label = next_label;
 	if (bProlog && cFlag)
 	{
 		next_label++;
 	}
 
-	uint start_label = next_label;
+	unsigned start_label = next_label;
 
 	(void) new Initial(head, next_label++, bSaveOnHead);
 
@@ -2006,7 +2006,7 @@ void DFA::emit(std::ostream &o, uint& ind, const RegExpMap* specMap, const std::
 
 	// Save 'next_fill_index' and compute information about code generation
 	// while writing to null device.
-	uint save_fill_index = next_fill_index;
+	unsigned save_fill_index = next_fill_index;
 	null_stream  null_dev;
 
 	for (s = head; s; s = s->next)
@@ -2140,7 +2140,7 @@ void DFA::emit(std::ostream &o, uint& ind, const RegExpMap* specMap, const std::
 	bUseStartLabel = false;
 }
 
-static void genGetStateGotoSub(std::ostream &o, uint ind, uint start_label, int cMin, int cMax)
+static void genGetStateGotoSub(std::ostream &o, unsigned ind, unsigned start_label, int cMin, int cMax)
 {
 	if (cMin == cMax)
 	{
@@ -2165,7 +2165,7 @@ static void genGetStateGotoSub(std::ostream &o, uint ind, uint start_label, int 
 	}
 }
 
-void genGetStateGoto(std::ostream &o, uint& ind, uint start_label)
+void genGetStateGoto(std::ostream &o, unsigned& ind, unsigned start_label)
 {
 	if (fFlag && !bWroteGetState)
 	{
@@ -2237,7 +2237,7 @@ void genGetStateGoto(std::ostream &o, uint& ind, uint start_label)
 	}
 }
 
-void genCondTable(std::ostream &o, uint ind, const RegExpMap& specMap)
+void genCondTable(std::ostream &o, unsigned ind, const RegExpMap& specMap)
 {
 	if (cFlag && !bWroteCondCheck && gFlag && specMap.size())
 	{
@@ -2258,7 +2258,7 @@ void genCondTable(std::ostream &o, uint ind, const RegExpMap& specMap)
 	}
 }
 
-static void genCondGotoSub(std::ostream &o, uint ind, RegExpIndices& vCondList, uint cMin, uint cMax)
+static void genCondGotoSub(std::ostream &o, unsigned ind, RegExpIndices& vCondList, unsigned cMin, unsigned cMax)
 {
 	if (cMin == cMax)
 	{
@@ -2266,7 +2266,7 @@ static void genCondGotoSub(std::ostream &o, uint ind, RegExpIndices& vCondList, 
 	}
 	else
 	{
-		uint cMid = cMin + ((cMax - cMin + 1) / 2);
+		unsigned cMid = cMin + ((cMax - cMin + 1) / 2);
 
 		o << indent(ind) << "if (" << genGetCondition() << " < " << cMid << ") {\n";
 		genCondGotoSub(o, ind + 1, vCondList, cMin, cMid - 1);
@@ -2276,7 +2276,7 @@ static void genCondGotoSub(std::ostream &o, uint ind, RegExpIndices& vCondList, 
 	}
 }
 
-void genCondGoto(std::ostream &o, uint ind, const RegExpMap& specMap)
+void genCondGoto(std::ostream &o, unsigned ind, const RegExpMap& specMap)
 {
 	if (cFlag && !bWroteCondCheck && specMap.size())
 	{
@@ -2318,7 +2318,7 @@ void genCondGoto(std::ostream &o, uint ind, const RegExpMap& specMap)
 	}
 }
 
-void genTypes(std::string& o, uint ind, const RegExpMap& specMap)
+void genTypes(std::string& o, unsigned ind, const RegExpMap& specMap)
 {
 	o.clear();
 
@@ -2341,7 +2341,7 @@ void genTypes(std::string& o, uint ind, const RegExpMap& specMap)
 	o += indent(--ind) + "};\n";
 }
 
-void genHeader(std::ostream &o, uint ind, const RegExpMap& specMap)
+void genHeader(std::ostream &o, unsigned ind, const RegExpMap& specMap)
 {
 	o << "/* Generated by re2c " PACKAGE_VERSION;
 	if (!bNoGenerationDate)
@@ -2599,11 +2599,11 @@ Scanner::Scanner(std::istream& i, std::ostream& o)
 {
 }
 
-char *Scanner::fill(char *cursor, uint need)
+char *Scanner::fill(char *cursor, unsigned need)
 {
 	if(!eof)
 	{
-		uint cnt;
+		unsigned cnt;
 		/* Do not get rid of anything when rFlag is active. Otherwise
 		 * get rid of everything that was already handedout. */
 		if (!rFlag)
@@ -2626,7 +2626,7 @@ char *Scanner::fill(char *cursor, uint need)
 		{
 			need = BSIZE;
 		}
-		if (static_cast<uint>(top - lim) < need)
+		if (static_cast<unsigned>(top - lim) < need)
 		{
 			char *buf = new char[(lim - bot) + need];
 			if (!buf)
@@ -2662,7 +2662,7 @@ void Scanner::set_in_parse(bool new_in_parse)
 	in_parse = new_in_parse;
 }
 
-void Scanner::fatal_at(uint line, uint ofs, const char *msg) const
+void Scanner::fatal_at(unsigned line, unsigned ofs, const char *msg) const
 {
 	out.flush();
 	std::cerr << "re2c: error: "
@@ -2671,12 +2671,12 @@ void Scanner::fatal_at(uint line, uint ofs, const char *msg) const
 	exit(1);
 }
 
-void Scanner::fatal(uint ofs, const char *msg) const
+void Scanner::fatal(unsigned ofs, const char *msg) const
 {
 	fatal_at(in_parse ? tline : cline, ofs, msg);
 }
 
-void Scanner::fatalf_at(uint line, const char* fmt, ...) const
+void Scanner::fatalf_at(unsigned line, const char* fmt, ...) const
 {
 	char szBuf[4096];
 
@@ -2714,7 +2714,7 @@ Scanner::~Scanner()
 	}
 }
 
-void Scanner::check_token_length(char *pos, uint len) const
+void Scanner::check_token_length(char *pos, unsigned len) const
 {
 	if (pos < bot || pos + len > top)
 	{

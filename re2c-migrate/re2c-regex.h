@@ -18,18 +18,18 @@ namespace re2c
 
 typedef unsigned short Char;
 
-const uint CHAR = 0;
-const uint GOTO = 1;
-const uint FORK = 2;
-const uint TERM = 3;
-const uint CTXT = 4;
+const unsigned CHAR = 0;
+const unsigned GOTO = 1;
+const unsigned FORK = 2;
+const unsigned TERM = 3;
+const unsigned CTXT = 4;
 
 union Ins {
 
 	struct
 	{
-		byte	tag;
-		byte	marked;
+		unsigned char	tag;
+		unsigned char	marked;
 		void	*link;
 	}
 
@@ -37,8 +37,8 @@ union Ins {
 
 	struct
 	{
-		ushort	value;
-		ushort	bump;
+		unsigned short	value;
+		unsigned short	bump;
 		void	*link;
 	}
 
@@ -70,17 +70,17 @@ public:
 	const Str          text;
 	const std::string  newcond;
 	const std::string  source;
-	uint               line;
+	unsigned               line;
 	const bool         autogen;
 
 public:
-	Token(const SubStr&, const std::string&, uint);
-	Token(const Token*, const std::string&, uint, const Str*);
+	Token(const SubStr&, const std::string&, unsigned);
+	Token(const Token*, const std::string&, unsigned, const Str*);
 	Token(const Token& oth);
 	~Token();
 };
 
-inline Token::Token(const SubStr& t, const std::string& s, uint l)
+inline Token::Token(const SubStr& t, const std::string& s, unsigned l)
 	: text(t)
 	, newcond()
 	, source(s)
@@ -90,7 +90,7 @@ inline Token::Token(const SubStr& t, const std::string& s, uint l)
 	;
 }
 
-inline Token::Token(const Token* t, const std::string& s, uint l, const Str *c)
+inline Token::Token(const Token* t, const std::string& s, unsigned l, const Str *c)
 	: text(t ? t->text.to_string().c_str() : "")
 	, newcond(c ? c->to_string() : "")
 	, source(s)
@@ -172,7 +172,7 @@ ExtOp;
 
 struct CharPtn
 {
-	uint	card;
+	unsigned	card;
 	CharPtn	*fix;
 	CharPtn	*nxt;
 };
@@ -195,12 +195,12 @@ class Range
 
 public:
 	Range	*next;
-	uint	lb, ub;		// [lb,ub)
+	unsigned	lb, ub;		// [lb,ub)
 
 	static free_list<Range*> vFreeList;
 
 public:
-	Range(uint l, uint u) : next(NULL), lb(l), ub(u)
+	Range(unsigned l, unsigned u) : next(NULL), lb(l), ub(u)
 	{
 		vFreeList.insert(this);
 	}
@@ -228,7 +228,7 @@ class RegExp
 {
 
 public:
-	uint	size;
+	unsigned	size;
         bool    anchored; // optimization flag -- always safe to set to false
 	
 	static free_list<RegExp*> vFreeList;
@@ -252,7 +252,7 @@ public:
 
 	virtual void split(CharSet&) = 0;
 	virtual void calcSize(Char*) = 0;
-	virtual uint fixedLength();
+	virtual unsigned fixedLength();
 	virtual void compile(Char*, Ins*) = 0;
 	virtual void display(std::ostream&) const = 0;
 	friend std::ostream& operator<<(std::ostream&, const RegExp&);
@@ -284,7 +284,7 @@ public:
 
 	void split(CharSet&);
 	void calcSize(Char*);
-	uint fixedLength();
+	unsigned fixedLength();
 	void compile(Char*, Ins*);
 	void display(std::ostream &o) const
 	{
@@ -311,7 +311,7 @@ public:
 
 	void split(CharSet&);
 	void calcSize(Char*);
-	uint fixedLength();
+	unsigned fixedLength();
 	void compile(Char*, Ins*);
 	void display(std::ostream&) const;
 
@@ -342,12 +342,12 @@ private:
 public:
 	RegExp   *ctx;
 	Ins      *ins;
-	uint     accept;
+	unsigned     accept;
 	Token    *code;
-	uint     line;
+	unsigned     line;
 
 public:
-	RuleOp(RegExp*, RegExp*, Token*, uint);
+	RuleOp(RegExp*, RegExp*, Token*, unsigned);
 
 	~RuleOp()
 	{
@@ -366,7 +366,7 @@ public:
 	{
 		o << exp << "/" << ctx << ";";
 	}
-	RuleOp* copy(uint) const;
+	RuleOp* copy(unsigned) const;
 
 #ifdef PEDANTIC
 private:
@@ -416,7 +416,7 @@ public:
 
 	void split(CharSet&);
 	void calcSize(Char*);
-	uint fixedLength();
+	unsigned fixedLength();
 	void compile(Char*, Ins*);
 	void display(std::ostream &o) const
 	{
@@ -466,7 +466,7 @@ public:
 
 	void split(CharSet&);
 	void calcSize(Char*);
-	uint fixedLength();
+	unsigned fixedLength();
 	void compile(Char*, Ins*);
 	void display(std::ostream &o) const
 	{
@@ -589,17 +589,17 @@ typedef std::pair<unsigned, RegExp*>    NRegExp;
 typedef std::map<std::string, NRegExp>  RegExpMap;
 typedef std::vector<std::string>        RegExpIndices;
 typedef std::list<RuleOp*>              RuleOpList;
-typedef std::pair<uint, std::string>    LineCode;
+typedef std::pair<unsigned, std::string>    LineCode;
 typedef std::map<std::string, LineCode> SetupMap;
 
 class DFA;
 
 extern DFA* genCode(RegExp*);
-extern void genGetStateGoto(std::ostream&, uint&, uint);
-extern void genCondTable(std::ostream&, uint, const RegExpMap&);
-extern void genCondGoto(std::ostream&, uint, const RegExpMap&);
-extern void genTypes(std::string&, uint, const RegExpMap&);
-extern void genHeader(std::ostream&, uint, const RegExpMap&);
+extern void genGetStateGoto(std::ostream&, unsigned&, unsigned);
+extern void genCondTable(std::ostream&, unsigned, const RegExpMap&);
+extern void genCondGoto(std::ostream&, unsigned, const RegExpMap&);
+extern void genTypes(std::string&, unsigned, const RegExpMap&);
+extern void genHeader(std::ostream&, unsigned, const RegExpMap&);
 
 extern RegExp *mkDiff(RegExp*, RegExp*);
 extern RegExp *mkAlt(RegExp*, RegExp*);
@@ -615,7 +615,7 @@ struct ScannerState
 
 	char	*tok, *ptr, *cur, *pos, *ctx;  // positioning
 	char    *bot, *lim, *top, *eof;        // buffer
-	uint	tchar, tline, cline, iscfg, buf_size;
+	unsigned	tchar, tline, cline, iscfg, buf_size;
 	bool    in_parse;
 };
 
@@ -626,7 +626,7 @@ private:
 	std::ostream&   out;
 
 private:
-	char *fill(char*, uint);
+	char *fill(char*, unsigned);
 	Scanner(const Scanner&); //unimplemented
 	Scanner& operator=(const Scanner&); //unimplemented
 	void set_sourceline(char *& cursor);
@@ -650,29 +650,29 @@ public:
 	void save_state(ScannerState&) const;
 	void restore_state(const ScannerState&);
 
-	uint get_cline() const;
+	unsigned get_cline() const;
 	void set_in_parse(bool new_in_parse);
-	void fatal_at(uint line, uint ofs, const char *msg) const;
-	void fatalf_at(uint line, const char*, ...) const;
+	void fatal_at(unsigned line, unsigned ofs, const char *msg) const;
+	void fatalf_at(unsigned line, const char*, ...) const;
 	void fatalf(const char*, ...) const;
 	void fatal(const char*) const;
-	void fatal(uint, const char*) const;
+	void fatal(unsigned, const char*) const;
 
 	void config(const Str&, int);
 	void config(const Str&, const Str&);
 
-	void check_token_length(char *pos, uint len) const;
+	void check_token_length(char *pos, unsigned len) const;
 	SubStr token() const;
-	SubStr token(uint start, uint len) const;
+	SubStr token(unsigned start, unsigned len) const;
 	Str raw_token(std::string enclosure) const;
-	virtual uint get_line() const;	
-	uint xlat(uint c) const;
+	virtual unsigned get_line() const;	
+	unsigned xlat(unsigned c) const;
 
-	uint unescape(SubStr &s) const;
+	unsigned unescape(SubStr &s) const;
 	std::string& unescape(SubStr& str_in, std::string& str_out) const;
 
 	Range * getRange(SubStr &s) const;
-	RegExp * matchChar(uint c) const;
+	RegExp * matchChar(unsigned c) const;
 	RegExp * strToName(SubStr s) const;
 	RegExp * strToRE(SubStr s) const;
 	RegExp * strToCaseInsensitiveRE(SubStr s) const;
@@ -687,12 +687,12 @@ inline size_t Scanner::get_pos() const
 	return cur - bot;
 }
 
-inline uint Scanner::get_line() const
+inline unsigned Scanner::get_line() const
 {
 	return cline;
 }
 
-inline uint Scanner::get_cline() const
+inline unsigned Scanner::get_cline() const
 {
 	return cline;
 }
@@ -713,13 +713,13 @@ inline SubStr Scanner::token() const
 	return SubStr(tok, cur - tok);
 }
 
-inline SubStr Scanner::token(uint start, uint len) const
+inline SubStr Scanner::token(unsigned start, unsigned len) const
 {
 	check_token_length(tok + start, len);
 	return SubStr(tok + start, len);
 }
 
-inline uint Scanner::xlat(uint c) const
+inline unsigned Scanner::xlat(unsigned c) const
 {
 	return re2c::wFlag ? c : re2c::xlat[c & 0xFF];
 }

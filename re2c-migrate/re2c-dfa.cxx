@@ -7,7 +7,7 @@
 namespace re2c
 {
 
-void prtChOrHex(std::ostream& o, uint c)
+void prtChOrHex(std::ostream& o, unsigned c)
 {
 	if (eFlag)
 	{
@@ -29,7 +29,7 @@ void prtChOrHex(std::ostream& o, uint c)
 	}
 }
 
-void prtHex(std::ostream& o, uint c)
+void prtHex(std::ostream& o, unsigned c)
 {
 	int oc = (int)(c);
 
@@ -61,7 +61,7 @@ void prtHex(std::ostream& o, uint c)
 	}
 }
 
-void prtCh(std::ostream& o, uint c)
+void prtCh(std::ostream& o, unsigned c)
 {
 	if (eFlag)
 	{
@@ -144,7 +144,7 @@ void prtCh(std::ostream& o, uint c)
 	}
 }
 
-void printSpan(std::ostream& o, uint lb, uint ub)
+void printSpan(std::ostream& o, unsigned lb, unsigned ub)
 {
 	if (lb > ub)
 	{
@@ -167,7 +167,7 @@ void printSpan(std::ostream& o, uint lb, uint ub)
 	o << "]";
 }
 
-uint Span::show(std::ostream &o, uint lb) const
+unsigned Span::show(std::ostream &o, unsigned lb) const
 {
 	if (to)
 	{
@@ -189,9 +189,9 @@ std::ostream& operator<<(std::ostream &o, const State &s)
 
 	o << "\n";
 
-	uint lb = 0;
+	unsigned lb = 0;
 
-	for (uint i = 0; i < s.go.nSpans; ++i)
+	for (unsigned i = 0; i < s.go.nSpans; ++i)
 	{
 		lb = s.go.span[i].show(o, lb);
 	}
@@ -260,7 +260,7 @@ struct GoTo
 	void	*to;
 };
 
-DFA::DFA(Ins *ins, uint ni, uint lb, uint ub, const Char *rep)
+DFA::DFA(Ins *ins, unsigned ni, unsigned lb, unsigned ub, const Char *rep)
 	: lbChar(lb)
 	, ubChar(ub)
 	, nStates(0)
@@ -271,7 +271,7 @@ DFA::DFA(Ins *ins, uint ni, uint lb, uint ub, const Char *rep)
 	, free_rep(rep)
 {
 	Ins **work = new Ins * [ni + 1];
-	uint nc = ub - lb;
+	unsigned nc = ub - lb;
 	GoTo *goTo = new GoTo[nc];
 	Span *span = new Span[nc];
 	memset((char*) goTo, 0, nc*sizeof(GoTo));
@@ -283,8 +283,8 @@ DFA::DFA(Ins *ins, uint ni, uint lb, uint ub, const Char *rep)
 		toDo = s->link;
 
 		Ins **cP, **iP, *i;
-		uint nGoTos = 0;
-		uint j;
+		unsigned nGoTos = 0;
+		unsigned j;
 
 		s->rule = NULL;
 
@@ -378,7 +378,7 @@ void DFA::addState(State **a, State *s)
 		tail = &s->next;
 }
 
-State *DFA::findState(Ins **kernel, uint kCount)
+State *DFA::findState(Ins **kernel, unsigned kCount)
 {
 	Ins **cP, **iP, *i;
 	State *s;

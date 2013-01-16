@@ -212,7 +212,7 @@ stapdfa::emit_declaration (translator_output *o)
   o->newline() << "#define YYMARKER mar";
   o->newline() << "#define YYFILL(n) ({ if ((cur - start) + n > l) return 0; })";
 
-  re2c::uint topIndent = 0;
+  unsigned topIndent = 0;
   bool bPrologBrace = false;
   content->emit(o->newline(), topIndent, NULL, "", 0, bPrologBrace);
 
