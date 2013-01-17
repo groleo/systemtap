@@ -106,6 +106,12 @@ proc no_load {} {
     return 0
 }
 
+# Load function to use when you need to wait 5 seconds.
+proc wait_5_secs {} {
+    after 5000;
+    return 0;
+}
+
 proc print_system_info {} {
 	global Host Snapshot Distro GCC_Version
 

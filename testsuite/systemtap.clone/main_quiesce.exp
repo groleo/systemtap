@@ -43,11 +43,6 @@ set output "hits = \[1-9\]\[0-9\]*\r\n"
 set script [format $test_script $exepath]
 verbose -log $script
 
-proc wait_5_secs {} {
-    after 5000;
-    return 0;
-}
-
 foreach runtime [get_runtime_list] {
     set test_name "$test"
 

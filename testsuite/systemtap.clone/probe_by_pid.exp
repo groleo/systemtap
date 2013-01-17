@@ -8,11 +8,6 @@ if {![utrace_p]} { untested $TEST_NAME; return }
 
 source $srcdir/$subdir/test_progs.tcl
 
-proc sleep_5_secs {} {
-    after 5000
-    return 0
-}
-
 proc run_test_prog {} {
     global test_prog
 

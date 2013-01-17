@@ -11,4 +11,4 @@ set invoke "$stap_path -p4 -e 'probe begin \{ log(\"start\")\}'"
 if {! [installtest_p]} { untested "$test"; return }
 if {! [uprobes_p]} { untested "$test"; return }
 
-stap_run ${test} no_load $output_string ${testpath}/${test}.stp -c $invoke
+stap_run ${test} wait_5_secs $output_string ${testpath}/${test}.stp -c $invoke

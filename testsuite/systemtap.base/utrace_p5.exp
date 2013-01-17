@@ -125,11 +125,6 @@ proc run_cat_5_sec {} {
     return 0;
 }
 
-proc wait_5_sec {} {
-    after 5000;
-    return 0;
-}
-
 # Compile our multi-threaded test program.
 set res [target_compile $multi_srcpath $multi_exepath executable $multi_flags]
 if { $res != "" } {
@@ -211,10 +206,10 @@ if {![utrace_p]} {
 	set test "$TEST_NAME"
 	if {$runtime != ""} {
 	    set test "${test}_${runtime}"
-	    stap_run $test wait_5_sec $thread_begin_script_output \
+	    stap_run $test wait_5_secs $thread_begin_script_output \
 		-e $script --runtime=$runtime -c $multi_exepath
 	} else {
-	    stap_run $test wait_5_sec $thread_begin_script_output \
+	    stap_run $test wait_5_secs $thread_begin_script_output \
 		-e $script -c $multi_exepath
 	}
     }
@@ -242,10 +237,10 @@ if {![utrace_p]} {
 	set test "$TEST_NAME"
 	if {$runtime != ""} {
 	    set test "${test}_${runtime}"
-	    stap_run $test wait_5_sec $thread_end_script_output \
+	    stap_run $test wait_5_secs $thread_end_script_output \
 		-e $script --runtime=$runtime -c $multi_exepath
 	} else {
-	    stap_run $test wait_5_sec $thread_end_script_output \
+	    stap_run $test wait_5_secs $thread_end_script_output \
 		-e $script -c $multi_exepath
 	}
     }
