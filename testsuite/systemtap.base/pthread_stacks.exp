@@ -1,0 +1,44 @@
+set test "pthread_stacks"
+
+set exepath "[pwd]/pthread_stacks.x"
+set flags "additional_flags=-pthread additional_flags=-g"
+
+set res [target_compile $srcdir/$subdir/pthread_stacks.c $exepath executable $flags]
+if { $res != "" } {
+    fail "$test compiling"
+    return
+} else {
+    pass "$test compiling"
+}
+
+
+set test "pthread_stacks no -Gsize"
+spawn stap -w -g $srcdir/systemtap.examples/process/threadstacks.stp -c "$exepath 1024 0" -d $exepath
+set ok 0
+set ko 0
+expect {
+    -re {^stacksize=[0-9]*\r\n} { incr ok; exp_continue }
+    -re {^WARNING[^\r\n]*\r\n} { incr ko; exp_continue }
+    timeout { fail "$test timeout" }
+    eof { }
+}
+catch { close }
+catch { wait }
+if { $ok == 1 } then { pass $test } else { fail "$test ($ok $ko)" }
+
+
+set test "pthread_stacks -Gsize"
+spawn stap -g $srcdir/systemtap.examples/process/threadstacks.stp -Gsize=65536 -c "$exepath 1024 0" -d $exepath
+set ok 0
+set ko 0
+expect {
+    -re {^stacksize=[0-9]*\r\n} { incr ok; exp_continue }
+    -re {^pthread_stacks[^\r\n]*overwrote[^\r\n]*\r\n} { incr ok; exp_continue }
+    -re {^WARNING[^\r\n]*\r\n} { incr ko; exp_continue }
+    timeout { fail "$test timeout" }
+    eof { }
+}
+catch { close }
+catch { wait }
+if { $ok == 2 } then { pass $test } else { fail "$test ($ok $ko)" }
+
