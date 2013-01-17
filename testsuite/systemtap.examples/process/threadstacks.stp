@@ -15,22 +15,10 @@
 global size = 0;
 
 probe process("/lib*/libpthread.so.*").function("allocate_stack") {
-  try
-  {
-      if (($attr->stacksize == 0) &&       /* stacksize attr not set by program */
-              (size != 0) &&                   /* size parameter set by stap user */
-              ($__default_stacksize != size))  /* not yet changed */
-          {
-              old_size = $__default_stacksize;
-              $__default_stacksize = size;     /* change it and report */
-              
-              printf("%s[%d] overwrote __default_stacksize@%p (%d->%d)\n",
-                  execname(), tid(), &$__default_stacksize, old_size, size)
-          }
-  }
-  catch (e)
-  {
-      warn(sprintf("%s[%d] failure to access __default_stacksize (%s)\n", 
-              execname(), tid(), e))
-  }
+    old_size = $__default_stacksize;
+    if ((size != 0) && (old_size != size)) {  /* requested but not yet changed */
+        $__default_stacksize = size;          /* change it and report */
+        printf("%s[%d] overwrote __default_stacksize@%p (%d->%d)\n",
+               execname(), tid(), &$__default_stacksize, old_size, size)
+    }
 }
