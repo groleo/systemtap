@@ -29,20 +29,17 @@ probe process("/usr/bin/find").statement("visit@ftsfind.c+13")
 {
     dividend = (@perf("find_cycles") - insn["find_cycles"])
     divisor =  (@perf("find_insns") - insn["find_insns"])
-    printf("in %d %d\n", @perf("find_insns"),insn["find_insns"])
     q = dividend / divisor
     if (q > 0)
 	cycles_per_insn <<< q
 
     dividend = (@perf("find_branches") - insn["find_branches"])
     q = dividend / divisor
-    printf("br %d/%d\n",dividend,divisor)
     if (q > 0)
 	branch_per_insn <<< q
 
     dividend = (@perf("find_cycles") - insn["find_cycles"])
     q = dividend / divisor
-    printf("cr %d/%d\n",dividend,divisor)
     if (q > 0)
 	cacheref_per_insn <<< q
 }
