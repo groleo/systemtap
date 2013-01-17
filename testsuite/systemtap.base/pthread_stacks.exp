@@ -42,3 +42,4 @@ catch { close }
 catch { wait }
 if { $ok == 2 } then { pass $test } else { fail "$test ($ok $ko)" }
 
+catch {exec rm -f $exepath}
