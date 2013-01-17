@@ -1,5 +1,12 @@
 set file $srcdir/$subdir/alias_suffixes
-foreach ix {01 02 03 04 05} {
-    set test "alias suffixes $ix"
-    stap_run "$file$ix.stp" no_load $all_pass_string
+foreach runtime [get_runtime_list] {
+    foreach ix {01 02 03 04 05} {
+	set test "alias suffixes $ix"
+	if {$runtime != ""} {
+	    stap_run "$file$ix.stp" no_load $all_pass_string \
+		--runtime=$runtime
+	} else {
+	    stap_run "$file$ix.stp" no_load $all_pass_string
+	}
+    }
 }

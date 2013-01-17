@@ -18,6 +18,9 @@ proc stap_run { TEST_NAME {LOAD_GEN_FUNCTION ""} {OUTPUT_CHECK_STRING ""} args }
     # zap the srcdir prefix
     set test_file_name $TEST_NAME
     set TEST_NAME [regsub {.*/testsuite/} $TEST_NAME ""]
+    if [file readable $test_file_name] {
+        lappend TEST_NAME $args
+    }
 
     # initialize probe_errors and skipped_probes to 0
     set probe_errors 0

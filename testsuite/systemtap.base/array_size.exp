@@ -2,4 +2,11 @@
 
 set test "array_size"
 
-stap_run $srcdir/$subdir/$test.stp no_load $all_pass_string -DMAXMAPENTRIES=1
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run $srcdir/$subdir/$test.stp no_load $all_pass_string \
+	     -DMAXMAPENTRIES=1 --runtime=$runtime
+    } else {
+	stap_run $srcdir/$subdir/$test.stp no_load $all_pass_string -DMAXMAPENTRIES=1
+    }
+}

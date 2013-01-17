@@ -1,14 +1,23 @@
 set test "arith"
 if {![installtest_p]} { untested $test; return }
 
-spawn stap -DMAXNESTING=5 $srcdir/$subdir/arith.stp
-set ok 0
-expect {
-    -timeout 150
-    -re {passes: [0-9]* failures: 0} { incr ok }
-    timeout { fail "$test (timeout)" }
-    eof { }
+foreach runtime [get_runtime_list] {
+    set test "arith"
+    set args ""
+    if {$runtime != ""} {
+	lappend test "($runtime)"
+	set args "--runtime=$runtime"
+    }
+
+    spawn stap -DMAXNESTING=5 $srcdir/$subdir/arith.stp $args
+    set ok 0
+    expect {
+	-timeout 150
+	-re {passes: [0-9]* failures: 0} { incr ok }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch { close }
+    catch { wait }
+    if {$ok == 1} { pass "$test" } { fail "$test" }
 }
-catch { close }
-wait
-if {$ok == 1} { pass "$test" } { fail "$test" }
