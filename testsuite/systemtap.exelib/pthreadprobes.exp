@@ -59,7 +59,6 @@ set script [subst {
     printf("cond_destroy=%d\\n", cond_destroy)
     printf("cond_init=%d\\n", cond_init)
     printf("cond_signal=%d\\n", cond_signal)
-    printf("cond_signal=%d\\n", cond_signal)
     printf("cond_timedwait=%d\\n", cond_timedwait)
     printf("cond_wait=%d\\n", cond_wait)
     printf("mutex_acquired=%d\\n", mutex_acquired)
@@ -121,7 +120,7 @@ foreach runtime [get_runtime_list] {
     
     # make sure the numbers match
     foreach line $res3 {
-	if {[regexp "cond_broadcast=1" $line]} {
+	if {[regexp {cond_broadcast=[1-9]} $line]} {
 	    set cond_broadcast_correct 1
 	}
 	if  {[regexp "cond_destroy=0" $line]} {
@@ -130,28 +129,28 @@ foreach runtime [get_runtime_list] {
 	if  {[regexp "cond_init=3" $line]} {
 	    set cond_init_correct 1
 	}
-	if  {[regexp "cond_signal=2" $line]} {
+	if  {[regexp {cond_signal=[1-9]} $line]} {
 	    set cond_signal_correct 1
 	}
 	if  {[regexp "cond_timedwait=1" $line]} {
 	    set cond_timedwait_correct 1
 	}
-	if  {[regexp "cond_wait=3" $line]} {
+	if  {[regexp {cond_wait=[1-9]} $line]} {
 	    set cond_wait_correct 1
 	}
-	if  {[regexp "mutex_acquired=15" $line]} {
+	if  {[regexp {mutex_acquired=([1-9][0-9]+)} $line]} {
 	    set mutex_acquired_correct 1
 	}
 	if  {[regexp "mutex_destroy=1" $line]} {
 	    set mutex_destroy_correct 1
 	}
-	if  {[regexp "mutex_entry=15" $line]} {
+	if  {[regexp {mutex_entry=([1-9][0-9]+)} $line]} {
 	    set mutex_entry_correct 1
 	}
 	if  {[regexp "mutex_init=3" $line]} {
 	    set mutex_init_correct 1
 	}
-	if  {[regexp "mutex_release=13" $line]} {
+	if  {[regexp {mutex_release=([1-9][0-9]+)} $line]} {
 	    set mutex_release_correct 1
 	}
 	# pthread_mutex_timedlock is called with a timeout of 1 second in a 
@@ -176,13 +175,13 @@ foreach runtime [get_runtime_list] {
 	if  {[regexp "pthread_start=6" $line]} {
 	    set pthread_start_correct 1
 	}
-	if  {[regexp "rdlock_entry=2" $line]} {
+	if  {[regexp {rdlock_entry=[1-9][0-9]*} $line]} {
 	    set rdlock_entry_correct 1
 	}
 	if  {[regexp "rwlock_destroy=0" $line]} {
 	    set rwlock_destroy_correct 1
 	}
-	if  {[regexp "wrlock_entry=1" $line]} {
+	if  {[regexp {wrlock_entry=[1-9]} $line]} {
 	    set wrlock_entry_correct 1
 	}
     }
