@@ -45,7 +45,7 @@ static void _stp_vma_match_vdso(struct task_struct *tsk)
 	    unsigned long notes_addr;
 	    int all_ok = 1;
 	    notes_addr = vdso_addr + m->build_id_offset;
-	    dbug_task_vma(1,"notes_addr %s: 0x%lx + 0x%lx = 0x%lx (len: %x)\n", m->name,
+	    dbug_task_vma(1,"notes_addr %s: 0x%lx + 0x%lx = 0x%lx (len: %x)\n", m->path,
 		  vdso_addr, m->build_id_offset, notes_addr, m->build_id_len);
 	    for (j = 0; j < m->build_id_len; j++)
 	      {

@@ -1,6 +1,6 @@
 /* -*- linux-c -*- 
  * Symbolic Lookup Functions
- * Copyright (C) 2005-2011 Red Hat Inc.
+ * Copyright (C) 2005-2013 Red Hat Inc.
  * Copyright (C) 2006 Intel Corporation.
  *
  * This file is part of systemtap, and is free software.  You can
@@ -40,7 +40,7 @@ static unsigned long _stp_kmodule_relocate(const char *module,
 
   for (i = 0; i < _stp_num_modules; i++) {
     struct _stp_module *m = _stp_modules[i];
-    if (strcmp(module, m->name))
+    if (strcmp(module, m->name)) /* duplication apprx. not possible for kernel */
       continue;
 
     for (j = 0; j < m->num_sections; j++) {
@@ -70,7 +70,7 @@ static unsigned long _stp_umodule_relocate(const char *path,
   unsigned i;
   unsigned long vm_start = 0;
 
-  dbug_sym(1, "%s, %lx\n", path, offset);
+  dbug_sym(1, "[%d] %s, %lx\n", tsk->pid, path, offset);
 
   for (i = 0; i < _stp_num_modules; i++) {
     struct _stp_module *m = _stp_modules[i];
@@ -289,23 +289,16 @@ static int _stp_build_id_check (struct _stp_module *m,
     set_fs(oldfs);
 
     if (rc || (theory != practice)) {
-      const char *basename;
-      basename = strrchr(m->path, '/');
-      if (basename)
-	basename++;
-      else
-	basename = m->path;
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
-      _stp_error ("Build-id mismatch [man error::buildid]: \"%s\" vs. \"%s\" byte %d (0x%02x vs 0x%02x) address %#lx rc %d\n",
-		  m->name, basename, j, theory, practice, notes_addr, rc);
+      _stp_error ("Build-id mismatch [man error::buildid]: \"%s\" byte %d (0x%02x vs 0x%02x) address %#lx rc %d\n",
+		  m->path, j, theory, practice, notes_addr, rc);
       return 1;
 #else
       /* This branch is a surrogate for kernels affected by Fedora bug
        * #465873. */
       _stp_warn (KERN_WARNING
-		 "Build-id mismatch [man error::buildid]: \"%s\" vs. \"%s\" byte %d (0x%02x vs 0x%02x) rc %d\n",
-		 m->name, basename, j, theory, practice, rc);
+		 "Build-id mismatch [man error::buildid]: \"%s\" byte %d (0x%02x vs 0x%02x) rc %d\n",
+		 m->path, j, theory, practice, rc);
 #endif
       break;
     } /* end mismatch */
@@ -337,7 +330,7 @@ static int _stp_module_check(void)
     {
       m = _stp_modules[i];
       if (m->build_id_len > 0 && m->notes_sect != 0) {
-          dbug_sym(1, "build-id validation [%s]\n", m->name);
+          dbug_sym(1, "build-id validation [%s]\n", m->name); /* kernel only */
 
           /* notes end address */
           if (!strcmp(m->name, "kernel")) {
@@ -424,12 +417,11 @@ static int _stp_usermodule_check(struct task_struct *tsk, const char *path_name,
 
 	notes_addr = addr + m->build_id_offset /* + m->module_base */;
 
-        dbug_sym(1, "build-id validation [%s] address=%#lx build_id_offset=%#lx\n",
-            m->name, addr, m->build_id_offset);
+        dbug_sym(1, "build-id validation [%d %s] address=%#lx build_id_offset=%#lx\n",
+                 tsk->pid, m->path, addr, m->build_id_offset);
 
 	if (notes_addr <= addr) {
-	  _stp_warn ("build-id address %lx < base %lx\n",
-		     notes_addr, addr);
+	  _stp_warn ("build-id address %lx < base %lx\n", notes_addr, addr);
 	  continue;
 	}
 	return _stp_build_id_check (m, notes_addr, tsk);
