@@ -191,7 +191,7 @@ public:
   Dwarf_Addr sdt_semaphore_addr;
 
   // perf.counter probes that this probe references
-  std::vector<derived_probe*> perf_counter_refs;
+  std::set<derived_probe*> perf_counter_refs;
 
   // index into session.probes[], set and used during translation
   unsigned session_index;
