@@ -48,9 +48,10 @@ keywords: filesystem
 general/eventcount.stp - Count Specified Events
 keywords: statistics thread process
 
-  The script prints a count of specified events and their related tid's
-  over the course of execution.  Numerous configuration options exist
-  to control filtering / reporting, see the script source.
+  The script periodically prints a count of specified events and their
+  related tid's over the course of execution.  Numerous configuration
+  options exist to control filtering / reporting, see the script
+  source.
 
   # stap eventcount.stp syscall.* -c 'sleep 0.2'
 
@@ -192,7 +193,7 @@ io/deviceseeks.stp - Histograms of Seek Behavior for Each Device
 keywords: disk
 
   The deviceseeks.stp script generates a histogram showing the
-  frequency of different sized seeks on each device.
+  frequency of different sized seeks (in sectors) on each device.
 
   # stap deviceseeks.stp -c "sleep 0.2"
 
@@ -960,6 +961,17 @@ keywords: syscall
   # ./syscalltimes -c 'sleep 0.2'
 
 
+process/threadstacks.stp - Override default new-pthread stack sizes
+keywords: thread
+
+  Overrides default NPTL pthread_create stack size for all new threads
+  created by target processes.	Reports one line per process when the
+  related glibc variable __default_stacksize is updated.  Moot for
+  glibc versions that support $LIBC_PTHREAD_DEFAULT_STACKSIZE_NP.
+
+  # stap -g threadstacks.stp -Gsize=65536 -c "sleep 1" -d stap
+
+
 process/wait4time.stp - Trace Time Spent in wait4 Syscalls
 keywords: syscall process
 
@@ -1114,6 +1126,39 @@ keywords: profiling
   frequent.
 
   # stap topsys.stp -c "sleep 0.2"
+
+
+stapgames/block.stp - block breaker game
+keywords: stapgames
+
+  A block game where you progressively break the ceiling blocks until
+  clearing the level
+
+  # stap -p4 -Itapset/ block.stp
+
+
+stapgames/eater.stp - eater game
+keywords: stapgames
+
+  walk through a maze, eat stuff
+
+  # stap -p4 -Itapset/ eater.stp
+
+
+stapgames/lifegame.stp - life game
+keywords: stapgames
+
+  watch as your creation morphes into different forms
+
+  # stap -p4 -Itapset/ lifegame.stp
+
+
+stapgames/pingpong.stp - pingpong game
+keywords: stapgames
+
+  A simulated ball bounces around the terminal reflecting at the edges
+
+  # stap -p4 -Itapset/ pingpong.stp
 
 
 virtualization/kvm_service_time.stp - Time Statistics on KVM Exit Reasons
