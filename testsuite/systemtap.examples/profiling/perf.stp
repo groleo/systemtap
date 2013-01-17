@@ -1,0 +1,59 @@
+global cycles_per_insn
+global branch_per_insn
+global cacheref_per_insn
+global insns
+global cycles
+global branches
+global cacherefs
+global insn
+
+probe perf.hw.instructions.process("/usr/bin/find").counter("find_insns") {} 
+probe perf.hw.cpu_cycles.process("/usr/bin/find").counter("find_cycles") {} 
+probe perf.hw.branch_instructions.process("/usr/bin/find").counter("find_branches") {} 
+probe perf.hw.cache_references.process("/usr/bin/find").counter("find_cache_refs") {} 
+
+probe process("/usr/bin/find").function("visit")
+{
+ insn["find_insns"] = @perf("find_insns")
+ insns <<< (insn["find_insns"])
+ insn["find_cycles"] = @perf("find_cycles")
+ cycles <<< insn["find_cycles"]
+ insn["find_branches"] = @perf("find_branches")
+ branches <<< insn["find_branches"]
+ insn["find_cache_refs"] = @perf("find_cache_refs")
+ cacherefs <<< insn["find_cache_refs"]
+}
+
+# in lieu of .return
+probe process("/usr/bin/find").statement("visit@ftsfind.c+13") 
+{
+    dividend = (@perf("find_cycles") - insn["find_cycles"])
+    divisor =  (@perf("find_insns") - insn["find_insns"])
+    printf("in %d %d\n", @perf("find_insns"),insn["find_insns"])
+    q = dividend / divisor
+    if (q > 0)
+	cycles_per_insn <<< q
+
+    dividend = (@perf("find_branches") - insn["find_branches"])
+    q = dividend / divisor
+    printf("br %d/%d\n",dividend,divisor)
+    if (q > 0)
+	branch_per_insn <<< q
+
+    dividend = (@perf("find_cycles") - insn["find_cycles"])
+    q = dividend / divisor
+    printf("cr %d/%d\n",dividend,divisor)
+    if (q > 0)
+	cacheref_per_insn <<< q
+}
+
+probe end
+{
+ printf ("Cycles per Insn\n\n")
+ print (@hist_log(cycles_per_insn))
+ printf ("\nBranches per Insn\n\n")
+ print (@hist_log(branch_per_insn))
+ printf ("Cache Refs per Insn\n\n")
+ print (@hist_log(cacheref_per_insn))
+}
+
