@@ -1,5 +1,5 @@
 set test "ctime"
-set ::result_string {Thu Jan  1 00:00:00 1970
+set linux_result_string {Thu Jan  1 00:00:00 1970
 Wed Dec 31 23:59:59 1969
 Thu Jan  1 00:00:01 1970
 Sat Mar  3 09:46:40 1973
@@ -14,4 +14,31 @@ Tue Jan 19 03:14:07 2038
 far far in the future...
 a long, long time ago...
 far far in the future...}
-stap_run2 $srcdir/$subdir/$test.stp
+
+# Notice the dyninst result string is different than the linux result
+# string. The userspace glibc library can convert more values.
+set dyninst_result_string {Thu Jan  1 00:00:00 1970
+Wed Dec 31 23:59:59 1969
+Thu Jan  1 00:00:01 1970
+Sat Mar  3 09:46:40 1973
+Fri Feb 13 23:31:30 2009
+Sat Jan 10 13:37:04 2004
+Fri Jul 13 11:01:20 2012
+Sun Aug 24 00:00:00 1000
+Thu Sep  2 00:00:00 9993
+Fri Dec 13 20:45:52 1901
+Fri Dec 13 20:45:51 1901
+Tue Jan 19 03:14:07 2038
+Tue Jan 19 03:14:08 2038
+<invalid time>
+<invalid time>}
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	set ::result_string [subst $${runtime}_result_string]
+	stap_run2 $srcdir/$subdir/$test.stp --runtime=$runtime
+    } else {
+	set ::result_string $linux_result_string
+	stap_run2 $srcdir/$subdir/$test.stp
+    }
+}

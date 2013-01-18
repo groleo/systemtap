@@ -26,5 +26,5 @@ function ctime:string(epochsecs:long)
             *newline = '\0';
         strlcpy (STAP_RETVALUE, buf, MAXSTRINGLEN);
     } else
-        STAP_RETVALUE[0] = '\0';
+        strlcpy(STAP_RETVALUE, "<invalid time>", MAXSTRINGLEN);
 %}
