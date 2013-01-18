@@ -8,6 +8,7 @@ run(){
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:$PATH
 export PATH
 
+run "id"
 run "stap -V"
 run "which stap"
 run "locate --regex '/stap(run)?$' | xargs ls -ald"
@@ -27,8 +28,8 @@ elif [ -f /var/log/packages ]; then
   # slackware
   run "cat /var/log/packages | egrep 'systemtap|elfutils|kernel|gcc' | sort -k9"
 fi
-run "egrep 'PROBE|TRACE|MARKER|_DEBUG_|MODULE' /lib/modules/`uname -r`/build/.config | grep -v not.set | sort | fmt -w 80"
-run "find /debugfs /proc /sys /dev -name '*kprobes*' 2>/dev/null | xargs grep ."
+run "egrep 'PROBE|TRACE|MARKER|_DEBUG_|MODULE|FENTRY|_SIG' /lib/modules/`uname -r`/build/.config | grep -v not.set | sort | fmt -w 80"
+run "find /debugfs /proc /sys /dev /sys/kernel/debug -path '*kprobe*' -type f 2>/dev/null | xargs grep -H ."
 run "lsmod"
 run "avahi-browse -r -t _stap._tcp"
 run "ifconfig -a"
