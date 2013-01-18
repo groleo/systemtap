@@ -7,7 +7,7 @@ function print_usage()
     echo "    -p: pid to attach to"
     echo "    -n: process name to attach to"
     echo "    -c: command to run"
-    echo "    -D: enable runtime debug"
+    echo "    -D: enable .ko runtime debug"
     echo "    -V: enable verbosity of stp script compilation"
     echo "    -s: sync binaries"
     echo "    -u: run stap script unpriviledged (for userspace probes)"
