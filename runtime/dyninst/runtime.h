@@ -219,16 +219,26 @@ err_attr:
  * XXX Functions like _exit() which bypass destructors are a problem...
  */
 
+static int _stp_runtime_contexts_init(void);
+
 static pid_t stp_dyninst_master = 0;
+
+static int stp_dyninst_ctor_rc = 0;
 
 __attribute__((constructor))
 static void stp_dyninst_ctor(void)
 {
+    int rc = 0;
+
     stap_hash_seed = _stp_random_u ((unsigned long)-1);
+
 
     _stp_mem_fd = open("/proc/self/mem", O_RDWR /*| O_LARGEFILE*/);
     if (_stp_mem_fd != -1) {
         fcntl(_stp_mem_fd, F_SETFD, FD_CLOEXEC);
+    }
+    else {
+        rc = -errno;
     }
 
     /* XXX We don't really want to be using the target's stdio. (PR14491)
@@ -237,9 +247,15 @@ static void stp_dyninst_ctor(void)
      */
     _stp_out = _stp_clone_file(stdout);
     _stp_err = _stp_clone_file(stderr);
-}
 
-static int _stp_runtime_contexts_init(void);
+    if (rc == 0)
+        rc = _stp_runtime_contexts_init();
+
+    if (rc == 0)
+        rc = _stp_print_init();
+
+    stp_dyninst_ctor_rc = rc;
+}
 
 const char* stp_dyninst_shm_init(void)
 {
@@ -248,6 +264,11 @@ const char* stp_dyninst_shm_init(void)
 
 int stp_dyninst_shm_connect(const char* name)
 {
+    /* We don't have a chance to indicate errors in the ctor, so do it here. */
+    if (stp_dyninst_ctor_rc != 0) {
+	return stp_dyninst_ctor_rc;
+    }
+
     return _stp_shm_connect(name);
 }
 
@@ -256,22 +277,14 @@ int stp_dyninst_session_init(void)
     int rc;
 
     /* We don't have a chance to indicate errors in the ctor, so do it here. */
-    if (_stp_mem_fd < 0) {
-	return -errno;
+    if (stp_dyninst_ctor_rc != 0) {
+	return stp_dyninst_ctor_rc;
     }
 
     /* Just in case stapdyn didn't do it (e.g. an old version), make sure our
      * shared memory is initialized before we do anything else.  */
     if (stp_dyninst_shm_init() == NULL)
 	return -ENOMEM;
-
-    rc = _stp_runtime_contexts_init();
-    if (rc != 0)
-	return rc;
-
-    rc = _stp_print_init();
-    if (rc != 0)
-	return rc;
 
     rc = systemtap_module_init();
     if (rc == 0) {
@@ -285,7 +298,6 @@ void stp_dyninst_session_exit(void)
 {
     if (stp_dyninst_master == getpid()) {
 	systemtap_module_exit();
-	_stp_print_cleanup();
 	stp_dyninst_master = 0;
     }
 }
@@ -295,6 +307,7 @@ static void stp_dyninst_dtor(void)
 {
     stp_dyninst_session_exit();
 
+    _stp_print_cleanup();
     _stp_shm_destroy();
 
     if (_stp_mem_fd != -1) {

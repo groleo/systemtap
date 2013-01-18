@@ -135,7 +135,7 @@ static int _stp_shm_connect(const char *name)
 		close(fd);
 
 	if (rc == 0)
-		shm_dbug("connected %s @ %p", _stp_shm_name, _stp_shm_base);
+		shm_dbug("connected pid %d to %s @ %p", getpid(), name, _stp_shm_base);
 	return rc;
 }
 

@@ -31,6 +31,7 @@ class mutator {
 
     void* module; // the locally dlopened probe module
     std::string module_name; // the filename of the probe module
+    std::string module_shmem; // the global name of this module's shared memory
     std::vector<dynprobe_target> targets; // the probe targets in the module
 
     std::vector<boost::shared_ptr<mutatee> > mutatees; // all attached target processes

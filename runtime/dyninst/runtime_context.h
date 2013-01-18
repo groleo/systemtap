@@ -16,6 +16,9 @@
 #include <sched.h>
 #include <pthread.h>
 
+/* Defined after stap_probes[] by translate.cxx */
+static const char* stp_probe_point(size_t index);
+
 /* Defined later in common_session_state.h */
 static inline struct context* stp_session_context(size_t index);
 
@@ -166,8 +169,15 @@ static void _stp_runtime_context_wait(void)
 		 * haven't already printed a message for this stuck
 		 * context, print one. */
 		if (elapsed.tv_sec > 0 && (i > hold_index)) {
+		    /* NB: c->probe_point is local memory, invalid across processes,
+		     * so read it indirectly through c->probe_index instead.  */
+		    const char* pp = stp_probe_point(c->probe_index);
+		    if (pp)
+			_stp_error("context[%d] stuck: %s", i, pp);
+		    else
+			_stp_error("context[%d] stuck in unknown probe %zu",
+				   i, c->probe_index);
 		    hold_index = i;
-		    _stp_error("context[%d] stuck: %s", i, c->probe_point);
 		}
 	    }
 	}

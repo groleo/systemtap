@@ -72,8 +72,10 @@ class mutatee {
     // Remove all BPatch snippets we've instrumented in the target
     void remove_instrumentation();
 
-    // Look up a stap function by name and invoke it without parameters.
+    // Look up a stap function by name and invoke it, optionally with parameters.
     void call_function(const std::string& name);
+    void call_function(const std::string& name,
+                       const std::vector<BPatch_snippet *>& args);
 
     // Send a signal to the process.
     int kill(int signal);

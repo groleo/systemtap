@@ -462,6 +462,15 @@ mutatee::remove_instrumentation()
 void
 mutatee::call_function(const string& name)
 {
+  vector<BPatch_snippet *> args;
+  call_function(name, args);
+}
+
+// Look up a function by name in the target and invoke it with parameters.
+void
+mutatee::call_function(const string& name,
+                       const vector<BPatch_snippet *>& args)
+{
   if (!stap_dso)
     return;
 
@@ -472,7 +481,6 @@ mutatee::call_function(const string& name)
   // expecting that... should we really call them all anyway?
   for (size_t i = 0; i < functions.size(); ++i)
     {
-      vector<BPatch_snippet *> args;
       BPatch_funcCallExpr call(*functions[i], args);
       process->oneTimeCode(call);
     }

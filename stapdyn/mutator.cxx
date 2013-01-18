@@ -16,6 +16,8 @@ extern "C" {
 #include <signal.h>
 }
 
+#include <BPatch_snippet.h>
+
 #include "dynutil.h"
 #include "../util.h"
 
@@ -269,17 +271,36 @@ mutator::attach_process(pid_t pid)
 bool
 mutator::run_module_init()
 {
-  // When we get multiple mutatees, we'll need to always do the basic
-  // begin/end/timers locally, but for now we'll run init/exit in the
-  // target if we have one.
-  if (target_mutatee)
+  if (!module)
+    return false;
+
+  // First see if this is a shared-memory, multiprocess-capable module
+  typeof(&stp_dyninst_shm_init) shm_init = NULL;
+  typeof(&stp_dyninst_shm_connect) shm_connect = NULL;
+  set_dlsym(shm_init, module, "stp_dyninst_shm_init", false);
+  set_dlsym(shm_connect, module, "stp_dyninst_shm_connect", false);
+  if (shm_init && shm_connect)
     {
+      // Initialize the shared-memory locally.
+      const char* shmem = shm_init();
+      if (shmem == NULL)
+        {
+          stapwarn() << "stp_dyninst_shm_init failed!" << endl;
+          return false;
+        }
+      module_shmem = shmem;
+      // After the session is initilized, then we'll map shmem in the target
+    }
+  else if (target_mutatee)
+    {
+      // For modules that don't support shared-memory, but still have a target
+      // process, we'll run init/exit in the target.
       target_mutatee->call_function("stp_dyninst_session_init");
       return true;
     }
 
-  if (!module)
-    return false;
+  // From here, either this is a shared-memory module,
+  // or we have no target and thus run init directly anyway.
 
   typeof(&stp_dyninst_session_init) session_init = NULL;
   try
@@ -299,6 +320,14 @@ mutator::run_module_init()
       return false;
     }
 
+  // Now we map the shared-memory into the target
+  if (target_mutatee && !module_shmem.empty())
+    {
+      vector<BPatch_snippet *> args;
+      args.push_back(new BPatch_constExpr(module_shmem.c_str()));
+      target_mutatee->call_function("stp_dyninst_shm_connect", args);
+    }
+
   return true;
 }
 
@@ -306,18 +335,20 @@ mutator::run_module_init()
 bool
 mutator::run_module_exit()
 {
-  // When we get multiple mutatees, we'll need to always do the basic
-  // begin/end/timers locally, but for now we'll run init/exit in the
-  // target if we have one.
-  // XXX This may already have been done in its deconstructor if the process exited.
-  if (target_mutatee)
+  if (!module)
+    return false;
+
+  if (target_mutatee && module_shmem.empty())
     {
+      // For modules that don't support shared-memory, but still have a target
+      // process, we'll run init/exit in the target.
+      // XXX This may already have been done in its deconstructor if the process exited.
       target_mutatee->call_function("stp_dyninst_session_exit");
       return true;
     }
 
-  if (!module)
-    return false;
+  // From here, either this is a shared-memory module,
+  // or we have no target and thus run exit directly anyway.
 
   typeof(&stp_dyninst_session_exit) session_exit = NULL;
   try

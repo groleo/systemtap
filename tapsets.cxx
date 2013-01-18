@@ -181,6 +181,8 @@ common_probe_entryfn_prologue (systemtap_session& s,
   s.op->newline() << "#if defined __ia64__";
   s.op->newline() << "c->unwaddr = 0;";
   s.op->newline() << "#endif";
+  if (s.runtime_usermode_p())
+    s.op->newline() << "c->probe_index = " << probe << "->index;";
   s.op->newline() << "c->probe_point = " << probe << "->pp;";
   s.op->newline() << "#ifdef STP_NEED_PROBE_NAME";
   s.op->newline() << "c->probe_name = " << probe << "->pn;";

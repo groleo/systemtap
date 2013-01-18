@@ -62,14 +62,11 @@ static void _stp_print_cleanup(void)
 {
 	int i;
 
-	if (_stp_pbuf == NULL)
-		return;
-
-	for (i = 0; i < _stp_runtime_num_contexts; i++) {
-		if (_stp_pbuf[i].buf)
-			free(_stp_pbuf[i].buf);
-	}
 	if (_stp_pbuf) {
+		for (i = 0; i < _stp_runtime_num_contexts; i++) {
+			if (_stp_pbuf[i].buf)
+				free(_stp_pbuf[i].buf);
+		}
 		free(_stp_pbuf);
 		_stp_pbuf = NULL;
 	}
@@ -80,6 +77,9 @@ static inline void _stp_print_flush(void)
 	_stp_pbuf_t *pbuf;
 
 	fflush(_stp_err);
+
+	if (_stp_pbuf == NULL)
+		return;
 
 	pbuf = &_stp_pbuf[_stp_runtime_get_data_index()];
 	if (pbuf->buf_used) {
@@ -93,6 +93,9 @@ static void * _stp_reserve_bytes (int numbytes)
 {
 	_stp_pbuf_t *pbuf;
 	size_t size;
+
+	if (_stp_pbuf == NULL)
+		return NULL;
 
 	pbuf = &_stp_pbuf[_stp_runtime_get_data_index()];
 	size = pbuf->buf_used + numbytes;
@@ -113,6 +116,9 @@ static void * _stp_reserve_bytes (int numbytes)
 static void _stp_unreserve_bytes (int numbytes)
 {
 	_stp_pbuf_t *pbuf;
+
+	if (_stp_pbuf == NULL)
+		return;
 
 	pbuf = &_stp_pbuf[_stp_runtime_get_data_index()];
 	if (unlikely(numbytes <= 0 || numbytes > pbuf->buf_used))

@@ -6832,7 +6832,18 @@ translate_pass (systemtap_session& s)
                           << lex_cast_qstring (p->derived_locations()) << "),";
         }
       s.op->newline(-1) << "};";
+      s.op->assert_0_indent();
 #undef CALCIT
+
+      if (s.runtime_usermode_p())
+        {
+          s.op->newline() << "static const char* stp_probe_point(size_t index) {";
+          s.op->newline(1) << "if (index < ARRAY_SIZE(stap_probes))";
+          s.op->newline(1) << "return stap_probes[index].pp;";
+          s.op->newline(-1) << "return NULL;";
+          s.op->newline(-1) << "}";
+          s.op->assert_0_indent();
+        }
 
       s.op->newline();
       s.up->emit_module_init ();

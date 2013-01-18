@@ -7,6 +7,9 @@
    context structures. */
 int data_index;
 
+/* The index of the active probe within stap_probes[].  */
+size_t probe_index;
+
 /* The lock for this context structure. */
 pthread_mutex_t lock;
 #endif
