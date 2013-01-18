@@ -113,6 +113,10 @@ static void * _stp_reserve_bytes (int numbytes)
 	return ret;
 }
 
+#ifndef STP_MAXBINARYARGS
+#define STP_MAXBINARYARGS 127
+#endif
+
 static void _stp_unreserve_bytes (int numbytes)
 {
 	_stp_pbuf_t *pbuf;
@@ -125,6 +129,31 @@ static void _stp_unreserve_bytes (int numbytes)
 		return;
 
 	pbuf->buf_used -= numbytes;
+}
+/** Write 64-bit args directly into the output stream.
+ * This function takes a variable number of 64-bit arguments
+ * and writes them directly into the output stream.  Marginally faster
+ * than doing the same in _stp_vsnprintf().
+ * @sa _stp_vsnprintf()
+ */
+static void _stp_print_binary (int num, ...)
+{
+	va_list vargs;
+	int i;
+	int64_t *args;
+	
+	if (unlikely(num > STP_MAXBINARYARGS))
+		num = STP_MAXBINARYARGS;
+
+	args = _stp_reserve_bytes(num * sizeof(int64_t));
+
+	if (likely(args != NULL)) {
+		va_start(vargs, num);
+		for (i = 0; i < num; i++) {
+			args[i] = va_arg(vargs, int64_t);
+		}
+		va_end(vargs);
+	}
 }
 
 static void _stp_printf (const char *fmt, ...)
