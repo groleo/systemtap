@@ -56,6 +56,9 @@ class mutator {
     // Do probes matching 'flag' exist?
     bool matching_probes_exist(uint64_t flag);
 
+    // Find a mutatee which matches the given process, else return NULL
+    boost::shared_ptr<mutatee> find_mutatee(BPatch_process* process);
+
   public:
 
     mutator (const std::string& module_name);

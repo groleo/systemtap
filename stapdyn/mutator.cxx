@@ -41,7 +41,7 @@ g_dynamic_library_callback(BPatch_thread *thread,
 }
 
 
-static void 
+static void
 g_post_fork_callback(BPatch_thread *parent, BPatch_thread *child)
 {
   for (size_t i = 0; i < g_mutators.size(); ++i)
@@ -49,15 +49,15 @@ g_post_fork_callback(BPatch_thread *parent, BPatch_thread *child)
 }
 
 
-static void 
-g_exit_callback(BPatch_thread *proc, BPatch_exitType type)
+static void
+g_exit_callback(BPatch_thread *thread, BPatch_exitType type)
 {
   for (size_t i = 0; i < g_mutators.size(); ++i)
-    g_mutators[i]->exit_callback(proc, type);
+    g_mutators[i]->exit_callback(thread, type);
 }
 
 
-static void 
+static void
 g_thread_create_callback(BPatch_process *proc, BPatch_thread *thread)
 {
   for (size_t i = 0; i < g_mutators.size(); ++i)
@@ -65,7 +65,7 @@ g_thread_create_callback(BPatch_process *proc, BPatch_thread *thread)
 }
 
 
-static void 
+static void
 g_thread_destroy_callback(BPatch_process *proc, BPatch_thread *thread)
 {
   for (size_t i = 0; i < g_mutators.size(); ++i)
@@ -444,6 +444,17 @@ mutator::run ()
 }
 
 
+// Find a mutatee which matches the given process, else return NULL
+boost::shared_ptr<mutatee>
+mutator::find_mutatee(BPatch_process* process)
+{
+  for (size_t i = 0; i < mutatees.size(); ++i)
+    if (*mutatees[i] == process)
+      return mutatees[i];
+  return boost::shared_ptr<mutatee>();
+}
+
+
 // Callback to respond to dynamically loaded libraries.
 // Check if it matches our targets, and instrument accordingly.
 void
@@ -455,10 +466,9 @@ mutator::dynamic_library_callback(BPatch_thread *thread,
     return;
 
   BPatch_process* process = thread->getProcess();
-
-  for (size_t i = 0; i < mutatees.size(); ++i)
-    if (*mutatees[i] == process)
-      mutatees[i]->instrument_object_dynprobes(module->getObject(), targets);
+  boost::shared_ptr<mutatee> mut = find_mutatee(process);
+  if (mut)
+    mut->instrument_object_dynprobes(module->getObject(), targets);
 }
 
 
@@ -483,22 +493,21 @@ mutator::post_fork_callback(BPatch_thread *parent, BPatch_thread *child)
 
 
 void
-mutator::exit_callback(BPatch_thread *proc,
+mutator::exit_callback(BPatch_thread *thread,
 		       BPatch_exitType type __attribute__((unused)))
 {
-  if (!proc)
+  if (!thread)
     return;
 
-  // 'proc' is the thread that requested the exit, not necessarily the
+  // 'thread' is the thread that requested the exit, not necessarily the
   // main thread.
-  BPatch_process* process = proc->getProcess();
+  BPatch_process* process = thread->getProcess();
 
   staplog(1) << "exit callback, pid = " << process->getPid() << endl;
-  for (size_t i = 0; i < mutatees.size(); ++i)
-    {
-      if (*mutatees[i] == process)
-	mutatees[i]->exit_callback(proc);
-    }
+
+  boost::shared_ptr<mutatee> mut = find_mutatee(process);
+  if (mut)
+    mut->exit_callback(thread);
 }
 
 
@@ -508,11 +517,9 @@ mutator::thread_create_callback(BPatch_process *proc, BPatch_thread *thread)
   if (!proc || !thread)
     return;
 
-  for (size_t i = 0; i < mutatees.size(); ++i)
-    {
-      if (*mutatees[i] == proc)
-	mutatees[i]->thread_callback(thread, true);
-    }
+  boost::shared_ptr<mutatee> mut = find_mutatee(proc);
+  if (mut)
+    mut->thread_callback(thread, true);
 }
 
 
@@ -522,11 +529,9 @@ mutator::thread_destroy_callback(BPatch_process *proc, BPatch_thread *thread)
   if (!proc || !thread)
     return;
 
-  for (size_t i = 0; i < mutatees.size(); ++i)
-    {
-      if (*mutatees[i] == proc)
-	mutatees[i]->thread_callback(thread, false);
-    }
+  boost::shared_ptr<mutatee> mut = find_mutatee(proc);
+  if (mut)
+    mut->thread_callback(thread, false);
 }
 
 
