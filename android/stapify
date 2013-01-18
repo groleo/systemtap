@@ -11,6 +11,7 @@ function print_usage()
     echo "    -V: enable verbosity of stp script compilation"
     echo "    -s: sync binaries"
     echo "    -u: run stap script unpriviledged (for userspace probes)"
+    echo "    -P: stop after pushing the .ko to the device"
 }
 
 function target_pid()
@@ -52,6 +53,9 @@ BASE_KO="${BASE}.ko"
 shift
 while [ $# -gt 0 ]; do
     case "$1" in
+        -P)
+            STOP_AFTER_PUSH=1
+            ;;
         -p)
             PID=$2
             shift;
@@ -134,6 +138,10 @@ fi
 
 if [ "$(adb shell 'lsmod' | awk '{print $1}' | grep $BASE)" != "" ]; then
     run_echo adb shell "rmmod $BASE_KO"
+fi
+
+if [ "$STOP_AFTER_PUSH" = "1" ]; then
+    exit 0
 fi
 
 echo "=================================================="
