@@ -54,26 +54,26 @@ proc arch_compile_flag_name { INDEX } {
 
 # Number of different combinations of compile flags.
 proc all_compile_flags {} {
+  # There are 3 sets of flags for each architecture.
   return [expr 3 * [arch_compile_flags]]
 }
 
+# Is INDEX a native (i.e. non-multiarch) configuration?
+proc all_compile_flag_native_p { INDEX } {
+  set arch_index [expr $INDEX % [arch_compile_flags]]
+  if { $arch_index == 0 } {
+    return 1
+  }
+  return 0
+}
 
 # Additional compile flag to use for with target_compile.
 # Given INDEX starts at zero and should be smaller than the number
 # returned by all_compile_flags.
 proc all_compile_flag { INDEX } {
-  if { $INDEX < [arch_compile_flags] } {
-    set opt_flag ""
-    set arch_index $INDEX
-  } else {
-    if { $INDEX < [expr 2 * [arch_compile_flags]] } {
-      set opt_flag "additional_flags=-O"
-      set arch_index [expr $INDEX-[arch_compile_flags]]
-    } else {
-      set opt_flag "additional_flags=-O2"
-      set arch_index [expr $INDEX-(2*[arch_compile_flags])]
-    }
-  }
+  set opt_flags [list "" "additional_flags=-O" "additional_flags=-O2" ]
+  set arch_index [expr $INDEX % [arch_compile_flags]]
+  set opt_flag [lindex $opt_flags [expr ($INDEX / 2) % 3]]
   return "[arch_compile_flag $arch_index] $opt_flag"
 }
 
@@ -81,18 +81,9 @@ proc all_compile_flag { INDEX } {
 # Given INDEX starts at zero and should be smaller than the number
 # returned by arch_compile_flags.
 proc all_compile_flag_name { INDEX } {
-  if { $INDEX < [arch_compile_flags] } {
-    set opt_name ""
-    set arch_index $INDEX
-  } else {
-    if { $INDEX < [expr 2 * [arch_compile_flags]] } {
-      set opt_name "-O"
-      set arch_index [expr $INDEX-[arch_compile_flags]]
-    } else {
-      set opt_name "-O2"
-      set arch_index [expr $INDEX-(2*[arch_compile_flags])]
-    }
-  }
+  set opt_names [list "" "-O" "-O2" ]
+  set arch_index [expr $INDEX % [arch_compile_flags]]
+  set opt_name [lindex $opt_names [expr ($INDEX / 2) % 3]]
   return "[arch_compile_flag_name $arch_index]$opt_name"
 }
 
