@@ -4,4 +4,12 @@ set test "div0"
 
 set output_string "(.*)division by 0 near(.*)"
 
-stap_run $srcdir/$subdir/$test.stp no_load $output_string
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run $srcdir/$subdir/$test.stp no_load $output_string \
+	    --runtime=$runtime
+    } else {
+	stap_run $srcdir/$subdir/$test.stp no_load $output_string
+
+    }
+}

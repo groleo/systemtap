@@ -25,7 +25,14 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
   if {![uprobes_p]} {
       untested "$test-$extra_name"
   } else {
-      stap_compile $test-$extra_name 1 "{$script}"
+    foreach runtime [get_runtime_list] {
+      if {$runtime != ""} {
+	stap_compile $test-$extra_name-$runtime 1 "{$script}" \
+	    --runtime=$runtime
+      } else {
+	  stap_compile $test-$extra_name 1 "{$script}"
+      }
+    }
   }
   catch {exec rm $test}
 }

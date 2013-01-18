@@ -33,7 +33,20 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
   }
 
   if {[installtest_p] && [uprobes_p]} {
-    stap_run3 "$test-$extra_name" -w $srcdir/$subdir/$test.stp $test.exe -c ./$test.exe
+    foreach runtime [get_runtime_list] {
+      if {$runtime != ""} {
+	# The dyninst runtime isn't multi-arch, it only works on the
+	# native architecture. PR14490.
+	if {! [all_compile_flag_native_p $i]} {
+	  setup_kfail 14490 "*-*-*"
+	}
+	stap_run3 "$test-$extra_name-$runtime" -w \
+	  $srcdir/$subdir/$test.stp $test.exe -c ./$test.exe --runtime=$runtime
+      } else {
+	stap_run3 "$test-$extra_name" -w $srcdir/$subdir/$test.stp \
+	  $test.exe -c ./$test.exe
+      }
+    }
   } else {
     untested "$test-$extra_name"
   }

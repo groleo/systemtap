@@ -25,8 +25,14 @@ if { $res != "" } {
 if {[installtest_p] && [uprobes_p]} {
   set dw_at_c {DW_AT_const_value}
   if {![catch {exec readelf --debug-dump=info $test.exe | grep "$dw_at_c"}]} {
-    stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe
-  } {
+    foreach runtime [get_runtime_list] {
+      if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe --runtime=$runtime
+      } else {
+	stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe
+      }
+    }
+  } else {
     untested "$test (no-const-value)"
   }
 } else {
@@ -60,9 +66,15 @@ if { $res != "" } {
 if {[installtest_p] && [uprobes_p]} {
   set dw_at_c {DW_AT_const_value}
   if {![catch {exec readelf --debug-dump=info $test.exe | grep "$dw_at_c"}]} {
-    setup_kfail 10739 "*-*-*"
-    stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe
-  } {
+    foreach runtime [get_runtime_list] {
+      setup_kfail 10739 "*-*-*"
+      if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe --runtime=$runtime
+      } else {
+	stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe
+      }
+    }
+  } else {
     untested "$test (no-const-value)"
   }
 } else {

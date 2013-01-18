@@ -18,7 +18,7 @@ proc stap_run { TEST_NAME {LOAD_GEN_FUNCTION ""} {OUTPUT_CHECK_STRING ""} args }
     # zap the srcdir prefix
     set test_file_name $TEST_NAME
     set TEST_NAME [regsub {.*/testsuite/} $TEST_NAME ""]
-    if [file readable $test_file_name] {
+    if {[file readable $test_file_name] && $args != ""} {
         lappend TEST_NAME $args
     }
 
