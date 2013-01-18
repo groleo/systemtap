@@ -126,6 +126,27 @@ mutatee::unload_stap_dso()
 }
 
 
+void
+mutatee::call_utrace_dynprobe(const dynprobe_location& probe,
+                              BPatch_thread* thread)
+{
+  if (utrace_enter_function != NULL)
+    {
+      vector<BPatch_snippet *> args;
+      args.push_back(new BPatch_constExpr((int64_t)probe.index));
+      args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
+      staplog(1) << "calling function with " << args.size() << " args" << endl;
+      BPatch_funcCallExpr call(*utrace_enter_function, args);
+      if (thread)
+	thread->oneTimeCode(call);
+      else
+	process->oneTimeCode(call);
+    }
+  else
+    staplog(1) << "no utrace enter function!" << endl;
+}
+
+
 // Remember utrace probes. They get handled when the associated
 // callback hits.
 void
@@ -337,6 +358,36 @@ mutatee::instrument_object_dynprobes(BPatch_object* object,
   process->finalizeInsertionSet(false);
 }
 
+
+void
+mutatee::begin_callback()
+{
+  // process->oneTimeCode() requires that the process be stopped
+  bool stopped = process->isStopped();
+  if (!stopped && !stop_execution(true))
+    {
+      staplog(3) << "stopping process failed, stopped="
+		 << process->isStopped() << ", terminated="
+		 << process->isTerminated() << endl;
+      return;
+    }
+
+  for (size_t i = 0; i < attached_probes.size(); ++i)
+    {
+      const dynprobe_location& probe = attached_probes[i];
+      if (probe.flags & STAPDYN_PROBE_FLAG_PROC_BEGIN)
+	{
+	  staplog(1) << "found begin proc probe, index = " << probe.index << endl;
+	  call_utrace_dynprobe(probe);
+	}
+    }
+
+  // Let the process continue (if it wasn't stopped when we started).
+  if (!stopped)
+    continue_execution();
+}
+
+
 // FIXME: We have a problem with STAPDYN_PROBE_FLAG_PROC_END
 // (i.e. 'process.end' probes).
 //
@@ -349,26 +400,15 @@ mutatee::instrument_object_dynprobes(BPatch_object* object,
 // locally, but then the probe context wouldn't be correct.
 
 void
-mutatee::exit_callback(BPatch_thread *proc)
+mutatee::exit_callback(BPatch_thread *thread)
 {
   for (size_t i = 0; i < attached_probes.size(); ++i)
     {
       const dynprobe_location& probe = attached_probes[i];
       if (probe.flags & STAPDYN_PROBE_FLAG_PROC_END)
-        {
+	{
 	  staplog(1) << "found end proc probe, index = " << probe.index << endl;
-	  if (utrace_enter_function != NULL)
-	    {
-	      vector<BPatch_snippet *> args;
-	      args.push_back(new BPatch_constExpr((int64_t)probe.index));
-	      args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
-	      staplog(1) << "calling function with " << args.size() << " args"
-			 << endl;
-	      BPatch_funcCallExpr call(*utrace_enter_function, args);
-	      proc->getProcess()->oneTimeCode(call);
-	    }
-	  else
-	    staplog(1) << "no utrace enter function!" << endl;
+	  call_utrace_dynprobe(probe, thread);
 	}
     }
 }
@@ -401,16 +441,7 @@ mutatee::thread_callback(BPatch_thread *thread, bool create_p)
         {
 	  staplog(1) << "found " << (create_p ? "begin" : "end")
 		     << " thread probe, index = " << probe.index << endl;
-	  if (utrace_enter_function != NULL)
-	    {
-	      vector<BPatch_snippet *> args;
-	      args.push_back(new BPatch_constExpr((int64_t)probe.index));
-	      args.push_back(new BPatch_constExpr((void*)NULL)); // pt_regs
-	      BPatch_funcCallExpr call(*utrace_enter_function, args);
-	      thread->oneTimeCode(call);
-	    }
-	  else
-	    staplog(1) << "no utrace enter function!" << endl;
+	  call_utrace_dynprobe(probe, thread);
 	}
     }
 
@@ -438,6 +469,47 @@ mutatee::instrument_dynprobes(const vector<dynprobe_target>& targets)
   image->getObjects(objects);
   for (size_t i = 0; i < objects.size(); ++i)
     instrument_object_dynprobes(objects[i], targets);
+}
+
+
+// Copy data for forked instrumentation
+void
+mutatee::copy_forked_instrumentation(mutatee& other)
+{
+  if (!process)
+    return;
+
+  // Find the same stap module in the fork
+  if (other.stap_dso)
+    {
+      BPatch_image* image = process->getImage();
+      if (!image)
+	return;
+
+      string dso_path = other.stap_dso->pathName();
+
+      vector<BPatch_object *> objects;
+      image->getObjects(objects);
+      for (size_t i = 0; i < objects.size(); ++i)
+	if (objects[i]->pathName() == dso_path)
+	  {
+	    stap_dso = objects[i];
+	    break;
+	  }
+    }
+
+  // Get new handles for all inserted snippets
+  for (size_t i = 0; i < other.snippets.size(); ++i)
+    {
+      BPatchSnippetHandle *handle =
+	process->getInheritedSnippet(*other.snippets[i]);
+      if (handle)
+        snippets.push_back(handle);
+    }
+
+  // Update utrace probes to match
+  for (size_t i = 0; i < other.attached_probes.size(); ++i)
+    instrument_utrace_dynprobe(other.attached_probes[i]);
 }
 
 

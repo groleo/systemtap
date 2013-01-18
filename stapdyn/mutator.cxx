@@ -405,7 +405,10 @@ mutator::run ()
 
   // And away we go!
   if (target_mutatee)
-   {
+    {
+      // For our first event, fire the target's process.begin probes (if any)
+      target_mutatee->begin_callback();
+
       // XXX Dyninst's notification FD is currently broken, so we'll fall back
       // to the fully-blocking wait for now.
 #if 0
@@ -486,9 +489,17 @@ mutator::post_fork_callback(BPatch_thread *parent, BPatch_thread *child)
   staplog(1) << "post fork, parent " << parent_process->getPid()
 	     << ", child " << child_process->getPid() << endl;
 
-  // FIXME: Here's we've got a problem. With post fork, we've got a
-  // new process, and this current code is designed for one process
-  // only.
+  boost::shared_ptr<mutatee> mut = find_mutatee(parent_process);
+  if (mut)
+    {
+      // Clone the mutatee for the new process.
+      boost::shared_ptr<mutatee> m(new mutatee(&patch, child_process));
+      mutatees.push_back(m);
+      m->copy_forked_instrumentation(*mut);
+
+      // Trigger any process.begin probes.
+      m->begin_callback();
+    }
 }
 
 

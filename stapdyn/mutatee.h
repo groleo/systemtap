@@ -40,6 +40,8 @@ class mutatee {
     mutatee (const mutatee& other);
     mutatee& operator= (const mutatee& other);
 
+    void call_utrace_dynprobe(const dynprobe_location& probe,
+                              BPatch_thread* thread=NULL);
     void instrument_utrace_dynprobe(const dynprobe_location& probe);
     void instrument_global_dynprobe_target(const dynprobe_target& target);
     void instrument_global_dynprobes(const std::vector<dynprobe_target>& targets);
@@ -69,6 +71,9 @@ class mutatee {
     // Look for probe matches in all objects.
     void instrument_dynprobes(const std::vector<dynprobe_target>& targets);
 
+    // Copy data for forked instrumentation
+    void copy_forked_instrumentation(mutatee& other);
+
     // Remove all BPatch snippets we've instrumented in the target
     void remove_instrumentation();
 
@@ -89,7 +94,8 @@ class mutatee {
 
     bool check_exit() { return check_dyninst_exit(process); }
 
-    void exit_callback(BPatch_thread *proc);
+    void begin_callback();
+    void exit_callback(BPatch_thread *thread);
     void thread_callback(BPatch_thread *thread, bool create_p);
 };
 
