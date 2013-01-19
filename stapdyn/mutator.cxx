@@ -163,11 +163,13 @@ mutator::load ()
     return rc;
   if (!targets.empty())
     {
+      // Always watch for new libraries to probe.
       patch.registerDynLibraryCallback(g_dynamic_library_callback);
 
-      // Do we need a fork callback?
-      if (matching_probes_exist(STAPDYN_PROBE_FLAG_PROC_BEGIN))
-	patch.registerPostForkCallback(g_post_fork_callback);
+      // Always watch for new child processes, even if we don't have
+      // STAPDYN_PROBE_FLAG_PROC_BEGIN, because we might want to trigger
+      // any of the other types of probes in new processes too.
+      patch.registerPostForkCallback(g_post_fork_callback);
 
       // Do we need a exit callback?
       if (matching_probes_exist(STAPDYN_PROBE_FLAG_PROC_END))
