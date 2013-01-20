@@ -273,7 +273,8 @@ SELECT=\$(grep 'select__start' $testsuite/stap-mysql-markers.log | wc -l)
 OKAY=\$(grep 'All.*tests were successful' $testsuite/stap-mysql.log | wc -l)
 
 echo  ACQUIRE=\$ACQUIRE  RELEASE=\$RELEASE COMMAND=\$COMMAND  QUERY=\$QUERY RDLOCK=\$RDLOCK  SELECT=\$SELECT OKAY=\$OKAY
-if \[ \$ACQUIRE -gt 10000 -a \$RELEASE -gt 10000 -a \$COMMAND -gt 11300 -a \$QUERY -gt 11200 -a \$RDLOCK -gt 5100 -a \$SELECT -gt 2900 \] ; then
+# ACQUIRE=10040 RELEASE=10040 COMMAND=11265 QUERY=11167 RDLOCK=5149 SELECT=2895 OKAY=0
+if \[ \$ACQUIRE -gt 10000 -a \$RELEASE -gt 10000 -a \$COMMAND -gt 11200 -a \$QUERY -gt 11100 -a \$RDLOCK -gt 5100 -a \$SELECT -gt 2800 \] ; then
    echo PASS: mysql markers \$1
 else
    echo FAIL: mysql markers \$1

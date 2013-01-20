@@ -10,6 +10,7 @@ mkdir -p tcl
 
 if [ ! -r tcl$tclrelease-src.tar.gz ] ; then
     wget -q http://sourceforge.net/projects/tcl/files/Tcl/$tclrelease/tcl$tclrelease-src.tar.gz/download
+    mv download tcl$tclrelease-src.tar.gz
 fi
 if [ ! -r tcl$tclrelease-src.tar.gz ] ; then
    echo FAIL: wget tcl$tclrelease-src.tar.gz

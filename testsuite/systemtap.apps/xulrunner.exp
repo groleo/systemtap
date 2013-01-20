@@ -99,12 +99,14 @@ fi
 if \[ ! -f xul/bld/js/src/js \] ; then
 mkdir xul/bld
 cd xul/bld
-if rpm -q java-1.6.0-openjdk ; then :
-else 
-   echo FAIL: Need java-1.6.0-openjdk-devel
-   exit
-fi
-JAVA_HOME=\$(dirname \$(dirname /usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0*/include/jni.h)) \
+JAVA=`yum info available 'java*openjdk' |& awk '/Name/ {print \$3}'`
+for P in glib-devel ORBit-devel \$JAVA ; do 
+    if rpm -q \$P ; then :
+    else echo FAIL: Need to: yum install \$P
+         exit
+    fi
+done
+JAVA_HOME=/usr/lib/jvm/\$JAVA.`uname -i` \
 CXXFLAGS='-g -I$env(SYSTEMTAP_INCLUDES)' \
 CFLAGS='-g -I$env(SYSTEMTAP_INCLUDES)' \
 PATH=$env(SYSTEMTAP_PATH)/:\$PATH \

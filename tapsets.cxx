@@ -5269,7 +5269,9 @@ struct sdt_uprobe_var_expanding_visitor: public var_expanding_visitor
       DRI ("%rdi", 5, DI); DRI ("%edi", 5, SI); DRI ("%di", 5, HI);
          DRI ("%dil", 5, QI);
       DRI ("%rbp", 6, DI); DRI ("%ebp", 6, SI); DRI ("%bp", 6, HI);
+         DRI ("%bpl", 6, QI);
       DRI ("%rsp", 7, DI); DRI ("%esp", 7, SI); DRI ("%sp", 7, HI);
+         DRI ("%spl", 7, QI);
       DRI ("%r8", 8, DI); DRI ("%r8d", 8, SI); DRI ("%r8w", 8, HI);
          DRI ("%r8b", 8, QI);
       DRI ("%r9", 9, DI); DRI ("%r9d", 9, SI); DRI ("%r9w", 9, HI);
