@@ -1041,20 +1041,22 @@ CharSet::~CharSet()
 	delete[] ptn;
 }
 
+// #define RE2C_CGDEBUG
+
 DFA* genCode(RegExp *re)
 {
 	CharSet cs;
 	unsigned j;
 
 	re->split(cs);
-        /*
+#ifdef RE2C_CGDEBUG
         std::cerr << std::endl << "CS.REP" << std::endl; 
 	    for(unsigned k = 0; k < nRealChars;){
 		for(j = k; ++k < nRealChars && cs.rep[k] == cs.rep[j];);
 		printSpan(std::cerr, j, k);
                 std::cerr << "\t" << cs.rep[j] - &cs.ptn[0] << std::endl;
 	    }
-        */
+#endif
 	Char *rep = new Char[nRealChars];
 
 	for (j = 0; j < nRealChars; ++j)
@@ -1070,32 +1072,32 @@ DFA* genCode(RegExp *re)
 	memset(ins, 0, (re->size + 1)*sizeof(Ins));
 	re->compile(rep, ins);
 
-        /*
+#ifdef RE2C_CGDEBUG
         std::cerr << std::endl << "BEFORE EOI" << std::endl;
 	for (const Ins *inst = &ins[0]; inst < &ins[re->size]; ) {
 		inst = showIns(std::cout, *inst, ins[0]);
 	}
-        */
+#endif
 
 	Ins *eoi = &ins[re->size];
 	eoi->i.tag = GOTO;
 	eoi->i.link = eoi;
 
-        /*
+#ifdef RE2C_CGDEBUG
         std::cerr << std::endl << "BEFORE OPT" << std::endl;
 	for (const Ins *inst = &ins[0]; inst <= &ins[re->size]; ) {
 		inst = showIns(std::cout, *inst, ins[0]);
 	}
-        */
+#endif
 
 	optimize(ins);
 
-        /*
+#ifdef RE2C_CGDEBUG
         std::cerr << std::endl << "AFTER OPT" << std::endl;
 	for (const Ins *inst = &ins[0]; inst <= &ins[re->size]; ) {
 		inst = showIns(std::cout, *inst, ins[0]);
 	}
-        */
+#endif
 
 	for (j = 0; j < re->size;)
 	{
