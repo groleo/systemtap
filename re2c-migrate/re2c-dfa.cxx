@@ -234,7 +234,7 @@ State::~State()
 /* Mark all Ins reachable from a given point without slurping a
    character. The list of Ins locations gets written out to a given
    work array starting at cP. */
-static Ins **closure(Ins **cP, Ins *i)
+static Ins **closure(Ins **cP, Ins *i, bool isInitial)
 {
 	while (!isMarked(i))
 	{
@@ -243,13 +243,22 @@ static Ins **closure(Ins **cP, Ins *i)
 
 		if (i->i.tag == FORK)
 		{
-			cP = closure(cP, i + 1);
+                        cP = closure(cP, i + 1, isInitial);
 			i = (Ins*) i->i.link;
 		}
 		else if (i->i.tag == GOTO || i->i.tag == CTXT)
 		{
 			i = (Ins*) i->i.link;
 		}
+                else if (i->i.tag == INIT && isInitial)
+                {
+                        /* TODOXXX The kernel of an initial vs. a
+                           non-initial state is distinguished not by
+                           the presence of the INIT itself, but by the
+                           presence of additional kernel Ins on the
+                           other side of the INIT. */
+			i = (Ins*) i->i.link;
+                }
 		else
 			break;
 	}
@@ -280,8 +289,9 @@ DFA::DFA(Ins *ins, unsigned ni, unsigned lb, unsigned ub, const Char *rep)
 	memset((char*) goTo, 0, nc*sizeof(GoTo));
 
         /* Build the initial state, based on the set of Ins
-           that can be reached from &ins[0]. */
-	findState(work, closure(work, &ins[0]) - work);
+           that can be reached from &ins[0], including Ins
+           reachable only through ^/INIT operations. */
+	findState(work, closure(work, &ins[0], true) - work);
 
 	while (toDo)
 	{
@@ -323,7 +333,7 @@ DFA::DFA(Ins *ins, unsigned ni, unsigned lb, unsigned ub, const Char *rep)
 			i = (Ins*) go->to;
 
 			for (cP = work; i; i = (Ins*) i->c.link)
-				cP = closure(cP, i + i->c.bump);
+                          cP = closure(cP, i + i->c.bump, false);
 
 			go->to = findState(work, cP - work);
 		}

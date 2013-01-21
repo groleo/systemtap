@@ -12,6 +12,16 @@
 # 2 means regex compilation should fail (cleanly):
 2:[:abc
 
+# FIXME -- initial tests just for left-anchoring
+0::
+0::abc
+0:^abc:abc
+0:^:abc
+1:a^:abc
+1:^abc:zabc
+1:ab^c:abc
+0:a*^b:b
+
 # FIXME -- matching should not be left-anchored by default
 0:abc:zabc
 

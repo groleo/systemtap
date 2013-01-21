@@ -23,6 +23,8 @@ const unsigned GOTO = 1;
 const unsigned FORK = 2;
 const unsigned TERM = 3;
 const unsigned CTXT = 4;
+const unsigned INIT = 5; // for ^ operator
+// TODOXXX const unsigned ENDI = 6; // for $ operator??
 
 union Ins {
 
@@ -329,6 +331,29 @@ private:
 		return *this;
 	}
 #endif
+};
+
+// TODOXXX for now, only supports left-anchoring (^)
+class AnchorOp: public RegExp
+{
+
+public:
+	static const char *type;
+
+public:
+	const char *typeOf()
+	{
+		return type;
+	}
+
+	void split(CharSet&);
+	void calcSize(Char*);
+	unsigned fixedLength();
+	void compile(Char*, Ins*);
+	void display(std::ostream &o) const
+	{
+		o << "^";
+	}
 };
 
 class RuleOp: public RegExp

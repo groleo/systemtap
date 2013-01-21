@@ -173,7 +173,8 @@ stapdfa::stapdfa (const string& func_name, const string& re)
   : orig_input(re), func_name(func_name)
 {
   if (!failRE) {
-    regex_parser p("[\\000-\\377]");
+    //regex_parser p("[\\000-\\377]");
+    regex_parser p("");
     failRE = p.parse();
   }
   if (!padRE) {
@@ -186,6 +187,7 @@ stapdfa::stapdfa (const string& func_name, const string& re)
 
   // compile ast to DFA
   content = genCode (ast);
+  // cerr << content;
   content->prepare();
 }
 
@@ -439,9 +441,15 @@ regex_parser::parse_factor ()
       result = parse_expr ();
       expect (')');
     }
-  else if (c == '^' || c == '$')
+  else if (c == '^')
     {
-      parse_error(_F("FIXME -- '%c' not yet supported", c));
+      result = new AnchorOp();
+    }
+  else if (c == '$')
+    {
+      // TEMPORARY HACK
+      // parse_error(_F("FIXME -- '%c' not yet supported", c));
+      result = sc->ranToRE(SubStr("[\\000]"));
     }
   else // escaped or ordinary character -- not yet swallowed
     {

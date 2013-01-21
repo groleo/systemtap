@@ -71,6 +71,10 @@ const Ins* showIns(std::ostream &o, const Ins &i, const Ins &base)
 		o << "fork " << ((Ins*) i.i.link - &base);
 		break;
 
+		case INIT:
+		o << "init " << ((Ins*) i.i.link - &base);
+		break;
+
 		case CTXT:
 		o << "ctxt";
 		break;
@@ -329,6 +333,29 @@ void MatchOp::split(CharSet &s)
 	for (; s.fix; s.fix = s.fix->fix)
 		if (s.fix->card)
 			s.fix->nxt = NULL;
+}
+
+const char *AnchorOp::type = "AnchorOp";
+
+void AnchorOp::calcSize(Char *rep)
+{
+  size = 1;
+}
+
+unsigned AnchorOp::fixedLength()
+{
+  return 0;
+}
+
+void AnchorOp::compile(Char *rep, Ins *i)
+{
+  i->i.tag = INIT;
+  i->i.link = &i[1];
+}
+
+void AnchorOp::split(CharSet &s)
+{
+  ;
 }
 
 RegExp * mkDiff(RegExp *e1, RegExp *e2)
