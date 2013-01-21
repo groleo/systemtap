@@ -204,13 +204,15 @@ class State
 {
 
 public:
-	unsigned	label;
+	unsigned	label; // number of state inside DFA
+	State	*next; // pointer to next state inside DFA
+
 	RuleOp	*rule;
-	State	*next;
-	State	*link;
+	State	*link; // for the DFA builder's to-process list
 	unsigned	depth;		// for finding SCCs
+
 	unsigned	kCount;
-	Ins 	**kernel;
+	Ins 	**kernel; // set of Ins which exit this state
 
 	bool    isPreCtxt;
 	bool    isBase;

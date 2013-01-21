@@ -231,6 +231,9 @@ State::~State()
 	delete [] go.span;
 }
 
+/* Mark all Ins reachable from a given point without slurping a
+   character. The list of Ins locations gets written out to a given
+   work array starting at cP. */
 static Ins **closure(Ins **cP, Ins *i)
 {
 	while (!isMarked(i))
@@ -275,6 +278,9 @@ DFA::DFA(Ins *ins, unsigned ni, unsigned lb, unsigned ub, const Char *rep)
 	GoTo *goTo = new GoTo[nc];
 	Span *span = new Span[nc];
 	memset((char*) goTo, 0, nc*sizeof(GoTo));
+
+        /* Build the initial state, based on the set of Ins
+           that can be reached from &ins[0]. */
 	findState(work, closure(work, &ins[0]) - work);
 
 	while (toDo)
@@ -378,6 +384,10 @@ void DFA::addState(State **a, State *s)
 		tail = &s->next;
 }
 
+/* Finds or creates the unique state in the DFA with specified kernel.
+   In order for this function to work, the kernel *must* have been
+   obtained from an invocation of closure(), which marks the appropriate
+   Ins belonging to the kernel. */
 State *DFA::findState(Ins **kernel, unsigned kCount)
 {
 	Ins **cP, **iP, *i;
@@ -387,6 +397,8 @@ State *DFA::findState(Ins **kernel, unsigned kCount)
 
 	cP = kernel;
 
+        /* Unmark all Ins which don't cross state boundaries, to
+           obtain the genuine kernel. */
 	for (iP = kernel; (i = *iP); ++iP)
 	{
 		if (i->i.tag == CHAR || i->i.tag == TERM || i->i.tag == CTXT)
@@ -402,6 +414,9 @@ State *DFA::findState(Ins **kernel, unsigned kCount)
 	kCount = cP - kernel;
 	kernel[kCount] = NULL;
 
+        /* Compare to the kernels of existing states (by checking
+           if the kernel sizes match and if s->kernel contains no
+           unmarked Ins). */
 	for (s = head; s; s = s->next)
 	{
 		if (s->kCount == kCount)
@@ -417,6 +432,8 @@ nextState:
 		;
 	}
 
+        /* If no existing state found, create one and push it
+           on the toDo list (using s->link to maintain a stack). */
 	s = new State;
 	addState(tail, s);
 	s->kCount = kCount;
