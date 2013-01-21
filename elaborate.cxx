@@ -1,5 +1,5 @@
 // elaboration functions
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2008 Intel Corporation
 //
 // This file is part of systemtap, and is free software.  You can
@@ -4491,7 +4491,12 @@ typeresolution_info::visit_perf_op (perf_op* e)
   if (t == pe_stats || t == pe_string)
     invalid (e->tok, t);
 
-  t = pe_long;
+  e->type = pe_long;
+
+  // (There is no real need to visit our operand - by parser
+  // construction, it's always a string literal, with its type already
+  // set.)
+  t = pe_string;
   e->operand->visit (this);
 }
 
