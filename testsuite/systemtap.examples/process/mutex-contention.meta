@@ -1,0 +1,6 @@
+title: pthread mutex contention analysis
+name: mutex-contention.stp
+keywords: locking
+description: Tracks pthread-mutex initialization/use and underlying futex operations, to identify (with backtraces/symbol-names) the mutexes suffering most contention.  Invoke with "NNN -d SHLIB --ldd"
+test_check: stap -p4 mutex-contention.stp 100
+test_installcheck: stap mutex-contention.stp 100 -c "sleep 0.2"

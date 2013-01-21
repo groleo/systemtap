@@ -808,6 +808,16 @@ keywords: scheduler
   # stap migrate.stp -c "sleep 0.2" bash
 
 
+process/mutex-contention.stp - pthread mutex contention analysis
+keywords: locking
+
+  Tracks pthread-mutex initialization/use and underlying futex
+  operations, to identify (with backtraces/symbol-names) the mutexes
+  suffering most contention.  Invoke with "NNN -d SHLIB --ldd"
+
+  # stap mutex-contention.stp 100 -c "sleep 0.2"
+
+
 process/noptrace.stp - Disable ptrace from Hierarchies of Processes
 keywords: process security
 
