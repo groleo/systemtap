@@ -333,14 +333,16 @@ private:
 #endif
 };
 
-// TODOXXX for now, only supports left-anchoring (^)
 class AnchorOp: public RegExp
 {
 
 public:
 	static const char *type;
+        char atype;
 
 public:
+        AnchorOp(char a): atype(a) {}
+
 	const char *typeOf()
 	{
 		return type;
@@ -352,7 +354,7 @@ public:
 	void compile(Char*, Ins*);
 	void display(std::ostream &o) const
 	{
-		o << "^";
+		o << atype;
 	}
 };
 

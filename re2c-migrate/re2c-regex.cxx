@@ -339,7 +339,7 @@ const char *AnchorOp::type = "AnchorOp";
 
 void AnchorOp::calcSize(Char *rep)
 {
-  size = 1;
+  size = atype == '^' ? 1 : 2;
 }
 
 unsigned AnchorOp::fixedLength()
@@ -349,8 +349,19 @@ unsigned AnchorOp::fixedLength()
 
 void AnchorOp::compile(Char *rep, Ins *i)
 {
-  i->i.tag = INIT;
-  i->i.link = &i[1];
+  if (atype == '^')
+    {
+      i->i.tag = INIT;
+      i->i.link = &i[1];
+    }
+  else // atype == '$'
+    {
+      i->i.tag = CHAR;
+      i->i.link = &i[2];
+      Ins *j = &i[1];
+      j->c.value = '\0';
+      j->c.bump = 1;
+    }
 }
 
 void AnchorOp::split(CharSet &s)

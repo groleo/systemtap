@@ -441,15 +441,9 @@ regex_parser::parse_factor ()
       result = parse_expr ();
       expect (')');
     }
-  else if (c == '^')
+  else if (c == '^' || c == '$')
     {
-      result = new AnchorOp();
-    }
-  else if (c == '$')
-    {
-      // TEMPORARY HACK
-      // parse_error(_F("FIXME -- '%c' not yet supported", c));
-      result = sc->ranToRE(SubStr("[\\000]"));
+      result = new AnchorOp(c);
     }
   else // escaped or ordinary character -- not yet swallowed
     {
@@ -478,6 +472,13 @@ regex_parser::parse_factor ()
   while (c == '*' || c == '+' || c == '?' || c == '{')
     {
       next ();
+
+      /* closure-type operators applied to $^ are definitely not kosher */
+      if (result->typeOf() == "AnchorOp")
+        {
+          parse_error(_F("postfix closure '%c' applied to anchoring operator", c));
+        }
+
       if (c == '*')
         {
           result = mkAlt (new CloseOp(result), new NullOp());

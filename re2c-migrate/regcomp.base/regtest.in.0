@@ -29,8 +29,8 @@
 0:.*:stuffs
 
 # FIXME -- make sure the following works correctly (however it's supposed to)
-2:$^:
-2:$.*:
-# TODO -- what's the right thing to do for the above??
-1:$a^:a
-1:$.*:a
+# TODO -- what's the right thing to do for the below??
+# 2:$^:
+# 2:$.*:
+# 1:$a^:a
+# 0:$.*:a

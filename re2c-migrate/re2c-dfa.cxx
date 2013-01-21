@@ -252,11 +252,11 @@ static Ins **closure(Ins **cP, Ins *i, bool isInitial)
 		}
                 else if (i->i.tag == INIT && isInitial)
                 {
-                        /* TODOXXX The kernel of an initial vs. a
-                           non-initial state is distinguished not by
-                           the presence of the INIT itself, but by the
-                           presence of additional kernel Ins on the
-                           other side of the INIT. */
+                        /* The kernel of an initial vs. a non-initial
+                           state is distinguished not by the presence
+                           of the INIT itself, but by the presence of
+                           additional kernel Ins on the other side of
+                           the INIT. */
 			i = (Ins*) i->i.link;
                 }
 		else
