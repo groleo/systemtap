@@ -3,5 +3,12 @@
 
 set test "error_fn"
 
-stap_run $srcdir/$subdir/$test.stp no_load ".*synthetic error.*"
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run $srcdir/$subdir/$test.stp no_load ".*synthetic error.*" \
+	    --runtime=$runtime
+    } else {
+	stap_run $srcdir/$subdir/$test.stp no_load ".*synthetic error.*"
+    }
+}
 
