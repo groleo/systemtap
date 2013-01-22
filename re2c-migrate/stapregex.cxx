@@ -218,6 +218,12 @@ stapdfa::emit_declaration (translator_output *o)
   bool bPrologBrace = false;
   content->emit(o->newline(), topIndent, NULL, "", 0, bPrologBrace);
 
+  o->newline() << "#undef YYCTYPE";
+  o->newline() << "#undef YYCURSOR";
+  o->newline() << "#undef YYLIMIT";
+  o->newline() << "#undef YYMARKER";
+  o->newline() << "#undef YYFILL";
+
   o->newline(-1) << "}";
 }
 
