@@ -1,13 +1,24 @@
+set test "global_stat"
 if {![installtest_p]} {
-    untested global_stat
+    untested $test
     return
 }
 
-spawn stap -e {global var; probe never {var<<<1} probe begin {exit()}}
-expect {
-    -timeout 60
-    "var @count=0x0" { pass "global_stat" }
-    timeout {fail "global_stat: unexpected timeout"}
-    eof {fail "global_stat: unexpected EOF"}
+foreach runtime [get_runtime_list] {
+    set test "global_stat"
+    if {$runtime != ""} {
+	set test "${test}_${runtime}"
+	spawn stap --runtime=$runtime \
+	    -e {global var; probe never {var<<<1} probe begin {exit()}}
+    } else {
+	spawn stap -e {global var; probe never {var<<<1} probe begin {exit()}}
+    }
+
+    expect {
+	-timeout 60
+	"var @count=0x0" { pass $test }
+	timeout {fail "$test: unexpected timeout"}
+	eof {fail "$test: unexpected EOF"}
+    }
+    catch {close}; catch {wait}
 }
-wait; catch { close }

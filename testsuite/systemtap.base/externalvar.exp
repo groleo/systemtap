@@ -44,6 +44,14 @@ if {! [installtest_p]} { untested "$test"; return }
 if {! [utrace_p]} { untested "$test"; return }
 if {! [uprobes_p]} { untested "$test"; return }
 
+proc dyninst_kfails {index} {
+  # The dyninst runtime isn't multi-arch, it only works on the
+  # native architecture. PR14490.
+  if {! [all_compile_flag_native_p $index]} {
+    setup_kfail 14490 "*-*-*"
+  }
+}
+
 for {set i 0} {$i < [all_compile_flags]} {incr i} {
   set extra_flag [all_compile_flag $i]
   set extra_name [all_compile_flag_name $i]
@@ -67,13 +75,9 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
   foreach runtime [get_runtime_list] {
     set test_name "$test-$extra_name"
     if {$runtime != ""} {
-      # The dyninst runtime isn't multi-arch, it only works on the
-      # native architecture. PR14490.
-      if {! [all_compile_flag_native_p $i]} {
-	setup_kfail 14490 "*-*-*"
-      }
       # Got to run stap with both the exe and the libraries used as -d
       # args.
+      ${runtime}_kfails $i
       set test_name "$test_name-$runtime"
       set cmd [concat stap --runtime=$runtime -d $testso \
 		   -d $testexe -c $testexe $testpath/$test.stp]
