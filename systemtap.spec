@@ -86,6 +86,9 @@ BuildRequires: elfutils-devel >= %{elfutils_version}
 %endif
 %if %{with_docs}
 BuildRequires: /usr/bin/latex /usr/bin/dvips /usr/bin/ps2pdf latex2html
+%if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
+BuildRequires: tex(fullpage.sty) tex(fancybox.sty) tex(bchr7t.tfm)
+%endif
 # On F10, xmlto's pdf support was broken off into a sub-package,
 # called 'xmlto-tex'.  To avoid a specific F10 BuildReq, we'll do a
 # file-based buildreq on '/usr/share/xmlto/format/fo/pdf'.
