@@ -450,6 +450,18 @@ mutatee::thread_callback(BPatch_thread *thread, bool create_p)
     continue_execution();
 }
 
+void
+mutatee::find_attached_probes(uint64_t flag,
+			      vector<const dynprobe_location *>&probes)
+{
+  for (size_t i = 0; i < attached_probes.size(); ++i)
+    {
+      const dynprobe_location& probe = attached_probes[i];
+      if (probe.flags & flag)
+	probes.push_back(&probe);
+    }
+}
+
 // Look for probe matches in all objects.
 void
 mutatee::instrument_dynprobes(const vector<dynprobe_target>& targets)

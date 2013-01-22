@@ -97,6 +97,9 @@ class mutatee {
     void begin_callback();
     void exit_callback(BPatch_thread *thread);
     void thread_callback(BPatch_thread *thread, bool create_p);
+
+    void find_attached_probes(uint64_t flag,
+			      std::vector<const dynprobe_location *>&probes);
 };
 
 #endif // MUTATEE_H

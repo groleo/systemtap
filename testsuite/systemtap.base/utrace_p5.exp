@@ -154,6 +154,26 @@ if {![utrace_p]} {
     stap_run $TEST_NAME run_cat_5_sec $end_script_output -e $script
 }
 
+set TEST_NAME "UTRACE_P5_01_cmd"
+if {![utrace_p]} {
+    untested "$TEST_NAME : no kernel utrace support found"
+} elseif {![installtest_p]} {
+    untested "$TEST_NAME"
+} else {
+    set script [format $end_script $exepath]
+    foreach runtime [get_runtime_list] {
+	set test "$TEST_NAME"
+	if {$runtime != ""} {
+	    set test "${test}_${runtime}"
+	    stap_run $test wait_5_secs $end_script_output \
+		-e $script --runtime=$runtime -c "$exepath /dev/null"
+	} else {
+	    stap_run $test wait_5_secs $end_script_output \
+		-e $script -c "$exepath /dev/null"
+	}
+    }
+}
+
 set TEST_NAME "UTRACE_P5_02"
 if {![utrace_p]} {
     untested "$TEST_NAME : no kernel utrace support found"
@@ -162,6 +182,26 @@ if {![utrace_p]} {
 } else {
     set script [format $begin_script $exepath]
     stap_run $TEST_NAME run_cat_5_sec $begin_script_output -e $script
+}
+
+set TEST_NAME "UTRACE_P5_02_cmd"
+if {![utrace_p]} {
+    untested "$TEST_NAME : no kernel utrace support found"
+} elseif {![installtest_p]} {
+    untested "$TEST_NAME"
+} else {
+    set script [format $begin_script $exepath]
+    foreach runtime [get_runtime_list] {
+	set test "$TEST_NAME"
+	if {$runtime != ""} {
+	    set test "${test}_${runtime}"
+	    stap_run $test wait_5_secs $begin_script_output \
+		-e $script --runtime=$runtime -c "$exepath /dev/null"
+	} else {
+	    stap_run $test wait_5_secs $begin_script_output \
+		-e $script -c "$exepath /dev/null"
+	}
+    }
 }
 
 set TEST_NAME "UTRACE_P5_03"

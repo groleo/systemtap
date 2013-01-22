@@ -103,7 +103,7 @@ setup_signals (void)
 
 mutator:: mutator (const string& module_name):
   module(NULL), module_name(resolve_path(module_name)),
-  p_target_created(false), signal_count(0)
+  p_target_created(false), signal_count(0), utrace_enter_fn(NULL)
 {
   // NB: dlopen does a library-path search if the filename doesn't have any
   // path components, which is why we use resolve_path(module_name)
@@ -516,11 +516,44 @@ mutator::exit_callback(BPatch_thread *thread,
   // main thread.
   BPatch_process* process = thread->getProcess();
 
+  if (utrace_enter_fn == NULL)
+    {
+      try
+        {
+	  set_dlsym(utrace_enter_fn, module, "enter_dyninst_utrace_probe");
+	}
+      catch (runtime_error& e)
+        {
+	  staperror() << e.what() << endl;
+	  return;
+	}
+    }
+
   staplog(1) << "exit callback, pid = " << process->getPid() << endl;
 
   boost::shared_ptr<mutatee> mut = find_mutatee(process);
   if (mut)
-    mut->exit_callback(thread);
+    {
+      // FIXME: We'd like to call the mutatee's exit_callback()
+      // function, but we've got a problem. The mutatee can't stop the
+      // process to call the exit probe within the target (it finishes
+      // exiting before we can). So, we'll call the probe(s) locally
+      // here. This works, but the context is wrong (the mutator, not
+      // the mutatee).
+      vector<const dynprobe_location *> exit_probes;
+      mutatees[i]->find_attached_probes(STAPDYN_PROBE_FLAG_PROC_END,
+					exit_probes);
+      for (size_t p = 0; p < exit_probes.size(); ++p)
+        {
+	  const dynprobe_location *probe = exit_probes[p];
+	  staplog(1) << "found end proc probe, index = " << probe->index
+		     << endl;
+	  int rc = utrace_enter_fn(probe->index, NULL);
+	  if (rc)
+	    stapwarn() << "enter_dyninst_utrace_probe returned "
+		       << rc << endl;
+	}
+    }
 }
 
 
