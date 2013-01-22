@@ -23,4 +23,11 @@ strings[2] = two
 1 strings in [t] bucket 67
 }
 
-stap_run_exact $test $srcdir/$subdir/$test.stp
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run_exact "${test}_${runtime}" $srcdir/$subdir/$test.stp \
+	    --runtime=$runtime
+    } else {
+	stap_run_exact $test $srcdir/$subdir/$test.stp
+    }
+}

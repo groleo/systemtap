@@ -63,4 +63,11 @@ stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
 stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
 }
 
-stap_run_exact $test $srcdir/$subdir/$test.stp
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run_exact "${test}_${runtime}" $srcdir/$subdir/$test.stp \
+	    --runtime=$runtime
+    } else {
+	stap_run_exact $test $srcdir/$subdir/$test.stp
+    }
+}
