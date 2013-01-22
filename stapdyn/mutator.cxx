@@ -541,8 +541,7 @@ mutator::exit_callback(BPatch_thread *thread,
       // here. This works, but the context is wrong (the mutator, not
       // the mutatee).
       vector<const dynprobe_location *> exit_probes;
-      mutatees[i]->find_attached_probes(STAPDYN_PROBE_FLAG_PROC_END,
-					exit_probes);
+      mut->find_attached_probes(STAPDYN_PROBE_FLAG_PROC_END, exit_probes);
       for (size_t p = 0; p < exit_probes.size(); ++p)
         {
 	  const dynprobe_location *probe = exit_probes[p];
