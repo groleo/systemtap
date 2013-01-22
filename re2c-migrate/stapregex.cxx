@@ -1,5 +1,5 @@
 // -*- C++ -*-
-// Copyright (C) 2012 Red Hat Inc.
+// Copyright (C) 2012-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -474,7 +474,7 @@ regex_parser::parse_factor ()
       next ();
 
       /* closure-type operators applied to $^ are definitely not kosher */
-      if (result->typeOf() == "AnchorOp")
+      if (string(result->typeOf()) == string("AnchorOp"))
         {
           parse_error(_F("postfix closure '%c' applied to anchoring operator", c));
         }

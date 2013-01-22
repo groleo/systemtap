@@ -660,7 +660,7 @@ private:
 
 public:
 	Scanner(std::istream&, std::ostream&);
-	~Scanner();
+	virtual ~Scanner();
 
 	enum ParseMode {
 		Stop,
