@@ -53,9 +53,9 @@ function show_contention(mutex, stack, type) {
   }
 }
 
-probe process("/lib*/libc*.so*").function("pthread_mutex_init") { process_mutex_init($mutex, probefunc()) }
-probe process("/lib*/libpthread*.so").function("__pthread_mutex_init") { process_mutex_init($mutex, probefunc()) }
-probe process("/lib*/libpthread*.so").function("__pthread_rwlock_init") { process_mutex_init($rwlock, probefunc()) }
+probe process("/lib*/libc.so*").function("pthread_mutex_init") { process_mutex_init($mutex, probefunc()) }
+probe process("/lib*/libpthread.so*").function("__pthread_mutex_init") { process_mutex_init($mutex, probefunc()) }
+probe process("/lib*/libpthread.so*").function("__pthread_rwlock_init") { process_mutex_init($rwlock, probefunc()) }
 
 probe syscall.futex.return {  
   if (($op & ~(FUTEX_PRIVATE_FLAG|FUTEX_CLOCK_REALTIME)) != FUTEX_WAIT) next
