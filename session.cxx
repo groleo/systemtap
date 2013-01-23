@@ -1241,6 +1241,11 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
             runtime_mode = kernel_runtime;
           else if (optarg == string("dyninst"))
             {
+#ifndef HAVE_DYNINST
+              cerr << _("ERROR: --runtime=dyninst unavailable; this build lacks DYNINST feature") << endl;
+              version();
+              return 1;
+#endif
               if (privilege_set && pr_unprivileged != privilege)
                 {
                   cerr << _("ERROR: --runtime=dyninst implies unprivileged mode only") << endl;
