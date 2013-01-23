@@ -1789,6 +1789,13 @@ systemtap_session::print_error (const semantic_error& e)
       message_str[i] = message.str();
     }
 
+  // skip error message printing for listing mode with low verbosity
+  if (this->listing_mode && this->verbose <= 1)
+    {
+      seen_errors.insert (message_str[1]); // increment num_errors()
+      return;
+    }
+
   // Duplicate elimination
   if (seen_errors.find (message_str[1]) == seen_errors.end())
     {
