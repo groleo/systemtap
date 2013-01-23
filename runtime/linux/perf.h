@@ -29,8 +29,8 @@ struct stap_perf_probe {
 	    /* per-task data. allocated by perf_event_create_kernel_counter */
 	    struct perf_event *per_thread_event;
 	    struct stap_task_finder_target tgt;
-	  };
-	};
+	  } t;
+	} e;
 };
 
 static long _stp_perf_init (struct stap_perf_probe *stp, struct task_struct* task);

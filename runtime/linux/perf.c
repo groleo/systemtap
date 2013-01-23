@@ -33,32 +33,32 @@ static long _stp_perf_init (struct stap_perf_probe *stp, struct task_struct* tas
 	  if (task == 0) /* need to setup later when we know the task */
 	    return 0;
 	  else  {
-	    if (stp->per_thread_event != 0) /* already setup */
+	    if (stp->e.t.per_thread_event != 0) /* already setup */
 	      return 0;
-	    stp->per_thread_event = perf_event_create_kernel_counter(&stp->attr,
+	    stp->e.t.per_thread_event = perf_event_create_kernel_counter(&stp->attr,
 								     -1, task,
 								     stp->callback
 #ifdef STAPCONF_PERF_COUNTER_CONTEXT
 								     , NULL
 #endif
 								     );
-	    if (IS_ERR(stp->per_thread_event)) {
-		long rc = PTR_ERR(stp->per_thread_event);
-		stp->per_thread_event = NULL;
+	    if (IS_ERR(stp->e.t.per_thread_event)) {
+		long rc = PTR_ERR(stp->e.t.per_thread_event);
+		stp->e.t.per_thread_event = NULL;
 		return rc;
 	      }
 	  }
 	}
 	else {
 	  /* allocate space for the event descriptor for each cpu */
-	  stp->events = _stp_alloc_percpu (sizeof(struct perf_event*));
-	  if (stp->events == NULL) {
+	  stp->e.events = _stp_alloc_percpu (sizeof(struct perf_event*));
+	  if (stp->e.events == NULL) {
 	    return -ENOMEM;
 	  }
 
 	  /* initialize event on each processor */
 	  for_each_possible_cpu(cpu) {
-	    struct perf_event **event = per_cpu_ptr (stp->events, cpu);
+	    struct perf_event **event = per_cpu_ptr (stp->e.events, cpu);
 	    if (cpu_is_offline(cpu)) {
 	      *event = NULL;
 	      continue;
@@ -95,25 +95,25 @@ static long _stp_perf_init (struct stap_perf_probe *stp, struct task_struct* tas
 static void _stp_perf_del (struct stap_perf_probe *stp)
 {
   int cpu;
-  if (! stp || !stp->events)
+  if (! stp || !stp->e.events)
     return;
 
   /* shut down performance event sampling */
   if (stp->per_thread) {
-    if (stp->per_thread_event) {
-      perf_event_release_kernel(stp->per_thread_event);
+    if (stp->e.t.per_thread_event) {
+      perf_event_release_kernel(stp->e.t.per_thread_event);
     }
-    stp->per_thread_event = NULL;
+    stp->e.t.per_thread_event = NULL;
   }
   else {
     for_each_possible_cpu(cpu) {
-      struct perf_event **event = per_cpu_ptr (stp->events, cpu);
+      struct perf_event **event = per_cpu_ptr (stp->e.events, cpu);
       if (*event) {
 	perf_event_release_kernel(*event);
       }
     }
-    _stp_free_percpu (stp->events);
-    stp->events = NULL;
+    _stp_free_percpu (stp->e.events);
+    stp->e.events = NULL;
   }
 }
 
@@ -151,14 +151,14 @@ long _stp_perf_read (int ncpu, unsigned i)
     }
   stp = & stap_perf_probes[i]; 
     
-  if (stp == NULL || stp->per_thread_event == NULL)
+  if (stp == NULL || stp->e.t.per_thread_event == NULL)
     {
       _stp_error ("_stp_perf_read\n");
       return 0;
     }
 
   might_sleep();
-  return perf_event_read_value (stp->per_thread_event, &enabled, &running);
+  return perf_event_read_value (stp->e.t.per_thread_event, &enabled, &running);
 
 }
 

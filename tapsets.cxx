@@ -7795,7 +7795,8 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
 	  map<string, pair<string,derived_probe*> >::iterator it;
 	  unsigned i = 0;
 	  // Find the associated perf.counter probe
-	  for (it=s.perf_counters.begin() ; it != s.perf_counters.end(); it++, i++)
+	  for (it=s.perf_counters.begin() ;
+	       it != s.perf_counters.end(); it++, i++)
 	    if ((*it).second.second == (*pcii))
 	      break;
 	  s.op->line() << lex_cast(i) << ", ";

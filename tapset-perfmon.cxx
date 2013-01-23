@@ -142,7 +142,7 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline() << "static int _stp_perf_probe_cb(struct stap_task_finder_target *tgt, struct task_struct *tsk, int register_p, int process_p) {";
       s.op->indent(1);
       s.op->newline() << "int rc = 0;";
-      s.op->newline() << "struct stap_perf_probe *p = container_of(tgt, struct stap_perf_probe, tgt);";
+      s.op->newline() << "struct stap_perf_probe *p = container_of(tgt, struct stap_perf_probe, e.t.tgt);";
       
       s.op->newline() << "if (register_p) ";
       s.op->indent(1);
@@ -183,11 +183,15 @@ perf_derived_probe_group::emit_module_decls (systemtap_session& s)
 	  else
 	    l_process_name = probes[i]->process_name;
 
+	  s.op->line() << " .e={";
+	  s.op->line() << " .t={";
 	  s.op->line() << " .tgt={";
 	  s.op->line() << " .purpose=\"perfctr\",";
 	  s.op->line() << " .procname=\"" << l_process_name << "\",";
 	  s.op->line() << " .pid=0,";
 	  s.op->line() << " .callback=&_stp_perf_probe_cb,";
+	  s.op->line() << " },";
+	  s.op->line() << " },";
 	  s.op->line() << " },";
 	  s.op->newline() << ".per_thread=" << "1, ";
 	}
@@ -266,7 +270,7 @@ perf_derived_probe_group::emit_module_init (systemtap_session& s)
   s.op->newline() << "break;";
   s.op->newline(-1) << "}"; // if-error
   if (have_a_process_tag)
-    s.op->newline() << "rc = stap_register_task_finder_target(&stp->tgt);";
+    s.op->newline() << "rc = stap_register_task_finder_target(&stp->e.t.tgt);";
   s.op->newline(-1) << "}"; // for loop
 }
 
