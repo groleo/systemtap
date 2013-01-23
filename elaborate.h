@@ -83,6 +83,10 @@ struct typeresolution_info: public visitor
   void invalid (const token* tok, exp_type t);
 
   exp_type t; // implicit parameter for nested visit call; may clobber
+              // Upon entry to one of the visit_* calls, the incoming
+              // `t' value is the type inferred for that node from 
+              // context.  It may match or conflict with the node's 
+              // preexisting type, or it may be unknown.
 
   void visit_block (block* s);
   void visit_try_block (try_block* s);
