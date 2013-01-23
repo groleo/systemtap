@@ -87,7 +87,7 @@ expect {
     -re {^In test_probe_4 dtrace probe 0x[0-9a-f][0-9a-f]*\r\n} { incr ok; exp_continue }
     -re {^In test_probe_1 probe 0x0\r\n} { incr ok; exp_continue }
     -re {^buz end\r\n} {incr ok; exp_continue }
-    -re {^WARNING:.*No DWARF information found\r\n} { exp_continue }
+    -re {^WARNING:.*No DWARF information found.*\r\n} { exp_continue }
     -re {^Missing separate debuginfos.*\r\n} { exp_continue }
     timeout { fail "$test (timeout)" }
     eof { }
@@ -126,9 +126,12 @@ catch {close}; catch {wait}
 
 error_handler [expr {$ok == 4}] "printf --ldd ($ok) ($ok != 4)"
 
-# Test .exported
+# Test .exported. Notice we're only testing exported functions in our
+# compiled 'libsdt' shared library. We could test exported functions
+# in glibc, but to find them we'd need glibc debuginfo installed,
+# which might or might not be present.
 
-spawn $stap_path -c $exepath -e "probe process(\"$exepath\").library(\"*\").function(\"*\").exported \{printf(\"%s \", pp())\}"
+spawn $stap_path -c $exepath -e "probe process(\"$exepath\").library(\"$sopath\").function(\"*\").exported \{printf(\"%s \", pp())\}"
 
 set ok 0
 expect {
@@ -136,13 +139,12 @@ expect {
     -re {libsdt.so.*bar} {incr ok; exp_continue }
     -re {libsdt.so.*baz} {incr ok; exp_continue }
     -re {libsdt.so.*buz} {incr ok; exp_continue }
-    -re {libc-.*so.*exported} {incr ok; exp_continue }
     timeout { fail "$test (timeout)" }
     eof { }
 }
 
 catch {close}; catch {wait}
 
-error_handler [expr {$ok >= 6}] ".exported ($ok) ($ok >= 6)"
+error_handler [expr {$ok >= 3}] ".exported ($ok) ($ok >= 3)"
 
 cleanup_handler $verbose
