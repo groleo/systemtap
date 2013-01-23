@@ -10,7 +10,7 @@ See the INSTALL file for generic build instructions.
 Prerequisites:
 
 - linux kernel
-- kernel module build environment (kernel-devel rpm)
+- kernel module build environment (kernel-devel rpm) and/or dyninst
 - optionally, debugging information for kernel/user-space being instrumented
 - C compiler (same as what kernel was compiled with)
 - elfutils with libdwfl for debugging information parsing
@@ -18,12 +18,8 @@ Prerequisites:
 
 Installation steps:
 
-- Install the kernel development and gcc packages.
-  On modern Fedora, # yum install kernel-devel-`uname -r`
-
 - Install any debuginfo packages you need, for kernel and/or userspace.
   On modern Fedora, # debuginfo-install kernel [...]
-
   (Beware of confusion between kernel vs. kernel-debug vs kernel-PAE etc.
   variants.  Each likely has a corresponding development and debuginfo
   package.)
@@ -33,9 +29,11 @@ Installation steps:
 
 Build steps:
 
-- Install the kernel-debuginfo, kernel-devel, gcc and dependent
-  packages (or see below if you are building your own kernels from source).
-
+- Consider installing the kernel-debuginfo, kernel-devel, gcc and
+  dependent packages (or see below if you are building your own
+  kernels from source).  If using only the pure-userspace dyninst
+  backend, install gcc and dyninst-devel.
+  
 - If available, install your distribution's copy of elfutils and its
   development headers/libraries.
   Or if desired, download an elfutils source release to build in
@@ -86,20 +84,25 @@ Build steps:
 
   Some samples should be available under $prefix/share/doc/systemtap/examples.
 
-  Normally, run "stap" as root.  If desired, create "stapdev" and
-  "stapusr" entries in /etc/groups.  Any users in "stapdev"+"stapusr" will
-  be able to run systemtap as if with root privileges.  Users in "stapusr"
-  only may launch (with "staprun") pre-compiled probe modules (created
-  by "stap -p4 ...") that a system administrator copied under
-  /lib/modules/`uname -r`/systemtap.  "stapusr" may also be permitted to
-  create arbitrary unprivileged systemtap scripts of their own.  See
-  README.unprivileged for additional setup instructions.
+  For the normal linux-kernel-module based backend, run "stap" as
+  root.  If desired, create "stapdev" and "stapusr" entries in
+  /etc/groups.  Any users in "stapdev"+"stapusr" will be able to run
+  systemtap as if with root privileges.  Users in "stapusr" only may
+  launch (with "staprun") pre-compiled probe modules (created by "stap
+  -p4 ...") that a system administrator copied under
+  /lib/modules/`uname -r`/systemtap.  "stapusr" may also be permitted
+  to create arbitrary unprivileged systemtap scripts of their own.
+  See README.unprivileged for additional setup instructions.
 
   To run a simple test.
   # stap -v -e 'probe vfs.read {printf("read performed\n"); exit()}'
 
   To run the full test suite from the build tree.
   # make installcheck
+
+  For the prototype dyninst pure-userspace backend, run "stap" as any user.
+  % stap --runtime=dyninst -e 'probe process.function("*") { 
+                               println(pn(), ":", $$parms) }' -c 'ls'
 
 
 Tips:
