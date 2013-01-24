@@ -1,5 +1,5 @@
 // -*- C++ -*-
-// Copyright (C) 2012 Red Hat Inc.
+// Copyright (C) 2012-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -8,16 +8,8 @@
 //
 // ---
 //
-// This file incorporates code from the re2c project, which was
-// originally released into the public domain. Many thanks to the
-// developers of re2c for their work.
-//
-// As a courtesy to the original developers of re2c, please include
-// appropriate acknowledgment in future code derived from this file.
-// Information on the original re2c distribution can be found at:
-//
-//   http://sourceforge.net/projects/re2c/
-//
+// This file incorporates code from the re2c project; please see
+// re2c-migrate/README for details.
 
 #ifndef STAPREGEX_H
 #define STAPREGEX_H

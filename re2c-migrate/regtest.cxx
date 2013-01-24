@@ -1,12 +1,15 @@
 // -*- C++ -*-
-// Copyright (C) 2012 Red Hat Inc.
+// Copyright (C) 2012-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
 // Public License (GPL); either version 2, or (at your option) any
 // later version.
 //
-// ... TODOXXX additional blurb for re2c ...
+// ---
+//
+// This file incorporates code from the re2c project; please see
+// re2c-migrate/README for details.
 
 #include "stapregex.h"
 #include "../translate.h"

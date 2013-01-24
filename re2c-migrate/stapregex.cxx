@@ -6,7 +6,10 @@
 // Public License (GPL); either version 2, or (at your option) any
 // later version.
 //
-// ... TODOXXX additional blurb for re2c ...
+// ---
+//
+// This file incorporates code from the re2c project; please see
+// re2c-migrate/README for details.
 
 #include "stapregex.h"
 #include "../translate.h"

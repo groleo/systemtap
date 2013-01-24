@@ -1,4 +1,16 @@
-/* $Id$ */
+// -*- C++ -*-
+// Copyright (C) 2012-2013 Red Hat Inc.
+//
+// This file is part of systemtap, and is free software.  You can
+// redistribute it and/or modify it under the terms of the GNU General
+// Public License (GPL); either version 2, or (at your option) any
+// later version.
+//
+// ---
+//
+// This file incorporates code from the re2c project; please see
+// re2c-migrate/README for details.
+
 #ifndef	_re2c_globals_h
 #define	_re2c_globals_h
 
