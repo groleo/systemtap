@@ -389,6 +389,7 @@ for {set i 0} {$i < [arch_compile_flags]} {incr i} {
     exit 1
   }
 }
+catch { eval [list exec rm -f] [glob "hello.c*" "hello-*"] }
 
 proc systemtap_init {args} {}
 proc systemtap_version {} {}
