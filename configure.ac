@@ -307,7 +307,15 @@ AM_CONDITIONAL([XMLTO_STRINGPARAM], [test "$have_xmlto_stringparam" == "yes"])
 
 if test "x${building_refdocs}" == "xyes"; then
 AC_MSG_CHECKING([for xmlto pdf support])
-   xmlto pdf conftest.xml >& /dev/null
+   # xmlto pdf may work *only* with --with-fop
+   # XXX: To an extent this test is redundant in that the --with-fop test
+   # already ran xmlto --with-fop pdf ....
+   if test "x$have_fop" == "xyes"; then
+      XMLTOPDF_FOP=--with-fop
+   else
+      XMLTOPDF_FOP=
+   fi
+   xmlto $XMLTOPDF_FOP pdf conftest.xml >& /dev/null
    if test $? == 0; then
       have_xmlto_pdf="yes"
       AC_MSG_RESULT([yes])

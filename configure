@@ -9552,7 +9552,15 @@ fi
 if test "x${building_refdocs}" == "xyes"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for xmlto pdf support" >&5
 $as_echo_n "checking for xmlto pdf support... " >&6; }
-   xmlto pdf conftest.xml >& /dev/null
+   # xmlto pdf may work *only* with --with-fop
+   # XXX: To an extent this test is redundant in that the --with-fop test
+   # already ran xmlto --with-fop pdf ....
+   if test "x$have_fop" == "xyes"; then
+      XMLTOPDF_FOP=--with-fop
+   else
+      XMLTOPDF_FOP=
+   fi
+   xmlto $XMLTOPDF_FOP pdf conftest.xml >& /dev/null
    if test $? == 0; then
       have_xmlto_pdf="yes"
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
