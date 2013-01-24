@@ -3,6 +3,14 @@ set ::result_string {call (22,84)
 call2 (128,-22)
 main (64,42)}
 
+proc dyninst_kfails {index} {
+    # The dyninst runtime isn't multi-arch, it only works on the
+    # native architecture. PR14490.
+    if {! [all_compile_flag_native_p $index]} {
+	setup_kfail 14490 "*-*-*"
+    }
+}
+
 # Try both inlined and non-inlined compiles.
 for {set i 0} {$i < [all_compile_flags]} {incr i} {
   set extra_flag [all_compile_flag $i]
@@ -20,7 +28,16 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
   }
 
   if {[installtest_p] && [uprobes_p]} {
-    stap_run3 "$test-$extra_name" $srcdir/$subdir/$test.stp $test.exe -c ./$test.exe
+    foreach runtime [get_runtime_list] {
+      if {$runtime != ""} {
+	if {[info procs ${runtime}_kfails] ne ""} { ${runtime}_kfails $i }
+	stap_run3 "$test-$extra_name-$runtime" $srcdir/$subdir/$test.stp \
+	  $test.exe -c ./$test.exe --runtime=$runtime
+      } else {
+	stap_run3 "$test-$extra_name" $srcdir/$subdir/$test.stp \
+	  $test.exe -c ./$test.exe 
+      }
+    }
   } else {
     untested "$test-$extra_name"
   }

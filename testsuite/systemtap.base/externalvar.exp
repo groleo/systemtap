@@ -77,7 +77,7 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
     if {$runtime != ""} {
       # Got to run stap with both the exe and the libraries used as -d
       # args.
-      ${runtime}_kfails $i
+      if {[info procs ${runtime}_kfails] ne ""} { ${runtime}_kfails $i }
       set test_name "$test_name-$runtime"
       set cmd [concat stap --runtime=$runtime -d $testso \
 		   -d $testexe -c $testexe $testpath/$test.stp]

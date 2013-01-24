@@ -43,7 +43,7 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
   if {[installtest_p] && [uprobes_p]} {
     foreach runtime [get_runtime_list] {
       if {$runtime != ""} {
-	${runtime}_kfails $i
+	if {[info procs ${runtime}_kfails] ne ""} { ${runtime}_kfails $i }
 	stap_run3 "$test-$extra_name-$runtime" -w \
 	  $srcdir/$subdir/$test.stp $test.exe -c ./$test.exe --runtime=$runtime
       } else {

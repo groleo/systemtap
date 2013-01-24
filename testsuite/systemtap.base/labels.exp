@@ -66,7 +66,7 @@ expect {
     timeout { fail "$test (timeout)" }
     eof { }
 }
-wait
+catch { close }; catch { wait }
 
 if {$ok == 0} { pass "$test :N .label $ok" } { fail "$test :N .label $ok" }
 
@@ -81,7 +81,7 @@ expect {
     timeout { fail "$test (timeout)" }
     eof { }
 }
-wait
+catch { close }; catch { wait }
 
 if {$ok == 1} { pass "$test :N .label $ok" } { fail "$test :N .label $ok" }
 
@@ -103,29 +103,38 @@ expect {
     timeout { fail "$test (timeout)" }
     eof { }
 }
-wait
+catch { close }; catch { wait }
 
 if {$ok == 4} { pass "$test -l .label" } { fail "$test -l .label $ok" }
 
 # label in an executable (only if we have uprobes)
 if {[uprobes_p]} {
-    set ok 0
-    verbose -log "spawn stap -c $label_exepath $label_stppath"
-    spawn stap -c $label_exepath $label_stppath
+    foreach runtime [get_runtime_list] {
+	set test_name "$test exe .label"
+	if {$runtime != ""} {
+	    lappend test_name $runtime
+	    verbose -log "spawn stap -c $label_exepath $label_stppath --runtime=$runtime"
+	    spawn stap -c $label_exepath $label_stppath --runtime=$runtime
+	} else {
+	    verbose -log "spawn stap -c $label_exepath $label_stppath"
+	    spawn stap -c $label_exepath $label_stppath
+	}
 
-    # Note that the output can come out in a bit different order
-    # depending on when the probes fire.  This is reasonable since
-    # we've got 2 probes at the same probe point (.label("init_*") and
-    # .label("init_an_int"))
-    expect {
-	-timeout 180
-	-re {VARS a=0x0 b=0x0.*init_an_int.*VARS a=0x2 b=0x0.*VARS a=0x2 b=0x3 c=0x[a-f01-9]} { incr ok; exp_continue }
-	-re {init_an_int.*VARS a=0x0 b=0x0.*VARS a=0x2 b=0x0.*VARS a=0x2 b=0x3 c=0x[a-f01-9]} { incr ok; exp_continue }
-	timeout { fail "$test (timeout)" }
-	eof { }
+	# Note that the output can come out in a bit different order
+	# depending on when the probes fire.  This is reasonable since
+	# we've got 2 probes at the same probe point (.label("init_*") and
+	# .label("init_an_int"))
+	set ok 0
+	expect {
+	    -timeout 180
+	    -re {VARS a=0x0 b=0x0.*init_an_int.*VARS a=0x2 b=0x0.*VARS a=0x2 b=0x3 c=0x[a-f01-9]} { incr ok; exp_continue }
+	    -re {init_an_int.*VARS a=0x0 b=0x0.*VARS a=0x2 b=0x0.*VARS a=0x2 b=0x3 c=0x[a-f01-9]} { incr ok; exp_continue }
+	    timeout { fail "$test (timeout)" }
+	    eof { }
+	}
+	catch { close }; catch { wait }
+	if {$ok == 1} { pass "$test_name" } { fail "$test_name $ok" }
     }
-    wait
-    if {$ok == 1} { pass "$test exe .label" } { fail "$test exe .label $ok" }
 } else {
     untested "$test exe .label"
 }
@@ -135,17 +144,17 @@ if {[uprobes_p]} {
 set label_shpath "[pwd]/label.sh"
 set fp [open $label_shpath "w"]
 puts $fp "
-readelf --debug-dump $label_exepath | awk \"
-/init_an_int_again/ {have_label=1} 
-/DW_AT_low_pc/ {if (have_label) {print \$3;exit;}}
-\"
-"
+	readelf --debug-dump $label_exepath | awk \"
+	/init_an_int_again/ {have_label=1} 
+	/DW_AT_low_pc/ {if (have_label) {print \$3;exit;}}
+	\"
+	"
 close $fp
 spawn sh $label_shpath
 expect {
     -re {0x[0-9a-f]*} 
 }
-wait
+catch { close }; catch { wait }
 
 set nomatch 0
 spawn stap -p2 -l "process\(\"$label_exepath\"\).statement($expect_out(0,string))"
@@ -155,7 +164,7 @@ expect {
     timeout { fail "$test (timeout)" }
     eof { }
 }
-wait
+catch { close }; catch { wait }
 
 if {$nomatch == 0} { pass "$test exe .statement" } { fail "$test exe .statement" }
 
@@ -181,7 +190,7 @@ expect {
     timeout { fail "$test (timeout)" }
     eof { }
 }
-wait
+catch { close }; catch { wait }
 
 if {$ok == 1} { pass "$test so .label" } { fail "$test so .label $ok" }
 
@@ -190,17 +199,17 @@ if {$ok == 1} { pass "$test so .label" } { fail "$test so .label $ok" }
 set label_shpath "[pwd]/label.sh"
 set fp [open $label_shpath "w"]
 puts $fp "
-readelf --debug-dump $label_sopath | awk \"
-/init_an_int_again/ {have_label=1} 
-/DW_AT_low_pc/ {if (have_label) {print \$3;exit;}}
-\"
-"
+	readelf --debug-dump $label_sopath | awk \"
+	/init_an_int_again/ {have_label=1} 
+	/DW_AT_low_pc/ {if (have_label) {print \$3;exit;}}
+	\"
+	"
 close $fp
 spawn sh $label_shpath
 expect {
     -re {0x[0-9a-f]*} 
 }
-wait
+catch { close }; catch { wait }
 
 set nomatch 0
 spawn stap -p2 -l "process\(\"$label_sopath\"\).statement($expect_out(0,string))"
@@ -210,7 +219,7 @@ expect {
     timeout { fail "$test (timeout)" }
     eof { }
 }
-wait
+catch { close }; catch { wait }
 
 if {$nomatch == 0} { pass "$test so .statement" } { fail "$test so .statement" }
 

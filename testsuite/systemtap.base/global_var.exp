@@ -65,7 +65,7 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
 
   foreach runtime [get_runtime_list] {
     if {$runtime != ""} {
-      ${runtime}_kfails $i
+      if {[info procs ${runtime}_kfails] ne ""} { ${runtime}_kfails $i }
       stap_run3 $test-$extra_name-$runtime $srcdir/$subdir/$test.stp \
 	-c ./${mname}_${extra_name} --runtime=$runtime
     } else {
