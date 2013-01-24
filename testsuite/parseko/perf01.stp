@@ -1,0 +1,10 @@
+#! stap -p2
+
+# @perf not supported
+global x
+probe perf.hw.cpu_cycles.process("/bin/ed").counter("a") {} 
+probe process("/bin/ed").begin
+{
+ x = @perf("a")
+}
+

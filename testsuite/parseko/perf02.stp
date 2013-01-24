@@ -1,0 +1,9 @@
+#! stap -p2
+
+# no counter id
+global x
+probe perf.hw.cpu_cycles.process("/bin/ls").counter("b") {}
+probe process("/bin/ed").function("main")
+{
+ y = @perf("")
+}

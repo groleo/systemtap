@@ -207,37 +207,24 @@ expect {
 spawn $stap_path -e "
 global x
 
-probe perf.hw.cpu_cycles.process(\"/bin/ls\").counter(\"b\") {}
+probe perf.hw.cpu_cycles.process(\"/bin/ls\").counter(\"a\") {}
 
 probe process(\"$exepath\").function(\"main\")
 {
- # no counter id
- y = @perf(\"\")
+ # wrong counter
+ y = @perf(\"b\")
 }"
 
 expect {
     -timeout 180
-    -re {parse error: expected 'string'} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-spawn $stap_path -e "
-global x
-
-probe perf.hw.cpu_cycles.process(\"/bin/ls\").counter(\"\") {}
-"
-
-expect {
-    -timeout 180
-    -re {semantic error: missing perf probe counter component name} { incr ok; exp_continue }
+    -re {semantic error: perf counter 'b' not defined} { incr ok; exp_continue }
     timeout { fail "$test (timeout)" }
     eof { }
 }
 
 catch {close}; catch {wait}
 
-if {$ok == 4} {
+if {$ok == 3} {
     pass "$test $subtest"
 } else {
     fail "$test $subtest ($ok)"

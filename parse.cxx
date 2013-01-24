@@ -1,5 +1,5 @@
 // recursive descent parser for systemtap scripts
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2006 Intel Corporation.
 // Copyright (C) 2007 Bull S.A.S
 //
@@ -3626,6 +3626,10 @@ expression* parser::parse_entry_op (const token* t)
 expression* parser::parse_perf_op (const token* t)
 {
   perf_op* pop = new perf_op;
+
+  if (strverscmp(session.compatible.c_str(), "2.1") < 0)
+    throw parse_error (_("expected @cast, @var or $var"));
+
   pop->tok = t;
   expect_op("(");
   pop->operand = parse_literal ();
