@@ -161,6 +161,8 @@ private: // nonterminals
   void parse_functiondecl (vector<functiondecl*>&);
   embeddedcode* parse_embeddedcode ();
   probe_point* parse_probe_point ();
+  literal_string* consume_string_literals (const token*);
+  literal_string* parse_literal_string ();
   literal* parse_literal ();
   block* parse_stmt_block ();
   try_block* parse_try_block ();
@@ -2339,6 +2341,44 @@ parser::parse_probe_point ()
 }
 
 
+literal_string*
+parser::consume_string_literals(const token *t)
+{
+  literal_string *ls = new literal_string (t->content);
+
+  // PR11208: check if the next token is also a string literal;
+  // auto-concatenate it.  This is complicated to the extent that we
+  // need to skip intermediate whitespace.
+  //
+  // NB for versions prior to 2.0: but don't skip over intervening comments
+  const token *n = peek();
+  while (n != NULL && n->type == tok_string
+         && ! (strverscmp(session.compatible.c_str(), "2.0") < 0
+               && input.ate_comment))
+    {
+      ls->value.append(next()->content); // consume and append the token
+      n = peek();
+    }
+  return ls;
+}
+
+
+// Parse a string literal and perform backslash escaping on the contents:
+literal_string*
+parser::parse_literal_string ()
+{
+  const token* t = next ();
+  literal_string* l;
+  if (t->type == tok_string)
+    l = consume_string_literals (t);
+  else
+    throw parse_error (_("expected literal string or number"));
+
+  l->tok = t;
+  return l;
+}
+
+
 literal*
 parser::parse_literal ()
 {
@@ -2346,20 +2386,7 @@ parser::parse_literal ()
   literal* l;
   if (t->type == tok_string)
     {
-      literal_string *ls = new literal_string (t->content);
-
-      // PR11208: check if the next token is also a string literal; auto-concatenate it
-      // This is complicated to the extent that we need to skip intermediate whitespace.
-      // NB for versions prior to 2.0: but don't skip over intervening comments
-      const token *n = peek();
-      while (n != NULL && n->type == tok_string
-             && ! (strverscmp(session.compatible.c_str(), "2.0") < 0
-                   && input.ate_comment))
-        {
-          ls->value.append(next()->content); // consume and append the token
-          n = peek();
-        }
-      l = ls;
+      l = consume_string_literals (t);
     }
   else
     {
@@ -3042,7 +3069,7 @@ parser::parse_comparison_or_regex_query ()
       r->op = t->content;
       r->tok = t;
       next ();
-      r->right = parse_literal(); // TODOXXX for now, RHS MUST be a literal; error should be fixed to say "expected literal string", NOT "string or number"
+      r->right = r->re = parse_literal_string();
       op1 = r;
       t = peek ();
     }

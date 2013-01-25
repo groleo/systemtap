@@ -1476,7 +1476,7 @@ public:
   void visit_regex_query (regex_query *q) {
     functioncall_traversing_visitor::visit_regex_query (q); // TODOXXX test necessity
 
-    string re = ((literal_string *)q->right)->value; /* parser ensured rhs is a literal */
+    string re = q->re->value;
     regex_to_stapdfa (&session, re, session.dfa_counter);
   }
 };
