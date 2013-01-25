@@ -421,6 +421,7 @@ RegExp *
 regex_parser::parse_factor ()
 {
   RegExp *result;
+  RegExp *old_result = NULL;
 
   char c = peek ();
   if (! c || c == '|' || c == ')')
@@ -457,6 +458,7 @@ regex_parser::parse_factor ()
   else // escaped or ordinary character -- not yet swallowed
     {
       string accumulate;
+      char d = 0;
 
       while (c && ( ! isspecial (c) || c == '\\' ))
         {
@@ -466,14 +468,30 @@ regex_parser::parse_factor ()
               c = peek ();
             }
 
-          accumulate.push_back (c);
           next ();
-          c = peek ();
+          d = peek ();
+
+          /* if we end in a closure, it only grabs the last character */
+          if (d == '*' || d == '+' || d == '?' || d == '{')
+            {
+              /* save the last character */
+              d = c; break;
+            }
+
+          accumulate.push_back (c);
+          c = d; d = 0;
         }
 
       // strToRE takes this funky custom class
       SubStr accumSubStr (accumulate.c_str ());
       result = sc->strToRE (accumSubStr);
+
+      if (d != 0) {
+        string dd(""); dd.push_back(d);
+        SubStr accumSubStr2 (dd.c_str());
+        old_result = result;
+        result = sc->strToRE (accumSubStr2);
+      }
     }
 
   /* parse closures or other postfix operators */
@@ -552,6 +570,9 @@ regex_parser::parse_factor ()
       
       c = peek ();
     }
+
+  if (old_result)
+    result = new CatOp(old_result, result);
 
   return result;
 }
