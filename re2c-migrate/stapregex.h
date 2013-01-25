@@ -27,7 +27,7 @@ namespace re2c {
 
 struct stapdfa {
   std::string orig_input;
-  stapdfa (const std::string& func_name, const std::string& re);
+  stapdfa (const std::string& func_name, const std::string& re, bool escape = true);
   ~stapdfa ();
   void emit_declaration (translator_output *o);
   void emit_matchop_start (translator_output *o);

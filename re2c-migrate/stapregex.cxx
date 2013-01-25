@@ -110,6 +110,56 @@ translator_output::line ()
 
 // ---------------------------------------------------------------------
 
+// Systemtap string literals are stored without substituting any
+// escape codes, so we need to do that here:
+
+string
+escape_string_literal(const string &old_input)
+{
+  string input("");
+  for (unsigned i = 0; i < old_input.size(); i++)
+    {
+      char c = old_input[i];
+
+      if (c == '\\')
+        {
+          i++;
+          assert (i < old_input.size()); // XXX should be caught by stap parser
+          c = old_input[i];
+
+          switch (c)
+            {
+            case 'a':
+              c = '\a'; break;
+            case 'b':
+              c = '\b'; break;
+            case 't':
+              c = '\t'; break;
+            case 'n':
+              c = '\n'; break;
+            case 'v':
+              c = '\v'; break;
+            case 'f':
+              c = '\f'; break;
+            case 'r':
+              c = '\r'; break;
+
+            // none of the following should be converted
+            case '0' ... '7': // NB: need only match the first digit
+              // TODOXXX octals should be handled by re2c??
+            case '\\':
+            default:
+		  break;
+            }
+        }
+
+      input.push_back(c);
+    }
+  return input;
+}
+
+// ---------------------------------------------------------------------
+
 #include "re2c-globals.h"
 #include "re2c-dfa.h"
 #include "re2c-regex.h"
@@ -172,7 +222,7 @@ regex_to_stapdfa (systemtap_session *s, const string& input, unsigned& counter)
 RegExp *stapdfa::failRE = NULL;
 RegExp *stapdfa::padRE = NULL;
 
-stapdfa::stapdfa (const string& func_name, const string& re)
+stapdfa::stapdfa (const string& func_name, const string& re, bool escape)
   : orig_input(re), func_name(func_name)
 {
   if (!failRE) {
@@ -185,12 +235,11 @@ stapdfa::stapdfa (const string& func_name, const string& re)
     padRE = p.parse();
   }
 
-  regex_parser p(re);
+  regex_parser p(escape ? escape_string_literal(re) : re);
   ast = prepare_rule(p.parse ()); // must be retained for re2c's reference
 
   // compile ast to DFA
   content = genCode (ast);
-  // cerr << content;
   content->prepare();
 }
 

@@ -46,7 +46,7 @@ int main(int argc, char *argv [])
         {
           if (argc != 4) { print_usage (argv[0]); exit (1); }
           string s(argv[2]);
-          stapdfa d("do_match", s);
+          stapdfa d("do_match", s, false); // no backslash escaping
           translator_output o(cout);
 
           string t(argv[3]);
