@@ -49,6 +49,7 @@ BASE=${BASE_STP%.stp}
 # contain -'s, so transform them to _'s.
 BASE=`echo $BASE | sed 's/-/_/g'`
 BASE_KO="${BASE}.ko"
+shopt -s extglob
 
 shift
 while [ $# -gt 0 ]; do
@@ -68,8 +69,8 @@ while [ $# -gt 0 ]; do
             CMD=$2
             shift;
             break;;
-        -V)
-            V_FLAG="-vvvvvv"
+        -+(V))
+            V_FLAG="$1"
             break;;
         -D)
             D_FLAG="-DDEBUG_UNWIND=9 -DDEBUG_UPROBES -DDEBUG_TASK_FINDER_VMA -DDEBUG_TASK_FINDER"
