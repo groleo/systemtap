@@ -1,14 +1,22 @@
 set test "optim"
 if {![installtest_p]} { untested $test; return }
-spawn stap $srcdir/$subdir/optim.stp
-set ok 0
-expect {
+
+foreach runtime [get_runtime_list] {
+    set test "optim"
+    if {$runtime != ""} {
+	lappend test "($runtime)"
+	spawn stap --runtime=$runtime $srcdir/$subdir/optim.stp
+    } else {
+	spawn stap $srcdir/$subdir/optim.stp
+    }
+    set ok 0
+    expect {
 	-timeout 120
 	-re {i=1} { incr ok ; exp_continue }
 	-re {j=2} { incr ok }
 	timeout { fail "$test (timeout)" }
 	eof { }
+    }
+    catch { close }; catch { wait }
+    if {$ok == 2} { pass $test } { fail $test }
 }
-close
-wait
-if {$ok == 2} { pass $test } { fail $test }

@@ -1,16 +1,32 @@
 set test "process_by_cmd"
+
+# Only run on make installcheck and uprobes present.
+if {! [installtest_p]} { untested "$test"; return }
+if {! [uprobes_p]} { untested "$test"; return }
+
+# Test for PR12427 [implied process("...") target for stap -c CMD
+# invocation].
+
+# We've got a problem in testing all the 'process.*' probe
+# variants. Depending on the compiler, debuginfo generation,
+# optimization level, etc., the probes can get hit in different
+# orders. For instance, a 'process.function("main")' probe might get
+# hit before or after the first
+# 'process.statement("*@process_by_cmd.c")' probe (they sometimes get
+# inserted at the same address, but might get installed in different
+# orders).
+#
+# To ensure we're testing the right thing, this test has been split
+# into two subtests, so we can hopefully depend on the order output.
+
 set ::result_string {func end
-state end
-func label end
 mark end
-state end
-state end
-state end
 func return end
 func return end
 func return end
 mark end
 func return end}
+
 set test_flags "additional_flags=-g"
 set test_flags "$test_flags [sdt_includes]"
 
@@ -24,9 +40,28 @@ if {$res != ""} {
     pass "$test.c compile"
 }
 
-if {[installtest_p] && [utrace_p] && [uprobes_p]} {
-  stap_run2 $srcdir/$subdir/process_by_cmd.stp -c ./$test
-} else {
-  untested "$test"
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run3 "${test}.stp ($runtime)" \
+	    $srcdir/$subdir/${test}.stp -c ./$test --runtime=$runtime 
+    } else {
+	stap_run3 ${test}.stp $srcdir/$subdir/${test}.stp -c ./$test
+    }
 }
-catch {exec rm -f $test}
+
+set ::result_string {state end
+func label end
+state end
+state end
+state end}
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run3 "${test}2.stp ($runtime)" \
+	    $srcdir/$subdir/${test}2.stp -c ./$test --runtime=$runtime 
+    } else {
+	stap_run3 ${test}2.stp $srcdir/$subdir/${test}2.stp -c ./$test
+    }
+}
+
+if { $verbose == 0 } { catch {exec rm -f $test} }

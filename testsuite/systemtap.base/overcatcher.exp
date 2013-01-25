@@ -6,4 +6,11 @@ set ::result_string {return
 next
 }
 
-stap_run_exact $test $srcdir/$subdir/$test.stp
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run_exact "$test ($runtime)" $srcdir/$subdir/$test.stp \
+	    --runtime=$runtime
+    } else {
+	stap_run_exact $test $srcdir/$subdir/$test.stp
+    }
+}
