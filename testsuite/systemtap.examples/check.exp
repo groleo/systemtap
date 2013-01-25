@@ -81,6 +81,7 @@ foreach file $meta_files {
         if { $res != 0 } { set build_p 0 }
     } else { 
         untested "$test build" 
+	continue
     }
 
     set test_installcheck [extract_tag "$meta_data" "test_installcheck"]

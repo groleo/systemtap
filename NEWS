@@ -13,6 +13,12 @@
   periods.  It requires the guru mode (-g) flag to work.  Add the earlier
   --suppress-handler-errors flag for a gung-ho "just-keep-going" attitude.
 
+- Perf event probes may now be read on demand. The counter probe is
+  defined using the counter-name part: 
+  probe perf.type(0).config(0).counter("NAME").  The counter is
+  read in a user space probe using @perf("NAME"), e.g.
+   process("PROCESS").statement("func@file") {stat <<< @perf("NAME")} 
+
 - Perf event probes may now be bound to a specific task using the
   process-name part:  probe perf.type(0).config(0).process("NAME") { }
   If the probed process name is not specified, then it is inferred

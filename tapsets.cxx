@@ -474,7 +474,7 @@ struct dwarf_derived_probe: public derived_probe
 
   void printsig (std::ostream &o) const;
   virtual void join_group (systemtap_session& s);
-  void emit_probe_local_init(translator_output * o);
+  void emit_probe_local_init(systemtap_session& s, translator_output * o);
   void getargs(std::list<std::string> &arg_set) const;
 
   void emit_privilege_assertion (translator_output*);
@@ -2235,6 +2235,8 @@ struct dwarf_var_expanding_visitor: public var_expanding_visitor
   unsigned saved_longs, saved_strings; // data saved within kretprobes
   map<std::string, expression *> return_ts_map;
   vector<Dwarf_Die> scopes;
+  // probe counter name -> pointer of associated probe
+  std::set<derived_probe*> perf_counter_refs;
   bool visited;
 
   dwarf_var_expanding_visitor(dwarf_query & q, Dwarf_Die *sd, Dwarf_Addr a):
@@ -2248,6 +2250,7 @@ struct dwarf_var_expanding_visitor: public var_expanding_visitor
   void visit_target_symbol (target_symbol* e);
   void visit_cast_op (cast_op* e);
   void visit_entry_op (entry_op* e);
+  void visit_perf_op (perf_op* e);
 private:
   vector<Dwarf_Die>& getcuscope(target_symbol *e);
   vector<Dwarf_Die>& getscopes(target_symbol *e);
@@ -3810,6 +3813,46 @@ dwarf_var_expanding_visitor::visit_entry_op (entry_op *e)
   provide (repl);
 }
 
+void
+dwarf_var_expanding_visitor::visit_perf_op (perf_op *e)
+{
+  token* t = new token;
+  string e_lit_val = ((literal_string*)e->operand)->value;
+  
+  t->location = e->tok->location;
+  t->type = tok_identifier;
+  t->content = e_lit_val;
+
+  add_block = new block;
+
+  systemtap_session &s = this->q.sess;
+  map<string, pair<string,derived_probe*> >::iterator it;
+  // Find the associated perf.counter probe
+  for (it=s.perf_counters.begin();
+       it != s.perf_counters.end();
+       it++)
+    if ((*it).first == e_lit_val)
+      {
+	// if perf .function("name") omitted, then set it to this process name
+	if ((*it).second.first.length() == 0)
+	  ((*it).second).first = this->q.user_path;
+	if (((*it).second).first == this->q.user_path)
+	  break;
+      }
+
+  if (it != s.perf_counters.end())
+    {
+      perf_counter_refs.insert((*it).second.second);
+      // __perf_read_N is assigned in the probe prologue
+      symbol* sym = new symbol;
+      sym->tok = t;
+      sym->name = "__perf_read_" + (*it).first;
+      provide (sym);
+    }
+  else
+    throw semantic_error(_F("perf counter '%s' not defined", e_lit_val.c_str()));
+}
+
 vector<Dwarf_Die>&
 dwarf_var_expanding_visitor::getcuscope(target_symbol *e)
 {
@@ -4324,6 +4367,31 @@ dwarf_derived_probe::dwarf_derived_probe(const string& funcname,
       // XXX: user-space deref's for q.has_process!
       dwarf_var_expanding_visitor v (q, scope_die, dwfl_addr);
       v.replace (this->body);
+
+      // Propagate perf.counters so we can emit later
+      this->perf_counter_refs = v.perf_counter_refs;
+      // Emit local var used to save the perf counter read value
+      std::set<derived_probe*>::iterator pcii;
+      for (pcii = v.perf_counter_refs.begin();
+	   pcii != v.perf_counter_refs.end(); pcii++)
+	{
+	  map<string, pair<string,derived_probe*> >::iterator it;
+	  // Find the associated perf counter probe
+	  for (it=q.sess.perf_counters.begin() ;
+	       it != q.sess.perf_counters.end();
+	       it++)
+	    if ((*it).second.second == (*pcii))
+	      break;
+	  vardecl* vd = new vardecl;
+	  vd->name = "__perf_read_" + (*it).first;
+	  vd->tok = this->tok;
+	  vd->set_arity(0, this->tok);
+	  vd->type = pe_long;
+	  vd->synthetic = true;
+	  this->locals.push_back (vd);
+	}
+
+
       if (!q.has_process)
         access_vars = v.visited;
 
@@ -4719,8 +4787,27 @@ dwarf_derived_probe::register_patterns(systemtap_session& s)
 }
 
 void
-dwarf_derived_probe::emit_probe_local_init(translator_output * o)
+dwarf_derived_probe::emit_probe_local_init(systemtap_session& s, translator_output * o)
 {
+  std::set<derived_probe*>::iterator pcii;
+  for (pcii = perf_counter_refs.begin();
+       pcii != perf_counter_refs.end();
+       pcii++)
+    {
+      map<string, pair<string,derived_probe*> >::iterator it;
+      // Find the associated perf.counter probe
+      unsigned i = 0;
+      for (it=s.perf_counters.begin() ;
+	   it != s.perf_counters.end();
+	   it++, i++)
+	if ((*it).second.second == (*pcii))
+	  break;
+      // place the perf counter read so it precedes stp_lock_probe
+      o->newline() << "l->l___perf_read_" + (*it).first
+	+ " = (((int64_t) (_stp_perf_read(smp_processor_id(),"
+	+ lex_cast(i) + "))));";
+    }
+  
   if (access_vars)
     {
       // if accessing $variables, emit bsp cache setup for speeding up
@@ -7405,6 +7492,29 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
 
   s.op->assert_0_indent();
 
+  unsigned pci;
+  for (pci=0; pci<probes.size(); pci++)
+    {
+      // List of perf counters used by each probe
+      // This list is an index into struct stap_perf_probe,
+      uprobe_derived_probe *p = probes[pci];
+      std::set<derived_probe*>::iterator pcii;
+      s.op->newline() << "long perf_counters_" + lex_cast(pci) + "[] = {";
+      for (pcii = p->perf_counter_refs.begin();
+	   pcii != p->perf_counter_refs.end(); pcii++)
+	{
+	  map<string, pair<string,derived_probe*> >::iterator it;
+	  unsigned i = 0;
+	  // Find the associated perf.counter probe
+	  for (it=s.perf_counters.begin() ;
+	       it != s.perf_counters.end(); it++, i++)
+	    if ((*it).second.second == (*pcii))
+	      break;
+	  s.op->line() << lex_cast(i) << ", ";
+	}
+      s.op->newline() << "};";
+    }
+
    // NB: read-only structure
   s.op->newline() << "static const struct stap_uprobe_spec stap_uprobe_specs [] = {";
   s.op->indent(1);
@@ -7422,6 +7532,10 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
       if (p->sdt_semaphore_addr != 0)
         s.op->line() << " .sdt_sem_offset=(unsigned long)0x"
                      << hex << p->sdt_semaphore_addr << dec << "ULL,";
+
+      s.op->line() << " .perf_counters_dim=ARRAY_SIZE(perf_counters_" << lex_cast(i) << "),";
+      // List of perf counters used by a probe from above
+      s.op->line() << " .perf_counters=&perf_counters_" + lex_cast(i) + ",";
 
       if (p->has_return)
         s.op->line() << " .return_p=1,";
@@ -7674,6 +7788,29 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
   s.op->assert_0_indent();
 
   // Declare the actual probes.
+  unsigned pci;
+  for (pci=0; pci<probes.size(); pci++)
+    {
+      // List of perf counters used by each probe
+      // This list is an index into struct stap_perf_probe,
+      uprobe_derived_probe *p = probes[pci];
+      std::set<derived_probe*>::iterator pcii;
+      s.op->newline() << "long perf_counters_" + lex_cast(pci) + "[] = {";
+      for (pcii = p->perf_counter_refs.begin();
+	   pcii != p->perf_counter_refs.end(); pcii++)
+	{
+	  map<string, pair<string,derived_probe*> >::iterator it;
+	  unsigned i = 0;
+	  // Find the associated perf.counter probe
+	  for (it=s.perf_counters.begin() ;
+	       it != s.perf_counters.end(); it++, i++)
+	    if ((*it).second.second == (*pcii))
+	      break;
+	  s.op->line() << lex_cast(i) << ", ";
+	}
+      s.op->newline() << "};";
+    }
+
   s.op->newline() << "static struct stapiu_consumer "
                   << "stap_inode_uprobe_consumers[] = {";
   s.op->indent(1);
@@ -7689,6 +7826,9 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
       if (p->sdt_semaphore_addr)
         s.op->line() << " .sdt_sem_offset=(loff_t)0x"
                      << hex << p->sdt_semaphore_addr << dec << "ULL,";
+      s.op->line() << " .perf_counters_dim=ARRAY_SIZE(perf_counters_" << lex_cast(i) << "),";
+      // List of perf counters used by a probe from above
+      s.op->line() << " .perf_counters=&perf_counters_" + lex_cast(i) + ",";
       s.op->line() << " .probe=" << common_probe_init (p) << ",";
       s.op->line() << " },";
     }

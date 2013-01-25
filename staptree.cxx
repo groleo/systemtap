@@ -434,6 +434,12 @@ void entry_op::print (ostream& o) const
 }
 
 
+void perf_op::print (ostream& o) const
+{
+  o << "@perf(" << *operand << ")";
+}
+
+
 void vardecl::print (ostream& o) const
 {
   o << name;
@@ -1470,6 +1476,13 @@ entry_op::visit (visitor* u)
 
 
 void
+perf_op::visit (visitor* u)
+{
+  u->visit_perf_op(this);
+}
+
+
+void
 arrayindex::visit (visitor* u)
 {
   u->visit_arrayindex (this);
@@ -1877,6 +1890,13 @@ traversing_visitor::visit_entry_op (entry_op* e)
 
 
 void
+traversing_visitor::visit_perf_op (perf_op* e)
+{
+  e->operand->visit (this);
+}
+
+
+void
 traversing_visitor::visit_arrayindex (arrayindex* e)
 {
   for (unsigned i=0; i<e->indexes.size(); i++)
@@ -2071,6 +2091,13 @@ varuse_collecting_visitor::visit_entry_op (entry_op *e)
 {
   // XXX
   functioncall_traversing_visitor::visit_entry_op (e);
+}
+
+
+void
+varuse_collecting_visitor::visit_perf_op (perf_op *e)
+{
+  functioncall_traversing_visitor::visit_perf_op (e);
 }
 
 
@@ -2514,6 +2541,13 @@ throwing_visitor::visit_entry_op (entry_op* e)
 
 
 void
+throwing_visitor::visit_perf_op (perf_op* e)
+{
+  throwone (e->tok);
+}
+
+
+void
 throwing_visitor::visit_arrayindex (arrayindex* e)
 {
   throwone (e->tok);
@@ -2786,6 +2820,13 @@ update_visitor::visit_entry_op (entry_op* e)
 }
 
 void
+update_visitor::visit_perf_op (perf_op* e)
+{
+  replace (e->operand);
+  provide (e);
+}
+
+void
 update_visitor::visit_arrayindex (arrayindex* e)
 {
   replace (e->base);
@@ -3044,6 +3085,12 @@ void
 deep_copy_visitor::visit_entry_op (entry_op* e)
 {
   update_visitor::visit_entry_op(new entry_op(*e));
+}
+
+void
+deep_copy_visitor::visit_perf_op (perf_op* e)
+{
+  update_visitor::visit_perf_op(new perf_op(*e));
 }
 
 void

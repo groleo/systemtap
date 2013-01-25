@@ -1133,7 +1133,9 @@ the following syntax:
 .SAMPLE
 probe perf.type(NN).config(MM).sample(XX)
 probe perf.type(NN).config(MM)
-probe perf.type(NN).config(MM).process("NAME")
+probe perf.type(NN).config(MM).process("PROC")
+probe perf.type(NN).config(MM).counter("COUNTER")
+probe perf.type(NN).config(MM).process("PROC").counter("COUNTER")
 .ESAMPLE
 The systemtap probe handler is called once per XX increments
 of the underlying performance counter.  The default sampling
@@ -1147,8 +1149,13 @@ result in errors during systemtap script startup.  Systemtap does
 not sanity-check the values: it merely passes them through to
 the kernel for error- and safety-checking.  By default the perf event
 probe is systemwide unless .process is specified, which will bind the
-probe to a specific process.  If the process name is omitted then it
-is inferred from the stap -c argument.
+probe to a specific task.  If the name is omitted then it
+is inferred from the stap -c argument.   A perf event can be read on
+demand using the counter part.  The counter is read in a user
+space probe (as opposed to the perf probe handler) via:
+.TP
+   process("PROCESS").statement("func@file") {stat <<< @perf("NAME")} 
+
 
 .SH EXAMPLES
 .PP
