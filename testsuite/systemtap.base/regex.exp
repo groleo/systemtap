@@ -3,18 +3,19 @@ set script_path $srcdir/$subdir/regex.stp
 
 proc stap_test_regex {expected re match} {
     global script_path
-    set test "regex $expected $re $match"
+    set test "regex $expected:$re:$match"
 
-    eval spawn stap $script_path $re $match
+    eval spawn stap $script_path "$re" "$match"
     set got -1
     expect {
         -timeout 60
-        -re {answer: 1 0} {set got 1}
-        -re {answer: 0 1} {set got 0}
+        -re {answer: 1 0} {set got 0}
+        -re {answer: 0 1} {set got 1}
+        eof { }
     }
-    set results [wait]
-    # TODOXXX: also expect and test for other results
-    # TODOXXX: also expect and test for errors
+    catch {close}; catch { wait }
+    # XXX: also expect and test for other results?
+    # XXX: also expect and test for errors?
 
     if {$expected == $got} then {
         pass $test
@@ -23,5 +24,34 @@ proc stap_test_regex {expected re match} {
     }
 }
 
-stap_test_regex 1 foo f
-stap_test_regex 0 foo bar
+##################################
+# testsuite courtesy of glibc 2.17
+
+# to run the full testsuite, run make check in re2c-migrate/
+# here, just test a dozen or so of our coolest regexes to avoid wasting time
+# (loading one systemtap script per regex takes non-negligible time)
+
+# note on backslash escaping: two '\' in Tcl --> one '\' in final regex
+# note on [] escaping: sq. brackets need extra '\' to avoid triggering Tcl
+stap_test_regex 0 {\\\\} {\\}
+
+stap_test_regex 0 {abc} {xabcy}
+stap_test_regex 0 {ab*bc} {abbbbc}
+stap_test_regex 0 {ab?bc} {abbc}
+stap_test_regex 1 {^abc$} {abcc}
+stap_test_regex 1 {a\[b-d\]e} {abd}
+stap_test_regex 0 {a\[b-d\]e} {ace}
+stap_test_regex 0 {a\\(*b} {ab}
+stap_test_regex 0 {a\\(*b} {a((b}
+stap_test_regex 0 {(a+|b)*} {ab}
+stap_test_regex 0 {(a+|b)+} {ab}
+stap_test_regex 0 {(\[abc\])*d} {abbbcd}
+stap_test_regex 1 {^(ab|cd)e} {abcde}
+stap_test_regex 0 {\[A-Za-z_\]\[A-Za-z0-9_\]*} {alpha}
+stap_test_regex 0 {(bc+d$|ef*g.|h?i(j|k))} {ij}
+stap_test_regex 1 {(bc+d$|ef*g.|h?i(j|k))} {effg}
+stap_test_regex 0 {(((((((((a)))))))))} {a}
+stap_test_regex 1 {\\((.*),} {(.*)\\)}
+stap_test_regex 1 {\[k\]} {ab}
+stap_test_regex 0 {abcd} {abcd}
+stap_test_regex 0 {a(bc)d} {abcd}

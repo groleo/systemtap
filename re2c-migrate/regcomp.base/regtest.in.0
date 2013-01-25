@@ -12,7 +12,7 @@
 # 2 means regex compilation should fail (cleanly):
 2:[:abc
 
-# FIXME -- initial tests just for left-anchoring
+# initial tests when trying to figure out left anchoring
 0::
 0::abc
 0:^abc:abc
@@ -22,14 +22,13 @@
 1:ab^c:abc
 0:a*^b:b
 
-# FIXME -- matching should not be left-anchored by default
+# matching should not be left-anchored by default
 0:abc:zabc
 
-# FIXME -- indefinite repetition should not fail via reading past the end
+# indefinite repetition should not fail via reading past the end
 0:.*:stuffs
 
-# FIXME -- make sure the following works correctly (however it's supposed to)
-# TODO -- what's the right thing to do for the below??
+# PR15063 -- what's the right thing to do for the below??
 # 2:$^:
 # 2:$.*:
 # 1:$a^:a

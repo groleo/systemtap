@@ -1,4 +1,5 @@
 probe begin {
-      printf ("answer: %d %d\n", @1 =~ @2, @1 !~ @2)
+      printf ("match: regex '%s', str '%s'\n", @1, @2)
+      printf ("answer: %d %d\n", @2 =~ @1, @2 !~ @1)
       exit ()
 }

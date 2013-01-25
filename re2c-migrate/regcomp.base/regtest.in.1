@@ -1,5 +1,5 @@
-# ... TODOXXX this file stolen from glibc; proper glibc attribution blurb ...
-0:(.*)*\1:xx
+##################################
+# testsuite courtesy of glibc 2.17
 0:^:
 0:$:
 0:^$:
@@ -80,7 +80,7 @@
 0:(a+|b)+:ab
 0:(a+|b)?:ab
 0:[^ab]*:cde
-0:(^)*:-
+# 0:(^)*:- # XXX: PR15063
 0:(ab|)*:-
 2:)(:-
 1:abc:
@@ -125,7 +125,6 @@
 0:abcd:abcd
 0:a(bc)d:abcd
 0:a[-]?c:ac
-0:(....).*\1:beriberi
 0:M[ou]'?am+[ae]r .*([AEae]l[- ])?[GKQ]h?[aeu]+([dtz][dhz]?)+af[iy]:Muammar Qaddafi
 0:M[ou]'?am+[ae]r .*([AEae]l[- ])?[GKQ]h?[aeu]+([dtz][dhz]?)+af[iy]:Mo'ammar Gadhafi
 0:M[ou]'?am+[ae]r .*([AEae]l[- ])?[GKQ]h?[aeu]+([dtz][dhz]?)+af[iy]:Muammar Kaddafi
@@ -158,11 +157,17 @@
 0:M[ou]'?am+[ae]r .*([AEae]l[- ])?[GKQ]h?[aeu]+([dtz][dhz]?)+af[iy]:Moammar Qudhafi
 0:M[ou]'?am+[ae]r .*([AEae]l[- ])?[GKQ]h?[aeu]+([dtz][dhz]?)+af[iy]:Mu'ammar al-Qaddafi
 0:M[ou]'?am+[ae]r .*([AEae]l[- ])?[GKQ]h?[aeu]+([dtz][dhz]?)+af[iy]:Mulazim Awwal Mu'ammar Muhammad Abu Minyar al-Qadhafi
-0:[[:digit:]]+:01234
-1:[[:alpha:]]+:01234
-0:^[[:digit:]]*$:01234
-1:^[[:digit:]]*$:01234a
-0:^[[:alnum:]]*$:01234a
-0:^[[:xdigit:]]*$:01234a
-1:^[[:xdigit:]]*$:01234g
-0:^[[:alnum:][:space:]]*$:Hello world
+
+# XXX: waiting on PR15064 -- character classes
+# 0:[[:digit:]]+:01234
+# 1:[[:alpha:]]+:01234
+# 0:^[[:digit:]]*$:01234
+# 1:^[[:digit:]]*$:01234a
+# 0:^[[:alnum:]]*$:01234a
+# 0:^[[:xdigit:]]*$:01234a
+# 1:^[[:xdigit:]]*$:01234g
+# 0:^[[:alnum:][:space:]]*$:Hello world
+
+# XXX: subexpression reuse not supported and probably won't be
+# 0:(.*)*\1:xx
+# 0:(....).*\1:beriberi
