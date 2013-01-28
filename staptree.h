@@ -161,7 +161,6 @@ struct array_in: public expression
 struct regex_query: public binary_expression
 {
   literal_string *re; // XXX somewhat redundant with right
-  void print (std::ostream& o) const;
   void visit (visitor* u);
 };
 
