@@ -2372,7 +2372,7 @@ parser::parse_literal_string ()
   if (t->type == tok_string)
     l = consume_string_literals (t);
   else
-    throw parse_error (_("expected literal string or number"));
+    throw parse_error (_("expected literal string"));
 
   l->tok = t;
   return l;
