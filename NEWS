@@ -38,6 +38,15 @@
   choice of aggregating function.  Previously, @count was implied.  e.g.:
      foreach ([x,y] in array @sum +) { println(@sum(array[x,y])) } 
 
+- Proof of concept support for regular expression matching has been added:
+     if ("aqqqqqb" =~ "q*b") { ... }
+     if ("abc" !~ "q*b") { ... }
+
+  The eventual aim is to support roughly the same functionality as
+  the POSIX Extended Regular Expressions implemented by glibc.
+  Currently missing features include extraction of the matched string
+  and subexpressions, and named character classes ([:alpha:], [:digit:], &c).
+
 * What's new in version 2.0, 2012-10-09
 
 - Systemtap includes a new prototype backend, which uses Dyninst to instrument

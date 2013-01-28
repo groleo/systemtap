@@ -968,8 +968,8 @@ string assignment operators
 unary numeric operators
 .B + \- ! ~ ++ \-\-
 .TP
-binary numeric or string comparison operators
-.B < > <= >= == !=
+binary numeric, string comparison or regex matching operators
+.B < > <= >= == != =~ !~
 .TP
 ternary operator
 .RB cond " ? " exp1 " : " exp2
@@ -984,6 +984,23 @@ array membership check
 .RB exp " in " array
 .br
 .BR "[" exp1 ", " exp2 ", " ... "] in " array
+
+.SS REGULAR EXPRESSION MATCHING (experimental)
+The scripting language has proof-of-concept support for regular
+expression matching. The basic syntax is as follows:
+.SAMPLE
+.BR exp " =~ " regex
+.BR exp " !~ " regex
+.ESAMPLE
+(The first operand must be an expression evaluating to a string; the
+second operand must be a string literal containing a syntactically
+valid regular expression.)
+.PP
+The regular expression syntax supports most of the features of POSIX
+Extended Regular Expressions, aside from subexpression reuse ("\\1")
+and named character classes ("[:digit:]", "[:alpha:]", ...). The
+ability to capture and extract the contents of the matched string and
+subexpressions has not yet been implemented.
 
 .SS PROBES
 The main construct in the scripting language identifies probes.

@@ -1797,9 +1797,19 @@ it generates an error. The following subsections list these operators.
 \index{unary}
 \texttt{+ - ! \textasciitilde{} ++ -{}-}
 
-\subsubsection{Binary numeric or string comparison operators}
+\subsubsection{Binary numeric, string comparison, or regular expression matching operators}
 \index{comparison}
-\texttt{< > <= >= == !=}
+\texttt{< > <= >= == !=} \verb+=~+ \verb+!~+
+
+The regular expression matching (\verb+=~+ and \verb+!~+) is
+currently an experimental feature. The second operand must be a string
+literal containing a syntactically valid regular expression. The
+regular expression syntax supports most of the features of POSIX
+Extended Regular Expressions, aside from subexpression reuse
+(\verb+\1+) and named character classes (\texttt{[:digit:]},
+\texttt{[:alpha:]}, ...). The ability to capture and extract the
+contents of the matched string and subexpressions has not yet been
+implemented.
 
 \subsubsection{Ternary operator\label{sub:Ternary-operator}}
 \index{?}
