@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <assert.h>
+#include <errno.h>
 
 
 static pthread_once_t printed_p = PTHREAD_ONCE_INIT;
@@ -36,6 +37,7 @@ main(int argc, char **argv)
     int numthreads;
     int stacksize;
     int rc;
+    int threads_created = 0;
 
     if (argc != 3) {
 	fprintf(stderr, "Usage: %s numthreads stacksize|0\n", argv[0]);
@@ -55,7 +57,14 @@ main(int argc, char **argv)
 
     while (numthreads--) {
       rc = pthread_create(&thr, (stacksize == 0 ? NULL : &attr), tfunc, NULL);
+
+      /* On systems with not enough memory, pthread_create() can fail
+       * after creating lots of threads. Just ignore this error (if
+       * we've already created at least 100 threads). */
+      if (rc == EAGAIN && threads_created > 100)
+	  break;
       assert (rc == 0);
+      threads_created++;
     }
 
     rc = pthread_attr_destroy(&attr);
