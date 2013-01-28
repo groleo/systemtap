@@ -45,11 +45,18 @@ flag.
 The
 .IR stap-prep
 script included with systemtap may be able to download the 
-appropriate kernel debuginfo.
+appropriate kernel debuginfo.  Another possibility is to install and
+use a 
+.IR stap\-server
+remote-compilation instance on a machine on your network, where
+debuginfo and compilation resources can be centralized.  Try the
+.IR "stap --use-server"
+option, in case such a server is already running.
 
 .SH SEE ALSO
 .IR stap (1),
 .IR stappaths (7),
+.IR stap-server (8),
 .IR strip (1),
 .IR error::reporting (7stap)
 .IR error::contextvars (7stap)

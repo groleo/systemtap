@@ -1,5 +1,5 @@
 // systemtap translator/driver
-// Copyright (C) 2005-2011 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005 IBM Corp.
 // Copyright (C) 2006 Intel Corporation.
 //
@@ -689,10 +689,7 @@ passes_0_4 (systemtap_session &s)
     }
 
   if (rc && !s.listing_mode)
-    cerr << _("Pass 1: parse failed.  Try again with another '--vp 1' option.") << endl;
-    //cerr << "Pass 1: parse failed.  "
-    //     << "Try again with another '--vp 1' option."
-    //     << endl;
+    cerr << _("Pass 1: parse failed.  [man error::pass1]") << endl;
 
   PROBE1(stap, pass1__end, &s);
 
@@ -727,13 +724,7 @@ passes_0_4 (systemtap_session &s)
                       << endl;
 
   if (rc && !s.listing_mode && !s.try_server ())
-    cerr << _("Pass 2: analysis failed.  Try again with another '--vp 01' option.") << endl;
-    //cerr << "Pass 2: analysis failed.  "
-    //     << "Try again with another '--vp 01' option."
-    //     << endl;
-
-  /* Print out list of missing files.  XXX should be "if (rc)" ? */
-  missing_rpm_list_print(s,"-debuginfo");
+    cerr << _("Pass 2: analysis failed.  [man error::pass2]") << endl;
 
   PROBE1(stap, pass2__end, &s);
 
@@ -805,10 +796,7 @@ passes_0_4 (systemtap_session &s)
          << endl;
 
   if (rc && ! s.try_server ())
-    cerr << _("Pass 3: translation failed.  Try again with another '--vp 001' option.") << endl;
-    //cerr << "Pass 3: translation failed.  "
-    //     << "Try again with another '--vp 001' option."
-    //     << endl;
+    cerr << _("Pass 3: translation failed.  [man error::pass3]") << endl;
 
   PROBE1(stap, pass3__end, &s);
 
@@ -843,7 +831,7 @@ passes_0_4 (systemtap_session &s)
                       << endl;
 
   if (rc && ! s.try_server ())
-    cerr << _("Pass 4: compilation failed. [man error::pass4]") << endl;
+    cerr << _("Pass 4: compilation failed.  [man error::pass4]") << endl;
 
   else
     {
@@ -897,10 +885,7 @@ pass_5 (systemtap_session &s, vector<remote*> targets)
                       << endl;
 
   if (rc)
-    cerr << _("Pass 5: run failed.  Try again with another '--vp 00001' option.") << endl;
-    //cerr << "Pass 5: run failed.  "
-    //     << "Try again with another '--vp 00001' option."
-    //     << endl;
+    cerr << _("Pass 5: run failed.  [man error::pass5]") << endl;
   else
     // Interrupting pass-5 to quit is normal, so we want an EXIT_SUCCESS below.
     pending_interrupts = 0;

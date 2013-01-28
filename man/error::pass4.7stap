@@ -18,16 +18,18 @@ include relevant fixes, so try getting or making an updated build.
 If the issue persists, report the problem to the systemtap developers.
 
 .TP
-buggy embedded-C code in user script
+buggy embedded-C code
 Embedded-C code in your own guru-mode script cannot be checked by systemtap,
 and is passed through verbatim to the compiler.  Errors in such snippets of
 code may be found during the pass-4 compiler invocation, though may be hard
-to identify by the compiler errors.  It may be necessary to run systemtap
-with 
+to identify by the compiler errors.  
+
+.SH GATHERING MORE INFORMATION
+It may be necessary to run systemtap with 
 .IR -k " or " -p3
-to examine the generated C code. Increasing the verbosity of pass-4
+to examine the generated C code.  Increasing the verbosity of pass-4
 with an option such as
-.IR --vp 0001
+.IR "--vp 0001"
 can also help pinpoint the problem.
 
 .SH SEE ALSO
