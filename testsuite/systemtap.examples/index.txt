@@ -1053,6 +1053,16 @@ keywords: profiling
   # stap linetimes.stp kernel sys_nanosleep -c "sleep 0.2"
 
 
+profiling/perf.stp - Show performance ratios using perf.counter to access performance counters
+keywords: profiling
+
+  On exit the perf.stp script provides a sorted list showing cycles per
+  insn, branches per insn, and cache refs per insn
+
+  # stap perf.stp -c "find /usr/bin -name \"l*\" -printf \"%h/%f %s %Cx \
+  %Ck%CM %Y\n\""
+
+
 profiling/periodic.stp - Show the Period of the Various Timers on the System
 keywords: profiling
 
