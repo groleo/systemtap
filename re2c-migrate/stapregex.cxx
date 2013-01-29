@@ -408,7 +408,7 @@ regex_parser::isspecial (char c)
 void
 regex_parser::expect (char expected)
 {
-  char c;
+  char c = 0;
   try {
     c = next ();
   } catch (const dfa_parse_error &e) {
@@ -570,7 +570,7 @@ regex_parser::parse_factor ()
       else if (c == '{')
         {
           int minsize = parse_number ();
-          int maxsize;
+          int maxsize = -1;
 
           c = next ();
           if (c == ',')
