@@ -290,14 +290,14 @@ proc test_probes { privilege } {
 	    process(string).library(string).function(number).return -
 	    process(string).library(string).function(string).return
 	    {
-		setup_kfail UPROBES *-*-*
+		if {![uretprobes_p]} { setup_kfail URETPROBES *-*-* }
 	    }
 	    process(number).insn -
 	    process(number).insn.block -
 	    process(string).insn -
 	    process(string).insn.block
 	    {
-		setup_kfail KERNEL *-*-*
+		setup_kfail UTRACE *-*-*
 	    }
 	    process(string).library(string).plt.statement(number) -
 	    process(string).library(string).plt(string).statement(number) -

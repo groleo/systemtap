@@ -61,6 +61,16 @@ proc uprobes_p {} {
 }
 
 
+proc uretprobes_p {} {
+    set path "/proc/kallsyms"
+    if {! [uprobes_p]} { return 0 }
+    if {! [catch {exec grep -q uretprobe $path} dummy]} { return 1 }
+    if {! [catch {exec grep -q utrace_attach $path} dummy]} { return 1 }
+    return 0
+}
+
+
+
 proc dyninst_p {} {
     global env
 

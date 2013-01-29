@@ -343,7 +343,7 @@ proc test_unrestricted_probes { privilege } {
 	    process(string).library(string).function(number).return -
 	    process(string).library(string).function(string).return
 	    {
-		setup_kfail UPROBES *-*-*
+		if {![uretprobes_p]} { setup_kfail URETPROBES *-*-* }
 	    }
 	}
 
