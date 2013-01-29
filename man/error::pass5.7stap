@@ -54,6 +54,12 @@ program may lack the necessary setuid permissions, or environment
 variables may interfere with locating
 .IR /usr/libexec/.../stapio  "."
 
+.TP
+errors from target program
+The program invoked by the
+.IR "stap -c CMD"
+option may exit with a non-zero code.
+
 
 .SH GATHERING MORE INFORMATION
 Increasing the verbosity of pass-5
