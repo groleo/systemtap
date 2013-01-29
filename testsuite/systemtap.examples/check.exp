@@ -53,7 +53,14 @@ proc run_command { test action command } {
 
 set src_examples [fullpath $srcdir/systemtap.examples]
 set meta_files [lsort [exec find  $src_examples -path "*.meta"]]
+
+set curdir [pwd]
+verbose -log "SAVED PWD=$curdir"
+
 foreach file $meta_files {
+    cd $curdir
+    verbose -log "PRETEST PWD=[pwd]"
+
     set dir [file dirname $file]
     set test [regsub {.*/testsuite/} $file ""]
     set test [regsub {.meta} $test ""]
@@ -63,8 +70,8 @@ foreach file $meta_files {
 
     # Do this after get_meta_data, as $file/$srcdir may be relative,
     # and become invalid after cd $dir.
-    set curdir [pwd]
     cd $dir
+    verbose -log "TEST PWD=[pwd]"
     
     set command $test_support
     set supported_p 1
@@ -96,8 +103,8 @@ foreach file $meta_files {
              untested "$test run" 
          }
     }
-
-    cd $curdir
-    # get back to starting point
 }
 
+# get back to starting point
+cd $curdir
+verbose -log "RESTORED PWD=[pwd]"
