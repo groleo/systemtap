@@ -315,7 +315,7 @@ struct entry_op: public expression
 
 struct perf_op: public expression
 {
-  literal *operand;
+  literal_string *operand;
   void print (std::ostream& o) const;
   void visit (visitor* u);
 };

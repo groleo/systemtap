@@ -3817,7 +3817,7 @@ void
 dwarf_var_expanding_visitor::visit_perf_op (perf_op *e)
 {
   token* t = new token;
-  string e_lit_val = ((literal_string*)e->operand)->value;
+  string e_lit_val = e->operand->value;
   
   t->location = e->tok->location;
   t->type = tok_identifier;

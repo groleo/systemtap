@@ -3676,10 +3676,9 @@ expression* parser::parse_perf_op (const token* t)
 
   pop->tok = t;
   expect_op("(");
-  pop->operand = parse_literal ();
-  if (pop->operand->tok->type != tok_string
-      || pop->operand->tok->content.length() == 0)
-    throw parse_error (_("expected 'string'"));
+  pop->operand = parse_literal_string ();
+  if (pop->operand->value == "")
+    throw parse_error (_("expected non-empty string"));
   expect_op(")");
   return pop;
 }
