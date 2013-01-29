@@ -40,3 +40,5 @@ for file in /sys/module/*/notes/.*build*
 do
     run "hexdump -C $file"
 done
+run "seinfo && getenforce"
+

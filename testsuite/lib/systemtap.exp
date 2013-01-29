@@ -283,7 +283,7 @@ proc fullpath { path } {
 }
 
 proc get_system_info {} {
-    global Host Snapshot Distro GCC_Version env
+    global Host Snapshot Distro GCC_Version env SElinux
 
     set Host [exec /bin/uname -a]
     if [file exists ../SNAPSHOT] {
@@ -311,6 +311,12 @@ proc get_system_info {} {
     # Plus full version between square brackets.
     set full [exec gcc --version | head -1]
     set GCC_Version "$n \[$full\]"
+    # selinux status
+    if [file exists /usr/sbin/getenforce] {
+        set SElinux [exec /usr/sbin/getenforce]
+    } else {
+        set SElinux "unknown"
+    }
 }
 
 if {! [setup_systemtap_environment]} then {

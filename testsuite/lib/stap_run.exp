@@ -120,14 +120,16 @@ proc wait_5_secs {} {
 }
 
 proc print_system_info {} {
-	global Host Snapshot Distro GCC_Version
+	global Host Snapshot Distro GCC_Version SElinux
 
 	clone_output "\nHost: $Host"
 	if {[string compare $Snapshot "unknown"]!=0} {
 		clone_output "Snapshot: $Snapshot"
 	}
 	clone_output "GCC: $GCC_Version"
-	clone_output "Distro: $Distro\n"
+	clone_output "Distro: $Distro"
+        clone_output "SElinux: $SElinux"
+        clone_output "\n"
 }
 
 print_system_info
