@@ -20,7 +20,7 @@ main return value@main: 42}
 
 # Only run on make installcheck and uprobes present.
 if {! [installtest_p]} { untested "$test"; return }
-if {! [uprobes_p]} { untested "$test"; return }
+if {! [uretprobes_p]} { untested "$test"; return }
 
 proc dyninst_kfails {index} {
   # The dyninst runtime isn't multi-arch, it only works on the

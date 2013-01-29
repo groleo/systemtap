@@ -6,7 +6,7 @@ set test "uprobe_uaddr"
 
 # Only run on make installcheck and uprobes present.
 if {! [installtest_p]} { untested "$test"; return }
-if {! [uprobes_p]} { untested "$test"; return }
+if {! [uretprobes_p]} { untested "$test"; return }
 
 set testpath  "$srcdir/$subdir"
 set testsrc   "$testpath/uprobe_stmt_num.c"

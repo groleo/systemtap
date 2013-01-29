@@ -20,7 +20,7 @@ proc error_handler { res message } {
 }
 
 if {![installtest_p]} {untested $test; return}
-if {![uprobes_p]} {untested $test; return}
+if {![uretprobes_p]} {untested $test; return}
 if {![utrace_p]} {
     untested "$test"
     return

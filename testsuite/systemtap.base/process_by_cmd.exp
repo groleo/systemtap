@@ -2,7 +2,7 @@ set test "process_by_cmd"
 
 # Only run on make installcheck and uprobes present.
 if {! [installtest_p]} { untested "$test"; return }
-if {! [uprobes_p]} { untested "$test"; return }
+if {! [uretprobes_p]} { untested "$test"; return }
 
 # Test for PR12427 [implied process("...") target for stap -c CMD
 # invocation].

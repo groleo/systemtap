@@ -7,7 +7,7 @@ if {! [installtest_p]} {
     return
 }
 
-if {![uprobes_p]} {
+if {![uretprobes_p]} {
     untested "$test -p5"
     return
 }

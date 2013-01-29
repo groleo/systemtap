@@ -13,7 +13,7 @@ if {![uprobes_p]} {
 set rc [stap_run_batch $srcdir/$subdir/$test.stp]
 if {$rc == 0} then { pass "$test -p4" } else { fail "$test -p4" }
 
-if {! [installtest_p]} {
+if {! [installtest_p] || ! [uretprobes_p]} {
     catch {exec rm -f $test}
     untested "$test -p5"
     return
