@@ -9,6 +9,16 @@ proc installtest_p {} {
 }
 
 
+# only original rhel5/6-era utrace need apply
+proc utrace_orig_p {} {
+    set path "/proc/kallsyms"
+    if {! [catch {exec grep -q utrace_attach $path} dummy]} {
+	return 1
+    }
+    return 0
+}
+
+
 proc utrace_p {} {
     set path "/proc/kallsyms"
     # We've got 2 ways to provide utrace support:

@@ -297,7 +297,7 @@ proc test_probes { privilege } {
 	    process(string).insn -
 	    process(string).insn.block
 	    {
-		setup_kfail UTRACE *-*-*
+		if {![utrace_orig_p]} { setup_kfail ITRACE *-*-* }
 	    }
 	    process(string).library(string).plt.statement(number) -
 	    process(string).library(string).plt(string).statement(number) -
