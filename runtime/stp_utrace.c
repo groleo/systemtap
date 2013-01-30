@@ -105,6 +105,17 @@ static void utrace_report_exec(void *cb_data __attribute__ ((unused)),
 #define __UTRACE_REGISTERED	1
 static atomic_t utrace_state = ATOMIC_INIT(__UTRACE_UNREGISTERED);
 
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED)
+// Sigh. On kernel's without signal_wake_up_state(), there is no
+// declaration to use in 'typeof(&signal_wake_up_state)'. So, we'll
+// provide one here.
+void signal_wake_up_state(struct task_struct *t, unsigned int state);
+
+// First typedef from the original decl, then #define as typecasted call.
+typedef typeof(&signal_wake_up_state) signal_wake_up_state_fn;
+#define signal_wake_up_state (* (signal_wake_up_state_fn)kallsyms_signal_wake_up_state)
+#endif
+
 #if !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
 // First typedef from the original decl, then #define as typecasted call.
 typedef typeof(&signal_wake_up) signal_wake_up_fn;
@@ -136,6 +147,28 @@ stp_lock_task_sighand(struct task_struct *tsk, unsigned long *flags)
 #endif
 
 
+/*
+ * Our internal version of signal_wake_up()/signal_wake_up_state()
+ * that handles the functions existing and being exported.
+ */
+static inline void
+stp_signal_wake_up(struct task_struct *t, bool resume)
+{
+#if defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED)
+    signal_wake_up_state(t, resume ? TASK_WAKEKILL : 0);
+#elif defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
+    signal_wake_up(t, resume);
+#else
+    if (kallsyms_signal_wake_up_state) {
+	signal_wake_up_state(t, resume ? TASK_WAKEKILL : 0);
+    }
+    else if (kallsyms_signal_wake_up) {
+	signal_wake_up(t, resume);
+    }
+#endif
+}
+
+
 static int utrace_init(void)
 {
 	int i;
@@ -151,12 +184,22 @@ static int utrace_init(void)
 		INIT_HLIST_HEAD(&task_utrace_table[i]);
 	}
 
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED)
+	/* The signal_wake_up_state() function (which replaces
+	 * signal_wake_up() in newer kernels) isn't exported. Look up
+	 * that function address. */
+        kallsyms_signal_wake_up_state = (void *)kallsyms_lookup_name("signal_wake_up_state");
+#endif
 #if !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
 	/* The signal_wake_up() function isn't exported. Look up that
 	 * function address. */
         kallsyms_signal_wake_up = (void *)kallsyms_lookup_name("signal_wake_up");
-        if (kallsyms_signal_wake_up == NULL) {
-		_stp_error("Can't resolve signal_wake_up!");
+#endif
+#if (!defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED) \
+     && !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED))
+        if (kallsyms_signal_wake_up_state == NULL
+	    && kallsyms_signal_wake_up == NULL) {
+		_stp_error("Can't resolve signal_wake_up_state or signal_wake_up!");
 		goto error;
         }
 #endif
@@ -1505,7 +1548,7 @@ static int utrace_control(struct task_struct *target,
 				sighand = stp_lock_task_sighand(target,
 								&irqflags);
 				if (likely(sighand)) {
-					signal_wake_up(target, 0);
+					stp_signal_wake_up(target, 0);
 					unlock_task_sighand(target, &irqflags);
 				}
 			}

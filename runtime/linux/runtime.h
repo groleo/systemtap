@@ -159,6 +159,9 @@ static void *kallsyms_task_work_add;
 static void *kallsyms_task_work_cancel;
 #endif
 
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED)
+static void *kallsyms_signal_wake_up_state;
+#endif
 #if !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
 static void *kallsyms_signal_wake_up;
 #endif

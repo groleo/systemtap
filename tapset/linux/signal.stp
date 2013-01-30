@@ -295,19 +295,38 @@ probe signal.checkperm.return = kernel.function("check_kill_permission").return
  * @state_mask: A string representation indicating the mask
  * of task states to wake. Possible values are
  * TASK_INTERRUPTIBLE, TASK_STOPPED,
- * TASK_TRACED, and TASK_INTERRUPTIBLE.
+ * TASK_TRACED, TASK_WAKEKILL, and TASK_INTERRUPTIBLE.
  */
-probe signal.wakeup = kernel.function("signal_wake_up")
+probe __signal.wakeup.signal_wake_up_state
+	= kernel.function("signal_wake_up_state")
+{
+    resume = ($state == 0) ? 0 : 1;
+    if ($state & %{ __TASK_STOPPED %} != 0) {
+	state_mask .= " | TASK_STOPPED"
+    }
+    if ($state & %{ __TASK_TRACED %} != 0) {
+	state_mask .= " | TASK_TRACED"
+    }
+    if ($state & %{ TASK_WAKEKILL %} != 0) {
+	state_mask .= " | TASK_WAKEKILL"
+    }
+    state_mask = "TASK_INTERRUPTIBLE" . state_mask
+}
+probe __signal.wakeup.signal_wake_up = kernel.function("signal_wake_up")
+{
+    resume = $resume
+    if (resume == 0) {
+	state_mask = "TASK_INTERRUPTIBLE"
+    } else {
+	state_mask = "TASK_INTERRUPTIBLE | TASK_STOPPED | TASK_TRACED"
+    }
+}
+probe signal.wakeup = __signal.wakeup.signal_wake_up_state !,
+		      __signal.wakeup.signal_wake_up
 {
     name = "wakeup"
     sig_pid = $t->pid
     pid_name = kernel_string($t->comm)
-    resume   = $resume
-    if (resume == 0) {
-        state_mask = "TASK_INTERRUPTIBLE"
-    } else {
-        state_mask = "TASK_INTERRUPTIBLE | TASK_STOPPED | TASK_TRACED"
-    }
 }
 
 
