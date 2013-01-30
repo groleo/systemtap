@@ -23,7 +23,7 @@ if {![utrace_p]} {
 	fail "$test -p2 ($probes)"
     }
 }
-exec rm -f $test
+if { $verbose == 0 } { catch { exec rm -f $test } }
 
 set test bz10294
 
@@ -66,7 +66,7 @@ if {![utrace_p]} {
     }
     wait
 }
-exec rm -f $test
+if { $verbose == 0 } { catch { exec rm -f $test } }
 
 
 set test bz14774
@@ -94,4 +94,4 @@ if {![utrace_p]} {
     catch { close }
     if { $hint == 1 && $probes >= 9 } then { pass "$test -p2" } else { fail "$test -p2 ($probes)" }
 }
-#exec rm -f $test
+if { $verbose == 0 } { catch { exec rm -f $test } }

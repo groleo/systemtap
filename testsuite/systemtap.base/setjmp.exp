@@ -55,3 +55,6 @@ foreach variant [list "" "-DSIGJMP" "-DUNDERJMP"] {
 	}
     }
 }
+if { $verbose == 0 } {
+    catch { eval [list exec /bin/rm -f] [glob "setjmp.exe*"] }
+}
