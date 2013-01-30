@@ -1,4 +1,5 @@
 set test "Server Argument Test"
+if {! [nss_p]} { unsupported $test; return }
 
 # Each test will take 3 seconds or more due to the use of avahi to browse for
 # servers, so limit iterations to some small but reasonable number.

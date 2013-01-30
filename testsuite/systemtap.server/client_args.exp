@@ -1,4 +1,5 @@
 set test "Invalid Server Client Arguments"
+if {! [nss_p]} { unsupported $test; return }
 
 # Test that stap on the server side will correctly accept/reject certain
 # arguments in unprivileged mode.
