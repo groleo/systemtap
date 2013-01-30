@@ -10,5 +10,6 @@ probe begin {
       // just test the ability of the regex infrastructure to pass
       // error messages to the systemtap reporter cleanly
 
-      ...
+      warn ("not yet implemented")
+      exit()
 }
