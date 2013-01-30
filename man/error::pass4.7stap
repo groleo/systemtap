@@ -22,7 +22,19 @@ buggy embedded-C code
 Embedded-C code in your own guru-mode script cannot be checked by systemtap,
 and is passed through verbatim to the compiler.  Errors in such snippets of
 code may be found during the pass-4 compiler invocation, though may be hard
-to identify by the compiler errors.  
+to identify by the compiler errors.
+
+.TP
+incompatible embedded-C code
+The interface standards between systemtap-generated code and embedded-C code
+occasionally change.  For example, before version 1.8, arguments were passed
+using macros
+.IR THIS->foo " and " THIS->__retvalue
+but from version 1.8 onward, using
+.IR STAP_ARG_foo " and " STAP_RETVALUE "."
+Adjust your embedded-C code to current standards, or use the
+.IR "stap --compatible=VERSION"
+option to make systemtap use a different one.
 
 .SH GATHERING MORE INFORMATION
 It may be necessary to run systemtap with 
