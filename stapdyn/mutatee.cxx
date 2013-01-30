@@ -126,6 +126,28 @@ mutatee::unload_stap_dso()
 }
 
 
+
+void
+mutatee::update_semaphores(unsigned short delta, size_t start)
+{
+  if (!process || process->isTerminated())
+    return;
+
+  for (size_t i=start; i < semaphores.size(); ++i)
+    {
+      unsigned short value = 0;
+      BPatch_variableExpr* semaphore = semaphores[i];
+
+      // Read-modify-write the semaphore remotely.
+      semaphore->readValue(&value, (int)sizeof(value));
+      value += delta;
+      semaphore->writeValue(&value, (int)sizeof(value));
+    }
+  // NB: Alternatively, we could build up a oneTimeCode snippet to do them all
+  // at once within the target process.  For now, remote seems good enough.
+}
+
+
 void
 mutatee::call_utrace_dynprobe(const dynprobe_location& probe,
                               BPatch_thread* thread)
@@ -307,7 +329,22 @@ mutatee::instrument_dynprobe_target(BPatch_object* object,
       if (handle)
         snippets.push_back(handle);
 
-      // XXX write the semaphore too!
+      // Update SDT semaphores as needed.
+      if (probe.semaphore)
+        {
+          Dyninst::Address sem_address = object->fileOffsetToAddr(probe.semaphore);
+          if (sem_address == BPatch_object::E_OUT_OF_BOUNDS)
+            stapwarn() << "couldn't convert semaphore " << target.path << "+"
+                       << lex_cast_hex(probe.offset) << " to an address" << endl;
+          else
+            {
+              // Create a variable to represent this semaphore
+              BPatch_type *sem_type = process->getImage()->findType("unsigned short");
+              BPatch_variableExpr *semaphore = process->createVariable(sem_address, sem_type);
+              if (semaphore)
+                semaphores.push_back(semaphore);
+            }
+        }
     }
 }
 
@@ -345,6 +382,8 @@ mutatee::instrument_object_dynprobes(BPatch_object* object,
   string path = resolve_path(object->pathName());
   staplog(2) << "found object " << path << endl;
 
+  size_t semaphore_start = semaphores.size();
+
   // Match the object to our targets, and instrument matches.
   process->beginInsertionSet();
   for (size_t i = 0; i < targets.size(); ++i)
@@ -356,6 +395,9 @@ mutatee::instrument_object_dynprobes(BPatch_object* object,
         instrument_dynprobe_target(object, target);
     }
   process->finalizeInsertionSet(false);
+
+  // Increment new semaphores
+  update_semaphores(1, semaphore_start);
 }
 
 
@@ -519,6 +561,15 @@ mutatee::copy_forked_instrumentation(mutatee& other)
         snippets.push_back(handle);
     }
 
+  // Get new variable representations of semaphores
+  for (size_t i = 0; i < other.semaphores.size(); ++i)
+    {
+      BPatch_variableExpr *semaphore =
+        process->getInheritedVariable(*other.semaphores[i]);
+      if (semaphore)
+        semaphores.push_back(semaphore);
+    }
+
   // Update utrace probes to match
   for (size_t i = 0; i < other.attached_probes.size(); ++i)
     instrument_utrace_dynprobe(other.attached_probes[i]);
@@ -537,6 +588,10 @@ mutatee::remove_instrumentation()
     process->deleteSnippet(snippets[i]);
   process->finalizeInsertionSet(false);
   snippets.clear();
+
+  // Decrement all semaphores
+  update_semaphores(-1);
+  semaphores.clear();
 
   unload_stap_dso();
 }

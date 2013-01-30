@@ -33,12 +33,16 @@ class mutatee {
 
     std::vector<BPatchSnippetHandle*> snippets; // handles from insertSnippet
 
+    std::vector<BPatch_variableExpr*> semaphores; // SDT semaphore variables
+
     std::vector<dynprobe_location> attached_probes;
     BPatch_function* utrace_enter_function;
 
     // disable implicit constructors by not implementing these
     mutatee (const mutatee& other);
     mutatee& operator= (const mutatee& other);
+
+    void update_semaphores(unsigned short delta, size_t start=0);
 
     void call_utrace_dynprobe(const dynprobe_location& probe,
                               BPatch_thread* thread=NULL);

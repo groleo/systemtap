@@ -6090,6 +6090,7 @@ private:
   string arg_string;
   string probe_name;
   string provider_name;
+  GElf_Addr semaphore_load_offset;
   Dwarf_Addr semaphore;
 
   bool init_probe_scn();
@@ -6119,7 +6120,7 @@ sdt_query::sdt_query(probe * base_probe, probe_point * base_loc,
   probe_loc(unknown_section), base_probe(base_probe),
   base_loc(base_loc), params(params), results(results), user_lib(user_lib),
   probe_scn_offset(0), probe_scn_addr(0), arg_count(0), base(0), pc(0),
-  semaphore(0)
+  semaphore_load_offset(0), semaphore(0)
 {
   assert(get_string_param(params, TOK_MARK, pp_mark));
   get_string_param(params, TOK_PROVIDER, pp_provider); // pp_provider == "" -> unspecified
@@ -6253,10 +6254,22 @@ sdt_query::handle_query_module()
       GElf_Shdr shdr_mem;
       GElf_Shdr *shdr = dw.get_section (".stapsdt.base", &shdr_mem);
 
+      // The 'base' lets us adjust the hardcoded addresses in notes for prelink
+      // effects.  The 'semaphore_load_offset' accounts for the difference in
+      // load addresses between text and data, so the semaphore can be
+      // converted to a file offset if needed.
       if (shdr)
-	base = shdr->sh_addr;
+	{
+	  base = shdr->sh_addr;
+	  GElf_Addr base_offset = shdr->sh_offset;
+	  shdr = dw.get_section (".probes", &shdr_mem);
+	  if (shdr)
+	    semaphore_load_offset =
+	      (shdr->sh_addr - shdr->sh_offset) - (base - base_offset);
+	}
       else
-	base = 0;
+	base = semaphore_load_offset = 0;
+
       dw.iterate_over_notes ((void*) this, &sdt_query::setup_note_probe_entry_callback);
     }
   else if (probe_loc == probe_section)
@@ -6479,6 +6492,12 @@ sdt_query::record_semaphore (vector<derived_probe *> & results, unsigned start)
         if (dwfl_module_relocations (dw.module) > 0)
           dwfl_module_relocate_address (dw.module, &addr);
         // XXX: relocation basis?
+
+        // Dyninst needs the *file*-based offset for semaphores,
+        // so subtract the difference in load addresses between .text and .probes
+        if (dw.sess.runtime_usermode_p())
+          addr -= semaphore_load_offset;
+
         for (unsigned i = start; i < results.size(); ++i)
           results[i]->sdt_semaphore_addr = addr;
         if (sess.verbose > 2)
