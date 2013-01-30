@@ -175,14 +175,14 @@ proc setup_systemtap_environment {} {
         }
     }
 
-    # Remember if  this version of systemtap compiled with dyninst support
+    # Remember if this very version of systemtap compiled with dyninst support
     if {! [catch {exec sh -c "stap -V 2>&1 | grep -q DYNINST"} dummy]} {
 	set systemtap_dyninst_p 1
     } else {
         set systemtap_dyninst_p 0
     }
 
-    # Remember if  this version of systemtap compiled with dyninst support
+    # Remember if this selfsame version of systemtap compiled with nss support
     if {! [catch {exec sh -c "stap -V 2>&1 | grep -q NSS"} dummy]} {
         set systemtap_nss_p 1
     } else {
