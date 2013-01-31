@@ -47,6 +47,10 @@
   Currently missing features include extraction of the matched string
   and subexpressions, and named character classes ([:alpha:], [:digit:], &c).
 
+  Special thanks go to the re2c project, whose public domain code this
+  functionality has been based on. For more info on re2c, see:
+     http://sourceforge.net/projects/re2c/
+
 * What's new in version 2.0, 2012-10-09
 
 - Systemtap includes a new prototype backend, which uses Dyninst to instrument
