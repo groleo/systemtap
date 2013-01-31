@@ -7552,9 +7552,10 @@ uprobe_derived_probe_group::emit_module_utrace_decls (systemtap_session& s)
         s.op->line() << " .sdt_sem_offset=(unsigned long)0x"
                      << hex << p->sdt_semaphore_addr << dec << "ULL,";
 
+      // XXX: don't bother emit if array is empty
       s.op->line() << " .perf_counters_dim=ARRAY_SIZE(perf_counters_" << lex_cast(i) << "),";
       // List of perf counters used by a probe from above
-      s.op->line() << " .perf_counters=&perf_counters_" + lex_cast(i) + ",";
+      s.op->line() << " .perf_counters=perf_counters_" + lex_cast(i) + ",";
 
       if (p->has_return)
         s.op->line() << " .return_p=1,";
@@ -7845,9 +7846,10 @@ uprobe_derived_probe_group::emit_module_inode_decls (systemtap_session& s)
       if (p->sdt_semaphore_addr)
         s.op->line() << " .sdt_sem_offset=(loff_t)0x"
                      << hex << p->sdt_semaphore_addr << dec << "ULL,";
+      // XXX: don't bother emit if array is empty
       s.op->line() << " .perf_counters_dim=ARRAY_SIZE(perf_counters_" << lex_cast(i) << "),";
       // List of perf counters used by a probe from above
-      s.op->line() << " .perf_counters=&perf_counters_" + lex_cast(i) + ",";
+      s.op->line() << " .perf_counters=perf_counters_" + lex_cast(i) + ",";
       s.op->line() << " .probe=" << common_probe_init (p) << ",";
       s.op->line() << " },";
     }

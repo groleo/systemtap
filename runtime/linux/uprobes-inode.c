@@ -107,7 +107,7 @@ struct stapiu_consumer {
   	// List of perf counters used by each probe
   	// This list is an index into struct stap_perf_probe,
         long perf_counters_dim;
-        long (*perf_counters) [];
+        long *perf_counters;
         const struct stap_probe * const probe;
 };
 
@@ -349,8 +349,8 @@ stapiu_target_reg(struct stapiu_target *target, struct task_struct* task)
 		if (! c->registered) {
 			int i;
 			for (i=0; i < c->perf_counters_dim; i++) {
-			  if ((*(c->perf_counters))[i] > -1)
-			    _stp_perf_read_init ((*(c->perf_counters))[i], task);
+                            if ((c->perf_counters)[i] > -1)
+			    _stp_perf_read_init ((c->perf_counters)[i], task);
 		        }
 			ret = stapiu_register(target->inode, c);
 			if (ret) {

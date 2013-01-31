@@ -29,7 +29,7 @@ struct stap_uprobe_spec {
   // List of perf counters used by each probe
   // This list is an index into struct stap_perf_probe,
   long perf_counters_dim;
-  long (*perf_counters) [];
+  long *perf_counters;
   const struct stap_probe * const probe;
  };
 

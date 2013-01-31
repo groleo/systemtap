@@ -86,8 +86,8 @@ static int stap_uprobe_change_plus (struct task_struct *tsk, unsigned long reloc
     } /* sdt_sem_offset */
 
     for (pci=0; pci < sups->perf_counters_dim; pci++) {
-	if ((*(sups->perf_counters))[pci] > -1)
-	  _stp_perf_read_init ((*(sups->perf_counters))[pci], tsk);
+	if ((sups->perf_counters)[pci] > -1)
+	  _stp_perf_read_init ((sups->perf_counters)[pci], tsk);
       }
 
     if (slotted_p) {
