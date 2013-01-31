@@ -22,14 +22,16 @@ if { $res != "" } {
 # Test only when we are running an install test (can execute) and when
 # gcc generated DW_AT_const_values for us. We are interested in block
 # constant values.
-if {[installtest_p] && [uprobes_p]} {
+if {[installtest_p]} {
   set dw_at_c {DW_AT_const_value}
   if {![catch {exec readelf --debug-dump=info $test.exe | grep "$dw_at_c"}]} {
     foreach runtime [get_runtime_list] {
       if {$runtime != ""} {
 	stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe --runtime=$runtime
-      } else {
+      } elseif {[uprobes_p]} {
 	stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe
+      } else {
+	untested "$test"
       }
     }
   } else {
@@ -63,15 +65,17 @@ if { $res != "" } {
 # Test only when we are running an install test (can execute) and when
 # gcc generated DW_AT_const_values for us. We are interested in pure
 # constant addresses.
-if {[installtest_p] && [uprobes_p]} {
+if {[installtest_p]} {
   set dw_at_c {DW_AT_const_value}
   if {![catch {exec readelf --debug-dump=info $test.exe | grep "$dw_at_c"}]} {
     foreach runtime [get_runtime_list] {
       setup_kfail 10739 "*-*-*"
       if {$runtime != ""} {
 	stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe --runtime=$runtime
-      } else {
+      } elseif {[uprobes_p]} {
 	stap_run2 $srcdir/$subdir/$test.stp -c ./$test.exe
+      } else {
+	untested "$test"
       }
     }
   } else {

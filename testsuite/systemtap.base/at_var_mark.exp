@@ -9,15 +9,16 @@ set invoke "$stap_path -p4 -e 'probe begin \{ log(\"start\")\}'"
 
 # Only run on make installcheck and uprobes present.
 if {! [installtest_p]} { untested "$test"; return }
-if {! [uprobes_p]} { untested "$test"; return }
 
 foreach runtime [get_runtime_list] {
     if {$runtime != ""} {
 	stap_run "${test} ($runtime)" wait_5_secs $output_string \
 	    --runtime=$runtime ${testpath}/${test}.stp -c $invoke
 
-    } else {
+    } elseif {[uprobes_p]} {
 	stap_run ${test} wait_5_secs $output_string \
 	    ${testpath}/${test}.stp -c $invoke 
+    } else {
+	untested "$test"
     }
 }

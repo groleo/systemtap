@@ -2,7 +2,6 @@ set test "process_by_cmd"
 
 # Only run on make installcheck and uprobes present.
 if {! [installtest_p]} { untested "$test"; return }
-if {! [uretprobes_p]} { untested "$test"; return }
 
 # Test for PR12427 [implied process("...") target for stap -c CMD
 # invocation].
@@ -44,8 +43,10 @@ foreach runtime [get_runtime_list] {
     if {$runtime != ""} {
 	stap_run3 "${test}.stp ($runtime)" \
 	    $srcdir/$subdir/${test}.stp -c ./$test --runtime=$runtime 
-    } else {
+    } elseif {[uretprobes_p]} {
 	stap_run3 ${test}.stp $srcdir/$subdir/${test}.stp -c ./$test
+    } else {
+	untested ${test}.stp
     }
 }
 
@@ -59,8 +60,10 @@ foreach runtime [get_runtime_list] {
     if {$runtime != ""} {
 	stap_run3 "${test}2.stp ($runtime)" \
 	    $srcdir/$subdir/${test}2.stp -c ./$test --runtime=$runtime 
-    } else {
+    } elseif {[uprobes_p]} {
 	stap_run3 ${test}2.stp $srcdir/$subdir/${test}2.stp -c ./$test
+    } else {
+	untested ${test}2.stp
     }
 }
 

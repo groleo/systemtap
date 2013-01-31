@@ -32,14 +32,16 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
       pass "$test-$extra_name compile"
   }
 
-  if {[installtest_p] && [uprobes_p]} {
+  if {[installtest_p]} {
     foreach runtime [get_runtime_list] {
       if {$runtime != ""} {
 	if {[info procs ${runtime}_kfails] ne ""} { ${runtime}_kfails $i }
 	stap_run3 "$test-$extra_name-$runtime" -w "$stpfile" $test.exe \
 	  -c ./$test.exe --runtime=$runtime
-      } else {
+      } elseif {[uprobes_p]} {
 	stap_run3 "$test-$extra_name" -w "$stpfile" $test.exe -c ./$test.exe
+      } else {
+	untested "$test-$extra_name"
       }
     }
   } else {

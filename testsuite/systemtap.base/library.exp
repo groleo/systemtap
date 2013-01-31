@@ -20,7 +20,6 @@ proc error_handler { res message } {
 }
 
 if {![installtest_p]} {untested $test; return}
-if {![uretprobes_p]} {untested $test; return}
 if {![utrace_p]} {
     untested "$test"
     return
@@ -83,8 +82,11 @@ proc globbing_test { mssg script } {
 		lappend test_name "($runtime)"
 		spawn $stap_path --runtime=$runtime -c $exepath \
 		    $script $exepath "$glob"
-	    } else {
+	    } elseif {[uretprobes_p]} {
 		spawn $stap_path -c $exepath $script $exepath "$glob"
+	    } else {
+		untested "library $test_name $glob $mssg"
+		continue
 	    }
 	    set ok 0
 	    expect {
@@ -133,8 +135,11 @@ foreach runtime [get_runtime_list] {
     if {$runtime != ""} {
 	lappend test_name "($runtime)"
 	spawn $stap_path --ldd -v -v -v -c $exepath -e "probe process(\"$exepath\").library(\"*\").statement(\"baz@sdt_misc.c\") \{printf(\"%s \", pn())\}"
-    } else {
+    } elseif {[uprobes_p]} {
 	spawn $stap_path --ldd -v -v -v -c $exepath -e "probe process(\"$exepath\").library(\"*\").statement(\"baz@sdt_misc.c\") \{printf(\"%s \", pn())\}"
+    } else {
+	untested "library $test_name"
+	continue
     }
     set ok 0
     expect {
@@ -163,8 +168,11 @@ foreach runtime [get_runtime_list] {
     if {$runtime != ""} {
 	lappend test_name "($runtime)"
 	spawn $stap_path --runtime=$runtime -c $exepath -e "probe process(\"$exepath\").library(\"$sopath\").function(\"*\").exported \{printf(\"%s \", pp())\}"
-    } else {
+    } elseif {[uprobes_p]} {
 	spawn $stap_path -c $exepath -e "probe process(\"$exepath\").library(\"$sopath\").function(\"*\").exported \{printf(\"%s \", pp())\}"
+    } else {
+	untested "library $test_name"
+	continue
     }
     set ok 0
     expect {

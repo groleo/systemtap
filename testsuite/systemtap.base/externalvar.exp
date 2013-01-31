@@ -41,8 +41,6 @@ stat_lib_s->s2 = 0x0}
 
 # Only run on make installcheck and utrace present.
 if {! [installtest_p]} { untested "$test"; return }
-if {! [utrace_p]} { untested "$test"; return }
-if {! [uprobes_p]} { untested "$test"; return }
 
 proc dyninst_kfails {index} {
   # The dyninst runtime isn't multi-arch, it only works on the
@@ -81,11 +79,14 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
       set test_name "$test_name-$runtime"
       set cmd [concat stap --runtime=$runtime -d $testso \
 		   -d $testexe -c $testexe $testpath/$test.stp]
-    } else {
+    } elseif {[utrace_p] && [uprobes_p]} {
       # Got to run stap with both the exe and the libraries used as -d
       # args.
       set cmd [concat stap -d $testso -d $testexe -c $testexe \
 		   $testpath/$test.stp]
+    } else {
+      untested "$test_name"
+      continue
     }
     send_log "cmd: $cmd\n"
     catch {eval exec $cmd} res
@@ -99,10 +100,12 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
 	fail "$test_name"
 	send_log "line [expr $n + 1]: expected \"[lindex $expected $n]\", "
 	send_log "Got \"$line\"\n"
+	set n -1
 	break
       }
       incr n
     }
+    if { $n < 0 } { continue }
       
     if { $n != $m } {
       fail "$test_name"

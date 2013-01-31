@@ -3,10 +3,6 @@ if {! [installtest_p]} {
     untested $test
     return
 }
-if {! [uprobes_p]} {
-    untested "$test (uprobes)"
-    return
-}
 
 # This test makes sure we don't miss events when the main thread
 # doesn't quiesce (without us interrupting it).
@@ -56,9 +52,12 @@ foreach runtime [get_runtime_list] {
 	stap_run $test_name wait_5_secs $output --runtime=$runtime \
 	    -e $script -x [exp_pid -i $exe_id]
 
-    } else {
+    } elseif {[uprobes_p]} {
 	stap_run $test_name wait_5_secs $output -e $script \
 	    -x [exp_pid -i $exe_id]
+    } else {
+	untested "$test (uprobes)"
+	continue
     }
 
     exec kill -INT -[exp_pid -i $exe_id]
