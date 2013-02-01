@@ -29,14 +29,15 @@
  * @sinfo: The address of siginfo struct
  * @shared: Indicates whether the signal is shared by the thread group
  * @send2queue: Indicates whether the signal is sent to an existing
- * sigqueue
+ * sigqueue (deprecated in SystemTap 2.1)
  * @name: The name of the function used to send out the signal
  *
  * Context:
  *  The signal's sender.
  *
  */
-probe signal.send = __signal.send.send_sigqueue,
+probe signal.send = __signal.send.signal_generate !,
+		    __signal.send.send_sigqueue,
 %( kernel_v > "2.6.25" %?
 		    __signal.send.send_signal ?
 %:
@@ -57,6 +58,18 @@ probe signal.send = __signal.send.send_sigqueue,
         si_code="SI_USER or SI_TIMER or SI_ASYNCIO"
 }
 
+probe __signal.send.signal_generate = kernel.trace("signal_generate") ?
+{
+    name = "signal_generate"
+    sig = $sig
+    task = $task
+    sinfo = $info
+    shared = (@choose_defined($group, 0) == 0) ? 0 : 1
+%( systemtap_v <= "2.1" %?
+    send2queue = 0
+%)
+}
+
 probe __signal.send.send_sigqueue = kernel.function("send_sigqueue")
 {
     name = "send_sigqueue"
@@ -64,7 +77,9 @@ probe __signal.send.send_sigqueue = kernel.function("send_sigqueue")
     sig = @choose_defined($q->info->si_signo, $sig)
     sinfo = @choose_defined($q->info, 0)
     shared = 0
+%( systemtap_v <= "2.1" %?
     send2queue = 1
+%)
 }
 
 probe __signal.send.send_signal =
@@ -82,7 +97,9 @@ probe __signal.send.send_signal =
     sig = $sig
     task = $t
     sinfo = $info
+%( systemtap_v <= "2.1" %?
     send2queue = 0
+%)
 }
 
 probe __signal.send.group_send_sig_info =
@@ -93,7 +110,9 @@ probe __signal.send.group_send_sig_info =
     task = $p
     sinfo = $info
     shared = 1
+%( systemtap_v <= "2.1" %?
     send2queue = 0
+%)
 }
 
 probe __signal.send.send_group_sigqueue =
@@ -104,7 +123,9 @@ probe __signal.send.send_group_sigqueue =
     task = $p
     sinfo = 0 # $q->info
     shared = 1
+%( systemtap_v <= "2.1" %?
     send2queue = 1
+%)
 }
 
 probe __signal.send.specific_send_sig_info =
@@ -115,11 +136,15 @@ probe __signal.send.specific_send_sig_info =
     task = $t
     sinfo = $info
     shared = 0
+%( systemtap_v <= "2.1" %?
     send2queue = 0
+%)
 }
 
+%( systemtap_v <= "2.1" %?
 /**
  * probe signal.send.return - Signal being sent to a process completed
+ * (deprecated in SystemTap 2.1)
  * @retstr: The return value to either __group_send_sig_info,
  * specific_send_sig_info,
  * or send_sigqueue
@@ -243,6 +268,7 @@ probe __signal.send.send_group_siggueue.return =
     shared = 1
     send2queue = 1
 }
+%)
 
 /**
  * probe signal.checkperm - Check being performed on a sent signal
@@ -608,15 +634,40 @@ probe signal.pending.return = kernel.function("do_sigpending").return
  * @ka_addr: The address of the k_sigaction table
  * associated with the signal
  * @oldset_addr: The address of the bitmask array of blocked signals
- * @regs: The address of the kernel-mode stack area
+ * (deprecated in SystemTap 2.1)
+ * @regs: The address of the kernel-mode stack area (deprecated in
+ * SystemTap 2.1)
  * @sig_mode: Indicates whether the signal was a user-mode or kernel-mode signal
  */
-probe signal.handle = kernel.function("handle_rt_signal64") ?,
-		      kernel.function("handle_rt_signal32") ?,
-		      kernel.function("handle_signal32") !,
-		      kernel.function("handle_signal")
+probe signal.handle = __signal.handle.tp !, __signal.handle.kp
 {
     name = "handle"
+    // Check whether the signal is a User Mode or Kernel mode Signal.
+
+    if (sinfo == 0 && sig_code <= 0)
+        sig_mode = "User Mode Signal"
+    else if (sinfo >=  1)
+        sig_mode = "Kernel Mode Signal"
+}
+
+probe __signal.handle.tp = kernel.trace("signal_deliver") ?
+{
+    sig = $sig
+    sig_name = _signal_name($sig)
+    sinfo = $info
+    sig_code = $info->si_code
+    ka_addr = $ka
+%( systemtap_v <= "2.1" %?
+    oldset_addr = 0
+    regs = 0
+%)
+}
+
+probe __signal.handle.kp = kernel.function("handle_rt_signal64") ?,
+			   kernel.function("handle_rt_signal32") ?,
+			   kernel.function("handle_signal32") !,
+			   kernel.function("handle_signal")
+{
     if (@defined($sig)) {
         sig = $sig
         sig_name = _signal_name($sig)
@@ -628,19 +679,16 @@ probe signal.handle = kernel.function("handle_rt_signal64") ?,
     sinfo = $info
     sig_code = $info->si_code
     ka_addr = $ka
-    oldset_addr = @choose_defined($oldset, $set)
+%( systemtap_v <= "2.1" %?
+    oldset_addr = @choose_defined($oldset, @choose_defined($set, 0))
     regs = $regs
-
-    // Check whether the signal is a User Mode or Kernel mode Signal.
-
-    if (sinfo == 0 && sig_code <= 0)
-        sig_mode = "User Mode Signal"
-    else if (sinfo >=  1)
-        sig_mode = "Kernel Mode Signal"
+%)
 }
 
+%( systemtap_v <= "2.1" %?
 /**
  * probe signal.handle.return - Signal handler invocation completed
+ * (deprecated in SystemTap 2.1)
  * @name: Name of the probe point
  * @retstr: Return value as a string
  */
@@ -652,6 +700,7 @@ probe signal.handle.return = kernel.function("handle_rt_signal64").return ?,
     name = "handle"
     retstr = return_str(1, $return)
 }
+%)
 
 
 /**

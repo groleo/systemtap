@@ -51,6 +51,16 @@
   functionality has been based on. For more info on re2c, see:
      http://sourceforge.net/projects/re2c/
 
+- The folowing tapset variables are deprecated in release 2.1 and will
+  be removed in release 2.2:
+  - The 'send2queue' variable in the 'signal.send' probe.
+  - The 'oldset_addr' and 'regs' variables in the 'signal.handle' probe.
+
+- The following tapset probes are deprecated in release 2.1 and will
+  be removed in release 2.2:
+  - signal.send.return
+  - signal.handle.return
+
 * What's new in version 2.0, 2012-10-09
 
 - Systemtap includes a new prototype backend, which uses Dyninst to instrument
