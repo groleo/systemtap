@@ -6749,8 +6749,9 @@ translate_pass (systemtap_session& s)
 
 	  s.op->assert_0_indent();
 	}
-      else if (s.runtime_usermode_p())
-        // stp_runtime_session wants to incorporate globals, but it can be empty
+      else
+        // stp_runtime_session wants to incorporate globals, but it
+        // can be empty
 	s.op->newline() << "struct stp_globals {};";
 
       // Common (static atomic) state of the stap session.
