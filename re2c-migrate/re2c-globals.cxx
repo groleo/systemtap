@@ -21,18 +21,6 @@
 
 #include "re2c-regex.h"
 
-#ifndef HAVE_STRNDUP
-
-char *strndup(const char *str, size_t len) throw ()
-{
-	char * ret = (char*)malloc(len + 1);
-	
-	memcpy(ret, str, len);
-	ret[len] = '\0';
-	return ret;
-}
-
-#endif
 
 namespace re2c
 {

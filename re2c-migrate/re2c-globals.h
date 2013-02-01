@@ -131,12 +131,6 @@ inline SubStr& SubStr::operator = (const SubStr& oth)
 
 } // end namespace re2c
 
-#ifndef HAVE_STRNDUP
-
-char *strndup(const char *str, size_t len);
-
-#endif
-
 #if defined(_MSC_VER) && !defined(vsnprintf)
 #define vsnprintf _vsnprintf
 #endif
