@@ -845,9 +845,10 @@ size.
 .BR global " tiny_array[10]" , " normal_array" , " big_array[50000]"
 .RE
 .PP
-Arrays may be wrapped using the '%' character causing previously entered
-elements to be overwritten if more elements are inserted than the array can
-hold. This works for both associative and statistics typed arrays.
+Arrays may be configured for wrapping using the '%' suffix.  This
+causes older elements to be overwritten if more elements are inserted
+than the array can hold. This works for both associative and statistics
+typed arrays.
 .RS
 .BR global " wrapped_array1%[10]", " wrapped_array2%"
 .RE
@@ -1715,6 +1716,9 @@ Individual arrays may be declared with a larger or smaller limit instead:
 .SAMPLE
 global big[10000],little[5]
 .ESAMPLE
+or denoted with
+.IR %
+to make them wrap-around automatically.
 .TP
 MAXERRORS
 Maximum number of soft errors before an exit is triggered, default 0, which
