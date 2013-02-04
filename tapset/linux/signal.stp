@@ -143,14 +143,10 @@ probe __signal.send.specific_send_sig_info =
 
 %( systemtap_v <= "2.1" %?
 /**
- * probe signal.send.return - Signal being sent to a process completed
- * (deprecated in SystemTap 2.1)
- * @retstr: The return value to either __group_send_sig_info,
- * specific_send_sig_info,
- * or send_sigqueue
+ * probe signal.send.return - Signal being sent to a process completed (deprecated in SystemTap 2.1)
+ * @retstr: The return value to either __group_send_sig_info, specific_send_sig_info, or send_sigqueue
  * @shared: Indicates whether the sent signal is shared by the thread group.
- * @send2queue: Indicates whether the sent signal was sent to an
- * existing sigqueue
+ * @send2queue: Indicates whether the sent signal was sent to an existing sigqueue
  * @name: The name of the function used to send out the signal
  *
  * Context:
@@ -160,8 +156,7 @@ probe __signal.send.specific_send_sig_info =
  * specific_send_sig_info return values are as follows;
  *
  * 0 -- The signal is successfully sent to a process,
- * which means that:
- * (1) the signal was ignored by the receiving process,
+ * which means that, (1) the signal was ignored by the receiving process,
  * (2) this is a non-RT signal and the system already has one queued, and
  * (3) the signal was successfully added to the sigqueue of the receiving process.
  *
