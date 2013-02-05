@@ -1477,7 +1477,14 @@ public:
     functioncall_traversing_visitor::visit_regex_query (q); // TODOXXX test necessity
 
     string re = q->re->value;
-    regex_to_stapdfa (&session, re, session.dfa_counter);
+    try
+      {
+        regex_to_stapdfa (&session, re, session.dfa_counter);
+      }
+    catch (const semantic_error &e)
+      {
+        throw semantic_error(e.what(), q->right->tok);
+      }
   }
 };
 

@@ -6767,7 +6767,14 @@ translate_pass (systemtap_session& s)
         {
           assert_no_interrupts();
           s.op->newline();
-          it->second->emit_declaration (s.op);
+          try
+            {
+              it->second->emit_declaration (s.op);
+            }
+          catch (const semantic_error &e)
+            {
+              s.print_error(e); // TODOXXX want to report the token
+            }
         }
       s.op->assert_0_indent();
 

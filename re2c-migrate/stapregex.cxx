@@ -225,22 +225,43 @@ RegExp *stapdfa::padRE = NULL;
 stapdfa::stapdfa (const string& func_name, const string& re, bool escape)
   : orig_input(re), func_name(func_name)
 {
-  if (!failRE) {
-    //regex_parser p("[\\000-\\377]");
-    regex_parser p("");
-    failRE = p.parse();
-  }
-  if (!padRE) {
-    regex_parser p(".*");
-    padRE = p.parse();
-  }
+  try
+    {
+      if (!failRE) {
+        //regex_parser p("[\\000-\\377]");
+        regex_parser p("");
+        failRE = p.parse();
+      }
+      if (!padRE) {
+        regex_parser p(".*");
+        padRE = p.parse();
+      }
 
-  regex_parser p(escape ? escape_string_literal(re) : re);
-  ast = prepare_rule(p.parse ()); // must be retained for re2c's reference
+      regex_parser p(escape ? escape_string_literal(re) : re);
+      ast = prepare_rule(p.parse ()); // must be retained for re2c's reference
 
-  // compile ast to DFA
-  content = genCode (ast);
-  content->prepare();
+      // compile ast to DFA
+      content = genCode (ast);
+      content->prepare();
+    }
+  catch (const re2c_error &e)
+    {
+#ifdef REGCOMP_STANDALONE
+      cerr << e.what() << " (at " << e.pos << ")" << endl;
+      exit (1);
+#else
+      throw semantic_error (e.what());
+#endif
+    }
+  catch (const dfa_parse_error &e)
+    {
+#ifdef REGCOMP_STANDALONE
+      cerr << e.what() << " (at " << e.pos << ")" << endl;
+      exit (1);
+#else
+      throw semantic_error (string("regex parse error: ") + e.what());
+#endif
+    }
 }
 
 stapdfa::~stapdfa ()
@@ -266,9 +287,21 @@ stapdfa::emit_declaration (translator_output *o)
   o->newline() << "#define YYMARKER mar";
   o->newline() << "#define YYFILL(n) ({ if ((cur - start) + n > l) return 0; })";
 
-  unsigned topIndent = 0;
-  bool bPrologBrace = false;
-  content->emit(o->newline(), topIndent, NULL, "", 0, bPrologBrace);
+  try
+    {
+      unsigned topIndent = 0;
+      bool bPrologBrace = false;
+      content->emit(o->newline(), topIndent, NULL, "", 0, bPrologBrace);
+    }
+  catch (const re2c_error &e)
+    {
+#ifdef REGCOMP_STANDALONE
+      cerr << e.what() << " (at " << e.pos << ")" << endl;
+      exit (1);
+#else
+      throw semantic_error (e.what());
+#endif
+    }
 
   o->newline() << "#undef YYCTYPE";
   o->newline() << "#undef YYCURSOR";
@@ -362,7 +395,7 @@ char
 regex_parser::next ()
 {
   if (! next_c && finished ())
-    parse_error(_("unexpected end of input"), next_pos);
+    parse_error(_("unexpected end of regex"), next_pos);
   if (! next_c)
     {
       last_pos = next_pos;
@@ -412,7 +445,7 @@ regex_parser::expect (char expected)
   try {
     c = next ();
   } catch (const dfa_parse_error &e) {
-    parse_error (_F("expected %c, found end of input", expected));
+    parse_error (_F("expected %c, found end of regex", expected));
   }
 
   if (c != expected)

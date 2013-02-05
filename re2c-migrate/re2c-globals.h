@@ -24,10 +24,21 @@
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <stdexcept>
 #include <string.h>
 
 namespace re2c
 {
+
+struct re2c_error: public std::runtime_error
+{
+  unsigned pos;
+  re2c_error (const std::string& msg):
+    runtime_error(msg), pos(0) {}
+  re2c_error (const std::string& msg, unsigned pos):
+    runtime_error(msg), pos(pos) {}
+  ~re2c_error () throw () {}
+};
 
 extern bool DFlag;
 extern bool eFlag;

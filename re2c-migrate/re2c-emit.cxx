@@ -2675,11 +2675,7 @@ void Scanner::set_in_parse(bool new_in_parse)
 
 void Scanner::fatal_at(unsigned line, unsigned ofs, const char *msg) const
 {
-	out.flush();
-	std::cerr << "re2c: error: "
-		<< "line " << line << ", column " << (tchar + ofs + 1) << ": "
-		<< msg << std::endl;
-	exit(1);
+  throw re2c_error("regex error:" + std::string(msg), tchar + ofs + 1);
 }
 
 void Scanner::fatal(unsigned ofs, const char *msg) const
