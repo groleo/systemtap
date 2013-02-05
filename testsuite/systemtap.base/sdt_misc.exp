@@ -18,9 +18,14 @@ proc cleanup_handler { verbose } {
     global pbtype_mssgs
     if { $verbose == 0 } {
 	foreach x $pbtype_mssgs {
-	    catch {exec rm -f libsdt_${x}.so libsdt_${x}_shared.so sdt_misc_${x}.x sdt_misc_${x}_loop.x sdt_misc_${x}_shared.x sdt_misc_${x}_loop_shared.x sdt_misc_${x}.x sdt_misc_${x}_compatibility.x sdt_misc_${x}_types.x libsdt_${x}_loop.so }
+	    catch {exec rm -f libsdt_${x}.so libsdt_${x}_shared.so \
+		       sdt_misc_${x}.x sdt_misc_${x}_loop.x \
+		       sdt_misc_${x}_shared.x sdt_misc_${x}_loop_shared.x \
+		       sdt_misc_${x}.x sdt_misc_${x}_compatibility.x \
+		       sdt_misc_${x}_types.x libsdt_${x}_loop.so }
 	}
-	catch {exec rm -f sdt_misc_.c sdt_misc_.h sdt_misc_.o sdt_types.x ,semclean ,semout}
+	catch {exec rm -f sdt_misc_.c sdt_misc_.h sdt_misc_.o sdt_types.x \
+		   sdt_asm.x ,semclean ,semout}
     }
 }
 
@@ -32,466 +37,491 @@ set sup_opath "[pwd]/sdt_misc_.o"
 
 # Iterate pbtype_flags
 for {set i 0} {$i < [llength $pbtype_flags]} {incr i} {
-set v_flag [lindex $v_flags $i]
-set pbtype_flag "[lindex $pbtype_flags $i] additional_flags=$v_flag"
-set pbtype_mssg [lindex $pbtype_mssgs $i]
-set sup_exepath "[pwd]/sdt_misc_$pbtype_mssg.x"
+    set v_flag [lindex $v_flags $i]
+    set pbtype_flag "[lindex $pbtype_flags $i] additional_flags=$v_flag"
+    set pbtype_mssg [lindex $pbtype_mssgs $i]
+    set sup_exepath "[pwd]/sdt_misc_$pbtype_mssg.x"
 
-# Run dtrace
-
-if {[installtest_p]} {
-    set dtrace $env(SYSTEMTAP_PATH)/dtrace
-} else {
-    set dtrace ../dtrace
-}
-
-verbose -log "$dtrace $v_flag --types -h -s $srcdir/$subdir/sdt_misc_.d"
-if {[catch {exec $dtrace $v_flag --types -h -s $srcdir/$subdir/sdt_misc_.d} res]} {
-    verbose -log "unable to run $dtrace: $res"
-}
-verbose -log "$dtrace $v_flag --types -G -s $srcdir/$subdir/sdt_misc_.d"
-if {[catch {exec $dtrace $v_flag --types -G -s $srcdir/$subdir/sdt_misc_.d} res]} {
-    verbose -log "unable to run $dtrace: $res"
-}
-if {[file exists $sup_hpath] && [file exists $sup_opath]} then {
-    pass "$test dtrace $pbtype_mssg"
-} else {
-    fail "$test dtrace $pbtype_mssg"
-    cleanup_handler $verbose
-    return
-}
-
-set sup_flags [sdt_includes]
-set sup_flags "$sup_flags additional_flags=-Wall"
-set sup_flags "$sup_flags additional_flags=-Werror"
-set sup_flags "$sup_flags additional_flags=$sup_opath"
-set sup_flags "$sup_flags additional_flags=-I. $pbtype_flag"
-set res [target_compile $srcdir/$subdir/sdt_misc.c $sup_exepath executable $sup_flags]
-if { $res != "" } {
-    verbose "target_compile failed: $res" 2
-    fail "$test compiling $pbtype_mssg"
-    cleanup_handler $verbose
-    return
-} else {
-    pass "$test compiling $pbtype_mssg"
-}
-
-if {![installtest_p]} {untested $test; return}
-if {![uprobes_p]} {untested $test; return}
-if {![utrace_p]} {
-    untested "$test"
-    cleanup_handler $verbose
-    return
-}
-
-# 1. Test executable built with dtrace generated header file
-
-set ok 0
-
-verbose -log "spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath"
-spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath
-expect {
-    -timeout 180
-    -re {In test_probe_2 probe 0x2} { incr ok; exp_continue }
-    -re {In test_probe_0 probe 0x3} { incr ok; exp_continue }
-    -re {In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]} { incr ok; exp_continue }
-    -re {In test_probe_4 dtrace probe 0x[0-9a-f]} { incr ok; exp_continue }
-    -re {In test_probe_1 probe 0x0} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if {$ok == 6} {
-    pass "$test $pbtype_mssg"
-} else {
-    if {[regexp "^(arm.*)$" $::tcl_platform(machine)] && $pbtype_mssg == "V2_uprobe"} {
-        xfail "$test ($ok) $pbtype_mssg"
+    # Run dtrace
+    
+    if {[installtest_p]} {
+	set dtrace $env(SYSTEMTAP_PATH)/dtrace
     } else {
-        fail "$test ($ok) $pbtype_mssg"
+	set dtrace ../dtrace
     }
-}
-
-# 2. Test attaching to a running process
-
-set loop_flags "$sup_flags additional_flags=-DLOOP"
-set loop_exepath "[pwd]/sdt_misc_${pbtype_mssg}_loop.x"
-set res [target_compile $srcdir/$subdir/sdt_misc.c $loop_exepath executable $loop_flags]
-if { $res != "" } {
-    verbose "target_compile failed: $res" 2
-    fail "$test compiling $pbtype_mssg -DLOOP"
-    return
-} else {
-    pass "$test compiling $pbtype_mssg -DLOOP"
-}
-
-# This is perhaps a wee bit clumsy
-verbose -log "$loop_exepath >| ,semclean 2>&1 & TEST=\$! ; \
+    
+    verbose -log "$dtrace $v_flag --types -h -s $srcdir/$subdir/sdt_misc_.d"
+    if {[catch {exec $dtrace $v_flag --types -h -s \
+		    $srcdir/$subdir/sdt_misc_.d} res]} {
+	verbose -log "unable to run $dtrace: $res"
+    }
+    verbose -log "$dtrace $v_flag --types -G -s $srcdir/$subdir/sdt_misc_.d"
+    if {[catch {exec $dtrace $v_flag --types -G -s \
+		    $srcdir/$subdir/sdt_misc_.d} res]} {
+	verbose -log "unable to run $dtrace: $res"
+    }
+    if {[file exists $sup_hpath] && [file exists $sup_opath]} then {
+	pass "$test dtrace $pbtype_mssg"
+    } else {
+	fail "$test dtrace $pbtype_mssg"
+	cleanup_handler $verbose
+	return
+    }
+    
+    set sup_flags [sdt_includes]
+    set sup_flags "$sup_flags additional_flags=-Wall"
+    set sup_flags "$sup_flags additional_flags=-Werror"
+    set sup_flags "$sup_flags additional_flags=$sup_opath"
+    set sup_flags "$sup_flags additional_flags=-I. $pbtype_flag"
+    set res [target_compile $srcdir/$subdir/sdt_misc.c $sup_exepath \
+		 executable $sup_flags]
+    if { $res != "" } {
+	verbose "target_compile failed: $res" 2
+	fail "$test compiling $pbtype_mssg"
+	cleanup_handler $verbose
+	return
+    } else {
+	pass "$test compiling $pbtype_mssg"
+    }
+    
+    if {![installtest_p]} {
+	untested $test
+	cleanup_handler $verbose
+	return}
+    if {![uprobes_p]} {
+	untested $test
+	cleanup_handler $verbose
+	return}
+    if {![utrace_p]} {
+	untested "$test"
+	cleanup_handler $verbose
+	return
+    }
+    
+    # 1. Test executable built with dtrace generated header file
+    
+    set ok 0
+    
+    verbose -log "spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath"
+    spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath
+    expect {
+	-timeout 180
+	-re {In test_probe_2 probe 0x2} { incr ok; exp_continue }
+	-re {In test_probe_0 probe 0x3} { incr ok; exp_continue }
+	-re {In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]} {
+	    incr ok; exp_continue }
+	-re {In test_probe_4 dtrace probe 0x[0-9a-f]} { incr ok; exp_continue }
+	-re {In test_probe_1 probe 0x0} { incr ok; exp_continue }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    
+    if {$ok == 6} {
+	pass "$test $pbtype_mssg"
+    } else {
+	if {[istarget "arm-*-*"] && $pbtype_mssg == "V2_uprobe"} {
+	    xfail "$test ($ok) $pbtype_mssg"
+	} else {
+	    fail "$test ($ok) $pbtype_mssg"
+	}
+    }
+    
+    # 2. Test attaching to a running process
+    
+    set loop_flags "$sup_flags additional_flags=-DLOOP"
+    set loop_exepath "[pwd]/sdt_misc_${pbtype_mssg}_loop.x"
+    set res [target_compile $srcdir/$subdir/sdt_misc.c $loop_exepath \
+		 executable $loop_flags]
+    if { $res != "" } {
+	verbose "target_compile failed: $res" 2
+	fail "$test compiling $pbtype_mssg -DLOOP"
+	cleanup_handler $verbose
+	return
+    } else {
+	pass "$test compiling $pbtype_mssg -DLOOP"
+    }
+    
+    # This is perhaps a wee bit clumsy
+    verbose -log "$loop_exepath >| ,semclean 2>&1 & TEST=\$! ; \
 	$stap_path $srcdir/$subdir/sdt_misc.stp $loop_exepath >| ,semout ; \
 	/usr/bin/kill -SIGINT \$TEST"
-system "$loop_exepath >,semclean 2>&1 & TEST=\$! ; \
+    system "$loop_exepath >,semclean 2>&1 & TEST=\$! ; \
 	$stap_path $srcdir/$subdir/sdt_misc.stp $loop_exepath >| ,semout ; \
 	/usr/bin/kill -SIGINT \$TEST"
-
-set ok 0
-set ko 0
-spawn cat ,semout
-expect {
-    -re {In test_probe_2 probe 0x2} { incr ok; exp_continue }
-    -re {In test_probe_0 probe 0x3} { incr ok; exp_continue }
-    -re {In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]} { incr ok; exp_continue }
-    -re {In test_probe_4 dtrace probe 0x[0-9a-f]} { incr ok; exp_continue }
-    -re {In test_probe_1 probe 0x0} { incr ok; exp_continue }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if {$ok == 6} {
-    pass "$test $pbtype_mssg attach"
-} else {
-    if {[regexp "^(arm.*)$" $::tcl_platform(machine)] && $pbtype_mssg == "V2_uprobe"} {
-        xfail "$test ($ok) $pbtype_mssg attach"
-    } else {
-        fail "$test ($ok) $pbtype_mssg attach"
+    
+    set ok 0
+    set ko 0
+    spawn cat ,semout
+    expect {
+	-re {In test_probe_2 probe 0x2} { incr ok; exp_continue }
+	-re {In test_probe_0 probe 0x3} { incr ok; exp_continue }
+	-re {In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]} {
+	    incr ok; exp_continue }
+	-re {In test_probe_4 dtrace probe 0x[0-9a-f]} { incr ok; exp_continue }
+	-re {In test_probe_1 probe 0x0} { incr ok; exp_continue }
+	eof { }
     }
-}
-
-set ok 0
-spawn cat ,semclean
-expect {
-    -timeout 180
-    -re {PASS} { incr ok; exp_continue }
-    -re {FAIL} { incr ko; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if {$ok == 4 && $ko == 0} {
-    pass "$test $pbtype_mssg epilogue"
-} else {
-    fail "$test ($ok) $pbtype_mssg epilogue"
-}
-
-# 3. Test passing various C types to .mark probes
-
-# same set of flags as sdt.exp
-set extra_type_flags {{additional_flags=-O2}
-    {additional_flags=-O3}
-    {additional_flags=-std=c89}
-    {additional_flags=-std=c99}
-    {additional_flags=-std=gnu99}
-    {c++ additional_flags=-std=c++98 additional_flags=-x additional_flags=c++}
-    {c++ additional_flags=-std=gnu++98 additional_flags=-x additional_flags=c++}
-    {c++ additional_flags=-std=c++0x additional_flags=-x additional_flags=c++}
-    {c++ additional_flags=-std=gnu++0x additional_flags=-x additional_flags=c++}
-}
-set extra_type_mssgs {-O2 -O3 c89 c99 gnu99 c++98 gnu++98 c++0x gnu++0x}
-# __STDC_VERSION__ could be used, but g++ has no equivalent
-set has_long_long {{} {} additional_flags=-DNO_LONG_LONG {} {} additional_flags=-DNO_LONG_LONG additional_flags=-DNO_LONG_LONG {} {}}
-set type_xfail {1 1 0 0 0 0 0 0 0}
-set type_pedantics_idx {1 1 2 2 2 2 2 2 2} 
-set type_pedantics {{} additional_flags=-pedantic} ; # don't compile -O2 -O3 with -pedantic
-set type_pedantic_mssgs {{} -pedantic}
-
-for {set j 0} {$j < [llength $extra_type_flags]} {incr j} {
-set extra_type_mssg [lindex $extra_type_mssgs $j]
-
-for {set p 0} {$p < [lindex $type_pedantics_idx $j]} {incr p} {
-set type_pedantic_mssg [lindex $type_pedantic_mssgs $p]
-set type_flags "[sdt_includes] additional_flags=-Wall additional_flags=-Werror"
-set type_flags "$type_flags additional_flags=-I. $pbtype_flag"
-set type_flags "$type_flags [lindex $extra_type_flags $j] [lindex $type_pedantics $p] [lindex $has_long_long $j]"
-if {![regexp "^(i.86|arm.*)$" $::tcl_platform(machine)]} {
-    set type_flags "$type_flags additional_flags=-m64"
-}
-
-# On ARM these tests are known to fail with timeout for V1 and V2 probes.
-# Skip them altogether to speed execution.
-if {[regexp "^(arm.*)$" $::tcl_platform(machine)] && ($pbtype_mssg == "V1_uprobe" || $pbtype_mssg == "V2_kprobe" || $pbtype_mssg == "V2_uprobe")} {
-    xfail "$test types $pbtype_mssg $extra_type_mssg $type_pedantic_mssg"
-    continue
-}
-
-
-set res [target_compile $srcdir/$subdir/sdt_types.c sdt_types.x executable $type_flags]
-if { $res != "" } {
-    verbose "target_compile failed: $res" 2
-    # -std=gnu++0x and -std=c++0x are not universally accepted
-    if {[string first "unrecognized command line option" $res] == -1} {
-      fail "$test compiling types $pbtype_mssg $extra_type_mssg $type_pedantic_mssg"
+    catch {close}; catch {wait}
+    
+    if {$ok == 6} {
+	pass "$test $pbtype_mssg attach"
     } else {
-      untested "$test compiling types $pbtype_mssg $extra_type_mssg $type_pedantic_mssg"
+	if {[istarget "arm-*-*"] && $pbtype_mssg == "V2_uprobe"} {
+	    xfail "$test ($ok) $pbtype_mssg attach"
+	} else {
+	    fail "$test ($ok) $pbtype_mssg attach"
+	}
     }
-    untested "$test types $pbtype_mssg $extra_type_mssg $type_pedantic_mssg"
-    continue ; # type_pedantics_idx
-} else {
-    pass "$test compiling types $pbtype_mssg $extra_type_mssg $type_pedantic_mssg"
-}
-
-set ok 0
-set notok 0
-set fail "types"
-set uns_notok 0
-verbose -log "spawn $stap_path -g -c ./sdt_types.x $srcdir/$subdir/sdt_types.stp ./sdt_types.x # $pbtype_mssg $extra_type_mssg"
-spawn $stap_path -g -c ./sdt_types.x $srcdir/$subdir/sdt_types.stp ./sdt_types.x
-
-expect {
-    -timeout 180
-    # i386 unsigned may xfail because of sign extension but fail anything else
-    -re {FAIL: [a-z_]+var} { regexp " .*$" $expect_out(0,string) s;
-	if {[regexp "unsigned" $s] && [regexp "^(i.86)$" $::tcl_platform(machine)]} {
-	    incr uns_notok }
-	incr notok; set fail "$fail $s"; exp_continue }
-    -re {PASS: [a-z_]+var} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if { $notok != 0 || $ok == 0} {
-    if { [lindex $type_xfail $j] || $notok == $uns_notok} {
-	xfail "$test types $fail $pbtype_mssg $extra_type_mssg $type_pedantic_mssg"
+    
+    set ok 0
+    spawn cat ,semclean
+    expect {
+	-timeout 180
+	-re {PASS} { incr ok; exp_continue }
+	-re {FAIL} { incr ko; exp_continue }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    
+    if {$ok == 4 && $ko == 0} {
+	pass "$test $pbtype_mssg epilogue"
     } else {
-	fail "$test types $fail $pbtype_mssg $extra_type_mssg $type_pedantic_mssg"
+	fail "$test ($ok) $pbtype_mssg epilogue"
     }
-} else {
-    pass "$test types $pbtype_mssg $extra_type_mssg $type_pedantic_mssg"
-}
-} ; # end type_pedantics_idx
-} ; # end extra_type_flags
+    
+    # 3. Test passing various C types to .mark probes
+    
+    # same set of flags as sdt.exp
+    set extra_type_flags {{additional_flags=-O2}
+	{additional_flags=-O3}
+	{additional_flags=-std=c89}
+	{additional_flags=-std=c99}
+	{additional_flags=-std=gnu99}
+	{c++ additional_flags=-std=c++98 additional_flags=-x \
+	     additional_flags=c++}
+	{c++ additional_flags=-std=gnu++98 additional_flags=-x \
+	     additional_flags=c++}
+	{c++ additional_flags=-std=c++0x additional_flags=-x \
+	     additional_flags=c++}
+	{c++ additional_flags=-std=gnu++0x additional_flags=-x \
+	     additional_flags=c++}
+    }
+    set extra_type_mssgs {-O2 -O3 c89 c99 gnu99 c++98 gnu++98 c++0x gnu++0x}
+    # __STDC_VERSION__ could be used, but g++ has no equivalent
+    set has_long_long {{} {} additional_flags=-DNO_LONG_LONG {} {} \
+			   additional_flags=-DNO_LONG_LONG \
+			   additional_flags=-DNO_LONG_LONG {} {}}
+    set type_xfail {1 1 0 0 0 0 0 0 0}
+    set type_pedantics_idx {1 1 2 2 2 2 2 2 2} 
+    # don't compile -O2 -O3 with -pedantic
+    set type_pedantics {{} additional_flags=-pedantic}
+    set type_pedantic_mssgs {{} -pedantic}
+    
+    for {set j 0} {$j < [llength $extra_type_flags]} {incr j} {
+	set extra_type_mssg [lindex $extra_type_mssgs $j]
+	
+	for {set p 0} {$p < [lindex $type_pedantics_idx $j]} {incr p} {
+	    set type_pedantic_mssg [lindex $type_pedantic_mssgs $p]
+	    set type_flags "[sdt_includes] additional_flags=-Wall additional_flags=-Werror"
+	    set type_flags "$type_flags additional_flags=-I. $pbtype_flag"
+	    set type_flags "$type_flags [lindex $extra_type_flags $j] [lindex $type_pedantics $p] [lindex $has_long_long $j]"
+	    if {![istarget "i*86-*-*"] && ![istarget "arm-*-*"]} {
+		set type_flags "$type_flags additional_flags=-m64"
+	    }
+	    set test_suffix "$pbtype_mssg $extra_type_mssg $type_pedantic_mssg"
 
-# 4. Test probe in shared object
-
-set sup41_flags "$sup_flags additional_flags=-shared"
-set sup41_flags "$sup41_flags additional_flags=-fPIC"
-set sup41_flags "$sup41_flags additional_flags=-DNO_MAIN"
-set sup_sopath "[pwd]/libsdt_$pbtype_mssg.so"
-set sup_exepath "[pwd]/sdt_misc_${pbtype_mssg}_shared.x"
-set res0 [target_compile $srcdir/$subdir/sdt_misc.c $sup_sopath executable $sup41_flags ]
-set sup42_flags "additional_flags=-Wl,-rpath,[pwd]"
-set sup42_flags "$sup42_flags additional_flags=-L[pwd] additional_flags=-lsdt_${pbtype_mssg}"
-set sup42_flags "$sup42_flags additional_flags=-DONLY_MAIN"
-set res [target_compile $srcdir/$subdir/sdt_misc.c $sup_exepath executable $sup42_flags ]
-if { $res0 != "" || $res != "" } {
-    verbose "target_compile failed: $res0 $res" 2
-    fail "$test compiling -shared $pbtype_mssg"
-    cleanup_handler $verbose
-    return
-} else {
-    pass "$test compiling -shared $pbtype_mssg"
-}
-
-set ok 0
-verbose -log "spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath $sup_sopath"
-spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath $sup_sopath
-
-expect {
-    -timeout 180
-    -re {In test_probe_2 probe 0x2} { incr ok; exp_continue }
-    -re {In test_probe_0 probe 0x3} { incr ok; exp_continue }
-    -re {In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]} { incr ok; exp_continue }
-    -re {In test_probe_4 dtrace probe 0x[0-9a-f]} { incr ok; exp_continue }
-    -re {In test_probe_1 probe 0x0} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if {$ok == 6} {
-    pass "$test shared $pbtype_mssg"
-} else {
-    if {[regexp "^(arm.*)$" $::tcl_platform(machine)] && $pbtype_mssg == "V2_uprobe"} {
-        xfail "$test ($ok) shared $pbtype_mssg"
+	    # On ARM these tests are known to fail with timeout for V1
+	    # and V2 probes.  Skip them altogether to speed execution.
+	    if {[istarget "arm-*-*"] \
+		&& ($pbtype_mssg == "V1_uprobe" \
+		    || $pbtype_mssg == "V2_kprobe" \
+		    || $pbtype_mssg == "V2_uprobe")} {
+		xfail "$test types $test_suffix"
+		continue
+	    }
+	    
+	    
+	    set res [target_compile $srcdir/$subdir/sdt_types.c \
+			 sdt_types.x executable $type_flags]
+	    if { $res != "" } {
+		verbose "target_compile failed: $res" 2
+		# -std=gnu++0x and -std=c++0x are not universally accepted
+		if {[string first "unrecognized command line option" $res] == -1} {
+		    fail "$test compiling types $test_suffix"
+		} else {
+		    untested "$test compiling types $test_suffix"
+		}
+		untested "$test types $test_suffix"
+		continue ; # type_pedantics_idx
+	    } else {
+		pass "$test compiling types $test_suffix"
+	    }
+	    
+	    set ok 0
+	    set notok 0
+	    set fail "types"
+	    set uns_notok 0
+	    verbose -log "spawn $stap_path -g -c ./sdt_types.x $srcdir/$subdir/sdt_types.stp ./sdt_types.x # $pbtype_mssg $extra_type_mssg"
+	    spawn $stap_path -g -c ./sdt_types.x $srcdir/$subdir/sdt_types.stp ./sdt_types.x
+	    expect {
+		-timeout 180
+		# i386 unsigned may xfail because of sign extension
+		# but fail anything else
+		-re {FAIL: [a-z_]+var} { regexp " .*$" $expect_out(0,string) s;
+		    if {[regexp "unsigned" $s] && [istarget "i*86-*-*"]} {
+			incr uns_notok }
+		    incr notok; set fail "$fail $s"; exp_continue }
+		-re {PASS: [a-z_]+var} { incr ok; exp_continue }
+		timeout { fail "$test (timeout) $test_suffix" }
+		eof { }
+	    }
+	    catch {close}; catch {wait}
+	    
+	    if { $notok != 0 || $ok == 0} {
+		if { [lindex $type_xfail $j] || $notok == $uns_notok} {
+		    xfail "$test types $fail $test_suffix"
+		} else {
+		    fail "$test types $fail $test_suffix"
+		}
+	    } else {
+		pass "$test types $test_suffix"
+	    }
+	} ; # end type_pedantics_idx
+    } ; # end extra_type_flags
+    
+    # 4. Test probe in shared object
+    
+    set sup41_flags "$sup_flags additional_flags=-shared"
+    set sup41_flags "$sup41_flags additional_flags=-fPIC"
+    set sup41_flags "$sup41_flags additional_flags=-DNO_MAIN"
+    set sup_sopath "[pwd]/libsdt_$pbtype_mssg.so"
+    set sup_exepath "[pwd]/sdt_misc_${pbtype_mssg}_shared.x"
+    set res0 [target_compile $srcdir/$subdir/sdt_misc.c $sup_sopath \
+		  executable $sup41_flags ]
+    set sup42_flags "additional_flags=-Wl,-rpath,[pwd]"
+    set sup42_flags "$sup42_flags additional_flags=-L[pwd] additional_flags=-lsdt_${pbtype_mssg}"
+    set sup42_flags "$sup42_flags additional_flags=-DONLY_MAIN"
+    set res [target_compile $srcdir/$subdir/sdt_misc.c $sup_exepath \
+		 executable $sup42_flags ]
+    if { $res0 != "" || $res != "" } {
+	verbose "target_compile failed: $res0 $res" 2
+	fail "$test compiling -shared $pbtype_mssg"
+	cleanup_handler $verbose
+	return
     } else {
-        fail "$test ($ok) shared $pbtype_mssg"
+	pass "$test compiling -shared $pbtype_mssg"
     }
-}
-
-# 5. Test attaching to a running process with markers in a shared object
-
-set supl_flags "$sup41_flags additional_flags=-DLOOP"
-set supl_sopath "[pwd]/libsdt_${pbtype_mssg}_loop.so"
-set res0 [target_compile $srcdir/$subdir/sdt_misc.c $supl_sopath executable $supl_flags ]
-set loop_flags [sdt_includes]
-set loop_flags "$loop_flags additional_flags=-I. $pbtype_flag"
-set loop_flags "$loop_flags additional_flags=-DLOOP"
-set loop_flags "$loop_flags additional_flags=-DONLY_MAIN"
-set loop_flags "$loop_flags additional_flags=-Wl,-rpath,[pwd]"
-set loop_flags "$loop_flags additional_flags=-L[pwd] additional_flags=-lsdt_${pbtype_mssg}_loop"
-set loop_exepath "[pwd]/sdt_misc_${pbtype_mssg}_loop_shared.x"
-set res [target_compile $srcdir/$subdir/sdt_misc.c $loop_exepath executable $loop_flags]
-if { $res != "" } {
-    verbose "target_compile failed: $res" 2
-    fail "$test compiling $pbtype_mssg -DLOOP with markers in a shared object"
-    return
-} else {
-    pass "$test compiling $pbtype_mssg -DLOOP with markers in a shared object"
-}
-
-# This is perhaps a wee bit clumsy
-verbose -log "$loop_exepath >| ,semclean 2>&1 & TEST=\$! ; \
+    
+    set ok 0
+    verbose -log "spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath $sup_sopath"
+    spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath $sup_sopath
+    expect {
+	-timeout 180
+	-re {In test_probe_2 probe 0x2} { incr ok; exp_continue }
+	-re {In test_probe_0 probe 0x3} { incr ok; exp_continue }
+	-re {In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]} {
+	    incr ok; exp_continue }
+	-re {In test_probe_4 dtrace probe 0x[0-9a-f]} { incr ok; exp_continue }
+	-re {In test_probe_1 probe 0x0} { incr ok; exp_continue }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    
+    if {$ok == 6} {
+	pass "$test shared $pbtype_mssg"
+    } else {
+	if {[istarget "arm-*-*"] && $pbtype_mssg == "V2_uprobe"} {
+	    xfail "$test ($ok) shared $pbtype_mssg"
+	} else {
+	    fail "$test ($ok) shared $pbtype_mssg"
+	}
+    }
+    
+    # 5. Test attaching to a running process with markers in a shared object
+    
+    set supl_flags "$sup41_flags additional_flags=-DLOOP"
+    set supl_sopath "[pwd]/libsdt_${pbtype_mssg}_loop.so"
+    set res0 [target_compile $srcdir/$subdir/sdt_misc.c $supl_sopath \
+		  executable $supl_flags ]
+    set loop_flags [sdt_includes]
+    set loop_flags "$loop_flags additional_flags=-I. $pbtype_flag"
+    set loop_flags "$loop_flags additional_flags=-DLOOP"
+    set loop_flags "$loop_flags additional_flags=-DONLY_MAIN"
+    set loop_flags "$loop_flags additional_flags=-Wl,-rpath,[pwd]"
+    set loop_flags "$loop_flags additional_flags=-L[pwd] additional_flags=-lsdt_${pbtype_mssg}_loop"
+    set loop_exepath "[pwd]/sdt_misc_${pbtype_mssg}_loop_shared.x"
+    set res [target_compile $srcdir/$subdir/sdt_misc.c $loop_exepath \
+		 executable $loop_flags]
+    set test_suffix "$pbtype_mssg -DLOOP with markers in a shared object"
+    if { $res != "" } {
+	verbose "target_compile failed: $res" 2
+	fail "$test compiling $test_suffix"
+	cleanup_handler $verbose
+	return
+    } else {
+	pass "$test compiling $test_suffix"
+    }
+    
+    # This is perhaps a wee bit clumsy
+    verbose -log "$loop_exepath >| ,semclean 2>&1 & TEST=\$! ; \
 	$stap_path $srcdir/$subdir/sdt_misc.stp $loop_exepath $supl_sopath >| ,semout ; \
 	/usr/bin/kill -SIGINT \$TEST"
-system "$loop_exepath >,semclean 2>&1 & TEST=\$! ; \
+    system "$loop_exepath >,semclean 2>&1 & TEST=\$! ; \
 	$stap_path $srcdir/$subdir/sdt_misc.stp $loop_exepath $supl_sopath >| ,semout ; \
 	/usr/bin/kill -SIGINT \$TEST"
-
-set ok 0
-set ko 0
-spawn cat ,semout
-expect {
-    -re {In test_probe_2 probe 0x2} { incr ok; exp_continue }
-    -re {In test_probe_0 probe 0x3} { incr ok; exp_continue }
-    -re {In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]} { incr ok; exp_continue }
-    -re {In test_probe_4 dtrace probe 0x[0-9a-f]} { incr ok; exp_continue }
-    -re {In test_probe_1 probe 0x0} { incr ok; exp_continue }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if {$ok == 6} {
-    pass "$test $pbtype_mssg shared attach"
-} else {
-    if {[regexp "^(arm.*)$" $::tcl_platform(machine)] && $pbtype_mssg == "V2_uprobe"} {
-       xfail "$test ($ok) $pbtype_mssg shared attach"
-    } else {
-       fail "$test ($ok) $pbtype_mssg shared attach"
+    
+    set ok 0
+    set ko 0
+    spawn cat ,semout
+    expect {
+	-re {In test_probe_2 probe 0x2} { incr ok; exp_continue }
+	-re {In test_probe_0 probe 0x3} { incr ok; exp_continue }
+	-re {In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]} {
+	    incr ok; exp_continue }
+	-re {In test_probe_4 dtrace probe 0x[0-9a-f]} { incr ok; exp_continue }
+	-re {In test_probe_1 probe 0x0} { incr ok; exp_continue }
+	eof { }
     }
-}
-
-set ok 0
-spawn cat ,semclean
-expect {
-    -timeout 180
-    -re {PASS} { incr ok; exp_continue }
-    -re {FAIL} { incr ko; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if {$ok == 4 && $ko == 0} {
-    pass "$test $pbtype_mssg shared shared epilogue"
-} else {
-    fail "$test ($ok) $pbtype_mssg shared epilogue"
-}
-
-# 6. Test .mark probe wildcard matching
-
-set ok 0
-verbose -log "spawn $stap_path -L \"process(\"./sdt_types.x\").mark(\"*\")"
-spawn $stap_path -L "process(\"./sdt_types.x\").mark(\"*\")"
-
-expect {
-    -timeout 180
-    -re {mark\(\"[a-z_]+\"\) .arg1:long .arg2:long .arg3:long .arg4:long .arg5:long .arg6:long .arg7:long .arg8:long\n} { incr ok; exp_continue }
-    -re {mark\(\"[a-z_]+\"\) .arg1:long .arg2:long\n} { incr ok; exp_continue }
-    -re {mark\(\"[a-z_]+\"\) .arg1:long\n} { incr ok; exp_continue }
-    -re {mark\(\"[a-z_]+\"\)} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-# PR10245: match the __ one here
-spawn $stap_path -l "process(\"./sdt_types.x\").mark(\"*-*-*\")"
-expect {
-    -timeout 180
-    -re {mark\(\"[a-z_]+\"\)} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if { $ok == 51 || $ok == 48 || (($ok == 43 || $ok == 40 ) && [regexp "^(i.86|arm.*)$" $::tcl_platform(machine)])} {
-    pass "$test wildcard $pbtype_mssg"
-} else {
-    fail "$test wildcard ($ok) $pbtype_mssg"
-}
-
-# 7. Test types defined in sdt_misc_.d.  This requires -g
-
-set ok 0
-set supbc_flags "$sup_flags additional_flags=-g additional_flags=-DNO_SLEEP"
-set supbc_exepath "[pwd]/sdt_misc_${pbtype_mssg}_types.x"
-set res [target_compile $srcdir/$subdir/sdt_misc.c $supbc_exepath executable $supbc_flags]
-if { $res != "" } {
-    verbose "target_compile failed: $res" 2
-    fail "$test compiling -g $pbtype_mssg --types"
-    cleanup_handler $verbose
-    return
-} else {
-    pass "$test compiling -g $pbtype_mssg --types"
-}
-
-verbose -log "spawn $stap_path -c $supbc_exepath -e \"probe process(\"$supbc_exepath\").mark(\"test_probe_4\") {printf(\"In %s dtrace probe %#x %#x\\n\", \$\$name, \$arg1->a, \$arg1->b)}\""
-spawn $stap_path -c $supbc_exepath -e "probe process(\"$supbc_exepath\").mark(\"test_probe_4\") {printf(\"In %s dtrace probe %#x %#x\\n\", \$\$name, \$arg1->a, \$arg1->b)}"
-expect {
-    -timeout 180
-    -re {In test_probe_4 dtrace probe 0x4 0x5} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if {$ok == 1} {
-    pass "$test $pbtype_mssg --types"
-} else {
-    if {[regexp "^(arm.*)$" $::tcl_platform(machine)] && $pbtype_mssg == "V2_uprobe"} {
-        xfail "$test ($ok) $pbtype_mssg --types"
+    catch {close}; catch {wait}
+    
+    if {$ok == 6} {
+	pass "$test $pbtype_mssg shared attach"
     } else {
-        fail "$test ($ok) $pbtype_mssg --types"
+	if {[istarget "arm-*-*"] && $pbtype_mssg == "V2_uprobe"} {
+	    xfail "$test ($ok) $pbtype_mssg shared attach"
+	} else {
+	    fail "$test ($ok) $pbtype_mssg shared attach"
+	}
     }
-}
-
+    
+    set ok 0
+    spawn cat ,semclean
+    expect {
+	-timeout 180
+	-re {PASS} { incr ok; exp_continue }
+	-re {FAIL} { incr ko; exp_continue }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    
+    if {$ok == 4 && $ko == 0} {
+	pass "$test $pbtype_mssg shared shared epilogue"
+    } else {
+	fail "$test ($ok) $pbtype_mssg shared epilogue"
+    }
+    
+    # 6. Test .mark probe wildcard matching
+    
+    set ok 0
+    verbose -log "spawn $stap_path -L \"process(\"./sdt_types.x\").mark(\"*\")"
+    spawn $stap_path -L "process(\"./sdt_types.x\").mark(\"*\")"
+    expect {
+	-timeout 180
+	-re {mark\(\"[a-z_]+\"\) .arg1:long .arg2:long .arg3:long .arg4:long .arg5:long .arg6:long .arg7:long .arg8:long\n} { incr ok; exp_continue }
+	-re {mark\(\"[a-z_]+\"\) .arg1:long .arg2:long\n} {
+	    incr ok; exp_continue }
+	-re {mark\(\"[a-z_]+\"\) .arg1:long\n} { incr ok; exp_continue }
+	-re {mark\(\"[a-z_]+\"\)} { incr ok; exp_continue }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    
+    # PR10245: match the __ one here
+    spawn $stap_path -l "process(\"./sdt_types.x\").mark(\"*-*-*\")"
+    expect {
+	-timeout 180
+	-re {mark\(\"[a-z_]+\"\)} { incr ok; exp_continue }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    
+    if { $ok == 51 || $ok == 48 \
+	 || (($ok == 43 || $ok == 40 ) && ([istarget "i.86-*-*"] \
+					   || [istarget "arm-*-*"]))} {
+	pass "$test wildcard $pbtype_mssg"
+    } else {
+	fail "$test wildcard ($ok) $pbtype_mssg"
+    }
+    
+    # 7. Test types defined in sdt_misc_.d.  This requires -g
+    
+    set ok 0
+    set supbc_flags "$sup_flags additional_flags=-g additional_flags=-DNO_SLEEP"
+    set supbc_exepath "[pwd]/sdt_misc_${pbtype_mssg}_types.x"
+    set res [target_compile $srcdir/$subdir/sdt_misc.c $supbc_exepath \
+		 executable $supbc_flags]
+    if { $res != "" } {
+	verbose "target_compile failed: $res" 2
+	fail "$test compiling -g $pbtype_mssg --types"
+	cleanup_handler $verbose
+	return
+    } else {
+	pass "$test compiling -g $pbtype_mssg --types"
+    }
+    
+    verbose -log "spawn $stap_path -c $supbc_exepath -e \"probe process(\"$supbc_exepath\").mark(\"test_probe_4\") {printf(\"In %s dtrace probe %#x %#x\\n\", \$\$name, \$arg1->a, \$arg1->b)}\""
+    spawn $stap_path -c $supbc_exepath -e "probe process(\"$supbc_exepath\").mark(\"test_probe_4\") {printf(\"In %s dtrace probe %#x %#x\\n\", \$\$name, \$arg1->a, \$arg1->b)}"
+    expect {
+	-timeout 180
+	-re {In test_probe_4 dtrace probe 0x4 0x5} { incr ok; exp_continue }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    
+    if {$ok == 1} {
+	pass "$test $pbtype_mssg --types"
+    } else {
+	if {[istarget "arm-*-*"] && $pbtype_mssg == "V2_uprobe"} {
+	    xfail "$test ($ok) $pbtype_mssg --types"
+	} else {
+	    fail "$test ($ok) $pbtype_mssg --types"
+	}
+    }
+    
 } ; # end pbtype_flags
 
 # 8. Test V3 asm support
 
-if {[regexp "^(x86_64|i.86)$" $::tcl_platform(machine)]} {
-set asm_flags [sdt_includes]
-set asm_flags "$asm_flags additional_flags=-g" ; # avoid WARNING for @defined($no_such_var)
-set res [target_compile $srcdir/$subdir/sdt_asm.S sdt_asm.x executable $asm_flags]
-if { $res != "" } {
-    verbose "target_compile failed: $res" 2
-    fail "$test compiling sdt_asm.S"
-} else {
-    pass "$test compiling sdt_asm.S"
-}
-
-set ok 0
-set notok 0
-set fail "asm"
-verbose -log "spawn $stap_path -c [pwd]/sdt_asm.x $srcdir/$subdir/sdt_asm.stp [pwd]/sdt_asm.x"
-spawn $stap_path -c [pwd]/sdt_asm.x $srcdir/$subdir/sdt_asm.stp [pwd]/sdt_asm.x
-
-expect {
-    -timeout 180
-    -re {FAIL: [a-z0-9]} { regexp " .*$" $expect_out(0,string) s;
-	incr notok; set fail "$fail $s"; exp_continue }
-    -re {PASS: [a-z0-9]} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-if { $notok != 0 || $ok == 0} {
-    fail "$test asm ($ok) $fail"
-} else {
-    pass "$test asm ($ok)"
-}
+if {[istarget "x86_64-*-*"] || [istarget "i*86-*-*"]} {
+    set asm_flags [sdt_includes]
+    # avoid WARNING for @defined($no_such_var)
+    set asm_flags "$asm_flags additional_flags=-g"
+    set res [target_compile $srcdir/$subdir/sdt_asm.S sdt_asm.x \
+		 executable $asm_flags]
+    if { $res != "" } {
+	verbose "target_compile failed: $res" 2
+	fail "$test compiling sdt_asm.S"
+    } else {
+	pass "$test compiling sdt_asm.S"
+    }
+    
+    set ok 0
+    set notok 0
+    set fail "asm"
+    verbose -log "spawn $stap_path -c [pwd]/sdt_asm.x $srcdir/$subdir/sdt_asm.stp [pwd]/sdt_asm.x"
+    spawn $stap_path -c [pwd]/sdt_asm.x $srcdir/$subdir/sdt_asm.stp [pwd]/sdt_asm.x
+    expect {
+	-timeout 180
+	-re {FAIL: [a-z0-9]} { regexp " .*$" $expect_out(0,string) s;
+	    incr notok; set fail "$fail $s"; exp_continue }
+	-re {PASS: [a-z0-9]} { incr ok; exp_continue }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    
+    if { $notok != 0 || $ok == 0} {
+	fail "$test asm ($ok) $fail"
+    } else {
+	pass "$test asm ($ok)"
+    }
 } ; # x86_64 | i.86
 
 set ok 0
@@ -499,16 +529,17 @@ verbose -log "spawn $stap_path -c ./sdt_misc_V3_uprobe.x -e \"probe process(\"./
 spawn $stap_path -c ./sdt_misc_V3_uprobe.x -e "probe process(\"./sdt_misc_V3_uprobe.x\").mark(\"test_probe_3\") {printf(\"%s %s %s\\n\", \$\$provider, \$\$name, \$\$parms)}"
 expect {
     -timeout 180
-    -re {sdt_misc test_probe_3 \$arg1=0x3 \$arg2=0x[0-9a-f][0-9a-f]} { incr ok; exp_continue }
+    -re {sdt_misc test_probe_3 \$arg1=0x3 \$arg2=0x[0-9a-f][0-9a-f]} {
+	incr ok; exp_continue }
     timeout { fail "$test (timeout)" }
     eof { }
 }
+catch {close}; catch {wait}
 
 if {$ok == 1} {
     pass "$test \$\$parms"
 } else {
     fail "$test ($ok) \$\$parms"
-    return
 }
 
 cleanup_handler $verbose
