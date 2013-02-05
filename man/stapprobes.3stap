@@ -596,8 +596,10 @@ of the function.
 Following constructs are supported :
 .SAMPLE
 kprobe.function(FUNCTION)
+kprobe.function(FUNCTION).call
 kprobe.function(FUNCTION).return
 kprobe.module(NAME).function(FUNCTION)
+kprobe.module(NAME).function(FUNCTION).call
 kprobe.module(NAME).function(FUNCTION).return
 kprobe.statement.(ADDRESS).absolute
 .ESAMPLE
