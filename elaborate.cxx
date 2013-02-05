@@ -1956,8 +1956,10 @@ semantic_pass (systemtap_session& s)
     }
 
   // PR11443
-  if (s.listing_mode && s.probes.size() == 0)
-    rc ++;
+  // NB: listing mode only cares whether we have any probes,
+  // so all previous error conditions are disregarded.
+  if (s.listing_mode)
+    rc = s.probes.empty();
 
   return rc;
 }
