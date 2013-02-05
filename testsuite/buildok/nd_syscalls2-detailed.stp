@@ -1326,11 +1326,10 @@ probe nd_syscall.ustat, nd_syscall.ustat32 ?
 	printf("%s, %s\n", name, argstr)
 	printf("%d, %p\n", dev, ubuf_uaddr)
 }
-probe nd_syscall.ustat.return
+probe nd_syscall.ustat.return, nd_syscall.ustat32.return
 {
 	printf("%s, %s\n", name, retstr)
 }
-# no nd_syscall.ustat32 return probe
 
 probe nd_syscall.utime ?, nd_syscall.compat_utime ?
 {

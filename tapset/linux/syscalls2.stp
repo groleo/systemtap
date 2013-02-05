@@ -3305,9 +3305,6 @@ probe syscall.ustat = kernel.function("sys_ustat").call
 # long sys32_ustat(unsigned dev, struct ustat32 __user *u32p)
 # long compat_sys_ustat(unsigned dev, struct compat_ustat __user *u)
 #
-# FIXME: the way the ustat/ustat32 probes are written, there is no
-# syscall.ustat32.return probe.
-#
 probe syscall.ustat32 = kernel.function("compat_sys_ustat").call ?,
       		        kernel.function("sys32_ustat").call ?
 {
@@ -3317,9 +3314,14 @@ probe syscall.ustat32 = kernel.function("compat_sys_ustat").call ?,
 	argstr = sprintf("%d, %p", $dev, @choose_defined($u, $u32p))
 }
 
-probe syscall.ustat.return = kernel.function("sys_ustat").return ?,
-                             kernel.function("sys32_ustat").return ?,
-                             kernel.function("compat_sys_ustat").return ?
+probe syscall.ustat.return = kernel.function("sys_ustat").return ?
+{
+	name = "ustat"
+	retstr = return_str(1, $return)
+}
+
+probe syscall.ustat32.return = kernel.function("sys32_ustat").return ?,
+                               kernel.function("compat_sys_ustat").return ?
 {
 	name = "ustat"
 	retstr = return_str(1, $return)

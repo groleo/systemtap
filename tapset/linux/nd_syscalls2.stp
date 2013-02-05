@@ -4074,9 +4074,14 @@ probe nd_syscall.ustat32 = kprobe.function("compat_sys_ustat") ?
 	argstr = sprintf("%d, %p", dev, ubuf_uaddr)
 }
 
-probe nd_syscall.ustat.return = kprobe.function("sys_ustat").return ?,
-                                kprobe.function("sys32_ustat").return ?,
-                                kprobe.function("compat_sys_ustat").return ?
+probe nd_syscall.ustat.return = kprobe.function("sys_ustat").return ?
+{
+	name = "ustat"
+	retstr = returnstr(1)
+}
+
+probe nd_syscall.ustat32.return = kprobe.function("sys32_ustat").return ?,
+                                  kprobe.function("compat_sys_ustat").return ?
 {
 	name = "ustat"
 	retstr = returnstr(1)
