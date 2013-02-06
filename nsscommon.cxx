@@ -1,7 +1,7 @@
 /*
   Common functions used by the NSS-aware code in systemtap.
 
-  Copyright (C) 2009-2011 Red Hat Inc.
+  Copyright (C) 2009-2013 Red Hat Inc.
 
   This file is part of systemtap, and is free software.  You can
   redistribute it and/or modify it under the terms of the GNU General Public
@@ -181,7 +181,7 @@ nssCleanup (const char *db_path)
 {
   // Shutdown NSS and ensure that it went down successfully. This is because we can not
   // initialize NSS again if it does not.
-  if (NSS_Shutdown () != SECSuccess)
+  if (NSS_IsInitialized () && NSS_Shutdown () != SECSuccess)
     {
       if (db_path)
 	nsscommon_error (_F("Unable to shutdown NSS for database %s", db_path));
