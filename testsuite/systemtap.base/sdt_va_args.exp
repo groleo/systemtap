@@ -54,10 +54,21 @@ if { $res != "" } {
     pass "compiling $test.c $extra_mssg"
 }
 
-if {[installtest_p] && [utrace_p] && [uprobes_p]} {
-  stap_run3 "$test $extra_mssg" -w $srcdir/$subdir/sdt.stp $testprog -c ./$testprog
+if {[installtest_p]} {
+    foreach runtime [get_runtime_list] {
+	if {$runtime != ""} {
+	    stap_run3 "$test $extra_mssg ($runtime)" \
+		--runtime=$runtime -w $srcdir/$subdir/sdt.stp \
+		$testprog -c ./$testprog
+	} elseif {[uprobes_p]} {
+	    stap_run3 "$test $extra_mssg" -w $srcdir/$subdir/sdt.stp \
+		$testprog -c ./$testprog
+	} else {
+	    untested "$test $extra_mssg"
+	}
+    }
 } else {
-  untested "$test $extra_mssg"
+    untested "$test $extra_mssg"
 }
 catch {exec rm -f $testprog}
 
