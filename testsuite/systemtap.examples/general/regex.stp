@@ -1,0 +1,11 @@
+#!/usr/bin/env stap
+# regex.stp
+# Uses the regex functionality to detect opened files whose names
+# match a given pattern (in this case, ending with an extension
+# showing them to be an archive).
+
+probe syscall.open {
+      if (filename =~ "(\\.tar\\.(gz|bz2|xz)|\\.zip|\\.tgz|\\.tbz)$") {
+         printf ("opened %s\n", filename)
+      }
+}
