@@ -15,4 +15,11 @@ if { $res != "" } {
   pass "$test compile"
 }
 
-stap_run3 $test "$stpfile" -c "$exefile"
+foreach runtime [get_runtime_list] {
+  if {$runtime != ""} {
+    stap_run3 "$test ($runtime)" "$stpfile" -c "$exefile" --runtime=$runtime
+  } else {
+      stap_run3 $test "$stpfile" -c "$exefile"
+  }
+}
+if { $verbose == 0 } { catch { exec rm -f $exefile } }
