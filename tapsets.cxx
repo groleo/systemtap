@@ -85,7 +85,7 @@ common_probe_entryfn_prologue (systemtap_session& s,
 			       string probe_type, bool overload_processing)
 {
   if (s.runtime_usermode_p())
-    s.op->newline() << "int _stp_ saved_errno = errno;";
+    s.op->newline() << "int _stp_saved_errno = errno;";
   s.op->newline() << "#ifdef STP_ALIBI";
   s.op->newline() << "atomic_inc(probe_alibi(" << probe << "->index));";
   s.op->newline() << "#else";
