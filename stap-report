@@ -23,10 +23,10 @@ if [ -x /usr/bin/dpkg ]; then
   run "dpkg --list | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi' | awk '{print \$2,\$3}' | sort"
 elif [ -x /usr/bin/rpm -o -x /bin/rpm ]; then
   # fedora/rhel/suse/...
-  run "rpm -qa --qf '%{name}-%{version} %{release}.%{arch}\\t%{buildtime:date}@%{buildhost}\\n' | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi' | sort"
+  run "rpm -qa --qf '%{name}-%{version} %{release}.%{arch}\\t%{buildtime:date}@%{buildhost}\\n' | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr' | sort"
 elif [ -f /var/log/packages ]; then
   # slackware
-  run "cat /var/log/packages | egrep 'systemtap|elfutils|kernel|gcc' | sort -k9"
+  run "cat /var/log/packages | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr' | sort -k9"
 fi
 run "egrep 'PROBE|TRACE|MARKER|_DEBUG_|MODULE|FENTRY|_SIG' /lib/modules/`uname -r`/build/.config | grep -v not.set | sort | fmt -w 80"
 run "find /debugfs /proc /sys /dev /sys/kernel/debug -path '*kprobe*' -type f 2>/dev/null | xargs grep -H ."
