@@ -61,7 +61,9 @@ static unsigned long _stp_random_u (unsigned long n)
 	static int initialized_p = 0;
 
 	if (unlikely (! initialized_p)) {
-		seed = (unsigned long) time(0);
+		struct timespec ts;
+		(void)clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+		seed = ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
 		initialized_p = 1;
 	}
 
