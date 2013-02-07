@@ -8,6 +8,8 @@ run(){
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:$PATH
 export PATH
 
+exec 2>&1
+
 run "id"
 run "stap -V"
 run "which stap"
