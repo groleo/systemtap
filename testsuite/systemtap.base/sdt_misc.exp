@@ -362,7 +362,7 @@ for {set i 0} {$i < [llength $pbtype_flags]} {incr i} {
 	    verbose -log "spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath $sup_sopath"
 	    spawn $stap_path -c $sup_exepath $srcdir/$subdir/sdt_misc.stp $sup_exepath $sup_sopath
 	} else {
-	    untested "$test shared $pbtype_msg"
+	    untested "$test shared $pbtype_mssg"
 	    continue
 	}
 	set ok 0
