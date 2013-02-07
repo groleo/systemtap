@@ -5,6 +5,6 @@ subsystem: any
 status: experimental
 exit: user-controlled
 scope: system-wide
-description: Uses the regex functionality to detect opened files whose names match a given pattern (in this case, ending with an extension showing them to be an archive).
+description: Uses the regex functionality to detect opened files whose names match a pattern given on the command line. If no command line parameter is given, demonstrate by filtering for files that end with an extension showing them to be an archive.
 test_check: stap -p4 regex.stp
 test_installcheck: stap regex.stp -c "sleep 0.2"
