@@ -50,7 +50,10 @@ installation/permission problems
 It is possible that your installation of systemtap was not correctly
 installed.  For example, the
 .IR /usr/bin/staprun
-program may lack the necessary setuid permissions, or environment
+program may lack the necessary setuid permissions, or your invoking
+userid might not have sufficient privileges (root, or
+.IR stapusr
+and related group memberships).  Environment
 variables may interfere with locating
 .IR /usr/libexec/.../stapio  "."
 
