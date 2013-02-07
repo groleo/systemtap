@@ -83,6 +83,33 @@ get_dwarf_registers(BPatch_process *app,
 }
 
 
+// Simple object to temporarily make sure a process is stopped
+class mutatee_freezer {
+    mutatee& m;
+    bool already_stopped;
+
+  public:
+    mutatee_freezer(mutatee& m):
+      m(m), already_stopped(m.is_stopped())
+    {
+      // If process is currently running, stop it.
+      if (!already_stopped && !m.stop_execution())
+        {
+          staplog(3) << "stopping process failed, stopped="
+                     << m.is_stopped() << ", terminated="
+                     << m.is_terminated() << endl;
+        }
+    }
+
+    ~mutatee_freezer()
+    {
+      // Let the process continue (if it wasn't stopped when we started).
+      if (!already_stopped)
+        m.continue_execution();
+    }
+};
+
+
 mutatee::mutatee(BPatch_process* process):
   pid(process? process->getPid() : 0),
   process(process), stap_dso(NULL),
@@ -405,14 +432,9 @@ void
 mutatee::begin_callback()
 {
   // process->oneTimeCode() requires that the process be stopped
-  bool stopped = process->isStopped();
-  if (!stopped && !stop_execution())
-    {
-      staplog(3) << "stopping process failed, stopped="
-		 << process->isStopped() << ", terminated="
-		 << process->isTerminated() << endl;
-      return;
-    }
+  mutatee_freezer mf(*this);
+  if (!is_stopped())
+    return;
 
   for (size_t i = 0; i < attached_probes.size(); ++i)
     {
@@ -423,10 +445,6 @@ mutatee::begin_callback()
 	  call_utrace_dynprobe(probe);
 	}
     }
-
-  // Let the process continue (if it wasn't stopped when we started).
-  if (!stopped)
-    continue_execution();
 }
 
 
@@ -466,14 +484,9 @@ mutatee::thread_callback(BPatch_thread *thread, bool create_p)
 
   // thread->oneTimeCode() requires that the process (not just the
   // thread) be stopped. So, stop the process if needed.
-  bool stopped = process->isStopped();
-  if (!stopped && !stop_execution())
-    {
-      staplog(3) << "stopping process failed, stopped="
-		 << process->isStopped() << ", terminated="
-		 << process->isTerminated() << endl;
-      return;
-    }
+  mutatee_freezer mf(*this);
+  if (!is_stopped())
+    return;
 
   for (size_t i = 0; i < attached_probes.size(); ++i)
     {
@@ -486,10 +499,6 @@ mutatee::thread_callback(BPatch_thread *thread, bool create_p)
 	  call_utrace_dynprobe(probe, thread);
 	}
     }
-
-  // Let the process continue (if it wasn't stopped when we started).
-  if (!stopped)
-    continue_execution();
 }
 
 void
@@ -506,7 +515,8 @@ mutatee::find_attached_probes(uint64_t flag,
 
 // Look for probe matches in all objects.
 void
-mutatee::instrument_dynprobes(const vector<dynprobe_target>& targets)
+mutatee::instrument_dynprobes(const vector<dynprobe_target>& targets,
+                              bool after_exec_p)
 {
   if (!process || !stap_dso || targets.empty())
     return;
@@ -514,6 +524,13 @@ mutatee::instrument_dynprobes(const vector<dynprobe_target>& targets)
   BPatch_image* image = process->getImage();
   if (!image)
     return;
+
+  // If this is post-exec, run any process.end from the pre-exec process
+  if (after_exec_p && !attached_probes.empty())
+    {
+      exit_callback(NULL);
+      attached_probes.clear();
+    }
 
   // Match non object/path specific probes.
   instrument_global_dynprobes(targets);
@@ -532,6 +549,9 @@ mutatee::copy_forked_instrumentation(mutatee& other)
 {
   if (!process)
     return;
+
+  // Freeze both processes, so we have a stable base.
+  mutatee_freezer mf_parent(other), mf(*this);
 
   // Find the same stap module in the fork
   if (other.stap_dso)
@@ -573,6 +593,21 @@ mutatee::copy_forked_instrumentation(mutatee& other)
   // Update utrace probes to match
   for (size_t i = 0; i < other.attached_probes.size(); ++i)
     instrument_utrace_dynprobe(other.attached_probes[i]);
+}
+
+
+// Reset instrumentation after an exec
+void
+mutatee::exec_reset_instrumentation()
+{
+  // Reset members that are now out of date
+  stap_dso = NULL;
+  snippets.clear();
+  semaphores.clear();
+
+  // NB: the utrace attached_probes are saved, so process.end can run as the
+  // new process is instrumented.  Thus, no attached_probes.clear() yet.
+  utrace_enter_function = NULL;
 }
 
 

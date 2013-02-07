@@ -71,10 +71,14 @@ class mutatee {
                                      const std::vector<dynprobe_target>& targets);
 
     // Look for probe matches in all objects.
-    void instrument_dynprobes(const std::vector<dynprobe_target>& targets);
+    void instrument_dynprobes(const std::vector<dynprobe_target>& targets,
+                              bool after_exec_p=false);
 
     // Copy data for forked instrumentation
     void copy_forked_instrumentation(mutatee& other);
+
+    // Reset instrumentation after an exec
+    void exec_reset_instrumentation();
 
     // Remove all BPatch snippets we've instrumented in the target
     void remove_instrumentation();

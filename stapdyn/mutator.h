@@ -89,6 +89,7 @@ class mutator {
     // Callback to respond to post fork events.  Check if it matches
     // our targets, and handle accordingly.
     void post_fork_callback(BPatch_thread *parent, BPatch_thread *child);
+    void exec_callback(BPatch_thread *thread);
     void exit_callback(BPatch_thread *thread, BPatch_exitType type);
 
     void thread_create_callback(BPatch_process *proc, BPatch_thread *thread);

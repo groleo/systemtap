@@ -50,6 +50,14 @@ g_post_fork_callback(BPatch_thread *parent, BPatch_thread *child)
 
 
 static void
+g_exec_callback(BPatch_thread *thread)
+{
+  for (size_t i = 0; i < g_mutators.size(); ++i)
+    g_mutators[i]->exec_callback(thread);
+}
+
+
+static void
 g_exit_callback(BPatch_thread *thread, BPatch_exitType type)
 {
   for (size_t i = 0; i < g_mutators.size(); ++i)
@@ -170,6 +178,7 @@ mutator::load ()
       // STAPDYN_PROBE_FLAG_PROC_BEGIN, because we might want to trigger
       // any of the other types of probes in new processes too.
       patch.registerPostForkCallback(g_post_fork_callback);
+      patch.registerExecCallback(g_exec_callback);
 
       // Do we need a exit callback?
       if (matching_probes_exist(STAPDYN_PROBE_FLAG_PROC_END))
@@ -471,6 +480,8 @@ mutator::dynamic_library_callback(BPatch_thread *thread,
     return;
 
   BPatch_process* process = thread->getProcess();
+  staplog(1) << "dlopen \"" << module->libraryName()
+             << "\", pid = " << process->getPid() << endl;
   boost::shared_ptr<mutatee> mut = find_mutatee(process);
   if (mut)
     mut->instrument_object_dynprobes(module->getObject(), targets);
@@ -501,6 +512,35 @@ mutator::post_fork_callback(BPatch_thread *parent, BPatch_thread *child)
 
       // Trigger any process.begin probes.
       m->begin_callback();
+    }
+}
+
+
+// Callback to respond to exec events.  Check if it matches our
+// targets, and handle accordingly.
+void
+mutator::exec_callback(BPatch_thread *thread)
+{
+  if (!thread)
+    return;
+
+  BPatch_process* process = thread->getProcess();
+
+  staplog(1) << "exec, pid = " << process->getPid() << endl;
+
+  boost::shared_ptr<mutatee> mut = find_mutatee(process);
+  if (mut)
+    {
+      // Clear previous instrumentation
+      mut->exec_reset_instrumentation();
+
+      // FIXME the loadLibrary is hanging in Dyninst waiting for IRPC.
+      // I've tried deferring this until update_mutatees() too - same hang.
+#if 0
+      // Load our module again in the new process
+      if (mut->load_stap_dso(module_name))
+        mut->instrument_dynprobes(targets, true);
+#endif
     }
 }
 
