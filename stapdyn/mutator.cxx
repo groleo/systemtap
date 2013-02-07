@@ -224,7 +224,7 @@ mutator::create_process(const string& command)
       return false;
     }
 
-  boost::shared_ptr<mutatee> m(new mutatee(&patch, app));
+  boost::shared_ptr<mutatee> m(new mutatee(app));
   mutatees.push_back(m);
   target_mutatee = m;
   p_target_created = true;
@@ -255,7 +255,7 @@ mutator::attach_process(pid_t pid)
       return false;
     }
 
-  boost::shared_ptr<mutatee> m(new mutatee(&patch, app));
+  boost::shared_ptr<mutatee> m(new mutatee(app));
   mutatees.push_back(m);
   target_mutatee = m;
   p_target_created = false;
@@ -495,7 +495,7 @@ mutator::post_fork_callback(BPatch_thread *parent, BPatch_thread *child)
   if (mut)
     {
       // Clone the mutatee for the new process.
-      boost::shared_ptr<mutatee> m(new mutatee(&patch, child_process));
+      boost::shared_ptr<mutatee> m(new mutatee(child_process));
       mutatees.push_back(m);
       m->copy_forked_instrumentation(*mut);
 

@@ -83,9 +83,9 @@ get_dwarf_registers(BPatch_process *app,
 }
 
 
-mutatee::mutatee(BPatch* patch, BPatch_process* process):
+mutatee::mutatee(BPatch_process* process):
   pid(process? process->getPid() : 0),
-  patch(patch), process(process), stap_dso(NULL),
+  process(process), stap_dso(NULL),
   utrace_enter_function(NULL)
 {
   get_dwarf_registers(process, registers);
@@ -406,7 +406,7 @@ mutatee::begin_callback()
 {
   // process->oneTimeCode() requires that the process be stopped
   bool stopped = process->isStopped();
-  if (!stopped && !stop_execution(true))
+  if (!stopped && !stop_execution())
     {
       staplog(3) << "stopping process failed, stopped="
 		 << process->isStopped() << ", terminated="
@@ -467,7 +467,7 @@ mutatee::thread_callback(BPatch_thread *thread, bool create_p)
   // thread->oneTimeCode() requires that the process (not just the
   // thread) be stopped. So, stop the process if needed.
   bool stopped = process->isStopped();
-  if (!stopped && !stop_execution(true))
+  if (!stopped && !stop_execution())
     {
       staplog(3) << "stopping process failed, stopped="
 		 << process->isStopped() << ", terminated="
@@ -643,7 +643,7 @@ mutatee::continue_execution()
 
 
 bool
-mutatee::stop_execution(bool wait_p)
+mutatee::stop_execution()
 {
   if (process->isStopped())
     {
@@ -657,17 +657,10 @@ mutatee::stop_execution(bool wait_p)
       staplog(1) << "stopExecution failed!" << endl;
       return false;
     }
-  if (wait_p)
+  if (! process->isStopped() || process->isTerminated())
     {
-      staplog(1) << "waiting on process to stop" << endl;
-      while (!process->isStopped() && !process->isTerminated())
-	patch->waitForStatusChange();
-      if (! process->isStopped() || process->isTerminated())
-        {
-	  if (! process->isStopped())
-	    staplog(1) << "couldn't stop proc!" << endl;
-	  return false;
-	}
+      staplog(1) << "couldn't stop proc!" << endl;
+      return false;
     }
   return true;
 }

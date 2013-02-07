@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 
-#include <BPatch.h>
 #include <BPatch_object.h>
 #include <BPatch_process.h>
 #include <BPatch_snippet.h>
@@ -25,7 +24,6 @@
 class mutatee {
   private:
     pid_t pid; // The system's process ID.
-    BPatch* patch;
     BPatch_process* process; // Dyninst's handle for this process
     BPatch_object* stap_dso; // the injected stap module
 
@@ -51,7 +49,7 @@ class mutatee {
     void instrument_global_dynprobes(const std::vector<dynprobe_target>& targets);
 
   public:
-    mutatee(BPatch* patch, BPatch_process* process);
+    mutatee(BPatch_process* process);
     ~mutatee();
 
     bool operator==(BPatch_process* other) { return process == other; }
@@ -89,7 +87,7 @@ class mutatee {
     // Send a signal to the process.
     int kill(int signal);
 
-    bool stop_execution(bool wait_p);
+    bool stop_execution();
     void continue_execution();
     void terminate_execution() { process->terminateExecution(); }
 
