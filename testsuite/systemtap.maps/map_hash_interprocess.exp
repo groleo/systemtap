@@ -1,0 +1,16 @@
+# This test makes sure that interprocess hashing works, especially for stapdyn,
+# so for example the stap_hash_seed must be correctly shared.
+
+set test "map_hash_interprocess"
+set script "$srcdir/$subdir/$test.stp"
+set ::result_string {array["foo", 42]: 0x123456789abcdef}
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run3 "$test (runtime)" "$script" --runtime=$runtime -c true
+    } elseif {[utrace_p]} {
+	stap_run3 "$test" "$script" -c true
+    } else {
+	untested "$test"
+    }
+}

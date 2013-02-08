@@ -133,7 +133,8 @@ static int _stp_runtime_num_contexts;
 static int systemtap_module_init(void);
 static void systemtap_module_exit(void);
 
-static unsigned long stap_hash_seed; /* Init during module startup */
+static inline unsigned long _stap_hash_seed(); /* see common_session_state.h */
+#define stap_hash_seed _stap_hash_seed()
 
 typedef pthread_rwlock_t rwlock_t; /* for globals */
 
@@ -229,9 +230,6 @@ __attribute__((constructor))
 static void stp_dyninst_ctor(void)
 {
     int rc = 0;
-
-    stap_hash_seed = _stp_random_u ((unsigned long)-1);
-
 
     _stp_mem_fd = open("/proc/self/mem", O_RDWR /*| O_LARGEFILE*/);
     if (_stp_mem_fd != -1) {

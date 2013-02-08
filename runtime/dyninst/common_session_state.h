@@ -18,6 +18,8 @@ struct stp_runtime_session {
 	atomic_t _skipped_count_uprobe_reg;
 	atomic_t _skipped_count_uprobe_unreg;
 
+        unsigned long _hash_seed;
+
 #ifdef STP_ALIBI
 	atomic_t _probe_alibi[STP_PROBE_COUNT];
 #endif
@@ -59,6 +61,14 @@ GET_SESSION_ATOMIC(skipped_count_uprobe_reg);
 GET_SESSION_ATOMIC(skipped_count_uprobe_unreg);
 
 #undef GET_SESSION_ATOMIC
+
+
+static inline unsigned long _stap_hash_seed()
+{
+	if (_stp_session())
+		return _stp_session()->_hash_seed;
+	return 0;
+}
 
 
 #ifdef STP_ALIBI
@@ -153,6 +163,8 @@ static int stp_session_init(void)
 	atomic_set(skipped_count_reentrant(), 0);
 	atomic_set(skipped_count_uprobe_reg(), 0);
 	atomic_set(skipped_count_uprobe_unreg(), 0);
+
+	_stp_session()->_hash_seed = _stp_random_u ((unsigned long)-1);
 
 #ifdef STP_ALIBI
 	// Initialize all the alibi counters

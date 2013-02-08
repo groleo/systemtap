@@ -1,0 +1,20 @@
+# This test makes sure that interprocess hashing works, especially for stapdyn,
+# so for example the stap_hash_seed must be correctly shared.
+
+global key1 = "foo"
+global key2 = 42
+global value = 0x123456789ABCDEF
+
+global array
+
+# The array write occurs in the target context
+probe process.begin {
+  array[key1, key2] = value
+}
+
+# The array read occurs in neutral context (stapio/stapdyn).
+# It's also keyed manually, because 'foreach' doesn't exercise hashing.
+probe end {
+  printf("array[\"%s\", %d]: %#x\n",
+         key1, key2, array[key1, key2])
+}
