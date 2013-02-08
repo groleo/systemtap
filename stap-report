@@ -5,7 +5,7 @@ run(){
   sh -c "$@" || true
 }
 
-PATH=/bin:/sbin:/usr/bin:/usr/sbin:$PATH
+PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
 exec 2>&1
