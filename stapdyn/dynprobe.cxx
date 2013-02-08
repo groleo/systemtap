@@ -75,7 +75,7 @@ find_dynprobes(void* module, vector<dynprobe_target>& targets)
       uint64_t semaphore = probe_semaphore(i);
       uint64_t flags = probe_flags ? probe_flags(i) : 0;
       dynprobe_location p(i, offset, semaphore, flags);
-      if (target_index < ntargets)
+      if (p.validate() && target_index < ntargets)
         targets[target_index].probes.push_back(p);
     }
 
@@ -100,6 +100,19 @@ dynprobe_location::dynprobe_location(uint64_t index, uint64_t offset,
       index(index), offset(offset), semaphore(semaphore),
       flags(flags), return_p(flags & STAPDYN_PROBE_FLAG_RETURN)
 {
+}
+
+bool
+dynprobe_location::validate()
+{
+  if (flags & ~STAPDYN_PROBE_ALL_FLAGS)
+    {
+      stapwarn() << "Unknown flags " << lex_cast_hex(flags)
+                 << " in probe " << index << endl;
+      return false;
+    }
+
+  return true;
 }
 
 

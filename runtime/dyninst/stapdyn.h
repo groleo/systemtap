@@ -45,21 +45,28 @@ extern int enter_dyninst_uprobe(uint64_t index, struct pt_regs *regs);
  * first the original PC, then DWARF-ordered registers.  */
 extern int enter_dyninst_uprobe_regs(uint64_t index, unsigned long nregs, ...);
 
-extern int enter_dyninst_utrace_probe(uint64_t index, struct pt_regs *regs);
-
 /* STAP 2.x : */
 
+/* uprobes-like flags */
 #define STAPDYN_PROBE_FLAG_RETURN	0x1
-#define STAPDYN_PROBE_FLAG_PROC_BEGIN	0x2
-#define STAPDYN_PROBE_FLAG_PROC_END	0x4
-#define STAPDYN_PROBE_FLAG_THREAD_BEGIN	0x8
-#define STAPDYN_PROBE_FLAG_THREAD_END	0x10
+
+/* utrace-like flags */
+#define STAPDYN_PROBE_FLAG_PROC_BEGIN	0x100
+#define STAPDYN_PROBE_FLAG_PROC_END	0x200
+#define STAPDYN_PROBE_FLAG_THREAD_BEGIN	0x400
+#define STAPDYN_PROBE_FLAG_THREAD_END	0x800
 
 extern uint64_t stp_dyninst_probe_flags(uint64_t index);
+
+extern int enter_dyninst_utrace_probe(uint64_t index, struct pt_regs *regs);
 
 extern const char* stp_dyninst_shm_init(void);
 extern int stp_dyninst_shm_connect(const char* name);
 
+
+#define STAPDYN_PROBE_ALL_FLAGS (uint64_t)(STAPDYN_PROBE_FLAG_RETURN	\
+    | STAPDYN_PROBE_FLAG_PROC_BEGIN | STAPDYN_PROBE_FLAG_PROC_END	\
+    | STAPDYN_PROBE_FLAG_THREAD_BEGIN | STAPDYN_PROBE_FLAG_THREAD_END)
 
 #ifdef __cplusplus
 }

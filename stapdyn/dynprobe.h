@@ -27,6 +27,8 @@ struct dynprobe_location {
 
     dynprobe_location(uint64_t index, uint64_t offset,
                       uint64_t semaphore, uint64_t flags);
+
+    bool validate();
 };
 
 
