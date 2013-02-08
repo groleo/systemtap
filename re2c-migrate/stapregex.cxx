@@ -673,6 +673,14 @@ regex_parser::parse_char_range ()
       c = peek ();
     }
 
+  // grab ']' only if it is at the very start of the class
+  if (c == ']')
+    {
+      accumulate.push_back (c);
+      next ();
+      c = peek ();
+    }
+
   // grab range to next ']'
   while (c != ']')
     {

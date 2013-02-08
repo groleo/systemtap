@@ -944,10 +944,11 @@ RegExp * Scanner::invToRE(SubStr s) const
 	
 	RegExp * any = getAnyRE();
 
-	if (s.len <= 2)
-	{
-		return any;
-	}
+        // TODOXXX this was probably erroneous
+	// if (s.len <= 2)
+	// {
+	//	return any;
+	// }
 
 	RegExp * ran = ranToRE(s);
 	RegExp * inv = mkDiff(any, ran);
