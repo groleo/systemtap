@@ -7,25 +7,37 @@ entirely in userspace.  Users should be able to run scripts on their own
 processes without any special privilege on the system.
 
 The set of available probes is of course limited from what a traditional
-kernel-mode SystemTap can access.  So far there is the plain begin/end/error,
-and the process probes that would usually use uprobes.  More may be possible,
-like timers are highly likely.
+kernel-mode SystemTap can access.  So far there are the plain begin/end/error,
+timers, uprobes-like process probes, and utrace-like process/thread begin/end.
 
 Because Dyninst operates on top of ptrace, the usual systemwide mode of
 operation is not really feasible, even on just one's own processes.  Instead,
-stapdyn will operate more like other ptracers (gdb, strace), where target apps
+stapdyn operates more like other ptracers (gdb, strace), where target apps
 are launched directly, or attached to specific PIDs.
 
-This code currently requires running with the dyninst.git master branch,
-especially for the BPatch_object and findPoints interfaces.  These are quite
-new, and may still need to work out bugs.  Consider following the Dyninst-API
-mailing list for further developments.
-  https://lists.cs.wisc.edu/mailman/options/dyninst-api/
+This code requires Dyninst 8.0 or later, including their development head.
+More information about Dyninst can be found here:
 
-Note that Dyninst requires the environment variable DYNINSTAPI_RT_LIB pointing
-to your build of libdyninstAPI_RT.so.  You may also need LD_LIBRARY_PATH to
-include the other libraries if they're not installed in the system paths.
+- website: http://www.dyninst.org/ and http://www.paradyn.org/
 
+- discussion: https://lists.cs.wisc.edu/mailman/options/dyninst-api/
+
+- source: http://git.dyninst.org/?p=dyninst.git;a=summary
+      or: git clone http://git.dyninst.org/dyninst.git
+
+- bug tracker: https://bugs.dyninst.org/
+
+Note that Dyninst uses the environment variable DYNINSTAPI_RT_LIB pointing to
+your build of libdyninstAPI_RT.so.  We try to calculate it at runtime relative
+to the dynamic libdyninstAPI.so location, but you can set this manually if
+needed.  You may also need LD_LIBRARY_PATH to include the other libraries if
+they're not installed in the system paths.
+
+Major stapdyn known issues:
+- PR14702 - dyninst breaks exception handling
+- PR15049 - stapdyn mishandling interrupts
+- PR15136 - stapdyn doesn't fill registers on 32-bit x86
+See also sourceware.org/bugzilla product:systemtap component:dyninst.
 
 For some more background on this project, see the presentations:
 
@@ -34,6 +46,3 @@ For some more background on this project, see the presentations:
 
 - LF Collab Summit 2012: SystemTap Sans Kernel [Josh Stone]
   https://events.linuxfoundation.org/events/collaboration-summit/slides-and-video
-
-
-See also sourceware.org/bugzilla product:systemtap component:dyninst.

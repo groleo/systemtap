@@ -63,6 +63,16 @@ The program invoked by the
 .IR "stap -c CMD"
 option may exit with a non-zero code.
 
+.TP
+uncaught exceptions in the target program
+When using
+.IR --runtime=dyninst
+you may encounter an issue where the target program aborts with a
+message like "terminate called after throwing an instance
+of 'foo_exception'".  This is unfortunately a limitation of Dyninst,
+which sometimes prevents exceptions from properly unwinding through
+instrumented code.
+
 
 .SH GATHERING MORE INFORMATION
 Increasing the verbosity of pass-5
