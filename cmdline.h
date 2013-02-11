@@ -52,6 +52,7 @@ enum {
   LONG_OPT_SYSENV,
   LONG_OPT_SUPPRESS_TIME_LIMITS,
   LONG_OPT_RUNTIME,
+  LONG_OPT_RUNTIME_DYNINST,
 };
 
 // NB: when adding new options, consider very carefully whether they

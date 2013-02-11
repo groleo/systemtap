@@ -115,6 +115,7 @@ public:
 
   // command line parsing
   int  parse_cmdline (int argc, char * const argv []);
+  bool parse_cmdline_runtime (const std::string& opt_runtime);
   void version ();
   void usage (int exitcode);
   void check_options (int argc, char * const argv []);

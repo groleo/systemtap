@@ -529,6 +529,10 @@ systemtap_session::usage (int exitcode)
 #endif /* HAVE_LIBSQLITE3 */
     "   --runtime=MODE\n"
     "              set the pass-5 runtime mode, instead of kernel\n"
+#ifdef HAVE_DYNINST
+    "   --dyninst\n"
+    "              shorthand for --runtime=dyninst\n"
+#endif /* HAVE_DYNINST */
     "   --privilege=PRIVILEGE_LEVEL\n"
     "              check the script for constructs not allowed at the given privilege level\n"
     "   --unprivileged\n"
@@ -1240,30 +1244,13 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 	    }
 
 	case LONG_OPT_RUNTIME:
-          if (optarg == string("kernel"))
-            runtime_mode = kernel_runtime;
-          else if (optarg == string("dyninst"))
-            {
-#ifndef HAVE_DYNINST
-              cerr << _("ERROR: --runtime=dyninst unavailable; this build lacks DYNINST feature") << endl;
-              version();
-              return 1;
-#endif
-              if (privilege_set && pr_unprivileged != privilege)
-                {
-                  cerr << _("ERROR: --runtime=dyninst implies unprivileged mode only") << endl;
-                  return 1;
-                }
-              privilege = pr_unprivileged;
-              privilege_set = true;
-              runtime_mode = dyninst_runtime;
-            }
-          else
-            {
-              cerr << _F("ERROR: %s is an invalid argument for --runtime", optarg) << endl;
-              return 1;
-            }
+          if (!parse_cmdline_runtime (optarg))
+            return 1;
+          break;
 
+	case LONG_OPT_RUNTIME_DYNINST:
+          if (!parse_cmdline_runtime ("dyninst"))
+            return 1;
           break;
 
 	case '?':
@@ -1282,6 +1269,36 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
     }
 
   return 0;
+}
+
+bool
+systemtap_session::parse_cmdline_runtime (const string& opt_runtime)
+{
+  if (opt_runtime == string("kernel"))
+    runtime_mode = kernel_runtime;
+  else if (opt_runtime == string("dyninst"))
+    {
+#ifndef HAVE_DYNINST
+      cerr << _("ERROR: --runtime=dyninst unavailable; this build lacks DYNINST feature") << endl;
+      version();
+      return false;
+#endif
+      if (privilege_set && pr_unprivileged != privilege)
+        {
+          cerr << _("ERROR: --runtime=dyninst implies unprivileged mode only") << endl;
+          return false;
+        }
+      privilege = pr_unprivileged;
+      privilege_set = true;
+      runtime_mode = dyninst_runtime;
+    }
+  else
+    {
+      cerr << _F("ERROR: %s is an invalid argument for --runtime", opt_runtime.c_str()) << endl;
+      return false;
+    }
+
+  return true;
 }
 
 void
