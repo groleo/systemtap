@@ -31,8 +31,13 @@
      % man error::FOO
      % man warning::BAR
 
-- The dyninst backend's runtime has been improved to allow much more
-  concurrency when probing multithreaded processes.
+- The dyninst backend has improved in several aspects:
+  - The runtime now allows much more concurrency when probing multithreaded
+    processes, and will also follow probes across forks.
+  - Several new probe types are now supported, including timers, function
+    return, and process.begin/end and process.thread.begin/end.
+  - Semaphores for SDT probes are now set properly.
+  - Attaching to existing processes with -x PID now works.
 
 - The foreach looping construct can now sort aggregate arrays by the user's
   choice of aggregating function.  Previously, @count was implied.  e.g.:
