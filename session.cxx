@@ -668,6 +668,12 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
         case 'd':
 	  server_args.push_back (string ("-") + (char)grc + optarg);
           {
+            // Make sure an empty data object wasn't specified (-d "")
+            if (strlen (optarg) == 0)
+            {
+              cerr << _("Data object (-d) cannot be empty.") << endl;
+              return 1;
+            }
             // At runtime user module names are resolved through their
             // canonical (absolute) path.
             const char *mpath = canonicalize_file_name (optarg);
