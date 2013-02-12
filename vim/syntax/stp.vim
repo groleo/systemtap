@@ -47,7 +47,7 @@ syn region stapString oneline start=+"+ skip=+\\"+ end=+"+ containedin=stapBlock
 syn match stapString "@\d\+\>" containedin=stapBlock
 syn match stapString "@#" containedin=stapBlock
 
-syn match stapTarget contained "\w\@<!\$\h\w*\>" containedin=stapBlock
+syn match stapTarget contained "\<\$\+\h\w*\$*\>" containedin=stapBlock
 
 syn region stapPreProc fold start="%(" end="%)" contains=stapNumber,stapString containedin=ALL
 syn keyword stapPreProcCond contained kernel_v kernel_vr arch containedin=stapPreProc
