@@ -6,14 +6,14 @@ Sat Mar  3 09:46:40 1973
 Fri Feb 13 23:31:30 2009
 Sat Jan 10 13:37:04 2004
 Fri Jul 13 11:01:20 2012
-a long, long time ago...
-far far in the future...
+conversion error
+conversion error
 Fri Dec 13 20:45:52 1901
-a long, long time ago...
+conversion error
 Tue Jan 19 03:14:07 2038
-far far in the future...
-a long, long time ago...
-far far in the future...}
+conversion error
+conversion error
+conversion error}
 
 # Notice the dyninst result string is different than the linux result
 # string. The userspace glibc library can convert more values.
@@ -30,8 +30,8 @@ Fri Dec 13 20:45:52 1901
 Fri Dec 13 20:45:51 1901
 Tue Jan 19 03:14:07 2038
 Tue Jan 19 03:14:08 2038
-<invalid time>
-<invalid time>}
+conversion error
+conversion error}
 
 foreach runtime [get_runtime_list] {
     if {$runtime != ""} {

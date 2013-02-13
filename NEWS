@@ -1,5 +1,11 @@
 * What's new in version 2.2
 
+- The folowing tapset functions used to return error strings instead
+  of raising an error. The original behavior is deprecated in release
+  2.2.
+
+  'ctime', 'probemod', 'modname'
+
 * What's new in version 2.1, 2013-02-13
 
 - EMACS and VIM editor modes for systemtap source files are included / updated.

@@ -162,9 +162,17 @@ function probemod:string () %{ /* pure */
 		if (m && m->name)
 			strlcpy (STAP_RETVALUE, m->name, MAXSTRINGLEN);
 		else
-			strlcpy (STAP_RETVALUE, "<unknown>", MAXSTRINGLEN);
+#if STAP_COMPAT_VERSION <= STAP_VERSION(2,2)
+			strlcpy (STAP_RETVALUE, "<unknown", MAXSTRINGLEN);
+#else
+			CONTEXT->last_error = "Cannot determine kernel module name";
+#endif
 	} else
+#if STAP_COMPAT_VERSION <= STAP_VERSION(2,2)
 		strlcpy (STAP_RETVALUE, "<unknown>", MAXSTRINGLEN);
+#else
+		CONTEXT->last_error = "Cannot determine kernel module name";
+#endif
 %}
 
 /**
@@ -172,9 +180,9 @@ function probemod:string () %{ /* pure */
  * @addr: The address to map to a kernel module name
  *
  * Description: Returns the module name associated with the given
- * address if known. If not known it will return the string "<unknown>".
- * If the address was not in a kernel module, but in the kernel itself,
- * then the string "kernel" will be returned.
+ * address if known. If not known it will raise an error. If the
+ * address was not in a kernel module, but in the kernel itself, then
+ * the string "kernel" will be returned.
  */
 function modname:string (addr: long) %{ /* pure */
 	struct _stp_module *m;
@@ -199,7 +207,11 @@ function modname:string (addr: long) %{ /* pure */
 	  }
 	preempt_enable_no_resched();
 #endif
+#if STAP_COMPAT_VERSION <= STAP_VERSION(2,2)
 	strlcpy (STAP_RETVALUE, "<unknown>", MAXSTRINGLEN);
+#else
+	CONTEXT->last_error = "Cannot determine kernel module name";
+#endif
 %}
 
 /**

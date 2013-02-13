@@ -20,10 +20,9 @@
  *
  * The string will always be exactly 24 characters. If the time would
  * be unreasonable far in the past (before what can be represented
- * with a 32 bit offset in seconds from the epoch) the returned string
- * will be "a long, long time ago...". If the time would be
- * unreasonable far in the future the returned string will be "far far
- * in the future..." (both these strings are also 24 characters wide).
+ * with a 32 bit offset in seconds from the epoch) an error will occur
+ * (which can be avoided with try/catch). If the time would be
+ * unreasonable far in the future, an error will also occur.
  *
  * Note that the epoch (zero) corresponds to
  *
@@ -100,12 +99,20 @@ function ctime:string(epochsecs:long)
 
     if (STAP_ARG_epochsecs > MAX_POS_SECS)
       {
+#if STAP_COMPAT_VERSION <= STAP_VERSION(2,2)
         strlcpy(STAP_RETVALUE, "far far in the future...", MAXSTRINGLEN);
+#else
+	CONTEXT->last_error = "Time too far in the future to be converted";
+#endif
 	return;
       }
     if (STAP_ARG_epochsecs < MIN_NEG_SECS)
       {
+#if STAP_COMPAT_VERSION <= STAP_VERSION(2,2)
         strlcpy(STAP_RETVALUE, "a long, long time ago...", MAXSTRINGLEN);
+#else
+	CONTEXT->last_error = "Time too far in the past to be converted";
+#endif
         return;
       }
 

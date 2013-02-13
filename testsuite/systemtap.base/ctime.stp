@@ -1,3 +1,8 @@
+# Note this test is written in a bit of an odd way. In systemtap 2.2
+# and above, ctime will raise an error. For systemtap versions before
+# 2.2, ctime returned one of three error strings. Map those error
+# strings to one error.
+
 probe begin 
 {
 	// epoch
@@ -23,11 +28,30 @@ probe begin
 	secsperday = secsperhour * hoursperday
 	epoch_year = 1970
 	time = -1 * (epoch_year - 1000) * 365 * secsperday
-	println(ctime(time))
-
+	try {
+		result = ctime(time)
+		if (result == "far far in the future..."
+		    || result == "a long, long time ago..."
+		    || result == "<invalid time>")
+			println("conversion error")
+		else
+			println(result)
+	} catch {
+		println("conversion error")
+	}
 	// some time in the far future
 	time = (9999 - epoch_year) * 365 * secsperday
-	println(ctime(time))
+	try {
+		result = ctime(time)
+		if (result == "far far in the future..."
+		    || result == "a long, long time ago..."
+		    || result == "<invalid time>")
+			println("conversion error")
+		else
+			println(result)
+	} catch {
+		println("conversion error")
+	}
 
 	// min 32 bit
 	time = -2147483648
@@ -35,7 +59,17 @@ probe begin
 
 	// over the edge, a long, long time ago...
 	time--
-	println(ctime(time))
+	try {
+		result = ctime(time)
+		if (result == "far far in the future..."
+		    || result == "a long, long time ago..."
+		    || result == "<invalid time>")
+			println("conversion error")
+		else
+			println(result)
+	} catch {
+		println("conversion error")
+	}
 
 	// max 32 bit
 	time = 2147483647
@@ -43,13 +77,43 @@ probe begin
 
 	// over the edge, far far in the future...
 	time++
-	println(ctime(time))
+	try {
+		result = ctime(time)
+		if (result == "far far in the future..."
+		    || result == "a long, long time ago..."
+		    || result == "<invalid time>")
+			println("conversion error")
+		else
+			println(result)
+	} catch {
+		println("conversion error")
+	}
 
 	// min 64 bit
-	println(ctime(-9223372036854775808))
+	try {
+		result = ctime(-9223372036854775808)
+		if (result == "far far in the future..."
+		    || result == "a long, long time ago..."
+		    || result == "<invalid time>")
+			println("conversion error")
+		else
+			println(result)
+	} catch {
+		println("conversion error")
+	}
 
 	// max 64 bit
-	println(ctime(9223372036854775807))
+	try {
+		result = ctime(9223372036854775807)
+		if (result == "far far in the future..."
+		    || result == "a long, long time ago..."
+		    || result == "<invalid time>")
+			println("conversion error")
+		else
+			println(result)
+	} catch {
+		println("conversion error")
+	}
 
 	exit()
 }
