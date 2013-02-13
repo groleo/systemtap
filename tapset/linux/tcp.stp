@@ -77,9 +77,10 @@ function tcp_ts_get_info_state:long(sock:long)
 /* return the TCP destination port for a given sock */
 function __tcp_sock_dport:long (sock:long)
 {
-    return @choose_defined(@cast(sock, "inet_sock")->inet_dport, # kernel >= 2.6.33
-	    @choose_defined(@cast(sock, "inet_sock", "kernel")->dport, # kernel >= 2.6.11
-		@cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->dport))
+  return @choose_defined(@cast(sock, "inet_sock", "kernel<net/inet_sock.h>")->sk->__sk_common->skc_dport, # kernel >= 3.8
+          @choose_defined(@cast(sock, "inet_sock")->inet_dport, # kernel >= 2.6.33
+           @choose_defined(@cast(sock, "inet_sock", "kernel")->dport, # kernel >= 2.6.11
+                           @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->dport)))
 }
 
 /* returns the TCP header for recent (<2.6.21) kernel */
