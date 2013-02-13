@@ -21,7 +21,7 @@
 %{!?with_emacsvim: %global with_emacsvim 1}
 
 Name: systemtap
-Version: 2.1
+Version: 2.2
 Release: 1%{?dist}
 # for version, see also configure.ac
 
