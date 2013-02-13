@@ -1433,7 +1433,9 @@ c_translate_location (struct obstack *pool,
 	pc_address = ctx->pc;
       else if (ctx->pc == 0)
 	ctx->pc = pc_address;
-      assert (ctx->pc == pc_address);
+      // PR15148: disable this assertion, in case the PR15123 address-retry logic
+      // sent us this way
+      // assert (ctx->pc == pc_address);
     }
 
   switch (*input == NULL ? loc_address : (*input)->type)
