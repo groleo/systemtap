@@ -115,7 +115,9 @@ proc no_load {} {
 
 # Load function to use when you need to wait 5 seconds.
 proc wait_5_secs {} {
-    after 5000;
+    # Tcl_Sleep appears to have a cow if the systme clock jumps, so
+    # instead of the built-in "after", use /usr/bin/sleep.
+    catch { exec sleep 5 }
     return 0;
 }
 
