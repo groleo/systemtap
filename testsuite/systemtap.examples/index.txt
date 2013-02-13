@@ -116,6 +116,17 @@ keywords: trace callgraph
   'kernel.function("vfs_read")' -c "cat /proc/sys/vm/* || true"
 
 
+general/regex.stp - Report opened files whose names match a given regex
+keywords: regex
+
+  Uses the regex functionality to detect opened files whose names match
+  a pattern given on the command line. If no command line parameter is
+  given, demonstrate by filtering for files that end with an extension
+  showing them to be an archive.
+
+  # stap regex.stp -c "sleep 0.2"
+
+
 general/sizeof.stp - Print the Size of a C Type
 keywords: statistics memory
 
