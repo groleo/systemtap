@@ -5,7 +5,7 @@
 set test "pr10854"
 
 # precompile the script module
-set compile { exec stap $srcdir/$subdir/$test.stp sys_read *@fs/*.c -p4 }
+set compile { exec stap $srcdir/$subdir/$test.stp sys_read vfs*@fs/*.c -p4 }
 if { [catch { set module [eval $compile] } msg ] } {
     fail "compiling $test.stp: $msg"
     untested "$test runloop"
@@ -25,6 +25,7 @@ for {set i 0} {$i < 10} {incr i} {
     spawn staprun $module -o /dev/null
     sleep 1
     catch { exec pkill stapio -P [pid] 2>/dev/null }
+    catch { exec pkill -9 stapio -P [pid] 2>/dev/null }
     catch { close } 
     catch { wait } 
     # don't delay before the next staprun
