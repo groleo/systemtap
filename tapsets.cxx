@@ -4573,6 +4573,13 @@ dwarf_derived_probe::saveargs(dwarf_query& q, Dwarf_Die* scope_die,
             /* NB: It still may not be directly accessible, e.g. if it is an
              * aggregate type, implicit_pointer, etc., but the user can later
              * figure out how to access the interesting parts. */
+
+            /* XXX: Perhaps saveargs() / listings-mode should work by synthesizing
+             * several synthetic
+             *     probe foo { $var }
+             * probes, testing them for overall resolvability.
+             */
+
             Dwarf_Attribute attr_mem;
             if (!dwarf_attr_integrate (&arg, DW_AT_const_value, &attr_mem))
               {
@@ -4588,10 +4595,14 @@ dwarf_derived_probe::saveargs(dwarf_query& q, Dwarf_Die* scope_die,
                 else if (!(dwarf_getlocation_addr(&attr_mem, dwfl_addr, &expr,
                                                   &len, 1) == 1 && len > 0))
                   {
-                    if (verbose)
-                      clog << _F("saveargs: local '%s' (dieoffset: %s) is not available at this address (%s)\n",
-                                 arg_name, lex_cast_hex(dwarf_dieoffset(&arg)).c_str(), lex_cast_hex(dwfl_addr).c_str());
-                    continue;
+                    Dwarf_Addr dwfl_addr2 = q.dw.pr15123_retry_addr (dwfl_addr, & arg);
+                    if (!dwfl_addr2 || (!(dwarf_getlocation_addr(&attr_mem, dwfl_addr2, &expr,
+                                                                 &len, 1) == 1 && len > 0))) {
+                      if (verbose)
+                        clog << _F("saveargs: local '%s' (dieoffset: %s) is not available at this address (%s)\n",
+                                   arg_name, lex_cast_hex(dwarf_dieoffset(&arg)).c_str(), lex_cast_hex(dwfl_addr).c_str());
+                      continue;
+                    }
                   }
               }
 

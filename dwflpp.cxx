@@ -2402,6 +2402,7 @@ dwflpp::translate_location(struct obstack *pool,
      further below, the c_translate_FOO functions, the module_bias value used
      to be passed in, but instead should now be zero for the same reason. */
 
+ retry:
   switch (dwarf_getlocation_addr (attr, pc /*+ module_bias*/, &expr, &len, 1))
     {
     case 1:			/* Should always happen.  */
@@ -2409,7 +2410,16 @@ dwflpp::translate_location(struct obstack *pool,
         break;
       /* Fall through.  */
 
-    case 0:			/* Shouldn't happen.  */
+    case 0:			/* Shouldn't happen.... but can, e.g. due to PR15123. */
+      {
+        Dwarf_Addr pc2 = pr15123_retry_addr (pc, die);
+        if (pc2 != 0) {
+          pc = pc2;
+          goto retry;
+        }
+      }
+
+      /* FALLTHROUGH */
       throw semantic_error (_F("not accessible at this address [man error::dwarf] (%s, dieoffset: %s)",
                                lex_cast_hex(pc).c_str(), lex_cast_hex(dwarf_dieoffset(die)).c_str()),
                                e->tok);
@@ -3723,5 +3733,72 @@ dwflpp::add_module_build_id_to_hash (Dwfl_Module *m,
 
   return DWARF_CB_OK;
 }
+
+
+
+// Perform PR15123 heuristic for given variable at given address.
+// Return alternate pc address to do location-list lookup at, or 0 if
+// inapplicable.
+//
+Dwarf_Addr
+dwflpp::pr15123_retry_addr (Dwarf_Addr pc, Dwarf_Die* die)
+{
+  // For PR15123, we'd like to detect the situation where the
+  // incoming PC may point to a couple-of-byte instruction
+  // sequence that gcc emits for CFLAGS=-mfentry, and where
+  // context variables are in fact available throughout, *but* due
+  // to the bug, the dwarf debuginfo location-list only starts a
+  // few instructions later.  Prologue searching does not resolve
+  // this as a line-record is in place at the -mfentry prologue.
+  //
+  // Detecting this is complicated because ...
+  // - we only want to do this if -mfentry was actually used
+  // - if <pc> points to the a function entry point
+  // - if the architecture is familiar enough that we can have a
+  // hard-coded constant to skip over the prologue.
+  //
+  // Otherwise, we could give a false-positive - return corrupted data.
+
+  if (getenv ("PR15123_DISABLE"))
+    return 0;
+
+  Dwarf_Die cudie;
+  Dwarf_Attribute cudie_producer;
+  dwarf_diecu (die, &cudie, NULL, NULL);
+  if (! dwarf_attr_integrate(&cudie, DW_AT_producer, &cudie_producer))
+    return 0;
+
+  const char* producer = dwarf_formstring(&cudie_producer);
+  if (!producer)
+    return 0;
+  if (! strstr(producer, "-mfentry"))
+    return 0;
+
+  // Determine if this pc maps to the beginning of a
+  // real function (not some inlined doppelganger.  This
+  // is made tricker by this->function may not be
+  // pointing at the right DIE (say e.g. stap encountered
+  // the inlined copy first, so was focus_on_function'd).
+  vector<Dwarf_Die> scopes = getscopes(pc);
+  if (scopes.size() == 0)
+    return 0;
+
+  Dwarf_Die outer_function_die = scopes[0];
+  Dwarf_Addr entrypc;
+  die_entrypc(& outer_function_die, &entrypc);
+  if (entrypc != pc) // (will fail on retry, so we won't loop more than once)
+    return 0;
+
+  if (sess.architecture == "i386" ||
+      sess.architecture == "x86_64") {
+    /* pull the trigger */
+    if (sess.verbose > 2)
+      clog << _("retrying variable location-list lookup at address pc+5\n");
+    return pc + 5;
+  }
+
+  return 0;
+}
+
 
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */

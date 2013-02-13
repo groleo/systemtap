@@ -1,5 +1,5 @@
 // C++ interface to dwfl
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
 // Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
@@ -451,6 +451,8 @@ private:
                  Dwarf_Addr base,
                  void *arg);
 
+public:
+  Dwarf_Addr pr15123_retry_addr (Dwarf_Addr pc, Dwarf_Die* var);
 };
 
 #endif // DWFLPP_H
