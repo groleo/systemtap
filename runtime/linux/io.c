@@ -111,9 +111,16 @@ static void _stp_exit (void)
  * being used. If the last character is not a newline, then one 
  * is added. 
  *
- * After the error message is displayed, the module will be unloaded.
+ * After the error message is displayed, the module will transition
+ * to exiting-state (as if ^C was pressed) and will eventually unload.
  * @param fmt A variable number of args.
  * @sa _stp_exit().
+ *
+ * NB: this function should not be used from script-accessible tapset
+ * functions.  Those should simply set CONTEXT->last_error, so that
+ * script-level try/catch blocks can handle them.  This is for random
+ * runtime internal matters that a script didn't invoke and can't
+ * expect to handle.
  */
 static void _stp_error (const char *fmt, ...)
 {
