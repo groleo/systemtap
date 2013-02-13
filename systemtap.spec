@@ -685,6 +685,9 @@ exit 0
 # ------------------------------------------------------------------------
 
 %changelog
+* Wed Feb 13 2012 Serguei Makarov <smakarov@redhat.com> - 2.1-1
+- Upstream release.
+
 * Tue Oct 09 2012 Josh Stone <jistone@redhat.com> - 2.0-1
 - Upstream release.
 
