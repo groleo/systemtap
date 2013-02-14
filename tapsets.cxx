@@ -3015,40 +3015,43 @@ static const string EMBEDDED_FETCH_DEREF_DONE = string("\n")
   + "#undef deref\n"
   + "#undef store_deref\n";
 
-expression*
-dwarf_pretty_print::deref (target_symbol* e)
+static functioncall*
+synthetic_embedded_deref_call(systemtap_session& session,
+                              const string& function_name,
+                              const string& function_code,
+                              exp_type function_type,
+                              bool userspace_p,
+                              bool lvalue_p,
+                              target_symbol* e,
+                              expression* pointer=NULL)
 {
-  static unsigned tick = 0;
-
-  if (!deref_p)
-    {
-      assert (pointer && e->components.empty());
-      return pointer;
-    }
-
-  // Synthesize a function to dereference the dwarf fields,
-  // with a pointer parameter that is the base tracepoint variable
+  // Synthesize a functiondecl for the given embedded code string.
   functiondecl *fdecl = new functiondecl;
   fdecl->synthetic = true;
   fdecl->tok = e->tok;
+  fdecl->name = function_name;
+  fdecl->type = function_type;
+
   embeddedcode *ec = new embeddedcode;
   ec->tok = e->tok;
-
-  fdecl->name = "_dwarf_pretty_print_deref_" + lex_cast(tick++);
+  ec->code += "/* unprivileged */";
+  if (! lvalue_p)
+    ec->code += "/* pure */";
+  ec->code += EMBEDDED_FETCH_DEREF(userspace_p);
+  ec->code += function_code;
+  ec->code += EMBEDDED_FETCH_DEREF_DONE;
   fdecl->body = ec;
 
   // Synthesize a functioncall.
   functioncall* fcall = new functioncall;
   fcall->tok = e->tok;
   fcall->function = fdecl->name;
+  fcall->type = fdecl->type;
 
-  ec->code += EMBEDDED_FETCH_DEREF(userspace_p);
-
+  // If this code snippet uses a precomputed pointer,
+  // pass that as the first argument.
   if (pointer)
     {
-      ec->code += dw.literal_stmt_for_pointer (&pointer_type, e,
-                                               false, fdecl->type);
-
       vardecl *v = new vardecl;
       v->type = pe_long;
       v->name = "pointer";
@@ -3056,14 +3059,8 @@ dwarf_pretty_print::deref (target_symbol* e)
       fdecl->formal_args.push_back(v);
       fcall->args.push_back(pointer);
     }
-  else if (!local.empty())
-    ec->code += dw.literal_stmt_for_local (scopes, pc, local, e,
-                                           false, fdecl->type);
-  else
-    ec->code += dw.literal_stmt_for_return (&scopes[0], pc, e,
-                                            false, fdecl->type);
 
-  // Any non-literal indexes need to be passed in too.
+  // Any non-literal indexes need to be passed as arguments too.
   for (unsigned i = 0; i < e->components.size(); ++i)
     if (e->components[i].type == target_symbol::comp_expression_array_index)
       {
@@ -3075,13 +3072,57 @@ dwarf_pretty_print::deref (target_symbol* e)
         fcall->args.push_back(e->components[i].expr_index);
       }
 
-  ec->code += "/* pure */";
-  ec->code += "/* unprivileged */";
+  // If this code snippet is assigning to an lvalue,
+  // add a final argument for the rvalue.
+  if (lvalue_p)
+    {
+      // Modify the fdecl so it carries a single pe_long formal
+      // argument called "value".
 
-  ec->code += EMBEDDED_FETCH_DEREF_DONE;
+      // FIXME: For the time being we only support setting target
+      // variables which have base types; these are 'pe_long' in
+      // stap's type vocabulary.  Strings and pointers might be
+      // reasonable, some day, but not today.
 
-  fdecl->join (dw.sess);
+      vardecl *v = new vardecl;
+      v->type = pe_long;
+      v->name = "value";
+      v->tok = e->tok;
+      fdecl->formal_args.push_back(v);
+      // NB: We don't know the value for fcall argument yet.
+      // (see target_symbol_setter_functioncalls)
+    }
+
+  // Add the synthesized decl to the session, and return the call.
+  fdecl->join (session);
   return fcall;
+}
+
+expression*
+dwarf_pretty_print::deref (target_symbol* e)
+{
+  static unsigned tick = 0;
+
+  if (!deref_p)
+    {
+      assert (pointer && e->components.empty());
+      return pointer;
+    }
+
+  bool lvalue_p = false;
+  string name = "_dwarf_pretty_print_deref_" + lex_cast(tick++);
+
+  string code;
+  exp_type type = pe_long;
+  if (pointer)
+    code = dw.literal_stmt_for_pointer (&pointer_type, e, false, type);
+  else if (!local.empty())
+    code = dw.literal_stmt_for_local (scopes, pc, local, e, false, type);
+  else
+    code = dw.literal_stmt_for_return (&scopes[0], pc, e, false, type);
+
+  return synthetic_embedded_deref_call(dw.sess, name, code, type,
+                                       userspace_p, lvalue_p, e, pointer);
 }
 
 
@@ -3684,85 +3725,22 @@ dwarf_var_expanding_visitor::visit_target_symbol (target_symbol *e)
           return;
         }
 
-      // Synthesize a function.
-      functiondecl *fdecl = new functiondecl;
-      fdecl->synthetic = true;
-      fdecl->tok = e->tok;
-      embeddedcode *ec = new embeddedcode;
-      ec->tok = e->tok;
-
+      bool userspace_p = q.has_process;
       string fname = (string(lvalue ? "_dwarf_tvar_set" : "_dwarf_tvar_get")
                       + "_" + e->sym_name()
                       + "_" + lex_cast(tick++));
 
-      ec->code += EMBEDDED_FETCH_DEREF(q.has_process);
 
+      exp_type type = pe_long;
+      string code;
       if (q.has_return && (e->name == "$return"))
-        {
-	  ec->code += q.dw.literal_stmt_for_return (scope_die,
-						   addr,
-						   e,
-						   lvalue,
-						   fdecl->type);
-	}
+        code = q.dw.literal_stmt_for_return (scope_die, addr, e, lvalue, type);
       else
-        {
-	  ec->code += q.dw.literal_stmt_for_local (getscopes(e),
-						  addr,
-						  e->sym_name(),
-						  e,
-						  lvalue,
-						  fdecl->type);
-	}
+        code = q.dw.literal_stmt_for_local (getscopes(e), addr, e->sym_name(),
+                                            e, lvalue, type);
 
-      if (! lvalue)
-        ec->code += "/* pure */";
-
-      ec->code += "/* unprivileged */";
-      ec->code += EMBEDDED_FETCH_DEREF_DONE;
-
-      fdecl->name = fname;
-      fdecl->body = ec;
-
-      // Any non-literal indexes need to be passed in too.
-      for (unsigned i = 0; i < e->components.size(); ++i)
-        if (e->components[i].type == target_symbol::comp_expression_array_index)
-          {
-            vardecl *v = new vardecl;
-            v->type = pe_long;
-            v->name = "index" + lex_cast(i);
-            v->tok = e->tok;
-            fdecl->formal_args.push_back(v);
-          }
-
-      if (lvalue)
-        {
-          // Modify the fdecl so it carries a single pe_long formal
-          // argument called "value".
-
-          // FIXME: For the time being we only support setting target
-          // variables which have base types; these are 'pe_long' in
-          // stap's type vocabulary.  Strings and pointers might be
-          // reasonable, some day, but not today.
-
-          vardecl *v = new vardecl;
-          v->type = pe_long;
-          v->name = "value";
-          v->tok = e->tok;
-          fdecl->formal_args.push_back(v);
-        }
-      fdecl->join (q.sess);
-
-      // Synthesize a functioncall.
-      functioncall* n = new functioncall;
-      n->tok = e->tok;
-      n->function = fname;
-      n->type = fdecl->type;
-
-      // Any non-literal indexes need to be passed in too.
-      for (unsigned i = 0; i < e->components.size(); ++i)
-        if (e->components[i].type == target_symbol::comp_expression_array_index)
-          n->args.push_back(require(e->components[i].expr_index));
+      functioncall* n = synthetic_embedded_deref_call(q.sess, fname, code, type,
+                                                      userspace_p, lvalue, e);
 
       if (lvalue)
         {
@@ -3773,7 +3751,8 @@ dwarf_var_expanding_visitor::visit_target_symbol (target_symbol *e)
           *(target_symbol_setter_functioncalls.top()) = n;
         }
 
-      provide (n);
+      // Revisit the functioncall so arguments can be expanded.
+      n->visit (this);
     }
   catch (const semantic_error& er)
     {
@@ -4043,74 +4022,8 @@ dwarf_cast_query::handle_query_module()
 		  + "_" + e.sym_name()
 		  + "_" + lex_cast(tick++));
 
-  // Synthesize a function.
-  functiondecl *fdecl = new functiondecl;
-  fdecl->synthetic = true;
-  fdecl->tok = e.tok;
-  fdecl->type = type;
-  fdecl->name = fname;
-
-  embeddedcode *ec = new embeddedcode;
-  ec->tok = e.tok;
-  fdecl->body = ec;
-
-  ec->code += EMBEDDED_FETCH_DEREF(userspace_p);
-  ec->code += code;
-
-  // Give the fdecl an argument for the pointer we're trying to cast
-  vardecl *v1 = new vardecl;
-  v1->type = pe_long;
-  v1->name = "pointer";
-  v1->tok = e.tok;
-  fdecl->formal_args.push_back(v1);
-
-  // Any non-literal indexes need to be passed in too.
-  for (unsigned i = 0; i < e.components.size(); ++i)
-    if (e.components[i].type == target_symbol::comp_expression_array_index)
-      {
-        vardecl *v = new vardecl;
-        v->type = pe_long;
-        v->name = "index" + lex_cast(i);
-        v->tok = e.tok;
-        fdecl->formal_args.push_back(v);
-      }
-
-  if (lvalue)
-    {
-      // Modify the fdecl so it carries a second pe_long formal
-      // argument called "value".
-
-      // FIXME: For the time being we only support setting target
-      // variables which have base types; these are 'pe_long' in
-      // stap's type vocabulary.  Strings and pointers might be
-      // reasonable, some day, but not today.
-
-      vardecl *v2 = new vardecl;
-      v2->type = pe_long;
-      v2->name = "value";
-      v2->tok = e.tok;
-      fdecl->formal_args.push_back(v2);
-    }
-  else
-    ec->code += "/* pure */";
-
-  ec->code += "/* unprivileged */";
-  ec->code += EMBEDDED_FETCH_DEREF_DONE;
-
-  fdecl->join (dw.sess);
-
-  // Synthesize a functioncall.
-  functioncall* n = new functioncall;
-  n->tok = e.tok;
-  n->function = fname;
-  n->args.push_back(e.operand);
-
-  // Any non-literal indexes need to be passed in too.
-  for (unsigned i = 0; i < e.components.size(); ++i)
-    if (e.components[i].type == target_symbol::comp_expression_array_index)
-      n->args.push_back(e.components[i].expr_index);
-
-  result = n;
+  result = synthetic_embedded_deref_call(dw.sess, fname, code, type,
+                                         userspace_p, lvalue, &e, e.operand);
 }
 
 
@@ -9150,77 +9063,16 @@ tracepoint_var_expanding_visitor::visit_target_symbol_arg (target_symbol* e)
           return;
         }
 
-      // Synthesize a function to dereference the dwarf fields,
-      // with a pointer parameter that is the base tracepoint variable
-      functiondecl *fdecl = new functiondecl;
-      fdecl->synthetic = true;
-      fdecl->tok = e->tok;
-      embeddedcode *ec = new embeddedcode;
-      ec->tok = e->tok;
-
+      bool userspace_p = false;
       string fname = (string(lvalue ? "_tracepoint_tvar_set" : "_tracepoint_tvar_get")
                       + "_" + e->sym_name()
                       + "_" + lex_cast(tick++));
 
-      fdecl->name = fname;
-      fdecl->body = ec;
+      exp_type type = pe_long;
+      string code = dw.literal_stmt_for_pointer (&arg->type_die, e, lvalue, type);
 
-      ec->code += EMBEDDED_FETCH_DEREF(false);
-      ec->code += dw.literal_stmt_for_pointer (&arg->type_die, e,
-                                                  lvalue, fdecl->type);
-
-      // Give the fdecl an argument for the raw tracepoint value
-      vardecl *v1 = new vardecl;
-      v1->type = pe_long;
-      v1->name = "pointer";
-      v1->tok = e->tok;
-      fdecl->formal_args.push_back(v1);
-
-      // Any non-literal indexes need to be passed in too.
-      for (unsigned i = 0; i < e->components.size(); ++i)
-        if (e->components[i].type == target_symbol::comp_expression_array_index)
-          {
-            vardecl *v = new vardecl;
-            v->type = pe_long;
-            v->name = "index" + lex_cast(i);
-            v->tok = e->tok;
-            fdecl->formal_args.push_back(v);
-          }
-
-      if (lvalue)
-        {
-          // Modify the fdecl so it carries a pe_long formal
-          // argument called "value".
-
-          // FIXME: For the time being we only support setting target
-          // variables which have base types; these are 'pe_long' in
-          // stap's type vocabulary.  Strings and pointers might be
-          // reasonable, some day, but not today.
-
-          vardecl *v2 = new vardecl;
-          v2->type = pe_long;
-          v2->name = "value";
-          v2->tok = e->tok;
-          fdecl->formal_args.push_back(v2);
-        }
-      else
-        ec->code += "/* pure */";
-
-      ec->code += "/* unprivileged */";
-      ec->code += EMBEDDED_FETCH_DEREF_DONE;
-
-      fdecl->join (dw.sess);
-
-      // Synthesize a functioncall.
-      functioncall* n = new functioncall;
-      n->tok = e->tok;
-      n->function = fname;
-      n->args.push_back(require(e2));
-
-      // Any non-literal indexes need to be passed in too.
-      for (unsigned i = 0; i < e->components.size(); ++i)
-        if (e->components[i].type == target_symbol::comp_expression_array_index)
-          n->args.push_back(require(e->components[i].expr_index));
+      functioncall* n = synthetic_embedded_deref_call(dw.sess, fname, code, type,
+                                                      userspace_p, lvalue, e, e2);
 
       if (lvalue)
         {
@@ -9231,7 +9083,8 @@ tracepoint_var_expanding_visitor::visit_target_symbol_arg (target_symbol* e)
           *(target_symbol_setter_functioncalls.top()) = n;
         }
 
-      provide (n);
+      // Revisit the functioncall so arguments can be expanded.
+      n->visit (this);
     }
 }
 
