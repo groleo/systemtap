@@ -273,14 +273,14 @@ stapdfa::~stapdfa ()
 void
 stapdfa::emit_declaration (translator_output *o)
 {
-  o->newline() << "int";
-  o->newline() << func_name << " (char *cur)";
+  o->newline() << "static int";
+  o->newline() << func_name << " (const char *cur)";
   o->newline() << "{";
   o->indent(1);
 
-  o->newline() << "char *start = cur;";
+  o->newline() << "const char *start = cur;";
   o->newline() << "unsigned l = strlen(cur) + 1;"; /* include \0 byte at end of string */
-  o->newline() << "char *mar;";
+  o->newline() << "const char *mar;";
   o->newline() << "#define YYCTYPE char";
   o->newline() << "#define YYCURSOR cur";
   o->newline() << "#define YYLIMIT cur";
