@@ -24,6 +24,15 @@
 
 #define _(msg) msg
 
+/* Using this structure in the callback (to handle_function) allows us
+   to print out the function's address */
+struct dwfunc
+{
+  Dwfl *dwfl;
+  Dwarf_Die *cu;
+  Dwarf_Addr dwbias;
+};
+
 static void __attribute__ ((noreturn))
 fail (void *arg __attribute__ ((unused)), const char *fmt, ...)
 {
@@ -440,6 +449,40 @@ print_vars (unsigned int indent, Dwarf_Die *die)
     while (dwarf_siblingof (&child, &child) == 0);
 }
 
+static int
+handle_function (Dwarf_Die *funcdie, void *arg)
+{
+  struct dwfunc *a = arg;
+  Dwarf_Addr entrypc;
+  int result;
+  Dwarf_Addr *bkpts = NULL;  
+  if (arg == NULL)
+    error (2, 0, "Error, dwfl structure empty");
+  const char *name = dwarf_diename (funcdie);
+  if (name == NULL)
+    error (2, 0, "Error, dwarf_diename returned NULL from Dwarf_die");
+  if (dwarf_entrypc (funcdie, &entrypc) == 0)
+    {
+      entrypc += a->dwbias;
+      printf ("%-35s \t %#.16" PRIx64, name, entrypc);
+      printf ("\t");
+      result = dwarf_entry_breakpoints (funcdie, &bkpts);
+      /* error check the result is greater than 0 */
+      if (result > 0)
+	{
+	  int i = 0;
+	  /* the formatting changes as a looka-head if we need different ending whitespace chars
+	     the location is a combination of the address + the offset (bias) */
+	  for (i = 0; i < result; i++)
+	    printf (" %#.16" PRIx64 "%s", bkpts[i] + a->dwbias, i == result - 1 ? "\n" : "");
+	  free (bkpts);
+	}
+      else
+	error (2, 0, "Error: %s\n", dwarf_errmsg(-1));
+    }
+  return 0;
+}
+
 #define INDENT 4
 
 int
@@ -480,7 +523,13 @@ In the third form, the access is a store rather than a fetch."
   assert (dwfl != NULL);
 
   if (argi == argc)
-    error (2, 0, "need address argument");
+    {
+      struct dwfunc a = { .dwfl = dwfl };
+      printf ("Function  Address  Debug Entry Address(s)\n");
+      while ((a.cu = dwfl_nextcu(a.dwfl, a.cu, &a.dwbias)) != NULL)
+	dwarf_getfuncs (a.cu, &handle_function, &a.dwfl, 0);
+      return 0;
+    }
 
   char *endp;
   uintmax_t pc = strtoumax (argv[argi], &endp, 0);
