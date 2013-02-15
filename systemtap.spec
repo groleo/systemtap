@@ -52,7 +52,7 @@ Summary: Programmable system-wide instrumentation system
 Group: Development/System
 License: GPLv2+
 URL: http://sourceware.org/systemtap/
-Source: ftp://sourceware.org/pub/%{name}/releases/%{name}-%{version}.tar.gz
+Source: ftp://sourceware.org/pub/systemtap/releases/systemtap-%{version}.tar.gz
 
 # Build*
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -453,7 +453,7 @@ test -e %{_localstatedir}/log/stap-server/log || {
 # If it does not already exist, as stap-server, generate the certificate
 # used for signing and for ssl.
 if test ! -e ~stap-server/.systemtap/ssl/server/stap.cert; then
-   runuser -s /bin/sh - stap-server -c %{_libexecdir}/%{name}/stap-gen-cert >/dev/null
+   runuser -s /bin/sh - stap-server -c %{_libexecdir}/systemtap/stap-gen-cert >/dev/null
 fi
 # Activate the service
 %if %{with_systemd}
@@ -467,8 +467,8 @@ exit 0
 %triggerin client -- systemtap-server
 if test -e ~stap-server/.systemtap/ssl/server/stap.cert; then
    # echo Authorizing ssl-peer/trusted-signer certificate for local systemtap-server
-   %{_libexecdir}/%{name}/stap-authorize-cert ~stap-server/.systemtap/ssl/server/stap.cert %{_sysconfdir}/systemtap/ssl/client >/dev/null
-   %{_libexecdir}/%{name}/stap-authorize-cert ~stap-server/.systemtap/ssl/server/stap.cert %{_sysconfdir}/systemtap/staprun >/dev/null
+   %{_libexecdir}/systemtap/stap-authorize-cert ~stap-server/.systemtap/ssl/server/stap.cert %{_sysconfdir}/systemtap/ssl/client >/dev/null
+   %{_libexecdir}/systemtap/stap-authorize-cert ~stap-server/.systemtap/ssl/server/stap.cert %{_sysconfdir}/systemtap/staprun >/dev/null
 fi
 exit 0
 # XXX: corresponding %triggerun?
@@ -536,30 +536,30 @@ exit 0
 
 %post
 # Remove any previously-built uprobes.ko materials
-(make -C %{_datadir}/%{name}/runtime/uprobes clean) >/dev/null 2>&1 || true
+(make -C %{_datadir}/systemtap/runtime/uprobes clean) >/dev/null 2>&1 || true
 (/sbin/rmmod uprobes) >/dev/null 2>&1 || true
 
 %preun
 # Ditto
-(make -C %{_datadir}/%{name}/runtime/uprobes clean) >/dev/null 2>&1 || true
+(make -C %{_datadir}/systemtap/runtime/uprobes clean) >/dev/null 2>&1 || true
 (/sbin/rmmod uprobes) >/dev/null 2>&1 || true
 
 # ------------------------------------------------------------------------
 
-%files -f %{name}.lang
+%files -f systemtap.lang
 # The master "systemtap" rpm doesn't include any files.
 
-%files server -f %{name}.lang
+%files server -f systemtap.lang
 %defattr(-,root,root)
 %{_bindir}/stap-server
-%dir %{_libexecdir}/%{name}
-%{_libexecdir}/%{name}/stap-serverd
-%{_libexecdir}/%{name}/stap-start-server
-%{_libexecdir}/%{name}/stap-stop-server
-%{_libexecdir}/%{name}/stap-gen-cert
-%{_libexecdir}/%{name}/stap-sign-module
-%{_libexecdir}/%{name}/stap-authorize-cert
-%{_libexecdir}/%{name}/stap-env
+%dir %{_libexecdir}/systemtap
+%{_libexecdir}/systemtap/stap-serverd
+%{_libexecdir}/systemtap/stap-start-server
+%{_libexecdir}/systemtap/stap-stop-server
+%{_libexecdir}/systemtap/stap-gen-cert
+%{_libexecdir}/systemtap/stap-sign-module
+%{_libexecdir}/systemtap/stap-authorize-cert
+%{_libexecdir}/systemtap/stap-env
 %{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
 %{_mandir}/man7/warning*
@@ -582,21 +582,21 @@ exit 0
 %doc README README.unprivileged AUTHORS NEWS COPYING
 
 
-%files devel -f %{name}.lang
+%files devel -f systemtap.lang
 %{_bindir}/stap
 %{_bindir}/stap-prep
 %{_bindir}/stap-report
-%dir %{_datadir}/%{name}
-%{_datadir}/%{name}/runtime
-%{_datadir}/%{name}/tapset
+%dir %{_datadir}/systemtap
+%{_datadir}/systemtap/runtime
+%{_datadir}/systemtap/tapset
 %{_mandir}/man1/stap.1*
 %{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
 %{_mandir}/man7/warning*
 %doc README README.unprivileged AUTHORS NEWS COPYING
 %if %{with_bundled_elfutils}
-%dir %{_libdir}/%{name}
-%{_libdir}/%{name}/lib*.so*
+%dir %{_libdir}/systemtap
+%{_libdir}/systemtap/lib*.so*
 %endif
 %if %{with_emacsvim}
 %{_emacs_sitelispdir}/*.el*
@@ -605,7 +605,7 @@ exit 0
 %endif
 
 
-%files runtime -f %{name}.lang
+%files runtime -f systemtap.lang
 %defattr(-,root,root)
 %attr(4110,root,stapusr) %{_bindir}/staprun
 %{_bindir}/stapsh
@@ -614,12 +614,12 @@ exit 0
 %if %{with_dyninst}
 %{_bindir}/stapdyn
 %endif
-%dir %{_libexecdir}/%{name}
-%{_libexecdir}/%{name}/stapio
-%{_libexecdir}/%{name}/stap-authorize-cert
+%dir %{_libexecdir}/systemtap
+%{_libexecdir}/systemtap/stapio
+%{_libexecdir}/systemtap/stap-authorize-cert
 %if %{with_crash}
-%dir %{_libdir}/%{name}
-%{_libdir}/%{name}/staplog.so*
+%dir %{_libdir}/systemtap
+%{_libdir}/systemtap/staplog.so*
 %endif
 %{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
@@ -628,7 +628,7 @@ exit 0
 %doc README README.security AUTHORS NEWS COPYING
 
 
-%files client -f %{name}.lang
+%files client -f systemtap.lang
 %defattr(-,root,root)
 %doc README README.unprivileged AUTHORS NEWS COPYING examples
 %if %{with_docs}
@@ -647,8 +647,8 @@ exit 0
 %{_mandir}/man7/error*
 %{_mandir}/man7/stappaths.7*
 %{_mandir}/man7/warning*
-%dir %{_datadir}/%{name}
-%{_datadir}/%{name}/tapset
+%dir %{_datadir}/systemtap
+%{_datadir}/systemtap/tapset
 
 
 
@@ -664,7 +664,7 @@ exit 0
 %doc initscript/README.systemtap
 
 
-%files sdt-devel -f %{name}.lang
+%files sdt-devel -f systemtap.lang
 %defattr(-,root,root)
 %{_bindir}/dtrace
 %{_includedir}/sys/sdt.h
@@ -675,8 +675,8 @@ exit 0
 
 %files testsuite
 %defattr(-,root,root)
-%dir %{_datadir}/%{name}
-%{_datadir}/%{name}/testsuite
+%dir %{_datadir}/systemtap
+%{_datadir}/systemtap/testsuite
 
 
 # ------------------------------------------------------------------------
