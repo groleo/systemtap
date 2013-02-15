@@ -388,6 +388,12 @@ mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/systemtap
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/systemtap
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d
 install -m 644 initscript/logrotate.stap-server $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/stap-server
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
+install -m 755 initscript/systemtap $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/systemtap
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/systemtap/conf.d
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/systemtap/script.d
+install -m 644 initscript/config.systemtap $RPM_BUILD_ROOT%{_sysconfdir}/systemtap/config
 %if %{with_systemd}
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 touch $RPM_BUILD_ROOT%{_unitdir}/stap-server.service
@@ -395,12 +401,6 @@ install -m 644 stap-server.service $RPM_BUILD_ROOT%{_unitdir}/stap-server.servic
 mkdir -p $RPM_BUILD_ROOT/usr/lib/tmpfiles.d
 install -m 644 stap-server.conf $RPM_BUILD_ROOT/usr/lib/tmpfiles.d/stap-server.conf
 %else
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
-install -m 755 initscript/systemtap $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/systemtap
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/systemtap/conf.d
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/systemtap/script.d
-install -m 644 initscript/config.systemtap $RPM_BUILD_ROOT%{_sysconfdir}/systemtap/config
 install -m 755 initscript/stap-server $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/stap-server/conf.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
@@ -654,14 +654,11 @@ exit 0
 
 %files initscript
 %defattr(-,root,root)
-%if %{with_systemd}
-%else
 %{_sysconfdir}/rc.d/init.d/systemtap
 %dir %{_sysconfdir}/systemtap
 %dir %{_sysconfdir}/systemtap/conf.d
 %dir %{_sysconfdir}/systemtap/script.d
 %config(noreplace) %{_sysconfdir}/systemtap/config
-%endif
 %dir %{_localstatedir}/cache/systemtap
 %ghost %{_localstatedir}/run/systemtap
 %doc initscript/README.systemtap
