@@ -25,6 +25,11 @@ using namespace std;
 
 
 
+visitable::~visitable ()
+{
+}
+
+
 expression::expression ():
   type (pe_unknown), tok (0)
 {
@@ -348,7 +353,7 @@ void array_in::print (ostream& o) const
       operand->indexes[i]->print (o);
     }
   o << "] in ";
-  operand->base->print_indexable (o);
+  operand->base->print (o);
 }
 
 void post_crement::print (ostream& o) const
@@ -499,7 +504,7 @@ void functiondecl::printsig (ostream& o) const
 
 void arrayindex::print (ostream& o) const
 {
-  base->print_indexable (o);
+  base->print (o);
   o << "[";
   for (unsigned i=0; i<indexes.size(); i++)
     o << (i>0 ? ", " : "") << *indexes[i];
@@ -1045,7 +1050,7 @@ void foreach_loop::print (ostream& o) const
 	o << (sort_direction > 0 ? "+" : "-");
     }
   o << "] in ";
-  base->print_indexable (o);
+  base->print (o);
   if (sort_direction != 0 && sort_column == 0)
     {
       switch (sort_aggr)
@@ -1518,36 +1523,6 @@ hist_op::visit (visitor *u)
   u->visit_hist_op (this);
 }
 
-void
-indexable::print_indexable (std::ostream& o) const
-{
-  const symbol *sym;
-  const hist_op *hist;
-  classify_const_indexable(this, sym, hist);
-  if (sym)
-    sym->print (o);
-  else
-    {
-      assert (hist);
-      hist->print (o);
-    }
-}
-
-void
-indexable::visit_indexable (visitor* u)
-{
-  symbol *sym;
-  hist_op *hist;
-  classify_indexable(this, sym, hist);
-  if (sym)
-    sym->visit (u);
-  else
-    {
-      assert (hist);
-      hist->visit (u);
-    }
-}
-
 
 bool
 indexable::is_symbol(symbol *& sym_out)
@@ -1564,20 +1539,6 @@ indexable::is_hist_op(hist_op *& hist_out)
 }
 
 bool
-indexable::is_const_symbol(const symbol *& sym_out) const
-{
-  sym_out = NULL;
-  return false;
-}
-
-bool
-indexable::is_const_hist_op(const hist_op *& hist_out) const
-{
-  hist_out = NULL;
-  return false;
-}
-
-bool
 symbol::is_symbol(symbol *& sym_out)
 {
   sym_out = this;
@@ -1585,36 +1546,10 @@ symbol::is_symbol(symbol *& sym_out)
 }
 
 bool
-symbol::is_const_symbol(const symbol *& sym_out) const
-{
-  sym_out = this;
-  return true;
-}
-
-const token *
-symbol::get_tok() const
-{
-  return tok;
-}
-
-bool
 hist_op::is_hist_op(hist_op *& hist_out)
 {
   hist_out = this;
   return true;
-}
-
-bool
-hist_op::is_const_hist_op(const hist_op *& hist_out) const
-{
-  hist_out = this;
-  return true;
-}
-
-const token *
-hist_op::get_tok() const
-{
-  return tok;
 }
 
 void
@@ -1626,21 +1561,11 @@ classify_indexable(indexable* ix,
   hist_out = NULL;
   assert(ix != NULL);
   if (!(ix->is_symbol (array_out) || ix->is_hist_op (hist_out)))
-    throw semantic_error(_("Expecting symbol or histogram operator"), ix->get_tok());
+    throw semantic_error(_("Expecting symbol or histogram operator"), ix->tok);
   if (!(hist_out || array_out))
-    throw semantic_error(_("Failed to classify indexable"), ix->get_tok());
+    throw semantic_error(_("Failed to classify indexable"), ix->tok);
 }
 
-void
-classify_const_indexable(const indexable* ix,
-			 const symbol *& array_out,
-			 const hist_op *& hist_out)
-{
-  array_out = NULL;
-  hist_out = NULL;
-  if (!(ix->is_const_symbol(array_out) || ix->is_const_hist_op(hist_out)))
-    throw semantic_error(_("Expecting symbol or histogram operator"), ix->get_tok());
-}
 
 // ------------------------------------------------------------------------
 
@@ -1727,13 +1652,7 @@ traversing_visitor::visit_for_loop (for_loop* s)
 void
 traversing_visitor::visit_foreach_loop (foreach_loop* s)
 {
-  symbol *array = NULL;
-  hist_op *hist = NULL;
-  classify_indexable (s->base, array, hist);
-  if (array)
-    array->visit(this);
-  else
-    hist->visit(this);
+  s->base->visit(this);
 
   for (unsigned i=0; i<s->indexes.size(); i++)
     s->indexes[i]->visit (this);
@@ -1915,13 +1834,7 @@ traversing_visitor::visit_arrayindex (arrayindex* e)
   for (unsigned i=0; i<e->indexes.size(); i++)
     e->indexes[i]->visit (this);
 
-  symbol *array = NULL;
-  hist_op *hist = NULL;
-  classify_indexable(e->base, array, hist);
-  if (array)
-    return array->visit(this);
-  else
-    return hist->visit(this);
+  e->base->visit(this);
 }
 
 void
@@ -2212,19 +2125,11 @@ varuse_collecting_visitor::visit_arrayindex (arrayindex *e)
   symbol *array = NULL;
   hist_op *hist = NULL;
   classify_indexable(e->base, array, hist);
+  expression *value = array ?: hist->stat;
 
-  if (array)
-    {
-      if (current_lrvalue == e) current_lrvalue = array;
-      if (current_lvalue == e) current_lvalue = array;
-      functioncall_traversing_visitor::visit_arrayindex (e);
-    }
-  else // if (hist)
-    {
-      if (current_lrvalue == e) current_lrvalue = hist->stat;
-      if (current_lvalue == e) current_lvalue = hist->stat;
-      functioncall_traversing_visitor::visit_arrayindex (e);
-    }
+  if (current_lrvalue == e) current_lrvalue = value;
+  if (current_lvalue == e) current_lvalue = value;
+  functioncall_traversing_visitor::visit_arrayindex (e);
 
   current_lrvalue = last_lrvalue;
   current_lvalue = last_lvalue;
@@ -2255,13 +2160,7 @@ varuse_collecting_visitor::visit_foreach_loop (foreach_loop* s)
   // NB: we duplicate so don't bother call
   // functioncall_traversing_visitor::visit_foreach_loop (s);
 
-  symbol *array = NULL;
-  hist_op *hist = NULL;
-  classify_indexable (s->base, array, hist);
-  if (array)
-    array->visit(this);
-  else
-    hist->visit(this);
+  s->base->visit(this);
 
   // If the collection is sorted, imply a "write" access to the
   // array in addition to the "read" one already noted above.
@@ -2891,26 +2790,6 @@ update_visitor::visit_hist_op (hist_op* e)
 {
   replace (e->stat);
   provide (e);
-}
-
-template <> indexable*
-update_visitor::require <indexable> (indexable* src, bool clearok)
-{
-  indexable *dst = NULL;
-  if (src != NULL)
-    {
-      symbol *array_src=NULL;
-      hist_op *hist_src=NULL;
-
-      classify_indexable(src, array_src, hist_src);
-
-      if (array_src)
-        dst = require (array_src);
-      else
-        dst = require (hist_src);
-      assert(clearok || dst);
-    }
-  return dst;
 }
 
 

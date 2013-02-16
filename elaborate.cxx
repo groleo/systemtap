@@ -1055,7 +1055,7 @@ struct symbol_fetcher
 
   void visit_arrayindex (arrayindex* e)
   {
-    e->base->visit_indexable (this);
+    e->base->visit (this);
   }
 
   void visit_cast_op (cast_op* e)

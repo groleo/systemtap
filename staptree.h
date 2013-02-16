@@ -18,9 +18,12 @@
 #include <iostream>
 #include <stdexcept>
 #include <cassert>
+#include <typeinfo>
 extern "C" {
 #include <stdint.h>
 }
+
+#include "util.h"
 
 struct token; // parse.h
 struct systemtap_session; // session.h
@@ -61,7 +64,12 @@ struct token;
 struct visitor;
 struct update_visitor;
 
-struct expression
+struct visitable
+{
+  virtual ~visitable ();
+};
+
+struct expression : public visitable
 {
   exp_type type;
   const token* tok;
@@ -193,18 +201,13 @@ struct assignment: public binary_expression
 
 struct symbol;
 struct hist_op;
-struct indexable
+struct indexable : public expression
 {
   // This is a helper class which, type-wise, acts as a disjoint union
   // of symbols and histograms. You can ask it whether it's a
   // histogram or a symbol, and downcast accordingly.
-  void print_indexable (std::ostream& o) const;
-  void visit_indexable (visitor* u);
   virtual bool is_symbol(symbol *& sym_out);
   virtual bool is_hist_op(hist_op *& hist_out);
-  virtual bool is_const_symbol(const symbol *& sym_out) const;
-  virtual bool is_const_hist_op(const hist_op *& hist_out) const;
-  virtual const token *get_tok() const = 0;
   virtual ~indexable() {}
 };
 
@@ -216,15 +219,8 @@ classify_indexable(indexable* ix,
 		   symbol *& array_out,
 		   hist_op *& hist_out);
 
-void
-classify_const_indexable(const indexable* ix,
-			 symbol const *& array_out,
-			 hist_op const *& hist_out);
-
 struct vardecl;
-struct symbol:
-  public expression,
-  public indexable
+struct symbol: public indexable
 {
   std::string name;
   vardecl *referent;
@@ -232,8 +228,6 @@ struct symbol:
   void print (std::ostream& o) const;
   void visit (visitor* u);
   // overrides of type 'indexable'
-  const token *get_tok() const;
-  bool is_const_symbol(const symbol *& sym_out) const;
   bool is_symbol(symbol *& sym_out);
 };
 
@@ -469,15 +463,12 @@ enum histogram_type
 
 struct hist_op: public indexable
 {
-  const token* tok;
   histogram_type htype;
   expression* stat;
   std::vector<int64_t> params;
   void print (std::ostream& o) const;
   void visit (visitor* u);
   // overrides of type 'indexable'
-  const token *get_tok() const;
-  bool is_const_hist_op(const hist_op *& hist_out) const;
   bool is_hist_op(hist_op *& hist_out);
 };
 
@@ -541,7 +532,7 @@ struct functiondecl: public symboldecl
 // ------------------------------------------------------------------------
 
 
-struct statement
+struct statement : public visitable
 {
   virtual void print (std::ostream& o) const = 0;
   virtual void visit (visitor* u) = 0;
@@ -966,17 +957,23 @@ struct update_visitor: public visitor
     if (src != NULL)
       {
         src->visit(this);
-        assert(!targets.empty());
-        dst = static_cast<T*>(targets.top()); // XXX: danger will robinson: not typesafe!
-        targets.pop();
-        assert(clearok || dst);
+        if (values.empty())
+          throw std::runtime_error(_("update_visitor wasn't provided a value"));
+        visitable *v = values.top();
+        values.pop();
+        if (v == NULL && !clearok)
+          throw std::runtime_error(_("update_visitor was provided a NULL value"));
+        dst = dynamic_cast<T*>(v);
+        if (v != NULL && dst == NULL)
+          throw std::runtime_error(_F("update_visitor can't set type \"%s\" with a \"%s\"",
+                                      typeid(T).name(), typeid(*v).name()));
       }
     return dst;
   }
 
   template <typename T> void provide (T* src)
   {
-    targets.push(static_cast<void*>(src)); // XXX: not typesafe!
+    values.push(src);
   }
 
   template <typename T> void replace (T*& src, bool clearok=false)
@@ -984,7 +981,7 @@ struct update_visitor: public visitor
     src = require(src, clearok);
   }
 
-  virtual ~update_visitor() { assert(targets.empty()); }
+  virtual ~update_visitor() { assert(values.empty()); }
 
   virtual void visit_block (block *s);
   virtual void visit_try_block (try_block *s);
@@ -1027,11 +1024,8 @@ struct update_visitor: public visitor
   virtual void visit_perf_op (perf_op* e);
 
 private:
-  std::stack<void *> targets;
+  std::stack<visitable *> values;
 };
-
-template <> indexable*
-update_visitor::require <indexable> (indexable* src, bool clearok);
 
 // A visitor which performs a deep copy of the root node it's applied
 // to. NB: It does not copy any of the variable or function

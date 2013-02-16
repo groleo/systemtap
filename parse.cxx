@@ -3041,7 +3041,7 @@ parser::parse_array_in ()
       arrayindex* a = new arrayindex;
       a->indexes = indexes;
       a->base = parse_indexable();
-      a->tok = a->base->get_tok();
+      a->tok = a->base->tok;
       e->operand = a;
       return e;
     }
