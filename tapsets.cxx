@@ -5497,7 +5497,7 @@ sdt_uprobe_var_expanding_visitor::visit_target_symbol_context (target_symbol* e)
           pf->raw_components += tsym->name;
           tsym->components = e->components;
 
-          expression *texp = require (tsym);
+          expression *texp = require<expression> (tsym);
           if (!e->components.empty() &&
               e->components[0].type == target_symbol::comp_pretty_print)
             pf->raw_components += "=%s";
@@ -9132,7 +9132,7 @@ tracepoint_var_expanding_visitor::visit_target_symbol_context (target_symbol* e)
 
           // every variable should always be accessible!
           tsym->saved_conversion_error = 0;
-          expression *texp = require (tsym); // NB: throws nothing ...
+          expression *texp = require<expression> (tsym); // NB: throws nothing ...
           if (tsym->saved_conversion_error) // ... but this is how we know it happened.
             {
               if (dw.sess.verbose>2)
