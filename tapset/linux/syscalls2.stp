@@ -1704,6 +1704,28 @@ probe syscall.compat_sys_sendmsg.return = kernel.function("compat_sys_sendmsg").
 	retstr = return_str(1, $return)
 }
 
+# sendmmsg ____________________________________________________
+#
+# int sys_sendmmsg(int fd, struct mmsghdr __user *mmsg, unsigned int vlen,
+#                  unsigned int flags)
+#
+probe syscall.sendmmsg = kernel.function("sys_sendmmsg").call ?
+{
+	name = "sendmmsg"
+	s = $fd
+	mmsg_uaddr = $msg
+	vlen = $vlen
+	flags = $flags
+	flags_str = _sendflags_str($flags)
+	argstr = sprintf("%d, %p, %d, %s", $fd, $mmsg, $vlen,
+			 _sendflags_str($flags))
+}
+probe syscall.sendmmsg.return = kernel.function("sys_sendmmsg").return ?
+{
+	name = "sendmmsg"
+	retstr = return_str(1, $return)
+}
+
 # sendto _____________________________________________________
 #
 # long sys_sendto(int fd,
