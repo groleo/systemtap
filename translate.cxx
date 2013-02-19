@@ -5900,6 +5900,47 @@ dump_unwind_tables (Dwfl_Module *m,
   return DWARF_CB_OK;
 }
 
+static void
+dump_unwindsym_cxt_table(systemtap_session& session, ostream& output,
+			 const string& modname, unsigned modindex,
+			 const string& secname, unsigned secindex,
+			 const string& table, void*& data, size_t& len)
+{
+  if (data == NULL || len == 0)
+    return;
+
+  if (len > MAX_UNWIND_TABLE_SIZE)
+    {
+      if (secname.empty())
+	session.print_warning (_F("skipping module %s %s table (too big: %zi > %zi)",
+				  modname.c_str(), table.c_str(),
+				  len, (size_t)MAX_UNWIND_TABLE_SIZE));
+      else
+	session.print_warning (_F("skipping module %s, section %s %s table (too big: %zi > %zi)",
+				  modname.c_str(), secname.c_str(), table.c_str(),
+				  len, (size_t)MAX_UNWIND_TABLE_SIZE));
+      data = NULL;
+      len = 0;
+      return;
+    }
+
+  output << "#if defined(STP_USE_DWARF_UNWINDER) && defined(STP_NEED_UNWIND_DATA)\n";
+  output << "static uint8_t _stp_module_" << modindex << "_" << table;
+  if (!secname.empty())
+    output << "_" << secindex;
+  output << "[] = \n";
+  output << "  {";
+  for (size_t i = 0; i < len; i++)
+    {
+      int h = ((uint8_t *)data)[i];
+      output << h << ","; // decimal is less wordy than hex
+      if ((i + 1) % 16 == 0)
+	output << "\n" << "   ";
+    }
+  output << "};\n";
+  output << "#endif /* STP_USE_DWARF_UNWINDER && STP_NEED_UNWIND_DATA */\n";
+}
+
 static int
 dump_unwindsym_cxt (Dwfl_Module *m,
 		    unwindsym_dump_context *c,
@@ -5919,76 +5960,15 @@ dump_unwindsym_cxt (Dwfl_Module *m,
   Dwarf_Addr eh_addr = c->eh_addr;
   Dwarf_Addr eh_frame_hdr_addr = c->eh_frame_hdr_addr;
 
-  if (debug_frame != NULL && debug_len > 0)
-    {
-      c->output << "#if defined(STP_USE_DWARF_UNWINDER) && defined(STP_NEED_UNWIND_DATA)\n";
-      c->output << "static uint8_t _stp_module_" << stpmod_idx
-		<< "_debug_frame[] = \n";
-      c->output << "  {";
-      if (debug_len > MAX_UNWIND_TABLE_SIZE)
-        {
-          c->session.print_warning ("skipping module " + modname + " debug_frame unwind table (too big: " +
-                                      lex_cast(debug_len) + " > " + lex_cast(MAX_UNWIND_TABLE_SIZE) + ")");
-        }
-      else
-        for (size_t i = 0; i < debug_len; i++)
-          {
-            int h = ((uint8_t *)debug_frame)[i];
-            c->output << h << ","; // decimal is less wordy than hex
-            if ((i + 1) % 16 == 0)
-              c->output << "\n" << "   ";
-          }
-      c->output << "};\n";
-      c->output << "#endif /* STP_USE_DWARF_UNWINDER && STP_NEED_UNWIND_DATA */\n";
-    }
+  dump_unwindsym_cxt_table(c->session, c->output, modname, stpmod_idx, "", 0,
+			   "debug_frame", debug_frame, debug_len);
 
-  if (eh_frame != NULL && eh_len > 0)
-    {
-      c->output << "#if defined(STP_USE_DWARF_UNWINDER) && defined(STP_NEED_UNWIND_DATA)\n";
-      c->output << "static uint8_t _stp_module_" << stpmod_idx
-		<< "_eh_frame[] = \n";
-      c->output << "  {";
-      if (eh_len > MAX_UNWIND_TABLE_SIZE)
-        {
-          c->session.print_warning ("skipping module " + modname + " eh_frame table (too big: " +
-                                      lex_cast(eh_len) + " > " + lex_cast(MAX_UNWIND_TABLE_SIZE) + ")");
-        }
-      else
-        for (size_t i = 0; i < eh_len; i++)
-          {
-            int h = ((uint8_t *)eh_frame)[i];
-            c->output << h << ","; // decimal is less wordy than hex
-            if ((i + 1) % 16 == 0)
-              c->output << "\n" << "   ";
-          }
-      c->output << "};\n";
-      c->output << "#endif /* STP_USE_DWARF_UNWINDER && STP_NEED_UNWIND_DATA */\n";
-    }
+  dump_unwindsym_cxt_table(c->session, c->output, modname, stpmod_idx, "", 0,
+			   "eh_frame", eh_frame, eh_len);
 
-  if (eh_frame_hdr != NULL && eh_frame_hdr_len > 0)
-    {
-      c->output << "#if defined(STP_USE_DWARF_UNWINDER) && defined(STP_NEED_UNWIND_DATA)\n";
-      c->output << "static uint8_t _stp_module_" << stpmod_idx
-		<< "_eh_frame_hdr[] = \n";
-      c->output << "  {";
-      if (eh_frame_hdr_len > MAX_UNWIND_TABLE_SIZE)
-        {
-          c->session.print_warning (_F("skipping module %s eh_frame_hdr table (too big: %s > %s)",
-                                          modname.c_str(), lex_cast(eh_frame_hdr_len).c_str(),
-                                          lex_cast(MAX_UNWIND_TABLE_SIZE).c_str()));
-        }
-      else
-        for (size_t i = 0; i < eh_frame_hdr_len; i++)
-          {
-            int h = ((uint8_t *)eh_frame_hdr)[i];
-            c->output << h << ","; // decimal is less wordy than hex
-            if ((i + 1) % 16 == 0)
-              c->output << "\n" << "   ";
-          }
-      c->output << "};\n";
-      c->output << "#endif /* STP_USE_DWARF_UNWINDER && STP_NEED_UNWIND_DATA */\n";
-    }
-  
+  dump_unwindsym_cxt_table(c->session, c->output, modname, stpmod_idx, "", 0,
+			   "eh_frame_hdr", eh_frame_hdr, eh_frame_hdr_len);
+
   if (c->session.need_unwind && debug_frame == NULL && eh_frame == NULL)
     {
       // There would be only a small benefit to warning.  A user
@@ -6035,32 +6015,8 @@ dump_unwindsym_cxt (Dwfl_Module *m,
       if (secname == ".dynamic" || secname == ".absolute"
 	  || secname == ".text" || secname == "_stext")
 	{
-	  if (debug_frame_hdr != NULL && debug_frame_hdr_len > 0)
-	    {
-	      c->output << "#if defined(STP_USE_DWARF_UNWINDER)"
-			<< " && defined(STP_NEED_UNWIND_DATA)\n";
-	      c->output << "static uint8_t _stp_module_" << stpmod_idx
-			<< "_debug_frame_hdr_" << secidx << "[] = \n";
-	      c->output << "  {";
-	      if (debug_frame_hdr_len > MAX_UNWIND_TABLE_SIZE)
-		{
-                  c->session.print_warning (_F("skipping module %s, section %s debug_frame_hdr"
-                                                 " table (too big: %s > %s)", modname.c_str(),
-                                                 secname.c_str(), lex_cast(debug_frame_hdr_len).c_str(),
-                                                 lex_cast(MAX_UNWIND_TABLE_SIZE).c_str()));
-		}
-	      else
-		for (size_t i = 0; i < debug_frame_hdr_len; i++)
-		  {
-		    int h = ((uint8_t *)debug_frame_hdr)[i];
-                    c->output << h << ","; // decimal is less wordy than hex
-		    if ((i + 1) % 16 == 0)
-		      c->output << "\n" << "   ";
-		  }
-	      c->output << "};\n";
-	      c->output << "#endif /* STP_USE_DWARF_UNWINDER"
-			<< " && STP_NEED_UNWIND_DATA */\n";
-	    }
+	  dump_unwindsym_cxt_table(c->session, c->output, modname, stpmod_idx, secname, secidx,
+				   "debug_frame_hdr", debug_frame_hdr, debug_frame_hdr_len);
 	}
     }
 
