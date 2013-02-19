@@ -1713,7 +1713,7 @@ probe syscall.sendmmsg = kernel.function("sys_sendmmsg").call ?
 {
 	name = "sendmmsg"
 	s = $fd
-	mmsg_uaddr = $msg
+	mmsg_uaddr = $mmsg
 	vlen = $vlen
 	flags = $flags
 	flags_str = _sendflags_str($flags)

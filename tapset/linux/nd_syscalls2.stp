@@ -2027,6 +2027,36 @@ probe nd_syscall.compat_sys_sendmsg.return = kprobe.function("compat_sys_sendmsg
 	retstr = returnstr(1)
 }
 
+# sendmmsg ____________________________________________________
+#
+# int sys_sendmmsg(int fd, struct mmsghdr __user *mmsg, unsigned int vlen,
+#                  unsigned int flags)
+#
+probe nd_syscall.sendmmsg = kprobe.function("sys_sendmmsg").call ?
+{
+	name = "sendmmsg"
+	// s = $fd
+	// mmsg_uaddr = $mmsg
+	// vlen = $vlen
+	// flags = $flags
+	// flags_str = _sendflags_str($flags)
+	// argstr = sprintf("%d, %p, %d, %s", $fd, $mmsg, $vlen,
+	//		 _sendflags_str($flags))
+	asmlinkage()
+	s = int_arg(1)
+	mmsg_uaddr = pointer_arg(2)
+	vlen = uint_arg(3)
+	flags = uint_arg(4)
+	flags_str = _sendflags_str(flags)
+	argstr = sprintf("%d, %p, %d, %s", s, mmsg_uaddr, vlen,
+			 _sendflags_str(flags))
+}
+probe nd_syscall.sendmmsg.return = kprobe.function("sys_sendmmsg").return ?
+{
+	name = "sendmmsg"
+	retstr = returnstr(1)
+}
+
 # sendto _____________________________________________________
 #
 # long sys_sendto(int fd,

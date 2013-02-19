@@ -598,6 +598,16 @@ probe nd_syscall.sendmsg.return ?, nd_syscall.compat_sys_sendmsg.return ?
 	printf("%s %s\n", name, retstr)
 }
 
+probe nd_syscall.sendmmsg ?
+{
+	printf("%s(%s)\n", name, argstr)
+	printf("%d %p %d %d(%s)\n", s, mmsg_uaddr, vlen, flags, flags_str)
+}
+probe nd_syscall.sendmmsg.return ?
+{
+	printf("%s %s\n", name, retstr)
+}
+
 probe nd_syscall.sendto ?
 {
 	printf("%s(%s)\n", name, argstr)
