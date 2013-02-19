@@ -45,7 +45,8 @@ extern "C" {
 // limit (a bit more than twice the .debug_frame size of my local
 // vmlinux for 2.6.31.4-83.fc12.x86_64).
 // A larger value was recently found in a libxul.so build.
-#define MAX_UNWIND_TABLE_SIZE (6 * 1024 * 1024)
+// ... and yet again in libxul.so, PR15162
+#define MAX_UNWIND_TABLE_SIZE (16 * 1024 * 1024)
 
 #define STAP_T_01 _("\"Array overflow, check ")
 #define STAP_T_02 _("\"MAXNESTING exceeded\";")
