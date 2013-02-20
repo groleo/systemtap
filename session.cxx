@@ -1568,24 +1568,23 @@ systemtap_session::parse_kernel_functions ()
   system_map.open(system_map_path.c_str(), ifstream::in);
   if (! system_map.is_open())
     {
-      string error1 = _F("Checking \"%s\" failed with error: %s\nEnsure kernel development headers & makefiles are installed",
-                         system_map_path.c_str(), strerror(errno));
+      if (verbose > 1)
+	clog << _F("Kernel symbol table %s unavailable, (%s)",
+		   system_map_path.c_str(), strerror(errno)) << endl;
 
       string system_map_path2 = "/boot/System.map-" + kernel_release;
-
       system_map.clear();
       system_map.open(system_map_path2.c_str(), ifstream::in);
       if (! system_map.is_open())
         {
-          clog << error1 << endl;
-          clog << _F("Checking \"%s\" failed with error: %s",
-                     system_map_path2.c_str(), strerror(errno)) << endl;
-          return 1;
+	  if (verbose > 1)
+	    clog << _F("Kernel symbol table %s unavailable, (%s)",
+		       system_map_path2.c_str(), strerror(errno)) << endl;
         }
     }
 
   string address, type, name;
-  do
+  while (system_map.good())
     {
       system_map >> address >> type >> name;
 
@@ -1609,7 +1608,6 @@ systemtap_session::parse_kernel_functions ()
       // - what about __kprobes_text_start/__kprobes_text_end?
       kernel_functions.insert(name);
     }
-  while (! system_map.eof());
   system_map.close();
   return 0;
 }
