@@ -10,10 +10,16 @@ export PATH
 
 exec 2>&1
 
+if [ "`id -u`" -ne 0 ]; then
+        echo
+	echo WARNING: rerun $0 as root for fuller results.
+        echo
+fi
+
 run "id"
 run "stap -V"
 run "which stap"
-run "locate --regex '/stap(run)?$' | xargs ls -ald"
+run "locate --regex '/stap(run|io|dyn)?$' | xargs ls -ald"
 run "printenv | egrep '^PATH=|^LD_LIBRARY_PATH=|^SYSTEMTAP_.*=|^XDG_DATA.*='"
 run "stap -vv --poison-cache -p4 -e 'probe begin {exit()}'"
 run "gcc -v"
@@ -22,16 +28,16 @@ run "dmesg | egrep 'stap|systemtap' | tail -n 10"
 run "cat /proc/cpuinfo | egrep 'processor|vendor_id|model name'"
 if [ -x /usr/bin/dpkg ]; then
   # debian/ubuntu
-  run "dpkg --list | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi' | awk '{print \$2,\$3}' | sort"
+  run "dpkg --list | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr|dejagnu' | awk '{print \$2,\$3}' | sort"
 elif [ -x /usr/bin/rpm -o -x /bin/rpm ]; then
   # fedora/rhel/suse/...
-  run "rpm -qa --qf '%{name}-%{version} %{release}.%{arch}\\t%{buildtime:date}@%{buildhost}\\n' | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr' | sort"
+  run "rpm -qa --qf '%{name}-%{version} %{release}.%{arch}\\t%{buildtime:date}@%{buildhost}\\n' | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr|dejagnu' | sort"
 elif [ -f /var/log/packages ]; then
   # slackware
-  run "cat /var/log/packages | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr' | sort -k9"
+  run "cat /var/log/packages | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr|dejagnu' | sort -k9"
 fi
 run "egrep 'PROBE|TRACE|MARKER|_DEBUG_|MODULE|FENTRY|_SIG' /lib/modules/`uname -r`/build/.config | grep -v not.set | sort | fmt -w 80"
-run "find /debugfs /proc /sys /dev /sys/kernel/debug -path '*kprobe*' -type f 2>/dev/null | xargs grep -H ."
+run "find /debugfs /proc /sys /dev /sys/kernel/debug -path '*kprobe*' -o -path '*yama*' -type f 2>/dev/null | xargs grep -H ."
 run "lsmod"
 run "avahi-browse -r -t _stap._tcp"
 run "ifconfig -a"
@@ -47,5 +53,8 @@ if [ -x /usr/bin/seinfo ]; then
 fi
 if [ -x /usr/sbin/getenforce ]; then
    run "getenforce"
+fi
+if [ -x /usr/sbin/aa-status ]; then
+   run "aa-status"
 fi
 
