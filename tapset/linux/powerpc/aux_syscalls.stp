@@ -49,6 +49,20 @@
 #ifndef PTRACE_SINGLEBLOCK
 # define PTRACE_SINGLEBLOCK 0x100
 #endif
+
+/* (old) PTRACE requests with inverted arguments */
+#ifndef PPC_PTRACE_GETREGS
+#define PPC_PTRACE_GETREGS 0x99
+#endif
+#ifndef PPC_PTRACE_SETREGS
+#define PPC_PTRACE_SETREGS 0x98
+#endif
+#ifndef PPC_PTRACE_GETFPREGS
+#define PPC_PTRACE_GETFPREGS 0x97
+#endif
+#ifndef PPC_PTRACE_SETFPREGS
+#define PPC_PTRACE_SETFPREGS 0x96
+#endif
 %}
 function _arch_ptrace_argstr(request, pid, addr, data)
 {
