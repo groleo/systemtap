@@ -534,7 +534,7 @@ probe nfsd.proc4.write = kernel.function("nfsd4_write").call !,
 	count = $write->wr_buflen
 	offset = $write->wr_offset
 	vec = $rqstp->rq_vec
-	vlen = $write->wr_vlen
+	vlen = @choose_defined($write->wr_vlen, 0)
 	stable = $write->wr_stable_how
 
 	name = "nfsd.proc4.write"
