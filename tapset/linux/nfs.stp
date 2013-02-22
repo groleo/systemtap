@@ -249,10 +249,11 @@ probe nfs.fop.return = nfs.fop.llseek.return,
  * @dev: device identifier
  * @ino: inode number
  * @offset: the offset of the file will be repositioned
- * @origin: the original position. The possible value could be:
+ * @whence: the original position. The possible value could be:
  *    SEEK_SET (offset set to offset bytes),
  *    SEEK_CUR (offset set to its current location plus offset bytes),
  *    or SEEK_END (offset set to the size of the file plus offset bytes).
+ * @whence_str: symbolic string representation of the position to seek from
  */
 probe nfs.fop.llseek = kernel.function ("nfs_file_llseek") !,
                        module("nfs").function("nfs_file_llseek")
@@ -264,10 +265,14 @@ probe nfs.fop.llseek = kernel.function ("nfs_file_llseek") !,
 
         maxbyte = __file_maxbytes($filp)
         offset = $offset
-        origin = $origin
+%(systemtap_v <= "2.2" %?
+        origin = @choose_defined($whence, $origin)
+%)
+	whence = @choose_defined($whence, $origin)
+	whence_str = _seek_whence_str(@choose_defined($whence, $origin))
 
         name = "nfs.fop.llseek"
-        argstr = sprintf("%d, %d", offset, origin)
+        argstr = sprintf("%d, %d", offset, @choose_defined($whence, $origin))
 }
 
 probe nfs.fop.llseek.return = kernel.function ("nfs_file_llseek").return !,

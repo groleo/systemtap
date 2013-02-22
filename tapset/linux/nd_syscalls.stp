@@ -3017,7 +3017,7 @@ probe nd_syscall.llistxattr.return = kprobe.function("sys_llistxattr").return ?
 #            unsigned long offset_high,
 #            unsigned long offset_low,
 #            loff_t __user * result,
-#            unsigned int origin)
+#            unsigned int whence)
 probe nd_syscall.llseek = kprobe.function("sys_llseek") ?
 {
 	name = "llseek"
@@ -3098,7 +3098,7 @@ probe nd_syscall.lremovexattr.return = kprobe.function("sys_lremovexattr").retur
 }
 
 # lseek ______________________________________________________
-# off_t sys_lseek(unsigned int fd, off_t offset, unsigned int origin)
+# off_t sys_lseek(unsigned int fd, off_t offset, unsigned int whence)
 probe nd_syscall.lseek = kprobe.function("sys_lseek") ?
 {
 	name = "lseek"

@@ -146,11 +146,16 @@ probe generic.fop.llseek = kernel.function("generic_file_llseek")
 	file = $file
 
 	offset = $offset
-	origin = $origin
+%(systemtap_v <= "2.2" %?
+	origin = @choose_defined($whence, $origin)
+%)
+	whence = @choose_defined($whence, $origin)
+	whence_str = _seek_whence_str(@choose_defined($whence, $origin))
+
         maxbyte = __file_maxbytes($file)
 
 	name = "generic_file_llseek"
-	argstr = sprintf("%d, %d", $offset, $origin)
+	argstr = sprintf("%d, %d", $offset, @choose_defined($whence, $origin))
 }
 probe generic.fop.llseek.return = kernel.function("generic_file_llseek").return
 {
@@ -158,7 +163,11 @@ probe generic.fop.llseek.return = kernel.function("generic_file_llseek").return
 	retstr = sprintf("%d", $return)
 	file = $file
 	offset = $offset
-	origin = $origin
+%(systemtap_v <= "2.2" %?
+	origin = @choose_defined($whence, $origin)
+%)
+	whence = @choose_defined($whence, $origin)
+	whence_str = _seek_whence_str(@choose_defined($whence, $origin))
 
 	error = $return < 0 ? $return : 0
 	error_str = error ? errno_str(error) : ""

@@ -2351,7 +2351,7 @@ probe syscall.llistxattr.return = kernel.function("sys_llistxattr").return
 #            unsigned long offset_high,
 #            unsigned long offset_low,
 #            loff_t __user * result,
-#            unsigned int origin)
+#            unsigned int whence)
 probe syscall.llseek = kernel.function("sys_llseek").call ?
 {
 	name = "llseek"
@@ -2359,8 +2359,8 @@ probe syscall.llseek = kernel.function("sys_llseek").call ?
 	offset_high = $offset_high
 	offset_low = $offset_low
 	result_uaddr = $result
-	whence = $origin
-	whence_str = _seek_whence_str($origin)
+	whence = @choose_defined($whence, $origin)
+	whence_str = _seek_whence_str(@choose_defined($whence, $origin))
 	argstr = sprintf("%d, 0x%x, 0x%x, %p, %s", $fd, $offset_high,
 		$offset_low, $result, whence_str)
 }
@@ -2412,15 +2412,15 @@ probe syscall.lremovexattr.return = kernel.function("sys_lremovexattr").return
 }
 
 # lseek ______________________________________________________
-# off_t sys_lseek(unsigned int fd, off_t offset, unsigned int origin)
+# off_t sys_lseek(unsigned int fd, off_t offset, unsigned int whence)
 probe syscall.lseek = kernel.function("sys_lseek").call
 {
 	name = "lseek"
 	fildes = $fd
 #	offset = __int32($offset)
 	offset = $offset
-	whence = $origin
-	whence_str = _seek_whence_str($origin)
+	whence = @choose_defined($whence, $origin)
+	whence_str = _seek_whence_str(@choose_defined($whence, $origin))
 	argstr = sprintf("%d, %d, %s", $fd, offset, whence_str)
 }
 probe syscall.lseek.return = kernel.function("sys_lseek").return

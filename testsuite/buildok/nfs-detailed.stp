@@ -7,6 +7,10 @@
 probe nfs.fop.llseek {
 	printf("%s(%s)\n", name, argstr)
 	printf("%d %d %d %s %d\n", dev, ino, s_id, devname, maxbyte)
+%(systemtap_v <= "2.2" %?
+	printf("%d\n", origin)
+%)
+	printf("%d %d %s\n", offset, whence, whence_str);
 }
 probe nfs.fop.llseek.return {
 	printf("%s(%s)\n", name, retstr)

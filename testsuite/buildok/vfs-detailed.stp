@@ -4,7 +4,11 @@ probe generic.fop.llseek
 {
 	printf("%s %s\n", name, argstr)
 	printf("%p %s %d %p\n", dev, devname, ino, file)
-	printf("%d %d %d\n", offset, origin, maxbyte)
+	printf("%d %d\n", offset, maxbyte)
+%(systemtap_v <= "2.2" %?
+	printf("%d\n", origin)
+%)
+	printf("%d %s\n", whence, whence_str)
 }
 probe generic.fop.llseek.return
 {

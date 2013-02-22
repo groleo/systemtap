@@ -1,5 +1,11 @@
 * What's new in version 2.2
 
+- The folowing tapset variables are deprecated in release 2.2 and will
+  be removed in release 2.3:
+  - The 'origin' variables in the 'generic.fop.llseek',
+    'generic.fop.llseek.return', and 'nfs.fop.llseek' probes. The
+    'origin' variable has been replaced by the 'whence' variable.  
+
 - The folowing tapset functions used to return error strings instead
   of raising an error. The original behavior is deprecated in release
   2.2.
