@@ -4,7 +4,17 @@
   be removed in release 2.3:
   - The 'origin' variables in the 'generic.fop.llseek',
     'generic.fop.llseek.return', and 'nfs.fop.llseek' probes. The
-    'origin' variable has been replaced by the 'whence' variable.  
+    'origin' variable has been replaced by the 'whence' variable.
+  - The 'page_index' variable in the 'vfs.block_sync_page' and
+    'vfs.buffer_migrate_page' probe aliases.
+  - The 'write_from' and 'write_upto' variables in the
+    '_vfs.block_prepare_write' and '_vfs.block_prepare_write.return'
+    probe aliases.
+
+- The folowing tapset functions are deprecated in release 2.2 and will
+  be removed in release 2.3:
+
+  'ppos_pos', '_dev_minor', and '_dev_major'
 
 - The folowing tapset functions used to return error strings instead
   of raising an error. The original behavior is deprecated in release

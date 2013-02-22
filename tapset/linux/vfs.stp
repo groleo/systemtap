@@ -25,11 +25,13 @@ function __find_bdevname:string(dev:long, bdev:long)
 	return bdevname(bdev)
 }
 
+%(systemtap_v <= "2.2" %?
 /* deprecated */
 function ppos_pos:long (ppos:long)
 {
 	return kernel_pointer(ppos)
 }
+%)
 
 function __address_inode:long (page:long)
 {
@@ -126,6 +128,7 @@ function _get_fopv_size:long (iovp:long, nr_segs:long)
 	return -1
 }
 
+%(systemtap_v <= "2.2" %?
 /* deprecated */
 function _dev_minor:long (dev:long)
 {
@@ -137,6 +140,7 @@ function _dev_major:long (dev:long)
 {
 	return MAJOR(dev)
 }
+%)
 
 probe generic.fop.llseek = kernel.function("generic_file_llseek")
 {
@@ -607,8 +611,10 @@ probe vfs.block_sync_page = kernel.function("block_sync_page") ?
 	devname = __find_bdevname(dev, __page_bdev($page))
 	ino = __page_ino($page)
 
+%(systemtap_v <= "2.2" %?
 	# 'page_index' is deprecated
 	page_index = __page_index($page)
+%)
 	index = __page_index($page)
 
 	name = "block_sync_page"
@@ -629,8 +635,10 @@ probe vfs.buffer_migrate_page = kernel.function("buffer_migrate_page") ?
         ino = __page_ino($page)
 	devname = __find_bdevname(dev,__page_bdev($page))
 
+%(systemtap_v <= "2.2" %?
 	# 'page_index' is deprecated
 	page_index = __page_index($page)
+%)
 	index = __page_index($page)
 
 	name = "buffer_migrate_page"
@@ -946,15 +954,19 @@ probe _vfs.block_prepare_write = kernel.function("__block_write_begin") !,
 		_inode = __page_ino($page)
 		from = $pos & (%{ PAGE_CACHE_SIZE  %} - 1)
 		to = from + $len		
+%(systemtap_v <= "2.2" %?
 		# write_from and write_upto are deprecated
 		write_from = from
 		write_upto = to
+%)
 	}
 	else {
 		_inode = $inode
+%(systemtap_v <= "2.2" %?
 		# write_from and write_upto are deprecated
 		write_from = $from
 		write_upto = $to
+%)
 		from = $from
 		to = $to
 	}
@@ -975,15 +987,19 @@ probe _vfs.block_prepare_write.return =
 		_inode = __page_ino($page)
 		from = $pos & (%{ PAGE_CACHE_SIZE  %} - 1)
 		to = from + $len		
+%(systemtap_v <= "2.2" %?
 		# write_from and write_upto are deprecated
 		write_from = from
 		write_upto = to
+%)
 	}
 	else {
 		_inode = $inode
+%(systemtap_v <= "2.2" %?
 		# write_from and write_upto are deprecated
 		write_from = $from
 		write_upto = $to
+%)
 		from = $from
 		to = $to
 	}
