@@ -60,7 +60,7 @@ done ;
 
 # create man page headers
 for i in `ls | grep -v .stp | grep -v tapsetdescription` ; do
-  echo ".\" -*- nroff -*-" >> $i.template ;
+  echo ".\\\" -*- nroff -*-" >> $i.template ;
   echo ".TH tapset::"$i" 3stap --- IBM" >> $i.template ;
   echo ".SH NAME" >> $i.template ;
   echo "tapset::"`cat $i.stp`" \- systemtap "`cat $i.stp`" tapset" >> $i.template ;
