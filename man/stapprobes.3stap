@@ -283,7 +283,7 @@ before any rounding occurs.
 Profiling timers are also available to provide probes that execute on
 all CPUs at the rate of the system tick (CONFIG_HZ).  This probe takes
 no parameters.  On some kernels, this is a one-concurrent-user-only or
-disabled facility, resulting in error -16 (EBUSY) during probe
+disabled facility, resulting in error \-16 (EBUSY) during probe
 registration.
 
 .SAMPLE
@@ -540,7 +540,7 @@ returns may be outstanding.  The default is a relatively small number,
 on the order of a few times the number of physical CPUs.  If many
 different threads concurrently call the same blocking function, such
 as futex(2) or read(2), this limit could be exceeded, and skipped
-"kretprobes" would be reported by "stap -t".  To work around this,
+"kretprobes" would be reported by "stap \-t".  To work around this,
 specify a
 .SAMPLE
 probe FOO.return.maxactive(NNN)
@@ -548,7 +548,7 @@ probe FOO.return.maxactive(NNN)
 suffix, with a large enough NNN to cover all expected concurrently blocked
 threads.  Alternately, use the
 .SAMPLE
-stap -DKRETACTIVE=NNNN
+stap \-DKRETACTIVE=NNNN
 .ESAMPLE
 stap command line macro setting to override the default for all
 ".return" probes.
@@ -1152,7 +1152,7 @@ not sanity-check the values: it merely passes them through to
 the kernel for error- and safety-checking.  By default the perf event
 probe is systemwide unless .process is specified, which will bind the
 probe to a specific task.  If the name is omitted then it
-is inferred from the stap -c argument.   A perf event can be read on
+is inferred from the stap \-c argument.   A perf event can be read on
 demand using .counter.  The body of the perf probe handler will not be
 invoked for a .counter probe; instead, the counter is read in a user
 space probe via:
