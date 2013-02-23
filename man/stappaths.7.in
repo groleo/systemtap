@@ -57,8 +57,8 @@ The location of kernel debugging information when packaged into the
 RPM, unless overridden by the
 .I SYSTEMTAP_DEBUGINFO_PATH
 environment variable.  The default value for this variable is
-.I \+:.debug:/usr/lib/debug:build 
-.  Elfutils searches vmlinux in this path and it interprets the path as a base
+.I \+:.debug:/usr/lib/debug:build
+\&. Elfutils searches vmlinux in this path and it interprets the path as a base
 directory of which various subdirectories will be searched for finding debuginfo
 for the kernel, kernel modules, and user-space binaries.
 By default, systemtap will also look for vmlinux in these locations:
