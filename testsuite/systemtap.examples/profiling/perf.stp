@@ -1,3 +1,4 @@
+#! /usr/bin/env stap
 global cycles_per_insn
 global branch_per_insn
 global cacheref_per_insn

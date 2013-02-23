@@ -1,3 +1,4 @@
+#! /usr/bin/env stap
 // NOTE: a popup mutex is one that is seen in contention but the init of it was not detected
 // not sure why there are popups - static mutex init?
 
