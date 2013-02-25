@@ -1204,10 +1204,21 @@ function _fcntl_cmd_str(cmd) {
    return sprintf("UNKNOWN VALUE: %d", cmd)
 }
 
+%{
+#include <linux/fs.h>
+#ifndef SEEK_DATA
+#define SEEK_DATA	3
+#endif
+#ifndef SEEK_HOLE
+#define SEEK_HOLE	4
+#endif
+%}
 function _seek_whence_str(w) {
-   if(w==0x00000000) return "SEEK_SET"
-   if(w==0x00000001) return "SEEK_CUR"
-   if(w==0x00000002) return "SEEK_END"
+   if (w == %{ SEEK_SET %}) return "SEEK_SET"
+   if (w == %{ SEEK_CUR %}) return "SEEK_CUR"
+   if (w == %{ SEEK_END %}) return "SEEK_END"
+   if (w == %{ SEEK_DATA %}) return "SEEK_DATA"
+   if (w == %{ SEEK_HOLE %}) return "SEEK_HOLE"
    return sprintf("UNKNOWN VALUE: %d", w)
 }
 

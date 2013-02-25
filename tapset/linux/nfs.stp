@@ -249,10 +249,7 @@ probe nfs.fop.return = nfs.fop.llseek.return,
  * @dev: device identifier
  * @ino: inode number
  * @offset: the offset of the file will be repositioned
- * @whence: the original position. The possible value could be:
- *    SEEK_SET (offset set to offset bytes),
- *    SEEK_CUR (offset set to its current location plus offset bytes),
- *    or SEEK_END (offset set to the size of the file plus offset bytes).
+ * @whence: the position to seek from
  * @whence_str: symbolic string representation of the position to seek from
  */
 probe nfs.fop.llseek = kernel.function ("nfs_file_llseek") !,
