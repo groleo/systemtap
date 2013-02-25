@@ -9502,6 +9502,7 @@ $as_echo "yes" >&6; }
 $as_echo "it's dead, Jim" >&6; }
       have_fop="broken"
    fi
+   rm -f dummy-tapsets.pdf
 fi
  if test "$have_fop" == "yes"; then
   HAVE_FOP_TRUE=
