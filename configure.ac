@@ -271,6 +271,7 @@ if test "x${have_fop}" == "xyes"; then
       AC_MSG_RESULT([it's dead, Jim])
       have_fop="broken"
    fi
+   rm -f dummy-tapsets.pdf
 fi
 AM_CONDITIONAL([HAVE_FOP], [test "$have_fop" == "yes"])
 
