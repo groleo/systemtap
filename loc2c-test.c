@@ -31,6 +31,9 @@ struct dwfunc
   Dwfl *dwfl;
   Dwarf_Die *cu;
   Dwarf_Addr dwbias;
+  char * funcname;
+  uintmax_t pc;
+  bool matchdebug;
 };
 
 static void __attribute__ ((noreturn))
@@ -455,7 +458,8 @@ handle_function (Dwarf_Die *funcdie, void *arg)
   struct dwfunc *a = arg;
   Dwarf_Addr entrypc;
   int result;
-  Dwarf_Addr *bkpts = NULL;  
+  int i = 0;
+  Dwarf_Addr *bkpts = NULL;
   if (arg == NULL)
     error (2, 0, "Error, dwfl structure empty");
   const char *name = dwarf_diename (funcdie);
@@ -464,21 +468,53 @@ handle_function (Dwarf_Die *funcdie, void *arg)
   if (dwarf_entrypc (funcdie, &entrypc) == 0)
     {
       entrypc += a->dwbias;
-      printf ("%-35s \t %#.16" PRIx64, name, entrypc);
-      printf ("\t");
       result = dwarf_entry_breakpoints (funcdie, &bkpts);
-      /* error check the result is greater than 0 */
-      if (result > 0)
+      if (a->funcname == NULL)
 	{
-	  int i = 0;
-	  /* the formatting changes as a looka-head if we need different ending whitespace chars
-	     the location is a combination of the address + the offset (bias) */
-	  for (i = 0; i < result; i++)
-	    printf (" %#.16" PRIx64 "%s", bkpts[i] + a->dwbias, i == result - 1 ? "\n" : "");
-	  free (bkpts);
+	  printf ("%-35s  %#.16" PRIx64, name, entrypc);
+	  /* error check the result is greater than 0 */
+	  if (result > 0)
+	    {
+	      /* the formatting changes as a looka-head if we
+		 need different ending whitespace chars the
+		 location is a combination of the address +
+		 the offset (bias) */
+	      for (i = 0; i < result; i++)
+		printf (" %#.16" PRIx64 "%s", bkpts[i] + a->dwbias,
+			i == result - 1 ? "\n" : "");
+	      free (bkpts);
+	    }
 	}
-      else
-	error (2, 0, "Error: %s\n", dwarf_errmsg(-1));
+      else if (a->funcname != NULL && (!strcmp (a->funcname, name)))
+	{
+	  if (!a->matchdebug)
+	    {
+	      entrypc += a->dwbias;
+	      a->pc = entrypc;
+	      free (bkpts);
+	      return DWARF_CB_ABORT;
+	    }
+	  else if (result == 1 && a->matchdebug)
+	    {
+	      a->pc = (bkpts[0] + a->dwbias);
+	      free (bkpts);
+	      return DWARF_CB_ABORT;
+	    }
+	  else if (result > 1 && a->matchdebug)
+	    {
+	      printf ("Function: %-35s has multiple breakpoints: ", name);
+	      for (i = 0; i < result; i++)
+		printf (" %#.16" PRIx64 "%s", bkpts[i] + a->dwbias,
+			i == result - 1 ? "\n" : "");
+	      free (bkpts);
+	      return DWARF_CB_ABORT;
+	    }
+	  else
+	    {
+	      error (2, 0, "Error, dwarf_entry_breakpoints returned an error( %s )\n",
+		     dwarf_errmsg (result));
+	    }
+	}
     }
   return 0;
 }
@@ -503,29 +539,35 @@ main (int argc, char **argv)
     {
       .children = argp_children,
       .args_doc = "ADDRESS\n\
+FUNCTIONNAME\n\
 ADDRESS VARIABLE [FIELD...]\n\
+FUNCTIONNAME VARIABLE [FIELD...]\n\
 ADDRESS VARIABLE [FIELD...] =",
       .doc = "Process DWARF locations visible with PC at ADDRESS.\v\
 ADDRESS must be in %i format (i.e. \"0x...\").\n\
-In the first form, display the scope entries containing ADDRESS,\
- and the variables/parameters visible there, with their type names. \
- Hex numbers within \"[...]\" are DIE offsets.\n\
-In the second form, emit a C code fragment to access a variable. \
- Each FIELD argument is the name of a member of an aggregate type\
- (or pointer to one);\
+FUNCTIONNAME must be exact or prepended with '@' character to specify \
+ breakpoint entry.\n\
+In the first and second form, display the scope entries containing \
+ ADDRESS or FUNCTIONNAME, and the variables/parameters visible there, \
+ with their type names. Hex numbers within \"[...]\" are DIE offsets.\n\
+In the third and fourth form, emit a C code fragment to access a \
+ variable. Each FIELD argument is the name of a member of an aggregate \
+ type (or pointer to one);\
  \"+INDEX\" to index into an array type (or offset a pointer type);\
  or \"\" (an empty argument) to dereference a pointer type.\n\
-In the third form, the access is a store rather than a fetch."
+In the fifth form, the access is a store rather than a fetch."
+
     };
   Dwfl *dwfl = NULL;
   int argi;
   (void) argp_parse (&argp, argc, argv, 0, &argi, &dwfl);
   assert (dwfl != NULL);
-
+  struct dwfunc a = { .dwfl = dwfl, .funcname = NULL,
+		      .pc = 0, .matchdebug = 0 };
   if (argi == argc)
     {
-      struct dwfunc a = { .dwfl = dwfl };
-      printf ("Function  Address  Debug Entry Address(s)\n");
+      printf ("%-35s  %-18s %s\n",
+	      "Function", "Address", "Debug Entry Address(s)");
       while ((a.cu = dwfl_nextcu(a.dwfl, a.cu, &a.dwbias)) != NULL)
 	dwarf_getfuncs (a.cu, &handle_function, &a.dwfl, 0);
       return 0;
@@ -534,7 +576,22 @@ In the third form, the access is a store rather than a fetch."
   char *endp;
   uintmax_t pc = strtoumax (argv[argi], &endp, 0);
   if (endp == argv[argi])
-    error (2, 0, "bad address argument");
+    {
+      a.funcname = argv[argi];
+      /* We need to check and adjust for a possible '@' character */
+      if (a.funcname[0] == '@')
+	{
+	  a.funcname++;
+	  a.matchdebug = 1;
+	}
+      
+      while ((a.cu = dwfl_nextcu(a.dwfl, a.cu, &a.dwbias)) != NULL)
+	dwarf_getfuncs (a.cu, &handle_function, &a.dwfl, 0);
+      /* If a.pc isn't set, that means the function specified wasn't found */
+      if (!a.pc)
+	error (EXIT_FAILURE, 0, "function: '%s' not found\n", argv[argi]);
+      pc = a.pc;
+    }
 
   Dwarf_Addr cubias;
   Dwarf_Die *cudie = dwfl_addrdie (dwfl, pc, &cubias);
