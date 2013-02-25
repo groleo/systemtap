@@ -285,6 +285,7 @@ clean-local:
 
 distclean-local:
 	rm -rf build-elfutils include-elfutils lib-elfutils
+	rm -f doc/beginners/en-US doc/beginners/build/en-US/testsuite
 
 uninstall-local:
 	rm -rf $(DESTDIR)$(pkgdatadir)
