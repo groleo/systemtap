@@ -113,6 +113,48 @@ probe nd_syscall.mmap2.return = kprobe.function("sys_mmap2").return ?,
 }
 %)
 
+%( CONFIG_GENERIC_SIGALTSTACK == "n" %?
+# sigaltstack ________________________________________________
+# asmlinkage long
+# sys_sigaltstack(const stack_t __user * uss, stack_t __user *uoss)
+#
+# NOTE: args vary between archs.
+probe nd_syscall.sigaltstack = kprobe.function("sys_sigaltstack")
+{
+	name = "sigaltstack"
+	//uss_uaddr = $uss
+	//uoss_uaddr = $uoss
+	asmlinkage()
+	uss_uaddr = pointer_arg(1)
+	uoss_uaddr = pointer_arg(2)
+%(systemtap_v <= "2.2" %?
+	regs = %{ _stp_current_pt_regs() %}
+%)
+	argstr = sprintf("%p, %p", uss_uaddr, uoss_uaddr)
+}
+probe nd_syscall.sigaltstack.return = kprobe.function("sys_sigaltstack").return
+{
+	name = "sigaltstack"
+	retstr = returnstr(1)
+}
+%)
+
+# sys32_sigaltstack ________________________________________________
+# asmlinkage long
+# sys32_sigaltstack(const stack_t32 __user *uss, stack_t32 __user *uoss)
+#
+# NOTE: args vary between archs.
+probe nd_syscall.sys32_sigaltstack = kprobe.function("sys32_sigaltstack") ?
+{
+	name = "sys32_sigaltstack"
+	argstr = ""
+}
+probe nd_syscall.sys32_sigaltstack.return = kprobe.function("sys32_sigaltstack").return ?
+{
+	name = "sys32_sigaltstack"
+	retstr = returnstr(1)
+}
+
 # sysctl _____________________________________________________
 #
 # long sys32_sysctl(struct __sysctl_args32 __user *args)

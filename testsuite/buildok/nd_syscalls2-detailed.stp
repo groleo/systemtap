@@ -919,6 +919,18 @@ probe nd_syscall.sigaction.return ?, nd_syscall.sigaction32.return ?
 	printf("%s, %s\n", name, retstr)
 }
 
+%( CONFIG_GENERIC_SIGALTSTACK == "y" %?
+probe nd_syscall.sigaltstack
+{
+	printf("%s, %s\n", name, argstr)
+	printf("%p, %p\n", uss_uaddr, uoss_uaddr)
+}
+probe nd_syscall.sigaltstack.return
+{
+	printf("%s, %s\n", name, retstr)
+}
+%)
+
 probe nd_syscall.signal ?
 {
 	printf("%s, %s\n", name, argstr)

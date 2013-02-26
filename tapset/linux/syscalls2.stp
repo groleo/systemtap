@@ -2440,6 +2440,24 @@ probe syscall.sigaction32.return = kernel.function("sys32_sigaction").return ?,
 	retstr = return_str(1, $return)
 }
 
+%( CONFIG_GENERIC_SIGALTSTACK == "y" %?
+# sigaltstack ________________________________________________
+# SYSCALL_DEFINE2(sigaltstack,const stack_t __user *,uss, stack_t __user *,uoss)
+#
+probe syscall.sigaltstack = kernel.function("sys_sigaltstack").call
+{
+	name = "sigaltstack"
+	uss_uaddr = $uss
+	uoss_uaddr = $uoss
+	argstr = sprintf("%p, %p", $uss, $uoss)
+}
+probe syscall.sigaltstack.return = kernel.function("sys_sigaltstack").return
+{
+	name = "sigaltstack"
+	retstr = return_str(1, $return)
+}
+%)
+
 # signal _____________________________________________________
 # unsigned long sys_signal(int sig, __sighandler_t handler)
 #

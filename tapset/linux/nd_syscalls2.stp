@@ -2954,6 +2954,28 @@ probe nd_syscall.sigaction32.return = kprobe.function("sys32_sigaction").return 
 	retstr = returnstr(1)
 }
 
+%( CONFIG_GENERIC_SIGALTSTACK == "y" %?
+# sigaltstack ________________________________________________
+# SYSCALL_DEFINE2(sigaltstack,const stack_t __user *,uss, stack_t __user *,uoss)
+#
+probe nd_syscall.sigaltstack = kprobe.function("sys_sigaltstack")
+{
+	name = "sigaltstack"
+	// uss_uaddr = $uss
+	// uoss_uaddr = $uoss
+	// argstr = sprintf("%p, %p", $uss, $uoss)
+	asmlinkage()
+	uss_uaddr = pointer_arg(1)
+	uoss_uaddr = pointer_arg(2)
+	argstr = sprintf("%p, %p", uss_uaddr, uoss_uaddr)
+}
+probe nd_syscall.sigaltstack.return = kprobe.function("sys_sigaltstack").return
+{
+	name = "sigaltstack"
+	retstr = returnstr(1)
+}
+%)
+
 # signal _____________________________________________________
 # unsigned long sys_signal(int sig, __sighandler_t handler)
 #

@@ -35,6 +35,7 @@ probe syscall.iopl.return = kernel.function("sys_iopl").return
 	retstr = return_str(1, $return)
 }
 
+%( CONFIG_GENERIC_SIGALTSTACK == "n" %?
 # sigaltstack ________________________________________________
 # long sys_sigaltstack(const stack_t __user *uss, stack_t __user *uoss,
 #		struct pt_regs *regs)
@@ -50,7 +51,9 @@ probe syscall.sigaltstack = kernel.function("sys_sigaltstack")
 %(systemtap_v <= "1.4" %?
 	regs_uaddr = $regs
 %)
+%(systemtap_v <= "2.2" %?
 	regs = $regs
+%)
 	argstr = sprintf("%p, %p", $uss, $uoss)
 }
 probe syscall.sigaltstack.return = kernel.function("sys_sigaltstack").return
@@ -58,6 +61,7 @@ probe syscall.sigaltstack.return = kernel.function("sys_sigaltstack").return
 	name = "sigaltstack"
 	retstr = return_str(1, $return)
 }
+%)
 
 # sysctl _____________________________________________________
 #

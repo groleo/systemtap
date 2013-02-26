@@ -10,6 +10,8 @@
   - The 'write_from' and 'write_upto' variables in the
     '_vfs.block_prepare_write' and '_vfs.block_prepare_write.return'
     probe aliases.
+  - The 'regs' variable in the 'syscall.sigaltstack' and
+  'nd_syscall.sigaltstack' probe aliases.
 
 - The folowing tapset functions are deprecated in release 2.2 and will
   be removed in release 2.3:

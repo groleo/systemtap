@@ -30,15 +30,20 @@ probe nd_syscall.mmap2.return ?
 }
 %)
 
+%( CONFIG_GENERIC_SIGALTSTACK == "n" %?
 probe nd_syscall.sigaltstack ?
 {
 	printf("%s, %s\n", name, argstr)
-	printf("%p, %p, %p\n", uss_uaddr, uoss_uaddr, regs)
+	printf("%p, %p\n", uss_uaddr, uoss_uaddr)
+%(systemtap_v <= "2.2" %?
+	printf("%p\n", regs)
+%)
 }
 probe nd_syscall.sigaltstack.return ?
 {
 	printf("%s, %s\n", name, retstr)
 }
+%)
 
 probe nd_syscall.sys32_sigaltstack ?
 {
