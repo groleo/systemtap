@@ -79,7 +79,7 @@ cp SystemTap_Beginners_Guide.pdf $BASEDIR/htdocs/
 #echo 'systemtap_beginners_guide.pdf cp'
 
 rm $BASEDIR/htdocs/SystemTap_Beginners_Guide/*.html
-cp -r SystemTap_Beginners_Guide $BASEDIR/htdocs/
+cp -R SystemTap_Beginners_Guide $BASEDIR/htdocs/
 #echo 'systemtap_beginners_guide recursive cp'
 # tapsets 
 cd ../..
