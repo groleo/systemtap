@@ -41,8 +41,12 @@ run "find /debugfs /proc /sys /dev /sys/kernel/debug -path '*kprobe*' -o -path '
 run "lsmod"
 run "avahi-browse -r -t _stap._tcp"
 run "ifconfig -a"
-run "eu-readelf -n /boot/vmlinuz-`uname -r` | grep Build"
-run "eu-readelf -n /usr/lib/debug/lib/modules/`uname -r`/vmlinux | grep Build"
+for file in /boot/vmlinuz-`uname -r` /usr/lib/debug/lib/modules/`uname -r`/vmlinux /lib/modules/`uname -r`/build/vmlinux
+do
+    if [ -f $file ]; then
+        run "eu-readelf -n $file | grep Build"
+    fi
+done
 run "hexdump -C /sys/kernel/notes"
 for file in /sys/module/*/notes/.*build*
 do
