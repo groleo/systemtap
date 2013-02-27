@@ -439,8 +439,11 @@ probe syscall.flock.return
 probe syscall.fork
 {
 	printf("%s, %s\n", name, argstr)
-	printf("%d, %d, %d, %d, %p, %p\n", clone_flags, stack_start, regs,
+	printf("%d, %d, %d, %p, %p\n", clone_flags, stack_start,
 	       stack_size, parent_tid_uaddr, child_tid_uaddr)
+%(systemtap_v <= "2.2" %?
+	printf("%p\n", regs)
+%)
 }
 probe syscall.fork.return
 {

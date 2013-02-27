@@ -1023,7 +1023,6 @@ probe syscall.flock.return = kernel.function("sys_flock").return
 # fork _______________________________________________________
 # long do_fork(unsigned long clone_flags,
 #	unsigned long stack_start,
-#	struct pt_regs *regs,
 #	unsigned long stack_size,
 #	int __user *parent_tidptr,
 #	int __user *child_tidptr)
@@ -1031,21 +1030,40 @@ probe syscall.fork = kernel.function("do_fork").call
 {
 	clone_flags = $clone_flags
 	stack_start = $stack_start
-	regs = $regs
 	stack_size = $stack_size
 	parent_tid_uaddr = $parent_tidptr
 	child_tid_uaddr = $child_tidptr
 
-	if (!__is_user_regs(regs)) {
-		name = "fork_kernel_thread"
-		argstr = __fork_flags(clone_flags)
-	} else if (clone_flags & 17)
-		name = "fork"
-	else if (clone_flags & 0x4000)
-		name = "vfork"
-	else {
-		name = "clone"
-		argstr = __fork_flags(clone_flags)
+	if (@defined($regs)) {
+%(systemtap_v <= "2.2" %?
+		regs = $regs
+%)
+		if (!__is_user_regs($regs)) {
+			name = "fork_kernel_thread"
+			argstr = __fork_flags($clone_flags)
+		} else if ($clone_flags & %{ CLONE_VFORK %}) {
+			name = "vfork"
+		} else if (($clone_flags & %{ CSIGNAL %}) != %{ SIGCHLD %}) {
+			name = "clone"
+			argstr = __fork_flags($clone_flags)
+		} else {
+			name = "fork"
+		}
+	} else {
+%(systemtap_v <= "2.2" %?
+		regs = 0
+%)
+		if ($clone_flags & %{ CLONE_VM | CLONE_UNTRACED %}) {
+			name = "fork_kernel_thread"
+			argstr = __fork_flags($clone_flags)
+		} else if ($clone_flags & %{ CLONE_VFORK %}) {
+			name = "vfork"
+		} else if (($clone_flags & %{ CSIGNAL %}) != %{ SIGCHLD %}) {
+			name = "clone"
+			argstr = __fork_flags($clone_flags)
+		} else {
+			name = "fork"
+		}
 	}
 }
 probe syscall.fork.return = kernel.function("do_fork").return

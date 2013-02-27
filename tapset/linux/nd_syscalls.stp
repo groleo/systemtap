@@ -1358,7 +1358,6 @@ probe nd_syscall.flock.return = kprobe.function("sys_flock").return ?
 # fork _______________________________________________________
 # long do_fork(unsigned long clone_flags,
 #	unsigned long stack_start,
-#	struct pt_regs *regs,
 #	unsigned long stack_size,
 #	int __user *parent_tidptr,
 #	int __user *child_tidptr)
@@ -1372,21 +1371,36 @@ probe nd_syscall.fork = kprobe.function("do_fork")
 	// child_tid_uaddr = $child_tidptr
 	clone_flags = ulong_arg(1)
 	stack_start = ulong_arg(2)
+%(kernel_v >= "3.8.0" %?
+%(systemtap_v <= "2.2" %?
+	regs = 0
+%)
+	stack_size = ulong_arg(3)
+	parent_tid_uaddr = pointer_arg(4)
+	child_tid_uaddr = pointer_arg(5)
+%:
+%(systemtap_v <= "2.2" %?
 	regs = pointer_arg(3)
+%)
 	stack_size = ulong_arg(4)
 	parent_tid_uaddr = pointer_arg(5)
 	child_tid_uaddr = pointer_arg(6)
+%)
 
-	if (!__is_user_regs(regs)) {
+%(kernel_v >= "3.8.0" %?
+	if (clone_flags & %{ CLONE_VM | CLONE_UNTRACED %}) {
+%:
+	if (!__is_user_regs(pointer_arg(3))) {
+%)
 		name = "fork_kernel_thread"
 		argstr = __fork_flags(clone_flags)
-	} else if (clone_flags & 17)
-		name = "fork"
-	else if (clone_flags & 0x4000)
+	} else if (clone_flags & %{ CLONE_VFORK %}) {
 		name = "vfork"
-	else {
+	} else if ((clone_flags & %{ CSIGNAL %}) != %{ SIGCHLD %}) {
 		name = "clone"
 		argstr = __fork_flags(clone_flags)
+	} else {
+		name = "fork"
 	}
 }
 probe nd_syscall.fork.return = kprobe.function("do_fork").return
