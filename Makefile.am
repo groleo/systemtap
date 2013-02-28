@@ -253,7 +253,7 @@ endif
 	(cd $(srcdir)/tapset; find . \( -name '*.stp' -o -name '*.stpm' -o -name README \) -print \
 		| while read f; do $(INSTALL_DATA) -D $$f $(DESTDIR)$(pkgdatadir)/tapset/$$f; done)
 	(cd $(srcdir)/testsuite/systemtap.examples; find . -type f -print \
-		| egrep -v 'check.exp|ChangeLog|examples-index-gen.pl' \
+		| egrep -v 'check.exp|ChangeLog|examples-index-gen.pl|html/.*\.tmpl$$' \
 		| while read f; do if test -x $$f; then \
 			i_cmd="$(INSTALL_PROGRAM)"; else \
 			i_cmd="$(INSTALL_DATA)"; fi; \
