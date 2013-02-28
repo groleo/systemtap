@@ -3424,6 +3424,11 @@ dwflpp::build_blacklist()
   blfn += "|test_ti_thread_flag.*";
   blfn += "|inat_get_opcode_attribute";
   blfn += "|system_call_after_swapgs";
+  blfn += "|HYPERVISOR_[gs]et_debugreg";
+  blfn += "|HYPERVISOR_event_channel_op";
+  blfn += "|hash_64";
+  blfn += "|hash_ptr";
+  blfn += "|native_set_pte";
 
   // Lots of locks
   blfn += "|.*raw_.*_lock.*";
