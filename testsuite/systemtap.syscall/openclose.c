@@ -13,7 +13,7 @@ int main()
   int fd1, fd2;
 
   fd2 = creat("foobar1",S_IREAD|S_IWRITE);
-  //staptest// open ("foobar1", O_WRONLY|O_CREAT[[[[.O_LARGEFILE]]]]?|O_TRUNC, 0600) = NNNN
+  //staptest// [[[[open ("foobar1", O_WRONLY|O_CREAT[[[[.O_LARGEFILE]]]]?|O_TRUNC!!!!creat ("foobar1"]]]], 0600) = NNNN
 
   fd1 = open("foobar2",O_WRONLY|O_CREAT, S_IRWXU);
   //staptest// open ("foobar2", O_WRONLY|O_CREAT[[[[.O_LARGEFILE]]]]?, 0700) = NNNN
