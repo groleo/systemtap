@@ -750,11 +750,11 @@ check_groups (
 
   /* Check whether this module can be loaded based on its path. check_path is a pointer to a
      module-specific function which will do this.  If we can load this module due to its path,
-     then assign stapdev level credentials to the user, since the module may require it. */
+     then assign all privilege credentials to the user, since the module may require them. */
   rc = check_path (module_path, module_fd);
   if (rc == 1) {
     if (assigned_user_credentials)
-      *assigned_user_credentials = pr_stapdev;
+      *assigned_user_credentials = pr_all;
   }
   else
     err("Unable to verify the signature for the module %s.\n", module_path);
