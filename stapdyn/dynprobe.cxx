@@ -22,13 +22,13 @@ find_dynprobes(void* module, vector<dynprobe_target>& targets)
 {
   // We query for probes with a function interface, so first we have
   // to get function pointers from the stap module.
-  typeof(&stp_dyninst_target_count) target_count = NULL;
-  typeof(&stp_dyninst_target_path) target_path = NULL;
+  __typeof__(&stp_dyninst_target_count) target_count = NULL;
+  __typeof__(&stp_dyninst_target_path) target_path = NULL;
 
-  typeof(&stp_dyninst_probe_count) probe_count = NULL;
-  typeof(&stp_dyninst_probe_target) probe_target = NULL;
-  typeof(&stp_dyninst_probe_offset) probe_offset = NULL;
-  typeof(&stp_dyninst_probe_semaphore) probe_semaphore = NULL;
+  __typeof__(&stp_dyninst_probe_count) probe_count = NULL;
+  __typeof__(&stp_dyninst_probe_target) probe_target = NULL;
+  __typeof__(&stp_dyninst_probe_offset) probe_offset = NULL;
+  __typeof__(&stp_dyninst_probe_semaphore) probe_semaphore = NULL;
 
   // If we don't even have this, then there aren't any uprobes in the module.
   set_dlsym(target_count, module, "stp_dyninst_target_count", false);
@@ -51,7 +51,7 @@ find_dynprobes(void* module, vector<dynprobe_target>& targets)
     }
 
   // This is optional - was only added post-2.0
-  typeof(&stp_dyninst_probe_flags) probe_flags = NULL;
+  __typeof__(&stp_dyninst_probe_flags) probe_flags = NULL;
   set_dlsym(probe_flags, module, "stp_dyninst_probe_flags", false);
 
   // Construct all the targets in the module.

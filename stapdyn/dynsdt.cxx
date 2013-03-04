@@ -124,13 +124,13 @@ find_sdt(const string& file)
         {
           sdt_base_addr = shdr.sh_addr;
           sdt_base_offset = shdr.sh_offset;
-          warnx("SDT base addr:%#"PRIx64" offset:%#"PRIx64"", sdt_base_addr, sdt_base_offset);
+          warnx("SDT base addr:%#" PRIx64 " offset:%#" PRIx64 "", sdt_base_addr, sdt_base_offset);
         }
       if (sh_name && !strcmp(".probes", sh_name))
         {
           sdt_probes_addr = shdr.sh_addr;
           sdt_probes_offset = shdr.sh_offset;
-          warnx("SDT probes addr:%#"PRIx64" offset:%#"PRIx64"", sdt_probes_addr, sdt_probes_offset);
+          warnx("SDT probes addr:%#" PRIx64 " offset:%#" PRIx64 "", sdt_probes_addr, sdt_probes_offset);
         }
     }
 
@@ -227,7 +227,7 @@ find_sdt(const string& file)
                 joined_args << ", ";
               joined_args << p.args[i].first << "@\"" << p.args[i].second << "\"";
             }
-	  warnx("SDT offset:%#"PRIx64" semaphore:%#"PRIx64" %s:%s(%s)",
+	  warnx("SDT offset:%#" PRIx64 " semaphore:%#" PRIx64 " %s:%s(%s)",
 		p.pc_offset, p.sem_offset,
                 p.provider.c_str(), p.name.c_str(),
 		joined_args.str().c_str());
@@ -254,7 +254,7 @@ instrument_sdt(BPatch_process* process,
   Dyninst::Address address = object->fileOffsetToAddr(p.pc_offset);
   if (address == BPatch_object::E_OUT_OF_BOUNDS)
     {
-      warnx("couldn't convert %s:%s at %#"PRIx64" to an address",
+      warnx("couldn't convert %s:%s at %#" PRIx64 " to an address",
             p.provider.c_str(), p.name.c_str(), p.pc_offset);
       return;
     }
@@ -263,7 +263,7 @@ instrument_sdt(BPatch_process* process,
   object->findPoints(address, points);
   if (points.empty())
     {
-      warnx("couldn't find %s:%s at %#"PRIx64" -> %#lx",
+      warnx("couldn't find %s:%s at %#" PRIx64 " -> %#lx",
             p.provider.c_str(), p.name.c_str(), p.pc_offset, address);
       return;
     }
@@ -289,7 +289,7 @@ instrument_sdt(BPatch_process* process,
   image->findFunction("printf", printfFuncs);
   BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
 
-  warnx("inserting %s:%s at %#"PRIx64" -> %#lx [%zu]",
+  warnx("inserting %s:%s at %#" PRIx64 " -> %#lx [%zu]",
         p.provider.c_str(), p.name.c_str(), p.pc_offset, address, points.size());
   process->insertSnippet(printfCall, points);
 
@@ -297,11 +297,11 @@ instrument_sdt(BPatch_process* process,
     {
       Dyninst::Address sem_address = object->fileOffsetToAddr(p.sem_offset);
       if (sem_address == BPatch_object::E_OUT_OF_BOUNDS)
-        warnx("couldn't convert %s:%s semaphore %#"PRIx64" to an address",
+        warnx("couldn't convert %s:%s semaphore %#" PRIx64 " to an address",
               p.provider.c_str(), p.name.c_str(), p.sem_offset);
       else
         {
-          warnx("incrementing semaphore for %s:%s at %#"PRIx64" -> %#lx",
+          warnx("incrementing semaphore for %s:%s at %#" PRIx64 " -> %#lx",
                 p.provider.c_str(), p.name.c_str(), p.sem_offset, sem_address);
 
           BPatch_type *sem_type = image->findType("unsigned short");
