@@ -102,7 +102,7 @@ stap_destroy_vma_map(void)
 			if (hlist_empty(head))
 				continue;
 
-		        hlist_for_each_entry_safe(entry, node, n, head, hlist) {
+		        stap_hlist_for_each_entry_safe(entry, node, n, head, hlist) {
 				hlist_del(&entry->hlist);
 				__stp_tf_vma_release_entry(entry);
 			}
@@ -131,7 +131,7 @@ __stp_tf_get_vma_map_entry_internal(struct task_struct *tsk,
 	struct __stp_tf_vma_entry *entry;
 
 	head = &__stp_tf_vma_map[__stp_tf_vma_map_hash(tsk)];
-	hlist_for_each_entry(entry, node, head, hlist) {
+	stap_hlist_for_each_entry(entry, node, head, hlist) {
 		if (tsk->pid == entry->pid
 		    && vm_start == entry->vm_start) {
 			return entry;
@@ -152,7 +152,7 @@ __stp_tf_get_vma_map_entry_end_internal(struct task_struct *tsk,
 	struct __stp_tf_vma_entry *entry;
 
 	head = &__stp_tf_vma_map[__stp_tf_vma_map_hash(tsk)];
-	hlist_for_each_entry(entry, node, head, hlist) {
+	stap_hlist_for_each_entry(entry, node, head, hlist) {
 		if (tsk->pid == entry->pid
 		    && vm_end == entry->vm_end) {
 			return entry;
@@ -290,7 +290,7 @@ stap_find_vma_map_info(struct task_struct *tsk, unsigned long addr,
 
 	read_lock_irqsave(&__stp_tf_vma_lock, flags);
 	head = &__stp_tf_vma_map[__stp_tf_vma_map_hash(tsk)];
-	hlist_for_each_entry(entry, node, head, hlist) {
+	stap_hlist_for_each_entry(entry, node, head, hlist) {
 		if (tsk->pid == entry->pid
 		    && addr >= entry->vm_start
 		    && addr < entry->vm_end) {
@@ -334,7 +334,7 @@ stap_find_vma_map_info_user(struct task_struct *tsk, void *user,
 
 	read_lock_irqsave(&__stp_tf_vma_lock, flags);
 	head = &__stp_tf_vma_map[__stp_tf_vma_map_hash(tsk)];
-	hlist_for_each_entry(entry, node, head, hlist) {
+	stap_hlist_for_each_entry(entry, node, head, hlist) {
 		if (tsk->pid == entry->pid
 		    && user == entry->user) {
 			found_entry = entry;
@@ -365,7 +365,7 @@ stap_drop_vma_maps(struct task_struct *tsk)
 	unsigned long flags;
 	write_lock_irqsave(&__stp_tf_vma_lock, flags);
 	head = &__stp_tf_vma_map[__stp_tf_vma_map_hash(tsk)];
-        hlist_for_each_entry_safe(entry, node, n, head, hlist) {
+        stap_hlist_for_each_entry_safe(entry, node, n, head, hlist) {
             if (tsk->pid == entry->pid) {
 		    hlist_del(&entry->hlist);
 		    __stp_tf_vma_release_entry(entry);

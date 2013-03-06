@@ -1,5 +1,5 @@
 // build/run probes
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -316,6 +316,7 @@ compile_pass (systemtap_session& s)
   output_autoconf(s, o, "autoconf-regset.c", "STAPCONF_REGSET", NULL);
   output_autoconf(s, o, "autoconf-utrace-regset.c", "STAPCONF_UTRACE_REGSET", NULL);
   output_autoconf(s, o, "autoconf-uprobe-get-pc.c", "STAPCONF_UPROBE_GET_PC", NULL);
+  output_autoconf(s, o, "autoconf-hlist-4args.c", "STAPCONF_HLIST_4ARGS", NULL);
   output_exportconf(s, o, "tsc_khz", "STAPCONF_TSC_KHZ");
   output_exportconf(s, o, "cpu_khz", "STAPCONF_CPU_KHZ");
   output_exportconf(s, o, "__module_text_address", "STAPCONF_MODULE_TEXT_ADDRESS");

@@ -370,7 +370,7 @@ static void utrace_shutdown(void)
 	spin_lock(&task_utrace_lock);
 	for (i = 0; i < TASK_UTRACE_TABLE_SIZE; i++) {
 		head = &task_utrace_table[i];
-		hlist_for_each_entry_safe(utrace, node, node2, head, hlist) {
+		stap_hlist_for_each_entry_safe(utrace, node, node2, head, hlist) {
 			hlist_del(&utrace->hlist);
 			utrace_cleanup(utrace);
 		}
@@ -389,7 +389,7 @@ static struct utrace *__task_utrace_struct(struct task_struct *task)
 
 	lockdep_assert_held(&task_utrace_lock);
 	head = &task_utrace_table[hash_ptr(task, TASK_UTRACE_HASH_BITS)];
-	hlist_for_each_entry(utrace, node, head, hlist) {
+	stap_hlist_for_each_entry(utrace, node, head, hlist) {
 		if (utrace->task == task)
 			return utrace;
 	}

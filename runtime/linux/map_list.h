@@ -47,7 +47,7 @@ static inline struct list_head* list_prev(struct list_head* head)
 #define mhlist_add_head	hlist_add_head
 #define mhlist_del_init	hlist_del_init
 
-#define mhlist_for_each_entry	hlist_for_each_entry
+#define mhlist_for_each_entry	stap_hlist_for_each_entry
 
 
 #endif /* _LINUX_MAP_LIST_H_ */

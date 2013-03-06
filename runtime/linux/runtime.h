@@ -1,5 +1,5 @@
 /* main header file for Linux
- * Copyright (C) 2005-2011 Red Hat Inc.
+ * Copyright (C) 2005-2013 Red Hat Inc.
  * Copyright (C) 2005-2006 Intel Corporation.
  *
  * This file is part of systemtap, and is free software.  You can
@@ -71,6 +71,14 @@ static void _stp_warn (const char *fmt, ...) __attribute__ ((format (printf, 1, 
 
 static void _stp_exit(void);
 
+
+#ifdef STAPCONF_HLIST_4ARGS
+#define stap_hlist_for_each_entry(a,b,c,d) hlist_for_each_entry(a,b,c,d)
+#define stap_hlist_for_each_entry_safe(a,b,c,d,e) hlist_for_each_entry_safe(a,b,c,d,e)
+#else
+#define stap_hlist_for_each_entry(a,b,c,d) (void) b; hlist_for_each_entry(a,c,d)
+#define stap_hlist_for_each_entry_safe(a,b,c,d,e) (void) b; hlist_for_each_entry_safe(a,c,d,e)
+#endif
 
 
 /* unprivileged user support */

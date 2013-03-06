@@ -71,7 +71,7 @@ __stp_tf_map_get_free_entry(void)
 
 	if (hlist_empty(head))
 		return NULL;
-	hlist_for_each_entry(entry, node, head, hlist) {
+	stap_hlist_for_each_entry(entry, node, head, hlist) {
 		break;
 	}
 	if (entry != NULL)
@@ -111,7 +111,7 @@ __stp_tf_get_map_entry(struct task_struct *tsk)
 	unsigned long flags;
 	read_lock_irqsave(&__stp_tf_map_lock, flags);
 	head = &__stp_tf_map_table[__stp_tf_map_hash(tsk)];
-	hlist_for_each_entry(entry, node, head, hlist) {
+	stap_hlist_for_each_entry(entry, node, head, hlist) {
 		if (tsk->pid == entry->pid) {
 			read_unlock_irqrestore(&__stp_tf_map_lock, flags);
 			return entry;
@@ -135,7 +135,7 @@ __stp_tf_add_map(struct task_struct *tsk, long syscall_no, unsigned long arg0,
 
 	write_lock_irqsave(&__stp_tf_map_lock, flags);
 	head = &__stp_tf_map_table[__stp_tf_map_hash(tsk)];
-	hlist_for_each_entry(entry, node, head, hlist) {
+	stap_hlist_for_each_entry(entry, node, head, hlist) {
 		// If we find an existing entry, just increment the
 		// usage count.
 		if (tsk->pid == entry->pid) {
