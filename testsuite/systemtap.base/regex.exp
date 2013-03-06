@@ -5,6 +5,8 @@ proc stap_test_regex {expected re match} {
     global script_path
     set test "regex $expected:$re:$match"
 
+    if {! [installtest_p]} { untested "$test"; return }
+
     eval spawn stap $script_path "$re" "$match"
     set got -1
     expect {
