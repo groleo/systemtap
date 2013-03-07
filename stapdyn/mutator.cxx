@@ -420,9 +420,9 @@ mutator::run ()
       // For our first event, fire the target's process.begin probes (if any)
       target_mutatee->begin_callback();
 
-      // XXX Dyninst's notification FD is currently broken, so we'll fall back
-      // to the fully-blocking wait for now.
-#if 0
+      // Dyninst's notification FD was fixed in 8.1; for earlier versions we'll
+      // fall back to the fully-blocking wait for now.
+#ifdef DYNINST_8_1
       // mask signals while we're preparing to poll
       stap_sigmasker masked;
 
