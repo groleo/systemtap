@@ -382,6 +382,7 @@ mv $RPM_BUILD_ROOT%{_datadir}/doc/systemtap/SystemTap_Beginners_Guide docs.insta
 
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/stap-server
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/stap-server
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/stap-server/.systemtap
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/stap-server
 touch $RPM_BUILD_ROOT%{_localstatedir}/log/stap-server/log
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/systemtap
@@ -434,6 +435,9 @@ getent group stap-server >/dev/null || groupadd -g 155 -r stap-server 2>/dev/nul
 getent passwd stap-server >/dev/null || \
   useradd -c "Systemtap Compile Server" -u 155 -g stap-server -d %{_localstatedir}/lib/stap-server -r -s /sbin/nologin stap-server 2>/dev/null || \
   useradd -c "Systemtap Compile Server" -g stap-server -d %{_localstatedir}/lib/stap-server -r -s /sbin/nologin stap-server
+
+%post server
+
 test -e ~stap-server && chmod 755 ~stap-server
 
 if [ ! -f ~stap-server/.systemtap/rc ]; then
@@ -442,9 +446,7 @@ if [ ! -f ~stap-server/.systemtap/rc ]; then
   echo "--rlimit-as=614400000 --rlimit-cpu=60 --rlimit-nproc=20 --rlimit-stack=1024000 --rlimit-fsize=51200000" > ~stap-server/.systemtap/rc
   chown stap-server:stap-server ~stap-server/.systemtap/rc
 fi
-exit 0
 
-%post server
 test -e %{_localstatedir}/log/stap-server/log || {
      touch %{_localstatedir}/log/stap-server/log
      chmod 664 %{_localstatedir}/log/stap-server/log
@@ -575,6 +577,7 @@ exit 0
 %config(noreplace) %{_sysconfdir}/logrotate.d/stap-server
 %dir %{_sysconfdir}/stap-server
 %dir %attr(0750,stap-server,stap-server) %{_localstatedir}/lib/stap-server
+%dir %attr(0700,stap-server,stap-server) %{_localstatedir}/lib/stap-server/.systemtap
 %dir %attr(0755,stap-server,stap-server) %{_localstatedir}/log/stap-server
 %ghost %config(noreplace) %attr(0644,stap-server,stap-server) %{_localstatedir}/log/stap-server/log
 %ghost %attr(0755,stap-server,stap-server) %{_localstatedir}/run/stap-server
