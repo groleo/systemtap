@@ -1,0 +1,10 @@
+#! stap -p1
+
+// invalid regex operator usage, currently should be rejected by parser
+probe begin {
+      a = "this is regex"
+      b = "but this is not match" =~ a // rhs must be literal regex
+      c = 2
+      b = "but this is totally bonkers!" =~ c
+      printf ("%s %d %d", a, b, c)
+}

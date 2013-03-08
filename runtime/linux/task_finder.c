@@ -26,6 +26,7 @@
 #include "syscall.h"
 #include "utrace_compatibility.h"
 #include "task_finder_map.c"
+#include "task_finder_vma.c"
 
 static LIST_HEAD(__stp_task_finder_list);
 
@@ -99,6 +100,7 @@ struct stap_task_finder_target {
 /* public: */
 	pid_t pid;
 	const char *procname;
+        const char *purpose;
 	stap_task_finder_callback callback;
 	stap_task_finder_mmap_callback mmap_callback;
 	stap_task_finder_munmap_callback munmap_callback;
@@ -440,7 +442,7 @@ __stp_task_finder_cleanup(void)
 static char *
 __stp_get_mm_path(struct mm_struct *mm, char *buf, int buflen)
 {
-	struct vm_area_struct *vma;
+	struct file *vm_file;
 	char *rc = NULL;
 
 	// The down_read() function can sleep, so we'll call
@@ -451,17 +453,12 @@ __stp_get_mm_path(struct mm_struct *mm, char *buf, int buflen)
 		return ERR_PTR(-ENOENT);
 	}
 
-	vma = mm->mmap;
-	while (vma) {
-		if ((vma->vm_flags & VM_EXECUTABLE) && vma->vm_file)
-			break;
-		vma = vma->vm_next;
-	}
-	if (vma) {
+	vm_file = stap_find_exe_file(mm);
+	if (vm_file) {
 #ifdef STAPCONF_DPATH_PATH
-		rc = d_path(&(vma->vm_file->f_path), buf, buflen);
+		rc = d_path(&(vm_file->f_path), buf, buflen);
 #else
-		rc = d_path(vma->vm_file->f_dentry, vma->vm_file->f_vfsmnt,
+		rc = d_path(vm_file->f_dentry, vm_file->f_vfsmnt,
 			    buf, buflen);
 #endif
 	}
@@ -576,18 +573,18 @@ __stp_utrace_attach_flags(struct task_struct *tsk,
 			debug_task_finder_attach();
 
 			if (action != UTRACE_RESUME) {
-				rc = utrace_control(tsk, engine, UTRACE_STOP);
-				if (rc == -EINPROGRESS)
-					/* EINPROGRESS means we must wait for
-					 * a callback, which is what we want. */
-					do {
-						rc = utrace_barrier(tsk, engine);
-					} while (rc == -ERESTARTSYS);
-				if (rc != 0)
+				rc = utrace_control(tsk, engine, action);
+				/* If utrace_control() returns
+				 * EINPROGRESS when we're trying to
+				 * stop/interrupt, that means the task
+				 * hasn't stopped quite yet, but will
+				 * soon.  Ignore this error. */
+				if (rc != 0 && rc != -EINPROGRESS) {
 					_stp_error("utrace_control returned error %d on pid %d",
 						   rc, (int)tsk->pid);
+				}
+				rc = 0;
 			}
-
 		}
 		else if (rc != -ESRCH && rc != -EALREADY)
 			_stp_error("utrace_set_events2 returned error %d on pid %d",
@@ -645,8 +642,9 @@ __stp_call_callbacks(struct stap_task_finder_target *tgt,
 
 		rc = cb_tgt->callback(cb_tgt, tsk, register_p, process_p);
 		if (rc != 0) {
-			_stp_error("callback for %d failed: %d",
-				   (int)tsk->pid, rc);
+			_stp_warn("task_finder %s%scallback for task %d failed: %d",
+                                  (cb_tgt->purpose?:""), (cb_tgt->purpose?" ":""),
+                                  (int)tsk->pid, rc);
 		}
 	}
 }
@@ -683,8 +681,9 @@ __stp_call_mmap_callbacks(struct stap_task_finder_target *tgt,
 		rc = cb_tgt->mmap_callback(cb_tgt, tsk, path, dentry,
 					  addr, length, offset, vm_flags);
 		if (rc != 0) {
-			_stp_error("mmap callback for %d failed: %d",
-				   (int)tsk->pid, rc);
+			_stp_warn("task_finder mmap %s%scallback for task %d failed: %d",
+                                  (cb_tgt->purpose?:""), (cb_tgt->purpose?" ":""),
+                                  (int)tsk->pid, rc);
 		}
 	}
 }
@@ -803,8 +802,9 @@ __stp_call_munmap_callbacks(struct stap_task_finder_target *tgt,
 
 		rc = cb_tgt->munmap_callback(cb_tgt, tsk, addr, length);
 		if (rc != 0) {
-			_stp_error("munmap callback for %d failed: %d",
-				   (int)tsk->pid, rc);
+			_stp_warn("task_finder munmap %s%scallback for task %d failed: %d",
+                                  (cb_tgt->purpose?:""), (cb_tgt->purpose?" ":""),
+                                  (int)tsk->pid, rc);
 		}
 	}
 }
@@ -831,8 +831,9 @@ __stp_call_mprotect_callbacks(struct stap_task_finder_target *tgt,
 		rc = cb_tgt->mprotect_callback(cb_tgt, tsk, addr, length,
 					       prot);
 		if (rc != 0) {
-			_stp_error("mprotect callback for %d failed: %d",
-				   (int)tsk->pid, rc);
+			_stp_warn("task_finder mprotect %s%scallback for task %d failed: %d",
+                                  (cb_tgt->purpose?:""), (cb_tgt->purpose?" ":""),
+                                  (int)tsk->pid, rc);
 		}
 	}
 }
@@ -1606,8 +1607,7 @@ stap_start_task_finder(void)
 		size_t mmpathlen;
 		struct list_head *tgt_node;
 
-		/* Skip over processes other than that specified with
-		 * stap -c or -x. */
+		/* If in stap -c/-x mode, skip over other processes. */
 		if (_stp_target && tsk->tgid != _stp_target)
 			continue;
 
@@ -1710,6 +1710,74 @@ stf_err:
 	debug_task_finder_report(); // report at end for utrace engine counting
 	return rc;
 }
+
+static void
+stap_task_finder_post_init(void)
+{
+	/* With the original version of utrace UTRACE_STOP also does
+	 * UTRACE_INTERRUPT, so we don't really need this function. */
+#if !defined(UTRACE_ORIG_VERSION)
+	struct task_struct *grp, *tsk;
+
+	if (atomic_read(&__stp_task_finder_state) != __STP_TF_RUNNING) {
+		_stp_error("task_finder not running?");
+		return;
+	}
+
+	rcu_read_lock();
+	do_each_thread(grp, tsk) {
+		struct list_head *tgt_node;
+
+		/* If in stap -c/-x mode, skip over other processes. */
+		if (_stp_target && tsk->tgid != _stp_target)
+			continue;
+
+		/* Only "poke" thread group leaders. */
+		if (tsk->tgid != tsk->pid)
+			continue;
+
+		/* See if we need to "poke" this thread. */
+		list_for_each(tgt_node, &__stp_task_finder_list) {
+			struct stap_task_finder_target *tgt;
+			struct utrace_engine *engine;
+
+			tgt = list_entry(tgt_node,
+					 struct stap_task_finder_target, list);
+			if (tgt == NULL || !tgt->engine_attached)
+				continue;
+
+			// If we found an "interesting" task earlier,
+			// stop it.
+			engine = utrace_attach_task(tsk,
+						    UTRACE_ATTACH_MATCH_OPS,
+						    &tgt->ops, tgt);
+			if (engine != NULL && !IS_ERR(engine)) {
+				/* We found a target task. Stop it. */
+				int rc = utrace_control(tsk, engine,
+							UTRACE_INTERRUPT);
+				/* If utrace_control() returns
+				 * EINPROGRESS when we're trying to
+				 * stop/interrupt, that means the task
+				 * hasn't stopped quite yet, but will
+				 * soon.  Ignore this error. */
+				if (rc != 0 && rc != -EINPROGRESS) {
+					_stp_error("utrace_control returned error %d on pid %d",
+						   rc, (int)tsk->pid);
+				}
+				utrace_engine_put(engine);
+
+				/* Since we only need to interrupt
+				 * the task once, not once per
+				 * engine, get out of this loop. */
+				break;
+			}
+		}
+	} while_each_thread(grp, tsk);
+	rcu_read_unlock();
+#endif
+	return;
+}
+
 
 static void
 stap_stop_task_finder(void)

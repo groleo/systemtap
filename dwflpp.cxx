@@ -1,5 +1,5 @@
 // C++ interface to dwfl
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
 // Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
@@ -140,6 +140,8 @@ dwflpp::get_module_dwarf(bool required, bool report)
       int i = dwfl_errno();
       if (i)
         msg += string(": ") + dwfl_errmsg (i);
+
+      msg += " [man warning::debuginfo]";
 
       /* add module_name to list to find rpm */
       find_debug_rpms(sess, module_name.c_str());
@@ -324,7 +326,7 @@ dwflpp::setup_kernel(const string& name, systemtap_session & s, bool debuginfo_n
         string dir = string(sess.sysroot + "/lib/modules/" + sess.kernel_release );
         find_debug_rpms(sess, dir.c_str());
       }
-      throw semantic_error (_F("missing %s kernel/module debuginfo under '%s'",
+      throw semantic_error (_F("missing %s kernel/module debuginfo [man warning::debuginfo] under '%s'",
                                 sess.architecture.c_str(), sess.kernel_build_tree.c_str()));
     }
   Dwfl *dwfl = dwfl_ptr.get()->dwfl;
@@ -362,7 +364,7 @@ dwflpp::setup_kernel(const vector<string> &names, bool debuginfo_needed)
         string dir = string(sess.sysroot + "/lib/modules/" + sess.kernel_release );
         find_debug_rpms(sess, dir.c_str());
       }
-      throw semantic_error (_F("missing %s kernel/module debuginfo under '%s'",
+      throw semantic_error (_F("missing %s kernel/module debuginfo [man warning::debuginfo] under '%s'",
                                sess.architecture.c_str(), sess.kernel_build_tree.c_str()));
     }
 
@@ -426,7 +428,9 @@ dwflpp::iterate_over_cus (int (*callback)(Dwarf_Die * die, void * arg),
           Dwarf_Die die_mem;
           Dwarf_Die *die;
           die = dwarf_offdie (dw, off + cuhl, &die_mem);
-          v->push_back (*die); /* copy */
+          /* Skip partial units. */
+          if (dwarf_tag (die) == DW_TAG_compile_unit)
+            v->push_back (*die); /* copy */
           off = noff;
         }
     }
@@ -445,7 +449,9 @@ dwflpp::iterate_over_cus (int (*callback)(Dwarf_Die * die, void * arg),
           Dwarf_Die die_mem;
           Dwarf_Die *die;
           die = dwarf_offdie_types (dw, off + cuhl, &die_mem);
-          v->push_back (*die); /* copy */
+          /* Skip partial units. */
+          if (dwarf_tag (die) == DW_TAG_type_unit)
+            v->push_back (*die); /* copy */
           off = noff;
 	}
       module_tus_read.insert(dw);
@@ -797,7 +803,7 @@ cache_type_prefix(Dwarf_Die* type)
 static bool
 has_only_decl_members (Dwarf_Die *die)
 {
-  Dwarf_Die child;
+  Dwarf_Die child, import;
   if (dwarf_child(die, &child) != 0)
     return false; /* no members */
 
@@ -811,6 +817,13 @@ has_only_decl_members (Dwarf_Die *die)
            || tag == DW_TAG_class_type)
           && ! has_only_decl_members (&child))
 	return false; /* real grand child member found.  */
+
+      // Unlikely to ever happen, but if there is an imported unit
+      // then check its children as if they are children of this DIE.
+      if (tag == DW_TAG_imported_unit
+	  && dwarf_attr_die(&child, DW_AT_import, &import)
+	  && ! has_only_decl_members (&import))
+	return false;
     }
   while (dwarf_siblingof(&child, &child) == 0);
 
@@ -1081,7 +1094,13 @@ dwflpp::iterate_over_globals (Dwarf_Die *cu_die,
 {
   assert (cu_die);
   assert (dwarf_tag(cu_die) == DW_TAG_compile_unit
-	  || dwarf_tag(cu_die) == DW_TAG_type_unit);
+	  || dwarf_tag(cu_die) == DW_TAG_type_unit
+	  || dwarf_tag(cu_die) == DW_TAG_partial_unit);
+
+  // Ignore partial_unit, if they get imported by a real unit, then
+  // iterate_over_types will traverse them.
+  if (dwarf_tag(cu_die) == DW_TAG_partial_unit)
+    return DWARF_CB_OK;
 
   // If this is C++, recurse for any inner types
   bool has_inner_types = dwarf_srclang(cu_die) == DW_LANG_C_plus_plus;
@@ -1099,7 +1118,7 @@ dwflpp::iterate_over_types (Dwarf_Die *top_die,
                             void * data)
 {
   int rc = DWARF_CB_OK;
-  Dwarf_Die die;
+  Dwarf_Die die, import;
 
   assert (top_die);
 
@@ -1120,6 +1139,15 @@ dwflpp::iterate_over_types (Dwarf_Die *top_die,
       case DW_TAG_namespace:
         rc = (*callback)(&die, has_inner_types, prefix, data);
         break;
+
+      case DW_TAG_imported_unit:
+	// Follow the imported_unit and iterate over its contents
+	// (either a partial_unit or a full compile_unit), all its
+	// children should be treated as if they appear in this place.
+	if (dwarf_attr_die(&die, DW_AT_import, &import))
+	  rc = iterate_over_types(&import, has_inner_types, prefix,
+				  callback, data);
+	break;
       }
   while (rc == DWARF_CB_OK && dwarf_siblingof(&die, &die) == 0);
 
@@ -1543,8 +1571,12 @@ dwflpp::iterate_over_srcfile_lines (char const * srcfile,
         }
       lineno += line_number;
     }
-  else if (line_type == WILDCARD)
-    function_line (&lineno);
+  else if (line_type == WILDCARD) {
+    if (name_has_wildcard(func_pattern)) /* PR14774: look at whole file if function name is wildcard */
+      lineno = 0;
+    else
+      function_line (&lineno);
+  }
   else if (line_type == RANGE) { /* correct lineno */
       int start_lineno;
 
@@ -1630,7 +1662,7 @@ dwflpp::iterate_over_srcfile_lines (char const * srcfile,
             }
 
           stringstream advice;
-          advice << _F("multiple addresses for %s:%d", srcfile, lineno);
+          advice << _F("multiple addresses for %s:%d [man error::dwarf]", srcfile, lineno);
           if (lo_try > 0 || hi_try > 0)
             {
               //TRANSLATORS: Here we are trying to advise what source file 
@@ -1677,7 +1709,7 @@ dwflpp::iterate_over_labels (Dwarf_Die *begin_die,
 {
   get_module_dwarf();
 
-  Dwarf_Die die;
+  Dwarf_Die die, import;
   const char *name;
   int res = dwarf_child (begin_die, &die);
   if (res != 0)
@@ -1711,7 +1743,7 @@ dwflpp::iterate_over_labels (Dwarf_Die *begin_die,
                         {
                           sess.print_warning(_F("label '%s' at address %s (dieoffset: %s) is not "
                                                 "contained by its scope '%s' (dieoffset: %s) -- bad"
-                                                " debuginfo?", name, lex_cast_hex(stmt_addr).c_str(),
+                                                " debuginfo? [man error::dwarf]", name, lex_cast_hex(stmt_addr).c_str(),
                                                 lex_cast_hex(dwarf_dieoffset(&die)).c_str(),
                                                 (dwarf_diename(&scope) ?: "<unknown>"),
                                                 lex_cast_hex(dwarf_dieoffset(&scope)).c_str()));
@@ -1727,6 +1759,13 @@ dwflpp::iterate_over_labels (Dwarf_Die *begin_die,
         case DW_TAG_inlined_subroutine:
           // Stay within our filtered function
           break;
+
+	case DW_TAG_imported_unit:
+	  // Iterate over the children of the imported unit as if they
+	  // were inserted in place.
+	  if (dwarf_attr_die(&die, DW_AT_import, &import))
+	    iterate_over_labels (&import, sym, function, q, callback);
+	  break;
 
         default:
           if (dwarf_haschildren (&die))
@@ -2032,12 +2071,27 @@ dwflpp::inner_die_containing_pc(Dwarf_Die& scope, Dwarf_Addr addr,
   if (!die_has_pc(scope, addr))
     return false;
 
-  Dwarf_Die child;
+  Dwarf_Die child, import;
   int rc = dwarf_child(&result, &child);
   while (rc == 0)
     {
       switch (dwarf_tag (&child))
         {
+	case DW_TAG_imported_unit:
+	  // The children of the imported unit need to be treated as if
+	  // they are inserted here. So look inside and set result if
+	  // found.
+	  if (dwarf_attr_die(&child, DW_AT_import, &import))
+	    {
+	      Dwarf_Die import_result;
+	      if (inner_die_containing_pc(import, addr, import_result))
+		{
+		  result = import_result;
+		  return true;
+		}
+	    }
+	  break;
+
         // lexical tags to recurse within the same starting scope
         // NB: this intentionally doesn't cross into inlines!
         case DW_TAG_lexical_block:
@@ -2152,9 +2206,15 @@ dwflpp::print_locals(vector<Dwarf_Die>& scopes, ostream &o)
 {
   // XXX Shouldn't this be walking up to outer scopes too?
 
+  print_locals_die(scopes[0], o);
+}
+
+void
+dwflpp::print_locals_die(Dwarf_Die& die, ostream &o)
+{
   // Try to get the first child of die.
-  Dwarf_Die child;
-  if (dwarf_child (&scopes[0], &child) == 0)
+  Dwarf_Die child, import;
+  if (dwarf_child (&die, &child) == 0)
     {
       do
         {
@@ -2169,6 +2229,12 @@ dwflpp::print_locals(vector<Dwarf_Die>& scopes, ostream &o)
               if (name)
                 o << " $" << name;
               break;
+	    case DW_TAG_imported_unit:
+	      // Treat the imported unit children as if they are
+	      // children of the given DIE.
+	      if (dwarf_attr_die(&child, DW_AT_import, &import))
+		print_locals_die (import, o);
+	      break;
             default:
               break;
             }
@@ -2200,26 +2266,30 @@ dwflpp::find_variable_and_frame_base (vector<Dwarf_Die>& scopes,
       stringstream alternatives;
       print_locals (scopes, alternatives);
       if (e->cu_name == "")
-        throw semantic_error (_F("unable to find local '%s' near pc %s %s %s %s (%s)",
+        throw semantic_error (_F("unable to find local '%s', [man error::dwarf] dieoffset %s in %s, near pc %s %s %s %s (%s)",
                                  local.c_str(),
+                                 lex_cast_hex(dwarf_dieoffset(scope_die)).c_str(),
+                                 module_name.c_str(),
                                  lex_cast_hex(pc).c_str(),
                                  (scope_die == NULL) ? "" : _("in"),
                                  (dwarf_diename(scope_die) ?: "<unknown>"),
                                  (dwarf_diename(cu) ?: "<unknown>"),
                                  (alternatives.str() == ""
                                   ? (_("<no alternatives>"))
-				  : (_(" (alternatives:")
+				  : (_("alternatives:")
                                        + alternatives.str())).c_str()),
                               e->tok);
       else
-        throw semantic_error (_F("unable to find global '%s' %s %s %s (%s)",
+        throw semantic_error (_F("unable to find global '%s', [man error::dwarf] dieoffset %s in %s, %s %s %s (%s)",
                                  local.c_str(),
+                                 lex_cast_hex(dwarf_dieoffset(scope_die)).c_str(),
+                                 module_name.c_str(),
                                  (scope_die == NULL) ? "" : _("in"),
                                  (dwarf_diename(scope_die) ?: "<unknown>"),
                                  e->cu_name.c_str(),
                                  (alternatives.str() == ""
                                   ? (_("<no alternatives>"))
-				  : (_(" (alternatives:")
+				  : (_("alternatives:")
                                        + alternatives.str())).c_str()),
                               e->tok);
     }
@@ -2238,6 +2308,9 @@ dwflpp::find_variable_and_frame_base (vector<Dwarf_Die>& scopes,
       if (dwarf_child(&scopes[declaring_scope], vardie) == 0)
 	do
 	  {
+	    // Note, not handling DW_TAG_imported_unit, assuming GCC
+	    // version is recent enough to not need this workaround if
+	    // we would see an imported unit.
 	    if (dwarf_tag (vardie) == DW_TAG_variable
 		&& strcmp (dwarf_diename (vardie), local.c_str ()) == 0
 		&& (dwarf_attr_integrate (vardie, DW_AT_external, &attr_mem)
@@ -2329,6 +2402,7 @@ dwflpp::translate_location(struct obstack *pool,
      further below, the c_translate_FOO functions, the module_bias value used
      to be passed in, but instead should now be zero for the same reason. */
 
+ retry:
   switch (dwarf_getlocation_addr (attr, pc /*+ module_bias*/, &expr, &len, 1))
     {
     case 1:			/* Should always happen.  */
@@ -2336,14 +2410,23 @@ dwflpp::translate_location(struct obstack *pool,
         break;
       /* Fall through.  */
 
-    case 0:			/* Shouldn't happen.  */
-      throw semantic_error (_F("not accessible at this address (%s, dieoffset: %s)",
+    case 0:			/* Shouldn't happen.... but can, e.g. due to PR15123. */
+      {
+        Dwarf_Addr pc2 = pr15123_retry_addr (pc, die);
+        if (pc2 != 0) {
+          pc = pc2;
+          goto retry;
+        }
+      }
+
+      /* FALLTHROUGH */
+      throw semantic_error (_F("not accessible at this address [man error::dwarf] (%s, dieoffset: %s)",
                                lex_cast_hex(pc).c_str(), lex_cast_hex(dwarf_dieoffset(die)).c_str()),
                                e->tok);
 
     default:			/* Shouldn't happen.  */
     case -1:
-      throw semantic_error (_F("dwarf_getlocation_addr failed, %s", dwarf_errmsg(-1)), e->tok);
+      throw semantic_error (_F("dwarf_getlocation_addr failed [man error::dwarf] , %s", dwarf_errmsg(-1)), e->tok);
     }
 
   Dwarf_Op *cfa_ops;
@@ -2370,16 +2453,20 @@ dwflpp::print_members(Dwarf_Die *vardie, ostream &o, set<string> &dupes)
 {
   const int typetag = dwarf_tag (vardie);
 
+  /* compile and partial unit included for recursion through
+     imported_unit below. */
   if (typetag != DW_TAG_structure_type &&
       typetag != DW_TAG_class_type &&
-      typetag != DW_TAG_union_type)
+      typetag != DW_TAG_union_type &&
+      typetag != DW_TAG_compile_unit &&
+      typetag != DW_TAG_partial_unit)
     {
       o << _F(" Error: %s isn't a struct/class/union", dwarf_type_name(vardie).c_str());
       return;
     }
 
   // Try to get the first child of vardie.
-  Dwarf_Die die_mem;
+  Dwarf_Die die_mem, import;
   Dwarf_Die *die = &die_mem;
   switch (dwarf_child (vardie, die))
     {
@@ -2401,6 +2488,12 @@ dwflpp::print_members(Dwarf_Die *vardie, ostream &o, set<string> &dupes)
   do
     {
       int tag = dwarf_tag(die);
+
+      /* The children of an imported_unit should be treated as members too. */
+      if (tag == DW_TAG_imported_unit
+          && dwarf_attr_die(die, DW_AT_import, &import))
+        print_members(&import, o, dupes);
+
       if (tag != DW_TAG_member && tag != DW_TAG_inheritance)
         continue;
 
@@ -2465,6 +2558,13 @@ dwflpp::find_struct_member(const target_symbol::component& c,
       do
         {
           int tag = dwarf_tag(&die);
+          /* recurse into imported units as if they are anonymoust structs */
+          Dwarf_Die import;
+          if (tag == DW_TAG_imported_unit
+              && dwarf_attr_die(&die, DW_AT_import, &import)
+              && find_struct_member(c, &import, memberdie, dies, locs))
+            goto success;
+
           if (tag != DW_TAG_member && tag != DW_TAG_inheritance)
             continue;
 
@@ -2945,7 +3045,7 @@ dwflpp::literal_stmt_for_local (vector<Dwarf_Die>& scopes,
 				       NULL, &addr_loc, 1, &tail, NULL, NULL);
 	}
       else
-        throw semantic_error (_F("failed to retrieve location attribute for '%s' (dieoffset: %s)",
+        throw semantic_error (_F("failed to retrieve location attribute for '%s' [man error::dwarf] (dieoffset: %s)",
                                  local.c_str(), lex_cast_hex(dwarf_dieoffset(&vardie)).c_str()), e->tok);
     }
   else
@@ -2955,7 +3055,7 @@ dwflpp::literal_stmt_for_local (vector<Dwarf_Die>& scopes,
 
   Dwarf_Die typedie;
   if (dwarf_attr_die (&vardie, DW_AT_type, &typedie) == NULL)
-    throw semantic_error(_F("failed to retrieve type attribute for '%s' (dieoffset: %s)", local.c_str(), lex_cast_hex(dwarf_dieoffset(&vardie)).c_str()), e->tok);
+    throw semantic_error(_F("failed to retrieve type attribute for '%s' [man error::dwarf] (dieoffset: %s)", local.c_str(), lex_cast_hex(dwarf_dieoffset(&vardie)).c_str()), e->tok);
 
   translate_components (&pool, &tail, pc, e, &vardie, &typedie);
 
@@ -2989,7 +3089,7 @@ dwflpp::type_die_for_local (vector<Dwarf_Die>& scopes,
   find_variable_and_frame_base (scopes, pc, local, e, &vardie, &attr_mem);
 
   if (dwarf_attr_die (&vardie, DW_AT_type, typedie) == NULL)
-    throw semantic_error(_F("failed to retrieve type attribute for '%s'", local.c_str()), e->tok);
+    throw semantic_error(_F("failed to retrieve type attribute for '%s' [man error::dwarf]", local.c_str()), e->tok);
 
   translate_components (NULL, NULL, pc, e, &vardie, typedie);
   return typedie;
@@ -3017,7 +3117,7 @@ dwflpp::literal_stmt_for_return (Dwarf_Die *scope_die,
                                                    &locops);
   if (nlocops < 0)
     {
-      throw semantic_error(_F("failed to retrieve return value location for %s (%s)",
+      throw semantic_error(_F("failed to retrieve return value location for %s [man error::dwarf] (%s)",
                           (dwarf_diename(scope_die) ?: "<unknown>"),
                           (dwarf_diename(cu) ?: "<unknown>")), e->tok);
     }
@@ -3039,7 +3139,7 @@ dwflpp::literal_stmt_for_return (Dwarf_Die *scope_die,
 
   Dwarf_Die vardie = *scope_die, typedie;
   if (dwarf_attr_die (&vardie, DW_AT_type, &typedie) == NULL)
-    throw semantic_error(_F("failed to retrieve return value type attribute for %s (%s)",
+    throw semantic_error(_F("failed to retrieve return value type attribute for %s [man error::dwarf] (%s)",
                            (dwarf_diename(&vardie) ?: "<unknown>"),
                            (dwarf_diename(cu) ?: "<unknown>")), e->tok);
 
@@ -3070,7 +3170,7 @@ dwflpp::type_die_for_return (Dwarf_Die *scope_die,
 {
   Dwarf_Die vardie = *scope_die;
   if (dwarf_attr_die (&vardie, DW_AT_type, typedie) == NULL)
-    throw semantic_error(_F("failed to retrieve return value type attribute for %s (%s)",
+    throw semantic_error(_F("failed to retrieve return value type attribute for %s [man error::dwarf] (%s)",
                            (dwarf_diename(&vardie) ?: "<unknown>"),
                            (dwarf_diename(cu) ?: "<unknown>")), e->tok);
 
@@ -3324,6 +3424,11 @@ dwflpp::build_blacklist()
   blfn += "|test_ti_thread_flag.*";
   blfn += "|inat_get_opcode_attribute";
   blfn += "|system_call_after_swapgs";
+  blfn += "|HYPERVISOR_[gs]et_debugreg";
+  blfn += "|HYPERVISOR_event_channel_op";
+  blfn += "|hash_64";
+  blfn += "|hash_ptr";
+  blfn += "|native_set_pte";
 
   // Lots of locks
   blfn += "|.*raw_.*_lock.*";
@@ -3633,5 +3738,72 @@ dwflpp::add_module_build_id_to_hash (Dwfl_Module *m,
 
   return DWARF_CB_OK;
 }
+
+
+
+// Perform PR15123 heuristic for given variable at given address.
+// Return alternate pc address to do location-list lookup at, or 0 if
+// inapplicable.
+//
+Dwarf_Addr
+dwflpp::pr15123_retry_addr (Dwarf_Addr pc, Dwarf_Die* die)
+{
+  // For PR15123, we'd like to detect the situation where the
+  // incoming PC may point to a couple-of-byte instruction
+  // sequence that gcc emits for CFLAGS=-mfentry, and where
+  // context variables are in fact available throughout, *but* due
+  // to the bug, the dwarf debuginfo location-list only starts a
+  // few instructions later.  Prologue searching does not resolve
+  // this as a line-record is in place at the -mfentry prologue.
+  //
+  // Detecting this is complicated because ...
+  // - we only want to do this if -mfentry was actually used
+  // - if <pc> points to the a function entry point
+  // - if the architecture is familiar enough that we can have a
+  // hard-coded constant to skip over the prologue.
+  //
+  // Otherwise, we could give a false-positive - return corrupted data.
+
+  if (getenv ("PR15123_DISABLE"))
+    return 0;
+
+  Dwarf_Die cudie;
+  Dwarf_Attribute cudie_producer;
+  dwarf_diecu (die, &cudie, NULL, NULL);
+  if (! dwarf_attr_integrate(&cudie, DW_AT_producer, &cudie_producer))
+    return 0;
+
+  const char* producer = dwarf_formstring(&cudie_producer);
+  if (!producer)
+    return 0;
+  if (! strstr(producer, "-mfentry"))
+    return 0;
+
+  // Determine if this pc maps to the beginning of a
+  // real function (not some inlined doppelganger.  This
+  // is made tricker by this->function may not be
+  // pointing at the right DIE (say e.g. stap encountered
+  // the inlined copy first, so was focus_on_function'd).
+  vector<Dwarf_Die> scopes = getscopes(pc);
+  if (scopes.size() == 0)
+    return 0;
+
+  Dwarf_Die outer_function_die = scopes[0];
+  Dwarf_Addr entrypc;
+  die_entrypc(& outer_function_die, &entrypc);
+  if (entrypc != pc) // (will fail on retry, so we won't loop more than once)
+    return 0;
+
+  if (sess.architecture == "i386" ||
+      sess.architecture == "x86_64") {
+    /* pull the trigger */
+    if (sess.verbose > 2)
+      clog << _("retrying variable location-list lookup at address pc+5\n");
+    return pc + 5;
+  }
+
+  return 0;
+}
+
 
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */

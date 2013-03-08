@@ -1,7 +1,7 @@
 /* -*- linux-c -*- 
  * symbols.c - stp symbol and module functions
  *
- * Copyright (C) Red Hat Inc, 2006-2011
+ * Copyright (C) Red Hat Inc, 2006-2012
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -60,10 +60,17 @@ static void _stp_do_relocation(const char __user *buf, size_t count)
   /* Detect actual kernel load address. */
   if (!strcmp ("kernel", msg.module)
       && !strcmp ("_stext", msg.reloc)) {
-    dbug_sym(2, "found kernel _stext load address: 0x%lx\n",
-             (unsigned long) msg.address);
-    if (_stp_kretprobe_trampoline != (unsigned long) -1)
-      _stp_kretprobe_trampoline += (unsigned long) msg.address;
+#ifdef CONFIG_KALLSYMS
+          if (msg.address == 0)
+                  msg.address = kallsyms_lookup_name("_stext");
+#endif
+          if (msg.address == 0)
+                  _stp_warn("No load address found _stext.  Kernel probes and addresses may not be available.");
+          else
+                  dbug_sym(1, "found kernel _stext load address: 0x%lx\n",
+                           (unsigned long) msg.address);
+          if (_stp_kretprobe_trampoline != (unsigned long) -1)
+                  _stp_kretprobe_trampoline += (unsigned long) msg.address;
   }
 
   _stp_kmodule_update_address(msg.module, msg.reloc, msg.address);

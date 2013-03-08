@@ -69,4 +69,6 @@
 #define SET_REG_IP(regs, x) REG_IP(regs) = x
 #endif
 
+static void _stp_print_regs(struct pt_regs * regs);
+
 #endif /* _REGS_H_ */

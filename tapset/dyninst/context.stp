@@ -9,14 +9,21 @@
 // NB: functionally equivalent to linux/context.stp
 
 %{
+#include <sched.h>
+#include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
 %}
 
-// TODO function print_regs ()
-
-// TODO function execname:string ()
+function execname:string ()
+%{
+	/* Need a 16-byte buffer, which will be 0-terminated only if shorter.
+	 * Use 17 bytes to make sure we always have termination.  */
+	char arg2[17] = {0};
+	if (prctl(PR_GET_NAME, (unsigned long)arg2, 0, 0, 0) == 0)
+		strlcpy (STAP_RETVALUE, arg2, MAXSTRINGLEN);
+%}
 
 function pid:long ()
 %{ /* pure */ /* unprivileged */
@@ -70,9 +77,16 @@ function euid:long ()
 // TODO function is_myproc:long ()
 // NB: dyninst by nature is myproc-only, *except if you're root*
 
-// TODO function cpu:long ()
+function cpu:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = sched_getcpu();
+%}
 
-// TODO function registers_valid:long ()
+
+function registers_valid:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = (CONTEXT->uregs != NULL);
+%}
 
 function user_mode:long ()
 {
@@ -97,9 +111,15 @@ function user_mode:long ()
 
 // TODO function stack_unused:long ()
 
-// TODO function addr:long ()
+function addr:long ()
+{
+	return uaddr()
+}
 
-// TODO function uaddr:long ()
+function uaddr:long ()
+%{ /* pure */ /* unprivileged */
+	STAP_RETVALUE = (intptr_t)(CONTEXT->uregs ? REG_IP(CONTEXT->uregs) : 0);
+%}
 
 // TODO function cmdline_args:string(n:long, m:long, delim:string)
 

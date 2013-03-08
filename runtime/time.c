@@ -133,7 +133,7 @@ __stp_time_timer_callback(unsigned long val)
        XXX: The worst that can probably happen is that we get
 	    two consecutive timer resets.  */
 
-    if (likely(atomic_read(&session_state) != STAP_SESSION_STOPPED))
+    if (likely(atomic_read(session_state()) != STAP_SESSION_STOPPED))
         mod_timer(&time->timer, jiffies + 1);
 }
 

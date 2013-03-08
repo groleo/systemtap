@@ -25,6 +25,11 @@ function ctime:string(epochsecs:long)
         if (newline)
             *newline = '\0';
         strlcpy (STAP_RETVALUE, buf, MAXSTRINGLEN);
-    } else
-        STAP_RETVALUE[0] = '\0';
+    } else {
+#if STAP_COMPAT_VERSION <= STAP_VERSION(2,2)
+        strlcpy(STAP_RETVALUE, "<invalid time>", MAXSTRINGLEN);
+#else
+	CONTEXT->last_error = "Time cannot be converted";
+#endif
+    }
 %}

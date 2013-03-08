@@ -25,7 +25,7 @@ probe scheduler.cpu_on
   if ((threads[tid()] != cpu() && (execname() == @1))) {
     printf("\nthread %d (%s) context switched on cpu%d state: %d\n",
            tid(), execname(), cpu(), task_state(task_current()));
-    print_stack(backtrace());
+    print_syms(backtrace());
     threads[tid()] = cpu();
   }
 }

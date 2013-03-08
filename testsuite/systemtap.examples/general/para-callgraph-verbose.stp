@@ -5,7 +5,7 @@ function trace(entry_p, extra) {
   printf("%s%s%s %s\n",
          thread_indent (entry_p),
          (entry_p>0?"->":"<-"),
-         probefunc (),
+         ppfunc (),
          extra)
 }
 

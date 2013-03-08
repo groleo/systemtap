@@ -1,4 +1,13 @@
 set test "basic1"
 set ::result_string {HelloWorld}
-stap_run2 $srcdir/$subdir/$test.stp
-stap_run2 $srcdir/$subdir/$test.stp -DSTP_LEGACY_PRINT
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test.stp --runtime=$runtime
+	stap_run2 $srcdir/$subdir/$test.stp --runtime=$runtime -DSTP_LEGACY_PRINT
+    } else {
+	stap_run2 $srcdir/$subdir/$test.stp
+	stap_run2 $srcdir/$subdir/$test.stp -DSTP_LEGACY_PRINT
+    }
+}
+

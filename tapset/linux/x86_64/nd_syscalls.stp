@@ -41,6 +41,7 @@ probe nd_syscall.iopl.return = kprobe.function("sys_iopl").return
 	retstr = returnstr(1)
 }
 
+%( CONFIG_GENERIC_SIGALTSTACK == "y" %?
 # sigaltstack ________________________________________________
 # long sys_sigaltstack(const stack_t __user *uss, stack_t __user *uoss,
 #		struct pt_regs *regs)
@@ -52,12 +53,15 @@ probe nd_syscall.sigaltstack = kprobe.function("sys_sigaltstack")
 	name = "sigaltstack"
 	// uss_uaddr = $uss
 	// uoss_uaddr = $uoss
-	// regs_uaddr = $regs
+	// regs = $regs
 	// argstr = sprintf("%p, %p", $uss, $uoss)
 	asmlinkage()
 	uss_uaddr = pointer_arg(1)
 	uoss_uaddr = pointer_arg(2)
+%(systemtap_v <= "2.2" %?
 	regs_uaddr = pointer_arg(3)
+	regs = pointer_arg(3)
+%)
 	argstr = sprintf("%p, %p", uss_uaddr, uoss_uaddr)
 }
 probe nd_syscall.sigaltstack.return = kprobe.function("sys_sigaltstack").return
@@ -65,6 +69,7 @@ probe nd_syscall.sigaltstack.return = kprobe.function("sys_sigaltstack").return
 	name = "sigaltstack"
 	retstr = returnstr(1)
 }
+%)
 
 # sysctl _____________________________________________________
 #

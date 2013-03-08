@@ -1,7 +1,7 @@
 /* -*- linux-c -*- 
  * VMA tracking and lookup functions.
  *
- * Copyright (C) 2005-2010 Red Hat Inc.
+ * Copyright (C) 2005-2013 Red Hat Inc.
  * Copyright (C) 2006 Intel Corporation.
  *
  * This file is part of systemtap, and is free software.  You can
@@ -45,7 +45,7 @@ static void _stp_vma_match_vdso(struct task_struct *tsk)
 	    unsigned long notes_addr;
 	    int all_ok = 1;
 	    notes_addr = vdso_addr + m->build_id_offset;
-	    dbug_task_vma(1,"notes_addr %s: 0x%lx + 0x%lx = 0x%lx (len: %x)\n", m->name,
+	    dbug_task_vma(1,"notes_addr %s: 0x%lx + 0x%lx = 0x%lx (len: %x)\n", m->path,
 		  vdso_addr, m->build_id_offset, notes_addr, m->build_id_len);
 	    for (j = 0; j < m->build_id_len; j++)
 	      {
@@ -220,6 +220,8 @@ static int _stp_vma_munmap_cb(struct stap_task_finder_target *tgt,
 	return 0;
 }
 
+#endif
+
 /* Initializes the vma tracker. */
 static int _stp_vma_init(void)
 {
@@ -238,6 +240,7 @@ static int _stp_vma_init(void)
                 // callback should be sufficient).
                 .pid = 0,
                 .procname = NULL,
+                .purpose = "vma tracking",
                 .callback = &_stp_vma_exec_cb,
                 .mmap_callback = &_stp_vma_mmap_cb,
                 .munmap_callback = &_stp_vma_munmap_cb,
@@ -256,7 +259,6 @@ static int _stp_vma_init(void)
 #endif
 	return rc;
 }
-#endif
 
 /* Get rid of the vma tracker (memory). */
 static void _stp_vma_done(void)

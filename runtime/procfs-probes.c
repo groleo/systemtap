@@ -17,8 +17,8 @@ struct _stp_procfs_data {
 
 struct stap_procfs_probe {
 	const char *path;
-	struct stap_probe * const read_probe;
-	struct stap_probe * const write_probe;
+	const struct stap_probe * const read_probe;
+	const struct stap_probe * const write_probe;
 
 	char *buffer;
 	const size_t bufsize;

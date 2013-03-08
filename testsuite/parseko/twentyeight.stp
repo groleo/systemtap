@@ -1,0 +1,6 @@
+#! stap -p1
+
+probe begin {
+      foo =~ /this is not the regex syntax fyi at least atm bbq/
+      // note that we would have a whole *bunch* of parseko tests to check if it was
+}

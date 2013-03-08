@@ -124,13 +124,11 @@ expect {
 }
 wait;catch {close}
 
-spawn sh -c "stap -v -v --vp 01020 -h 2>&1"
-expect {
-    -re {add per-pass verbosity .23242.} { pass "cmd_parse14" }
-    timeout { fail "cmd_parse14: timeout" }
-    eof { fail "cmd_parse14: eof" }
+if {![catch { exec sh -c "stap -v -v --vp 01020 -h 2>&1 | grep -q 'add per-pass verbosity .23242.'" }]} {
+    pass "cmd_parse14"
+} else {
+    fail "cmd_parse14"
 }
-wait;catch {close}
 
 set uname [exec uname -r]
 set triplet [split $uname {.-}]

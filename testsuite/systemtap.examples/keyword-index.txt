@@ -164,7 +164,7 @@ io/deviceseeks.stp - Histograms of Seek Behavior for Each Device
 keywords: disk
 
   The deviceseeks.stp script generates a histogram showing the
-  frequency of different sized seeks on each device.
+  frequency of different sized seeks (in sectors) on each device.
 
   # stap deviceseeks.stp -c "sleep 0.2"
 
@@ -684,6 +684,16 @@ keywords: syscall locking futex
   # stap futexes.stp -c "sleep 0.2"
 
 
+process/mutex-contention.stp - pthread mutex contention analysis
+keywords: locking
+
+  Tracks pthread-mutex initialization/use and underlying futex
+  operations, to identify (with backtraces/symbol-names) the mutexes
+  suffering most contention.  Invoke with "NNN -d SHLIB --ldd"
+
+  # stap mutex-contention.stp 100 -c "sleep 0.2"
+
+
 = MEMORY =
 
 general/sizeof.stp - Print the Size of a C Type
@@ -1107,9 +1117,10 @@ keywords: network drop packets
 general/eventcount.stp - Count Specified Events
 keywords: statistics thread process
 
-  The script prints a count of specified events and their related tid's
-  over the course of execution.  Numerous configuration options exist
-  to control filtering / reporting, see the script source.
+  The script periodically prints a count of specified events and their
+  related tid's over the course of execution.  Numerous configuration
+  options exist to control filtering / reporting, see the script
+  source.
 
   # stap eventcount.stp syscall.* -c 'sleep 0.2'
 
@@ -1160,6 +1171,16 @@ keywords: process scheduler
   determine what process is creating a flurry of short-lived processes.
 
   # stap forktracker.stp -c "sleep 0.2"
+
+
+process/ltrace.stp - uprobes-based ltrace
+keywords: process
+
+  The ltrace.stp script lists calls that the designated process makes
+  through PLTs (procedure linkage tables), generally into shared
+  libraries.
+
+  # stap ltrace.stp -c ls || echo PR14738
 
 
 process/noptrace.stp - Disable ptrace from Hierarchies of Processes
@@ -1364,6 +1385,16 @@ keywords: profiling
   # stap linetimes.stp kernel sys_nanosleep -c "sleep 0.2"
 
 
+profiling/perf.stp - Show performance ratios using perf.counter to access performance counters
+keywords: profiling
+
+  On exit the perf.stp script provides a sorted list showing cycles per
+  insn, branches per insn, and cache refs per insn
+
+  # stap perf.stp -c "find /usr/bin -name \"l*\" -printf \"%h/%f %s %Cx \
+  %Ck%CM %Y\n\""
+
+
 profiling/periodic.stp - Show the Period of the Various Timers on the System
 keywords: profiling
 
@@ -1471,6 +1502,19 @@ keywords: virtualization qemu kvm io
   times each IO port read and written.
 
   # stap qemu_io.stp -c "sleep 0.2"
+
+
+= REGEX =
+
+general/regex.stp - Report opened files whose names match a given regex
+keywords: regex
+
+  Uses the regex functionality to detect opened files whose names match
+  a pattern given on the command line. If no command line parameter is
+  given, demonstrate by filtering for files that end with an extension
+  showing them to be an archive.
+
+  # stap regex.stp -c "sleep 0.2"
 
 
 = SCHEDULER =
@@ -1721,6 +1765,41 @@ keywords: network tcp socket
   # stap -g tcp_init_cwnd.stp -c "sleep 0.2"
 
 
+= STAPGAMES =
+
+stapgames/block.stp - block breaker game
+keywords: stapgames
+
+  A block game where you progressively break the ceiling blocks until
+  clearing the level
+
+  # stap -p4 -Itapset/ block.stp
+
+
+stapgames/eater.stp - eater game
+keywords: stapgames
+
+  walk through a maze, eat stuff
+
+  # stap -p4 -Itapset/ eater.stp
+
+
+stapgames/lifegame.stp - life game
+keywords: stapgames
+
+  watch as your creation morphes into different forms
+
+  # stap -p4 -Itapset/ lifegame.stp
+
+
+stapgames/pingpong.stp - pingpong game
+keywords: stapgames
+
+  A simulated ball bounces around the terminal reflecting at the edges
+
+  # stap -p4 -Itapset/ pingpong.stp
+
+
 = STATISTICS =
 
 general/alias_suffixes.stp - Count I/O Syscalls using Alias Suffixes
@@ -1740,9 +1819,10 @@ keywords: io statistics
 general/eventcount.stp - Count Specified Events
 keywords: statistics thread process
 
-  The script prints a count of specified events and their related tid's
-  over the course of execution.  Numerous configuration options exist
-  to control filtering / reporting, see the script source.
+  The script periodically prints a count of specified events and their
+  related tid's over the course of execution.  Numerous configuration
+  options exist to control filtering / reporting, see the script
+  source.
 
   # stap eventcount.stp syscall.* -c 'sleep 0.2'
 
@@ -1938,11 +2018,23 @@ keywords: network tcp socket
 general/eventcount.stp - Count Specified Events
 keywords: statistics thread process
 
-  The script prints a count of specified events and their related tid's
-  over the course of execution.  Numerous configuration options exist
-  to control filtering / reporting, see the script source.
+  The script periodically prints a count of specified events and their
+  related tid's over the course of execution.  Numerous configuration
+  options exist to control filtering / reporting, see the script
+  source.
 
   # stap eventcount.stp syscall.* -c 'sleep 0.2'
+
+
+process/threadstacks.stp - Override default new-pthread stack sizes
+keywords: thread
+
+  Overrides default NPTL pthread_create stack size for all new threads
+  created by target processes.	Reports one line per process when the
+  related glibc variable __default_stacksize is updated.  Moot for
+  glibc versions that support $LIBC_PTHREAD_DEFAULT_STACKSIZE_NP.
+
+  # stap -g threadstacks.stp -Gsize=65536 -c "sleep 1" -d stap
 
 
 = TIME =

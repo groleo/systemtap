@@ -1,46 +1,68 @@
 set test "stmt_rel_user"
 
+proc dyninst_kfails {index} {
+    # The dyninst runtime isn't multi-arch, it only works on the
+    # native architecture. PR14490.
+    if {! [all_compile_flag_native_p $index]} {
+	setup_kfail 14490 "*-*-*"
+    }
+}
+
 # Compile with inlining and check we can set a relative statement there
 for {set i 0} {$i < [all_compile_flags]} {incr i} {
-  set extra_flag [all_compile_flag $i]
-  set extra_name [all_compile_flag_name $i]
+    set extra_flag [all_compile_flag $i]
+    set extra_name [all_compile_flag_name $i]
+    
+    set rel_flags "additional_flags=-Wall additional_flags=-Werror"
+    set rel_flags "$rel_flags additional_flags=-Winline"
+    set rel_flags "$rel_flags additional_flags=-g"
+    set rel_flags "$rel_flags $extra_flag"
+    set res [target_compile $srcdir/$subdir/stmt_rel.c [pwd]/stmt_rel.x executable $rel_flags]
+    if { $res != "" } {
+	verbose "target_compile failed: $res" 2
+	fail "$test-$extra_name compiling"
+	cleanup_handler $verbose
+	continue
+    } else {
+	pass "$test-$extra_name compiling"
+    }
+    
+    if {![installtest_p]} { untested "$test-$extra_name"; return }
+    
+    foreach runtime [get_runtime_list] {
+	if {$runtime != ""} {
+	    set test_name "$test-$extra_name-$runtime"
+	    if { [info procs ${runtime}_kfails] ne "" } {
+		${runtime}_kfails $i
+	    }
+	    spawn stap --runtime=$runtime -c ./stmt_rel.x -e "probe process(\"./stmt_rel.x\").statement(\"Move@stmt_rel.c+1\") {printf(\"Move %d\\n\",\$s1)}"
+	} elseif {[uprobes_p]} {
+	    set test_name "$test-$extra_name"
+	    spawn stap -c ./stmt_rel.x -e "probe process(\"./stmt_rel.x\").statement(\"Move@stmt_rel.c+1\") {printf(\"Move %d\\n\",\$s1)}"
+	} else {
+	    untested "$test-$extra_name"
+	    continue
+	}
 
-  set ok 0
-  set rel_flags "additional_flags=-Wall additional_flags=-Werror"
-  set rel_flags "$rel_flags additional_flags=-Winline"
-  set rel_flags "$rel_flags additional_flags=-g"
-  set rel_flags "$rel_flags $extra_flag"
-  set res [target_compile $srcdir/$subdir/stmt_rel.c [pwd]/stmt_rel.x executable $rel_flags]
-  if { $res != "" } {
-      verbose "target_compile failed: $res" 2
-      fail "$test-$extra_name compiling"
-      cleanup_handler $verbose
-      continue
-  } else {
-      pass "$test-$extra_name compiling"
-  }
-
-  if {![installtest_p]} { untested "$test-$extra_name"; return }
-  if {![uprobes_p]} { untested "$test-$extra_name"; return }
-
-  spawn stap -c ./stmt_rel.x -e "probe process(\"./stmt_rel.x\").statement(\"Move@stmt_rel.c+1\") {printf(\"Move %d\\n\",\$s1)}"
-  expect {
-      -timeout 180
-      -re {Move [0-9]} { incr ok; exp_continue }
-      timeout { fail "$test-$extra_name (timeout)" }
-      eof { }
-  }
-  catch {close}; catch {wait}
-
-  # PR13430 when optimizing we fail to set probes on all inlined lines.
-  if { [string first "O" $extra_name] != -1 } {
-    setup_kfail 13430 "*-*-*" 
-  }
-
-  # A hanoi tower needs 2^n - 1 moves (n == 14 in the test program)
-  if { $ok == 16383 } {
-      pass "$test-$extra_name"
-  } else {
-      fail "$test-$extra_name ($ok)"
-  }
+	set ok 0
+	expect {
+	    -timeout 180
+	    -re {Move [0-9]} { incr ok; exp_continue }
+	    timeout { fail "$test_name (timeout)" }
+	    eof { }
+	}
+	catch {close}; catch {wait}
+	
+	# PR13430 when optimizing we fail to set probes on all inlined lines.
+	if { [string first "O" $extra_name] != -1 } {
+	    setup_kfail 13430 "*-*-*" 
+	}
+	
+	# A hanoi tower needs 2^n - 1 moves (n == 14 in the test program)
+	if { $ok == 16383 } {
+	    pass "$test_name"
+	} else {
+	    fail "$test_name ($ok)"
+	}
+    }
 }

@@ -3,5 +3,12 @@ set ::result_string {abc-ABC 123!
 \a\b\f\n\r\t\v\'\\
 \000\033\177\222\333\377}
 
-stap_run2 $srcdir/$subdir/$test.stp
-stap_run2 $srcdir/$subdir/$test.stp -DSTP_LEGACY_PRINT
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test.stp --runtime=$runtime
+	stap_run2 $srcdir/$subdir/$test.stp --runtime=$runtime -DSTP_LEGACY_PRINT
+    } else {
+	stap_run2 $srcdir/$subdir/$test.stp
+	stap_run2 $srcdir/$subdir/$test.stp -DSTP_LEGACY_PRINT
+    }
+}

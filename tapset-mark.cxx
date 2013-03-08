@@ -1,7 +1,6 @@
 // tapset for kernel static markers
 // Copyright (C) 2005-2010 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
-// Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -492,7 +491,7 @@ mark_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "static struct stap_marker_probe {";
   s.op->newline(1) << "const char * const name;";
   s.op->newline() << "const char * const format;";
-  s.op->newline() << "struct stap_probe * const probe;";
+  s.op->newline() << "const struct stap_probe * const probe;";
   s.op->newline(-1) << "} stap_marker_probes [" << probes.size() << "] = {";
   s.op->indent(1);
   for (unsigned i=0; i < probes.size(); i++)
@@ -511,15 +510,15 @@ mark_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline();
   s.op->newline() << "static void enter_marker_probe (void *probe_data, void *call_data, const char *fmt, va_list *args) {";
   s.op->newline(1) << "struct stap_marker_probe *smp = (struct stap_marker_probe *)probe_data;";
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "smp->probe",
-				 "_STP_PROBE_HANDLER_MARKER");
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "smp->probe",
+				 "stp_probe_type_marker");
   s.op->newline() << "c->ips.kmark.marker_name = smp->name;";
   s.op->newline() << "c->ips.kmark.marker_format = smp->format;";
   s.op->newline() << "c->ips.kmark.mark_va_list = args;";
   s.op->newline() << "(*smp->probe->ph) (c);";
   s.op->newline() << "c->ips.kmark.mark_va_list = NULL;";
 
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
   s.op->newline(-1) << "}";
 
   return;

@@ -8,6 +8,6 @@ status: production
 exit: user-controlled
 output: histogram
 scope: system-wide
-description: The deviceseeks.stp script generates a histogram showing the frequency of different sized seeks on each device.
+description: The deviceseeks.stp script generates a histogram showing the frequency of different sized seeks (in sectors) on each device.
 test_check: stap -p4 deviceseeks.stp
 test_installcheck: stap deviceseeks.stp -c "sleep 0.2"

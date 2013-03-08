@@ -1,0 +1,53 @@
+#!/usr/bin/bash 
+
+### Create the directory we'll be working in###
+
+DIR=`mktemp -d stapXXX -p /tmp/`; cd $DIR
+
+# We need to differenciate between upstream sources and the later used distro sources
+# hence the specific checkout to systemtap-git
+
+git clone git://sourceware.org/git/systemtap.git systemtap-git
+cd systemtap-git
+
+# We need to use --global for the NAME and USER vars as we're
+# assuming this script can be run from anywhere (ie, not in an
+# already existing git repo)
+DATE=`date +"%a %b %d %Y"`
+NAME=`git config --get-all user.name`
+EMAIL=`git config --get-all user.email`
+STAP_MAJOR_VERSION=`grep "^Version:" systemtap.spec`
+CHANGELOG_VERSION=`echo $STAP_MAJOR_VERSION | cut -f2 -d" "`
+GIT_VERSION_TAG=`echo 0.$(git describe | rev | cut -f1,2 -d- --output-delimiter=. | rev)`
+
+### lets do a sanity check first
+if which fedpkg &>/dev/null; then
+ :
+else
+echo "Please install the fedpkg package"
+exit
+fi
+
+### Checkout the fedora sources systemtap
+cd ..
+fedpkg co systemtap
+
+### create a tar.gz of the latest git sources from HEAD
+cd systemtap-git
+git archive --prefix=systemtap-$CHANGELOG_VERSION/ -o ../systemtap/systemtap-$CHANGELOG_VERSION-$GIT_VERSION_TAG.tar.gz HEAD
+
+### fedpackage stuff
+
+cd ../systemtap
+
+sed -i "s/Release: .*/Release: $GIT_VERSION_TAG\%\{\?dist\}/" systemtap.spec
+sed -i "s/^Source:.*/Source: %{name}-%{version}-$GIT_VERSION_TAG.tar.gz/" systemtap.spec
+sed -i "s/\%changelog/\%changelog\n* $DATE $NAME <$EMAIL> - $CHANGELOG_VERSION-$GIT_VERSION_TAG\n- Automated weekly rawhide release\n/" systemtap.spec
+
+echo "Please ensure that you have an up to date fedoraproject SSL certificate, you can achieve this by running fedora-cert -n"
+
+fedpkg new-sources systemtap-$CHANGELOG_VERSION-$GIT_VERSION_TAG.tar.gz
+
+fedpkg commit -m "Automated weekly systemtap rawhide release: $GIT_VERSION_TAG" -p 
+
+fedpkg build

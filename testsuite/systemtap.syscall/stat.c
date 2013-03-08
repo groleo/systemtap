@@ -20,7 +20,7 @@ int main()
   //staptest// getcwd (XXXX, 128) = NNNN
 
   fd = creat("foobar",S_IREAD|S_IWRITE);
-  //staptest// open ("foobar", O_WRONLY|O_CREAT[[[[.O_LARGEFILE]]]]?|O_TRUNC, 0600) = NNNN
+  //staptest// [[[[open ("foobar", O_WRONLY|O_CREAT[[[[.O_LARGEFILE]]]]?|O_TRUNC!!!!creat ("foobar"]]]], 0600) = NNNN
 
   fstat(fd, &sbuf);
   //staptest// fstat (NNNN, XXXX) = 0
@@ -36,7 +36,7 @@ int main()
   ubuf.actime = 1;
   ubuf.modtime = 1135641600;
   utime("foobar", &ubuf);
-#ifdef __ia64__
+#if defined(__ia64__) || defined(__arm__)
   //staptest// utimes ("foobar", \[1.000000\]\[1135641600.000000\]) =
 #else
   //staptest// utime ("foobar", \[Thu Jan  1 00:00:01 1970, Tue Dec 27 00:00:00 2005\]) = 0
@@ -45,7 +45,7 @@ int main()
   ubuf.actime =  1135690000;
   ubuf.modtime = 1135700000;
   utime("foobar", &ubuf);
-#ifdef __ia64__
+#if defined(__ia64__) || defined(__arm__)
   //staptest// utimes ("foobar", \[1135690000.000000\]\[1135700000.000000\]) =
 #else
   //staptest// utime ("foobar", \[Tue Dec 27 13:26:40 2005, Tue Dec 27 16:13:20 2005\]) = 0

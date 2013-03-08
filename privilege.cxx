@@ -1,4 +1,4 @@
-// Copyright (C) 2011 Red Hat Inc.
+// Copyright (C) 2011-2012 Red Hat Inc.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as
@@ -27,17 +27,15 @@ using namespace std;
 
 const char *pr_name (privilege_t p)
 {
-  switch (p)
-    {
-    case pr_stapusr:
-      return "stapusr";
-    case pr_stapsys:
-      return "stapsys";
-    case pr_stapdev:
-      return "stapdev";
-    default:
-      break;
-    }
+  /* Test the given privilege credentials in descending order. */
+  if (pr_contains (p, pr_stapdev))
+    return "stapdev";
+  if (pr_contains (p, pr_stapsys))
+    return "stapsys";
+  if (pr_contains (p, pr_stapusr))
+    return "stapusr";
+  if (p == pr_none)
+    return "none";
   return "unknown";
 }
 

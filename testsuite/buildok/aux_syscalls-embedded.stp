@@ -26,7 +26,12 @@ probe begin {
 
 	print (_sigprocmask_how_str(0))
 	print (_itimer_which_str(0))
+
+# nfsservctl was removed in kernel 3.0/2.6.40.
+%( kernel_v < "2.6.40" && CONFIG_NFSD == "[ym]" %?
 	print (_nfsctl_cmd_str(0))
+%)
+
 	print (_get_wc_str(0))
 	print (_flock_cmd_str(0))
 

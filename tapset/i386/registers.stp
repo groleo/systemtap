@@ -48,8 +48,7 @@ if (test_x86_gs()) {
 function _stp_get_register_by_offset:long (offset:long) %{ /* pure */
 	long value;
 	struct pt_regs *regs;
-	regs = ((CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
-		? CONTEXT->uregs : CONTEXT->kregs);
+	regs = (CONTEXT->user_mode_p ? CONTEXT->uregs : CONTEXT->kregs);
 
 	if (!regs) {
 		CONTEXT->last_error = "No registers available in this context";
@@ -119,8 +118,7 @@ function _stp_arg:long (argnum:long) %{ /* pure */
 	long val;
 	int n, nr_regargs, result;
 	struct pt_regs *regs;
-	regs = ((CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
-		? CONTEXT->uregs : CONTEXT->kregs);
+	regs = (CONTEXT->user_mode_p ? CONTEXT->uregs : CONTEXT->kregs);
 	STAP_RETVALUE = 0;
 	if (!regs) {
 		snprintf(CONTEXT->error_buffer, sizeof(CONTEXT->error_buffer),
@@ -133,7 +131,7 @@ function _stp_arg:long (argnum:long) %{ /* pure */
 	n = (int) STAP_ARG_argnum;
 	if (CONTEXT->regparm == 0) {
 		/* Default */
-		if (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
+		if (CONTEXT->user_mode_p)
 			nr_regargs = 0;
 		else
 			nr_regargs = 3;

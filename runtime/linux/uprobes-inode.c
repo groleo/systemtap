@@ -1,6 +1,6 @@
 /* -*- linux-c -*-
  * Common functions for using inode-based uprobes
- * Copyright (C) 2011 Red Hat Inc.
+ * Copyright (C) 2011, 2012 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -25,23 +25,52 @@
 #if !defined(CONFIG_UPROBES)
 #error "not to be built without CONFIG_UPROBES"
 #endif
+
 #if !defined(STAPCONF_UPROBE_REGISTER_EXPORTED)
-typedef int (*uprobe_register_fn)(struct inode *inode, loff_t offset, 
-                                  struct uprobe_consumer *consumer);
+// First get the right typeof(name) that's found in uprobes.h
+#if defined(STAPCONF_OLD_INODE_UPROBES)
+typedef typeof(&register_uprobe) uprobe_register_fn;
+#else
+typedef typeof(&uprobe_register) uprobe_register_fn;
+#endif
+// Then define the typecasted call via function pointer
 #define uprobe_register (* (uprobe_register_fn)kallsyms_uprobe_register)
 #elif defined(STAPCONF_OLD_INODE_UPROBES)
+// In this case, just need to map the new name to the old
 #define uprobe_register register_uprobe
 #endif
+
 #if !defined(STAPCONF_UPROBE_UNREGISTER_EXPORTED)
-typedef void (*uprobe_unregister_fn)(struct inode *inode, loff_t offset,
-                                     struct uprobe_consumer *consumer);
+// First get the right typeof(name) that's found in uprobes.h
+#if defined(STAPCONF_OLD_INODE_UPROBES)
+typedef typeof(&unregister_uprobe) uprobe_unregister_fn;
+#else
+typedef typeof(&uprobe_unregister) uprobe_unregister_fn;
+#endif
+// Then define the typecasted call via function pointer
 #define uprobe_unregister (* (uprobe_unregister_fn)kallsyms_uprobe_unregister)
 #elif defined(STAPCONF_OLD_INODE_UPROBES)
+// In this case, just need to map the new name to the old
 #define uprobe_unregister unregister_uprobe
 #endif
 
+#if defined(STAPCONF_INODE_URETPROBES)
+#if !defined(STAPCONF_URETPROBE_REGISTER_EXPORTED)
+// First typedef from the original decl, then #define it as a typecasted call.
+typedef typeof(&uretprobe_register) uretprobe_register_fn;
+#define uretprobe_register (* (uretprobe_register_fn)kallsyms_uretprobe_register)
+#endif
+
+#if !defined(STAPCONF_URETPROBE_UNREGISTER_EXPORTED)
+// First typedef from the original decl, then #define it as a typecasted call.
+typedef typeof(&uretprobe_unregister) uretprobe_unregister_fn;
+#define uretprobe_unregister (* (uretprobe_unregister_fn)kallsyms_uretprobe_unregister)
+#endif
+#endif
+
 #if !defined(STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED)
-typedef unsigned long (*uprobe_get_swbp_addr_fn)(struct pt_regs *regs);
+// First typedef from the original decl, then #define it as a typecasted call.
+typedef typeof(&uprobe_get_swbp_addr) uprobe_get_swbp_addr_fn;
 #define uprobe_get_swbp_addr (* (uprobe_get_swbp_addr_fn)kallsyms_uprobe_get_swbp_addr)
 #endif
 
@@ -65,7 +94,9 @@ struct stapiu_target {
 /* A consumer is a specific uprobe that we want to place.  */
 struct stapiu_consumer {
 	struct uprobe_consumer consumer;
-	unsigned registered;
+
+	const unsigned return_p:1;
+	unsigned registered:1;
 
 	struct list_head target_consumer;
 	struct stapiu_target * const target;
@@ -73,7 +104,11 @@ struct stapiu_consumer {
 	loff_t offset; /* the probe offset within the inode */
 	loff_t sdt_sem_offset; /* the semaphore offset from process->base */
 
-	struct stap_probe * const probe;
+  	// List of perf counters used by each probe
+  	// This list is an index into struct stap_perf_probe,
+        long perf_counters_dim;
+        long *perf_counters;
+        const struct stap_probe * const probe;
 };
 
 
@@ -89,7 +124,78 @@ static struct stapiu_process {
 
 /* This lock guards modification to stapiu_process_slots and target->processes.
  * XXX: consider fine-grained locking for target-processes.  */
-DEFINE_RWLOCK(stapiu_process_lock);
+static DEFINE_RWLOCK(stapiu_process_lock);
+
+
+/* The stap-generated probe handler for all inode-uprobes. */
+static int
+stapiu_probe_handler (struct stapiu_consumer *sup, struct pt_regs *regs);
+
+static int
+stapiu_probe_prehandler (struct uprobe_consumer *inst, unsigned long ip, struct pt_regs *regs)
+{
+	unsigned long saved_ip;
+	struct stapiu_consumer *sup =
+		container_of(inst, struct stapiu_consumer, consumer);
+	int ret;
+
+	/* NB: The current test kernels of new uretprobes are only passing a
+	 * valid address for uretprobes, and passing 0 for regular uprobes.  In
+	 * the near future, the latter should get a fixed-up address too, and
+	 * this call to uprobe_get_swbp_addr() can go away.  */
+	if (ip == 0)
+		ip = uprobe_get_swbp_addr(regs);
+
+	/* Make it look like the IP is set as it would in the actual user task
+	 * when calling real probe handler. Reset IP regs on return, so we
+	 * don't confuse uprobes.  */
+	saved_ip = REG_IP(regs);
+	SET_REG_IP(regs, ip);
+	ret = stapiu_probe_handler(sup, regs);
+	SET_REG_IP(regs, saved_ip);
+	return ret;
+}
+
+#ifdef STAPCONF_INODE_UPROBES_NOADDR
+/* This is the old form of uprobes handler, without the separate ip address.
+ * We'll always have to kludge it in with uprobe_get_swbp_addr().
+ */
+static int
+stapiu_probe_prehandler_noaddr (struct uprobe_consumer *inst, struct pt_regs *regs)
+{
+	unsigned long ip = uprobe_get_swbp_addr(regs);
+	return stapiu_probe_prehandler(inst, ip, regs);
+}
+#define STAPIU_HANDLER stapiu_probe_prehandler_noaddr
+#else
+#define STAPIU_HANDLER stapiu_probe_prehandler
+#endif
+
+static int
+stapiu_register (struct inode* inode, struct stapiu_consumer* c)
+{
+	c->consumer.handler = STAPIU_HANDLER;
+	if (!c->return_p) {
+		return uprobe_register (inode, c->offset, &c->consumer);
+        } else {
+#if defined(STAPCONF_INODE_URETPROBES)
+		return uretprobe_register (inode, c->offset, &c->consumer);
+#else
+		return EINVAL;
+#endif
+        }
+}
+
+static void
+stapiu_unregister (struct inode* inode, struct stapiu_consumer* c)
+{
+	if (!c->return_p)
+		uprobe_unregister (inode, c->offset, &c->consumer);
+#if defined(STAPCONF_INODE_URETPROBES)
+	else
+		uretprobe_unregister (inode, c->offset, &c->consumer);
+#endif
+}
 
 
 static inline void
@@ -226,8 +332,7 @@ stapiu_target_unreg(struct stapiu_target *target)
 	list_for_each_entry(c, &target->consumers, target_consumer) {
 		if (c->registered) {
 			c->registered = 0;
-			uprobe_unregister(target->inode, c->offset,
-					  &c->consumer);
+			stapiu_unregister(target->inode, c);
 		}
 	}
 }
@@ -235,14 +340,19 @@ stapiu_target_unreg(struct stapiu_target *target)
 
 /* Register all uprobe consumers of a target.  */
 static int
-stapiu_target_reg(struct stapiu_target *target)
+stapiu_target_reg(struct stapiu_target *target, struct task_struct* task)
 {
 	int ret = 0;
 	struct stapiu_consumer *c;
 
 	list_for_each_entry(c, &target->consumers, target_consumer) {
 		if (! c->registered) {
-			ret = uprobe_register(target->inode, c->offset, &c->consumer);
+			int i;
+			for (i=0; i < c->perf_counters_dim; i++) {
+                            if ((c->perf_counters)[i] > -1)
+			    _stp_perf_read_init ((c->perf_counters)[i], task);
+		        }
+			ret = stapiu_register(target->inode, c);
 			if (ret) {
 				c->registered = 0;
 				_stp_error("probe %s registration error (rc %d)",
@@ -374,7 +484,7 @@ stapiu_change_plus(struct stapiu_target* target, struct task_struct *task,
 
 		/* OK, we've checked the target's buildid. Now
 		 * register all its consumers. */
-		rc = stapiu_target_reg(target);
+		rc = stapiu_target_reg(target, task);
 		if (rc) {
 			/* Be sure to release the inode on failure. */
 			iput(target->inode);
@@ -392,9 +502,14 @@ stapiu_change_plus(struct stapiu_target* target, struct task_struct *task,
 		if (!p->tgid) {
 			p->tgid = task->tgid;
 			p->relocation = relocation;
-			p->base = relocation;
-			if (!(vm_flags & VM_EXECUTABLE))
-				p->base -= offset;
+
+                        /* The base is used for relocating semaphores.  If the
+                         * probe is in an ET_EXEC binary, then that offset
+                         * already is a real address.  But stapiu_process_found
+                         * calls us in this case with relocation=offset=0, so
+                         * we don't have to worry about it.  */
+			p->base = relocation - offset;
+
 			list_add(&p->target_process, &target->processes);
 			break;
 		}
@@ -477,7 +592,7 @@ static struct inode *
 stapiu_get_task_inode(struct task_struct *task)
 {
 	struct mm_struct *mm;
-	struct vm_area_struct *vma;
+	struct file* vm_file;
 	struct inode *inode = NULL;
 
 	// Grab the inode associated with the task.
@@ -493,15 +608,9 @@ stapiu_get_task_inode(struct task_struct *task)
 	}
 
 	down_read(&mm->mmap_sem);
-	vma = mm->mmap;
-	while (vma) {
-		if ((vma->vm_flags & VM_EXECUTABLE) && vma->vm_file
-		    && vma->vm_file->f_path.dentry != NULL) {
-			inode = vma->vm_file->f_path.dentry->d_inode;
-			break;
-		}
-		vma = vma->vm_next;
-	}
+	vm_file = stap_find_exe_file(mm);
+	if (vm_file && vm_file->f_path.dentry)
+		inode = vm_file->f_path.dentry->d_inode;
 
 	up_read(&mm->mmap_sem);
 	return inode;

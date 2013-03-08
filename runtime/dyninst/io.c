@@ -14,7 +14,28 @@
 #define WARN_STRING "WARNING: "
 #define ERR_STRING "ERROR: "
 
-// XXX for now, all IO is going in-process to stdout/err
+// XXX for now, all IO is going in-process to stdout/stderr via
+// _stp_out/_stp_err; see runtime/dyninst/runtime.h for initialization.
+
+static FILE* _stp_out = NULL;
+static FILE* _stp_err = NULL;
+
+
+/* Clone a FILE* for private use.  On error, fallback to the original. */
+static FILE* _stp_clone_file(FILE* file)
+{
+    int fd = dup(fileno(file));
+    if (fd != -1) {
+	fcntl(fd, F_SETFD, FD_CLOEXEC);
+	FILE* newfile = fdopen(fd, "wb");
+	if (newfile)
+	    return newfile;
+
+	close(fd);
+    }
+    return file;
+}
+
 
 /** Prints warning.
  * This function sends a warning message immediately to staprun. It
@@ -27,9 +48,9 @@ static void _stp_warn (const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	fprintf(stderr, WARN_STRING);
-	vfprintf(stderr, fmt, args);
-	fprintf(stderr, "\n");
+	fprintf(_stp_err, WARN_STRING);
+	vfprintf(_stp_err, fmt, args);
+	fprintf(_stp_err, "\n");
 	va_end(args);
 }
 
@@ -48,9 +69,9 @@ static void _stp_error (const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	fprintf(stderr, ERR_STRING);
-	vfprintf(stderr, fmt, args);
-	fprintf(stderr, "\n");
+	fprintf(_stp_err, ERR_STRING);
+	vfprintf(_stp_err, fmt, args);
+	fprintf(_stp_err, "\n");
 	va_end(args);
 // FIXME: need to exit here...
 //	_stp_exit();
@@ -70,9 +91,9 @@ static void _stp_softerror (const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	fprintf(stderr, ERR_STRING);
-	vfprintf(stderr, fmt, args);
-	fprintf(stderr, "\n");
+	fprintf(_stp_err, ERR_STRING);
+	vfprintf(_stp_err, fmt, args);
+	fprintf(_stp_err, "\n");
 	va_end(args);
 }
 
@@ -81,9 +102,9 @@ static void _stp_dbug (const char *func, int line, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	fprintf(stderr, "%s:%d: ", func, line);
-	vfprintf(stderr, fmt, args);
-	fprintf(stderr, "\n");
+	fprintf(_stp_err, "%s:%d: ", func, line);
+	vfprintf(_stp_err, fmt, args);
+	fprintf(_stp_err, "\n");
 	va_end(args);
 }
 

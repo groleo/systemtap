@@ -155,6 +155,7 @@ probe nd_syscall.set_zone_reclaim.return = kprobe.function("sys_set_zone_reclaim
 	retstr = returnstr(1)
 }
 
+%( CONFIG_GENERIC_SIGALTSTACK == "n" %?
 # sigaltstack ________________________________________________
 # int sys_sigaltstack(unsigned long ebx)
 #
@@ -174,6 +175,7 @@ probe nd_syscall.sigaltstack.return = kprobe.function("sys_sigaltstack").return
 	name = "sigaltstack"
 	retstr = returnstr(1)
 }
+%)
 
 # vm86 _______________________________________________________
 #

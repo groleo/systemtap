@@ -33,26 +33,42 @@ set pbtype_flags {{""} {additional_flags=-DSTAP_SDT_V2}}
 set pbtype_mssgs {{uprobe} {V2_uprobe}}
 
 proc sdt_stap_run { TEST_NAME TEST_FILE FAIL args } {
-    set cmd [concat stap $TEST_FILE $args]
-    send_log "executing: $cmd\n"
-    catch {eval exec $cmd} res
-
-    set n 0
-    set expected [split $::result_string "\n"]
-    foreach line [split $res "\n"] {
-	if {![string equal $line [lindex $expected $n]]} {
-	    $FAIL "$TEST_NAME"
-	    send_log "line [expr $n + 1]: expected \"[lindex $expected $n]\"\n"
-	    send_log "Got \"$line\"\n"
-	    return
+    foreach runtime [get_runtime_list] {
+	set full_test_name $TEST_NAME
+	if {$runtime != ""} {
+	    lappend full_test_name "($runtime)"
+	    set cmd [concat stap --runtime=$runtime $TEST_FILE $args]
+	} elseif {[uprobes_p]} {
+	    set cmd [concat stap $TEST_FILE $args]
+	} else {
+	    untested $full_test_name
+	    continue
 	}
-	incr n
-    }
-    if {[expr $n == [llength $expected]]} {
-      pass "$TEST_NAME"
-    } else {
-      $FAIL "$TEST_NAME"
-      send_log "too few lines of output, got $n, expected [llength $expected]\n"
+	send_log "executing: $cmd\n"
+	catch {eval exec $cmd} res
+
+	set skip 0
+	set n 0
+	set expected [split $::result_string "\n"]
+	foreach line [split $res "\n"] {
+	    if {![string equal $line [lindex $expected $n]]} {
+		$FAIL "$full_test_name"
+		send_log "line [expr $n + 1]: expected \"[lindex $expected $n]\"\n"
+		send_log "Got \"$line\"\n"
+		set skip 1
+		break
+	    }
+	    incr n
+	}
+	if {$skip != 0} {
+	    continue
+	}
+	if {[expr $n == [llength $expected]]} {
+	    pass "$full_test_name"
+	} else {
+	    $FAIL "$full_test_name"
+	    send_log "too few lines of output, got $n, expected [llength $expected]\n"
+	}
     }
 }
 
@@ -93,8 +109,9 @@ if { $res != "" } {
     pass "compiling $test.c $extra_mssg $type_pedantic_mssg $pbtype_mssg"
 }
 
-if {[installtest_p] && [utrace_p] && [uprobes_p]} {
-    if {[regexp "^(ppc64|s390x)$" $::tcl_platform(machine)] && [regexp "^(-O)" $extra_mssg]} {
+if {[installtest_p]} {
+    if {[regexp "^(ppc64|s390x)$" $::tcl_platform(machine)] \
+	    && [regexp "^(-O)" $extra_mssg]} {
 	# register name and constant is ambiguous in ppc/s390 asm syntax
 	# thus constant folding can throw the result off
 	set FAIL xfail
@@ -105,7 +122,8 @@ if {[installtest_p] && [utrace_p] && [uprobes_p]} {
     if { $pbtype_mssg == "uprobe" } {
 	append ::result_string $result_string12
     }
-    sdt_stap_run "$test $extra_mssg $type_pedantic_mssg $pbtype_mssg" -w $FAIL $srcdir/$subdir/$test.stp $testprog -c ./$testprog
+    sdt_stap_run "$test $extra_mssg $type_pedantic_mssg $pbtype_mssg" \
+	-w $FAIL $srcdir/$subdir/$test.stp $testprog -c ./$testprog
 } else {
     untested "$test $extra_mssg $type_pedantic_mssg $pbtype_mssg"
 }

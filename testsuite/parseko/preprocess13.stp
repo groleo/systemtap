@@ -1,4 +1,4 @@
 #! /bin/sh
 
 # recursive 
-stap -p1 -e '$1' '$1'
+stap $@ -p1 -e '$1' '$1'

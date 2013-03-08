@@ -52,7 +52,7 @@
 \newpage{}
 This document was derived from other documents contributed to the SystemTap project by employees of Red Hat, IBM and Intel.\newline
 
-Copyright \copyright\space  2007-2012 Red Hat Inc.\newline
+Copyright \copyright\space  2007-2013 Red Hat Inc.\newline
 Copyright \copyright\space  2007-2009 IBM Corp.\newline
 Copyright \copyright\space  2007 Intel Corporation.\newline
 
@@ -365,11 +365,12 @@ Events are specified in a special syntax called \emph{probe points}. There
 are several varieties of probe points defined by the translator, and tapset
 scripts may define others using aliases. The provided probe points are listed
 in the \texttt{stapprobes(3)}, \texttt{tapset::*(3stap)}, and
-\texttt{probe::*(3stap)} man pages.
+\texttt{probe::*(3stap)} man pages.  The STMT statement block is executed
+whenever {\i any} of the named PROBEPOINT events occurs.
 
 The probe handler is interpreted relative to the context of each event. For
 events associated with kernel code, this context may include variables defined
-in the source code at that location. These \emph{target variables}\index{target variables}
+in the source code at that location. These \emph{target variables}\index{target variables} (or ``context variables'')
 are presented to the script as variables whose names are prefixed with a
 dollar sign (\$). They may be accessed only if the compiler used to compile
 the kernel preserved them, despite optimization. This is the same constraint
@@ -630,17 +631,47 @@ limit. See Section~\ref{sub:SystemTap-safety}.
 
 \subsection{Embedded C\label{sub:Embedded-C}}
 \index{embedded C}
-SystemTap supports a \emph{guru\index{guru mode} mode} where script safety
-features such as code and data memory reference protection are removed. Guru
-mode is set by passing the \textbf{-g} option to the stap command. When in guru
-mode, the translator accepts C code enclosed between {}``\%\{''
-and {}``\%\}'' markers in the script file. The embedded C code is transcribed
-verbatim, without analysis, in sequence, into generated C code. At the outermost
-level of a script, guru mode may be useful to add \#include instructions,
-or any auxiliary definitions for use by other embedded code.
+SystemTap supports a \emph{guru\index{guru mode} mode} where script
+safety features such as code and data memory reference protection are
+removed. Guru mode is set by passing the \textbf{-g} option to the
+stap command. When in guru mode, the translator accepts C code
+enclosed between {}``\%\{'' and {}``\%\}'' markers in the top level of
+the script file. The embedded C code is transcribed verbatim, without
+analysis, in sequence, into the top level of the generated C
+code. Thus, guru mode may be useful for adding \#include instructions
+at the top level of the generated module, or providing auxiliary
+definitions for use by other embedded code.
 
+When in guru mode, embedded C code blocks are also allowed as the body
+of a SystemTap function (as described in
+Section~\ref{sub:Embedded-C-Functions}), and in place of any SystemTap
+expression. In the latter case, the code block must contain a valid
+expression according to C syntax.
 
-\subsection{Embedded C functions}
+Here is an example of the various permitted methods of embedded C code inclusion:
+
+\begin{vindent}
+\begin{verbatim}
+%{
+#include <linux/in.h>
+#include <linux/ip.h>
+%} /* <-- top level */
+
+/* Reads the char value stored at a given address: */ 
+function __read_char:long(addr:long) %{ /* pure */
+         STAP_RETVALUE = kderef(sizeof(char), STAP_ARG_addr);
+         CATCH_DEREF_FAULT ();
+%} /* <-- function body */
+
+/* Determines whether an IP packet is TCP, based on the iphdr: */
+function is_tcp_packet:long(iphdr) {
+         protocol = @cast(iphdr, "iphdr")->protocol
+         return (protocol == %{ IPPROTO_TCP %}) /* <-- expression */
+}
+\end{verbatim}
+\end{vindent}
+
+\subsection{Embedded C functions\label{sub:Embedded-C-Functions}}
 
 General syntax:
 
@@ -654,7 +685,7 @@ In that case, the script language
 body is replaced entirely by a piece of C code enclosed between 
 {}``\%\{'' and {}``\%\}'' markers.
 The enclosed code may do anything reasonable and safe as allowed
-by the parser.
+by the C parser.
 
 There are a number of undocumented but complex safety constraints on concurrency,
 resource consumption and runtime limits that are applied to code written
@@ -703,6 +734,37 @@ C code generated for ordinary script language functions to write compatible
 embedded-C. Note that all SystemTap functions and probes run with interrupts
 disabled, thus you cannot call functions that might sleep within the embedded
 C.
+
+\subsection{Embedded C pragma comments}
+
+Embedded C blocks may contain various markers to assert optimization
+and safety properties.
+
+\begin{itemize}
+\item \verb+/* pure */+ means that the C code has no side effects and
+  may be elided entirely if its value is not used by script code.
+\item \verb+/* unprivileged */+ means that the C code is so safe that
+  even unprivileged users are permitted to use it. (This is useful, in
+  particular, to define an embedded-C function inside a tapset that
+  may be used by unprivileged code.)
+\item \verb+/* myproc-unprivileged */+ means that the C code is so
+  safe that even unprivileged users are permitted to use it, provided
+  that the target of the current probe is within the user's own
+  process.
+\item \verb+/* guru */+ means that the C code is so unsafe that a
+  systemtap user must specify \verb+-g+ (guru mode) to use this, even
+  if the C code is being exported from a tapset.
+\item \verb+/* unmangled */+, used in an embedded-C function, means
+  that the legacy (pre-1.8) argument access syntax should be made
+  available inside the function. Hence, in addition to
+  \verb+STAP_ARG_foo+ and \verb+STAP_RETVALUE+ one can use
+  \verb+THIS->foo+ and \verb+THIS->__retvalue+ respectively inside the
+  function. This is useful for quickly migrating code written for
+  SystemTap version 1.7 and earlier.
+\item \verb+/* string */+ in embedded-C expressions only, means that
+  the expression has \verb+const char *+ type and should be treated as
+  a string value, instead of the default long numeric.
+\end{itemize}
 
 \section{Probe points\label{sec:Probe-Points}}
 \index{probe points}
@@ -1045,10 +1107,7 @@ to not register. Also, statement probes are available only in guru mode.
 \index{userspace probing}
 \index{process}
 Support for userspace probing is supported on kernels that are
-configured to include the utrace extensions.  Red Hat and CentOS
-distributions provide kernels with utrace support enabled.  For more
-information about utrace, see
-\url{http://people.redhat.com/roland/utrace/}.
+configured to include the utrace or uprobes extensions.
 
 \subsubsection{Begin/end variants}
 \label{sec:beginendvariants}
@@ -1738,9 +1797,19 @@ it generates an error. The following subsections list these operators.
 \index{unary}
 \texttt{+ - ! \textasciitilde{} ++ -{}-}
 
-\subsubsection{Binary numeric or string comparison operators}
+\subsubsection{Binary numeric, string comparison, or regular expression matching operators}
 \index{comparison}
-\texttt{< > <= >= == !=}
+\texttt{< > <= >= == !=} \verb+=~+ \verb+!~+
+
+The regular expression matching (\verb+=~+ and \verb+!~+) is
+currently an experimental feature. The second operand must be a string
+literal containing a syntactically valid regular expression. The
+regular expression syntax supports most of the features of POSIX
+Extended Regular Expressions, aside from subexpression reuse
+(\verb+\1+) and named character classes (\texttt{[:digit:]},
+\texttt{[:alpha:]}, ...). The ability to capture and extract the
+contents of the matched string and subexpressions has not yet been
+implemented.
 
 \subsubsection{Ternary operator\label{sub:Ternary-operator}}
 \index{?}
@@ -1953,6 +2022,22 @@ literal for matching it. This comparison is a simple string equality or inequali
 The currently supported architecture strings are i386, i686, x86\_64, ia64,
 s390, and powerpc.
 
+\subsubsection{Conditions based on privilege level: systemtap\_privilege}
+\index{systemtap\_privilege}
+
+If the first part of the conditional expression is the identifier
+\texttt{systemtap\_privilege} which refers to the privilege level the
+systemtap script is being compiled with, then the second part is a
+string comparison operator ''=='' or ''!='', and the third part is a
+string literal for matching it. This comparison is a simple string
+equality or inequality.  The possible privilege strings to consider
+are \verb+"stapusr"+ for unprivileged scripts, and \verb+"stapsys"+ or
+\verb+"stapdev"+ for privileged scripts. (In general, to test for a
+privileged script it is best to use \verb+!= "stapusr"+.)
+
+This condition can be used to write scripts that can be run in both
+privileged and unprivileged modes, with additional functionality made
+available in the privileged case.
 
 \subsubsection{True and False Tokens}
 \index{tokens}
@@ -2096,7 +2181,7 @@ try {
 \end{vindent}
 
 
-\subsection{delete}
+\subsection{delete\label{sub:delete}}
 \index{delete}
 \texttt{delete} removes an element.
 
@@ -2371,6 +2456,12 @@ SystemTap forbids any modification of an array during iteration with a foreach.
 
 For a full description of \texttt{foreach} see subsection \ref{sub:foreach}.
 
+\subsection{Deletion}
+\index{delete}
+The \texttt{delete} statement can either remove a single element by index from
+an array or clear an entire array at once.  See subsection \ref{sub:delete} for
+details and examples.
+
 \section{Statistics (aggregates)\label{sec:Statistics}}
 \index{aggregates}
 Aggregate instances are used to collect statistics on numerical values, when
@@ -2546,6 +2637,10 @@ value |-------------------------------------------------- count
 \end{vindent}
 \end{samepage}
 
+\subsection{Deletion}
+\index{delete}
+The \texttt{delete} statement (subsection \ref{sub:delete}) applied to an
+aggregate variable will reset it to the initial empty state.
 
 \section{Formatted output}
 

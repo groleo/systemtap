@@ -18,10 +18,11 @@ void check_process_probe_kernel_support(systemtap_session& s);
 void register_standard_tapsets(systemtap_session& sess);
 std::vector<derived_probe_group*> all_session_groups(systemtap_session& s);
 std::string common_probe_init (derived_probe* p);
-void common_probe_entryfn_prologue (translator_output* o, std::string statestr,
+void common_probe_entryfn_prologue (systemtap_session& s, std::string statestr,
 				    std::string probe, std::string probe_type,
 				    bool overload_processing = true);
-void common_probe_entryfn_epilogue (translator_output* o, bool overload_processing, bool suppress_handler_errors);
+void common_probe_entryfn_epilogue (systemtap_session& s,
+				    bool overload_processing);
 
 void register_tapset_been(systemtap_session& sess);
 void register_tapset_itrace(systemtap_session& sess);

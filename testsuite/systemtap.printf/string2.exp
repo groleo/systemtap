@@ -106,14 +106,12 @@ set TEST_NAME "$subdir/$test.stp"
 
 if {![installtest_p]} { untested $TEST_NAME; return }
 
-set res [exec stap $srcdir/$subdir/$test.stp]
-
-if {[string compare $res $::result_string] == 0} {
-      pass $TEST_NAME
-} else {
-      fail $TEST_NAME
-      puts "EXPECTED:\n-----------------------\n<$::result_string>"
-      puts "-----------------------\n"
-      puts "GOT:\n-----------------------\n<$res>"
-      puts "-----------------------\n"
+foreach runtime [get_runtime_list] {
+    set TEST_NAME "$subdir/$test.stp"
+    if {$runtime != ""} {
+	lappend TEST_NAME "($runtime)"
+	stap_run_exact $TEST_NAME $srcdir/$subdir/$test.stp --runtime=$runtime
+    } else {
+	stap_run_exact $TEST_NAME $srcdir/$subdir/$test.stp
+    }
 }

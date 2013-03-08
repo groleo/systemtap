@@ -4,11 +4,10 @@
 #include "linux/task_work_compatibility.h"
 
 #if !defined(STAPCONF_TASK_WORK_ADD_EXPORTED)
-typedef int (*task_work_add_fn)(struct task_struct *task,
-				  struct task_work *twork, bool notify);
+// First typedef from the original decls, then #define as typecasted calls.
+typedef typeof(&task_work_add) task_work_add_fn;
 #define task_work_add (* (task_work_add_fn)kallsyms_task_work_add)
-typedef struct task_work *(*task_work_cancel_fn)(struct task_struct *,
-						 task_work_func_t);
+typedef typeof(&task_work_cancel) task_work_cancel_fn;
 #define task_work_cancel (* (task_work_cancel_fn)kallsyms_task_work_cancel)
 #endif
 
@@ -20,7 +19,7 @@ static atomic_t stp_task_work_callbacks = ATOMIC_INIT(0);
  * stp_task_work_init() should be called before any other
  * stp_task_work_* functions are called to do setup.
  */
-int
+static int
 stp_task_work_init(void)
 {
 #if !defined(STAPCONF_TASK_WORK_ADD_EXPORTED)
@@ -49,7 +48,7 @@ stp_task_work_init(void)
  * is called, the kernel will try to make a function call to an
  * invalid address.
  */
-void
+static void
 stp_task_work_exit(void)
 {
 	while (atomic_read(&stp_task_work_callbacks))
@@ -61,7 +60,7 @@ stp_task_work_exit(void)
  * Our task_work_add() wrapper that remembers that we've got a pending
  * callback.
  */
-int
+static int
 stp_task_work_add(struct task_struct *task, struct task_work *twork)
 {
 	int rc;
@@ -76,7 +75,7 @@ stp_task_work_add(struct task_struct *task, struct task_work *twork)
  * Our task_work_cancel() wrapper that remembers that a callback has
  * been cancelled.
  */
-struct task_work *
+static struct task_work *
 stp_task_work_cancel(struct task_struct *task, task_work_func_t func)
 {
 	struct task_work *twork;
@@ -92,7 +91,7 @@ stp_task_work_cancel(struct task_struct *task, task_work_func_t func)
  * task_work callback function so that we can keep up with callback
  * accounting.
  */
-void
+static void
 stp_task_work_func_done(void)
 {
 	atomic_dec(&stp_task_work_callbacks);

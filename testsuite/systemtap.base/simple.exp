@@ -6,4 +6,10 @@ set test "simple"
 #check to see whether get the marker indicating the probe is loaded and running
 #should check to see whether exited for some reason
 #should be error is something else is printed.
-stap_run $srcdir/$subdir/$test.stp
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run $srcdir/$subdir/$test.stp "" "" --runtime=$runtime
+    } else {
+	stap_run $srcdir/$subdir/$test.stp
+    }
+}

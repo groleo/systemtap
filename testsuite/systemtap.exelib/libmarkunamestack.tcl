@@ -8,7 +8,7 @@ if {! [uprobes_p]} { untested "libmarkunamestack-$testname"; return }
 #print_ubacktrace exe 0
 # 0x080484ba : main_func+0xa/0x29 [.../uprobes_exe]
 # 0x080484f6 : main+0x1d/0x37 [.../uprobes_exe]
-#print_ustack exe 1
+#print_usyms exe 1
 # 0x080484ba : main_func+0xa/0x29 [.../uprobes_exe]
 # 0x080484c9 : main_func+0x19/0x29 [.../uprobes_exe]
 # 0x080484f6 : main+0x1d/0x37 [.../uprobes_exe]
@@ -19,7 +19,7 @@ if {! [uprobes_p]} { untested "libmarkunamestack-$testname"; return }
 # 0x080484c9 : main_func+0x19/0x29 [.../uprobes_exe]
 # 0x080484c9 : main_func+0x19/0x29 [.../uprobes_exe]
 # 0x080484f6 : main+0x1d/0x37 [.../uprobes_exe]
-#print_ustack lib 3
+#print_usyms lib 3
 # 0x00db2422 : lib_func+0x16/0x2b [.../libuprobes_lib.so]
 # 0x00db2431 : lib_func+0x25/0x2b [.../libuprobes_lib.so]
 # 0x00db2455 : lib_main+0x1e/0x29 [.../libuprobes_lib.so]

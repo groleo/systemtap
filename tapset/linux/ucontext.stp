@@ -24,21 +24,32 @@ function umodname:string (addr:long) %{
 %}
 
 /**
- *  sfunction ucallers - return list of PCs at top n levels of user stack
+ *  sfunction ucallers - Return first n elements of user stack backtrace
+ *  
  *  @n: number of levels to descend in the stack (not counting the top
  *  level). If n is -1, print the entire stack.
+ *
+ *  Description: This function returns a string of the first n hex
+ *  addresses from the backtrace of the user stack. Output may be
+ *  truncated as per maximum string length (MAXSTRINGLEN).
+ *
+ *  Note: To get (full) backtraces for user space applications and shared
+ *  shared libraries not mentioned in the current script run stap with
+ *  -d /path/to/exe-or-so and/or add --ldd to load all needed unwind data.
  */
 function ucallers:string (n:long) {
-         str = ""
-         for (i = 0; i <= n || n == -1; i++) {
-             foo = i > 0 ? " " : ""
+         __str = ""; __l = 0
+         for (__i = 0; __i <= n || n == -1; __i++) {
+             __foo = __i > 0 ? " " : ""
              try {
-                 foo .= sprintf("0x%x", ustack(i))
+                 __foo .= sprintf("0x%x", ustack(__i))
              } catch { /* assume we've hit the end of the stack */
                  if (n == -1) break
-                 @unwind_error(n)
+                 @__context_unwind_error(n)
              }
-             str .= foo
+             // ensure string cuts off cleanly at MAXSTRINGLEN:
+             __l += strlen(__foo); if (__l > %{ MAXSTRINGLEN %}) break
+             __str .= __foo
          }
-         return str
+         return __str
 }

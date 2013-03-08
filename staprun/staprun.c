@@ -23,11 +23,13 @@
 #define _BSD_SOURCE
 #include "staprun.h"
 #include "../privilege.h"
+#include "../runtime/k_syms.h"
 #include <string.h>
 #include <sys/uio.h>
 #include <glob.h>
 #include <time.h>
 #include <sys/prctl.h>
+#include <sys/utsname.h>
 
 /* used in dbug, _err and _perr */
 char *__name__ = "staprun";
@@ -202,6 +204,7 @@ static void remove_all_modules(void)
 	struct dirent *d;
 	DIR *moddir;
 
+        /* NB: nothing to do with PR14245 */
 	if (statfs("/sys/kernel/debug", &st) == 0 && (int)st.f_type == (int)DEBUGFS_MAGIC)
 		base = "/sys/kernel/debug/systemtap";
 	else
@@ -272,6 +275,12 @@ void disable_kprobes_optimization()
         const char* proc_kprobes = "/proc/sys/debug/kprobes-optimization";
         char prev;
         int rc, fd;
+        struct utsname uts;
+
+        /* PR13814; disable this facility for new enough kernels, containing
+         * these fix commits: 86b4ce31 46484688 3f33ab1c */
+        if ((uname (&uts) == 0) && (strverscmp (uts.release, "3.4") >= 0))
+                return;
 
         if (getenv ("STAP_PR13193_OVERRIDE"))
                 return;
@@ -310,7 +319,12 @@ int init_staprun(void)
 	rc = 0;
 	if (delete_mod)
 		exit(remove_module(modname, 1));
-	else if (!attach_mod) {
+        if (attach_mod) {
+                /* PR14245: prime the relay_basedir_fd pump. */
+		rc = init_ctl_channel (modname, 0);
+		if (rc >= 0)
+		  close_ctl_channel ();
+        } else /* if (!attach_mod) */ {
 		if (need_uprobes && enable_uprobes() != 0)
 			return -1;
 
@@ -378,6 +392,17 @@ int main(int argc, char **argv)
 
 	parse_args(argc, argv);
 
+        /* PR14245, For security reasons, preclude "staprun -F fd".
+           The -F option is only for stapio, but the overzealous quest
+           for commonality doesn't let us express that nicer. */
+        if (relay_basedir_fd >= 0) {
+                err(_("ERROR: relay basedir -F option is invalid for staprun\n"));
+                exit(1);
+        }
+        /* NB: later on, some of our own code may set relay_basedir_fd, for
+           passing onto stapio - or for our own reuse.  That's OK.  */
+
+
 	if (buffer_size)
 		dbug(2, "Using a buffer of %u MB.\n", buffer_size);
 
@@ -418,6 +443,27 @@ int main(int argc, char **argv)
 	/* Copy nenamed modname into argv */
 	if(rename_mod)
 		argv[mod_optind] = modname;
+
+        /* PR14245: pass -F fd to stapio. Unfortunately, this requires
+           us to extend argv[], with all the C fun that entails. */
+#ifdef HAVE_OPENAT
+        if (relay_basedir_fd >= 0) {
+                char ** new_argv = calloc(sizeof(char *),argc+1);
+                const int new_Foption_size = 10; /* -FNNNNN */
+                char * new_Foption = malloc(new_Foption_size);
+                int i;
+
+                if (new_argv && new_Foption) {
+                        snprintf (new_Foption, new_Foption_size, "-F%d", relay_basedir_fd);
+                        for (i=0; argv[i] != NULL; i++)
+                                new_argv[i] = argv[i];
+                        new_argv[i++] = new_Foption; /* overwrite the NULL */
+                        new_argv[i++] = NULL; /* ensconce a new NULL */
+
+                        argv = new_argv;
+                }
+        }
+#endif
 
 	/* Run stapio */
 	if (run_as (1, getuid(), getgid(), argv[0], argv) < 0) {
@@ -472,12 +518,6 @@ int send_a_relocation (const char* module, const char* reloc, unsigned long long
   return rc;
 }
 
-
-#ifdef __powerpc64__
-#define KERNEL_RELOC_SYMBOL ".__start"
-#else
-#define KERNEL_RELOC_SYMBOL "_stext"
-#endif
 
 int send_relocation_kernel ()
 {

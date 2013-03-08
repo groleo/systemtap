@@ -1,0 +1,73 @@
+# test aggregate sorting
+
+set test "foreach_aggrsort"
+set ::result_string {sort default+
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+sort default-
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+sort @count+
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+sort @count-
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+sort @sum+
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+sort @sum-
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+sort @avg+
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+sort @avg-
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+sort @min+
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+sort @min-
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+sort @max+
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+sort @max-
+stats[2]: @count=2 @sum=7 @min=1 @max=6 @avg=3
+stats[3]: @count=3 @sum=12 @min=3 @max=5 @avg=4
+stats[4]: @count=4 @sum=1 @min=0 @max=1 @avg=0
+stats[1]: @count=1 @sum=-1 @min=-1 @max=-1 @avg=-1
+}
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run_exact "${test}_${runtime}" $srcdir/$subdir/$test.stp \
+	    --runtime=$runtime
+    } else {
+	stap_run_exact $test $srcdir/$subdir/$test.stp
+    }
+}

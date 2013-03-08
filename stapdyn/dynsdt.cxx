@@ -1,3 +1,11 @@
+// dyninst example program
+// Copyright (C) 2012 Red Hat Inc.
+//
+// This file is part of systemtap, and is free software.  You can
+// redistribute it and/or modify it under the terms of the GNU General
+// Public License (GPL); either version 2, or (at your option) any
+// later version.
+
 
 #include <cstdlib>
 #include <string>
@@ -25,6 +33,7 @@ extern "C" {
 #include <BPatch_point.h>
 
 #include "dynutil.h"
+#include "../util.h"
 
 
 using namespace std;
@@ -36,31 +45,6 @@ struct sdt_point {
     GElf_Addr pc_offset;
     GElf_Addr sem_offset;
 };
-
-
-string
-resolve_path(const string& name)
-{
-  if (name.find('/') != string::npos)
-    return name;
-
-  char *env_path = getenv("PATH");
-  if (!env_path)
-    return name;
-
-  vector<string> paths;
-  char *ppath, path[strlen(env_path)];
-  strcpy(path, env_path);
-  ppath = strtok(path, ":");
-  while (ppath)
-    {
-      string fullpath = string(ppath) + "/" + name;
-      if (!access(fullpath.c_str(), X_OK))
-        return fullpath;
-      ppath = strtok(NULL, ":");
-    }
-  return name;
-}
 
 
 static vector<pair<int, string> >
@@ -140,13 +124,13 @@ find_sdt(const string& file)
         {
           sdt_base_addr = shdr.sh_addr;
           sdt_base_offset = shdr.sh_offset;
-          warnx("SDT base addr:%#"PRIx64" offset:%#"PRIx64"", sdt_base_addr, sdt_base_offset);
+          warnx("SDT base addr:%#" PRIx64 " offset:%#" PRIx64 "", sdt_base_addr, sdt_base_offset);
         }
       if (sh_name && !strcmp(".probes", sh_name))
         {
           sdt_probes_addr = shdr.sh_addr;
           sdt_probes_offset = shdr.sh_offset;
-          warnx("SDT probes addr:%#"PRIx64" offset:%#"PRIx64"", sdt_probes_addr, sdt_probes_offset);
+          warnx("SDT probes addr:%#" PRIx64 " offset:%#" PRIx64 "", sdt_probes_addr, sdt_probes_offset);
         }
     }
 
@@ -243,7 +227,7 @@ find_sdt(const string& file)
                 joined_args << ", ";
               joined_args << p.args[i].first << "@\"" << p.args[i].second << "\"";
             }
-	  warnx("SDT offset:%#"PRIx64" semaphore:%#"PRIx64" %s:%s(%s)",
+	  warnx("SDT offset:%#" PRIx64 " semaphore:%#" PRIx64 " %s:%s(%s)",
 		p.pc_offset, p.sem_offset,
                 p.provider.c_str(), p.name.c_str(),
 		joined_args.str().c_str());
@@ -270,7 +254,7 @@ instrument_sdt(BPatch_process* process,
   Dyninst::Address address = object->fileOffsetToAddr(p.pc_offset);
   if (address == BPatch_object::E_OUT_OF_BOUNDS)
     {
-      warnx("couldn't convert %s:%s at %#"PRIx64" to an address",
+      warnx("couldn't convert %s:%s at %#" PRIx64 " to an address",
             p.provider.c_str(), p.name.c_str(), p.pc_offset);
       return;
     }
@@ -279,7 +263,7 @@ instrument_sdt(BPatch_process* process,
   object->findPoints(address, points);
   if (points.empty())
     {
-      warnx("couldn't find %s:%s at %#"PRIx64" -> %#lx",
+      warnx("couldn't find %s:%s at %#" PRIx64 " -> %#lx",
             p.provider.c_str(), p.name.c_str(), p.pc_offset, address);
       return;
     }
@@ -305,7 +289,7 @@ instrument_sdt(BPatch_process* process,
   image->findFunction("printf", printfFuncs);
   BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
 
-  warnx("inserting %s:%s at %#"PRIx64" -> %#lx [%zu]",
+  warnx("inserting %s:%s at %#" PRIx64 " -> %#lx [%zu]",
         p.provider.c_str(), p.name.c_str(), p.pc_offset, address, points.size());
   process->insertSnippet(printfCall, points);
 
@@ -313,11 +297,11 @@ instrument_sdt(BPatch_process* process,
     {
       Dyninst::Address sem_address = object->fileOffsetToAddr(p.sem_offset);
       if (sem_address == BPatch_object::E_OUT_OF_BOUNDS)
-        warnx("couldn't convert %s:%s semaphore %#"PRIx64" to an address",
+        warnx("couldn't convert %s:%s semaphore %#" PRIx64 " to an address",
               p.provider.c_str(), p.name.c_str(), p.sem_offset);
       else
         {
-          warnx("incrementing semaphore for %s:%s at %#"PRIx64" -> %#lx",
+          warnx("incrementing semaphore for %s:%s at %#" PRIx64 " -> %#lx",
                 p.provider.c_str(), p.name.c_str(), p.sem_offset, sem_address);
 
           BPatch_type *sem_type = image->findType("unsigned short");
@@ -358,10 +342,13 @@ main(int argc, const char* argv[])
   if (!check_dyninst_rt())
     return 1;
 
+  if (!check_dyninst_sebools())
+    return 1;
+
   BPatch patch;
 
   warnx("creating the process");
-  string fullpath = resolve_path(argv[1]);
+  string fullpath = find_executable(argv[1]);
   BPatch_process *app = patch.processCreate(fullpath.c_str(), &argv[1]);
   BPatch_image *image = app->getImage();
 
@@ -389,7 +376,7 @@ main(int argc, const char* argv[])
   }
 
   warnx("done!");
-  return 0;
+  return check_dyninst_exit(app) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */

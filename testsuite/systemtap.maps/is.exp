@@ -63,6 +63,10 @@ foo[8] = # 64
 foo[9] = # 81
 foo[10] = # 100}
 
-stap_run2 $srcdir/$subdir/$test.stp
-
-
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test.stp --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test.stp
+    }
+}

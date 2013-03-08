@@ -1,7 +1,6 @@
 // tapset for begin/end/error/never
 // Copyright (C) 2005-2011 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
-// Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -122,7 +121,7 @@ be_derived_probe_group::emit_module_decls (systemtap_session& s)
   sort(probes.begin(), probes.end(), be_derived_probe::comp);
 
   s.op->newline() << "static struct stap_be_probe {";
-  s.op->newline(1) << "struct stap_probe * const probe;";
+  s.op->newline(1) << "const struct stap_probe * const probe;";
   s.op->newline() << "int state, type;";
   s.op->newline(-1) << "} stap_be_probes[] = {";
   s.op->indent(1);
@@ -139,10 +138,10 @@ be_derived_probe_group::emit_module_decls (systemtap_session& s)
 
   s.op->newline() << "static void enter_be_probe (struct stap_be_probe *stp) {";
   s.op->indent(1);
-  common_probe_entryfn_prologue (s.op, "stp->state", "stp->probe",
-				 "_STP_PROBE_HANDLER_BEEN", false);
+  common_probe_entryfn_prologue (s, "stp->state", "stp->probe",
+				 "stp_probe_type_been", false);
   s.op->newline() << "(*stp->probe->ph) (c);";
-  common_probe_entryfn_epilogue (s.op, false, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, false);
   s.op->newline(-1) << "}";
 }
 

@@ -4,7 +4,7 @@ set ::result_string {{.c8='s', .c16='t', .c32='p', .s8="stapΑΩ☺😈", .s16="
 set srcfile "$srcdir/$subdir/$test.cxx"
 set stpfile "$srcdir/$subdir/$test.stp"
 set exefile "[pwd]/$test.exe"
-set test_flags "additional_flags=-g additional_flags=-std=c++0x"
+set test_flags "compiler=g++ additional_flags=-g additional_flags=-std=c++0x"
 set res [target_compile "$srcfile" "$exefile" executable "$test_flags"]
 if { $res != "" } {
   verbose "target_compile failed: $res" 2
@@ -15,4 +15,11 @@ if { $res != "" } {
   pass "$test compile"
 }
 
-stap_run3 $test "$stpfile" -c "$exefile"
+foreach runtime [get_runtime_list] {
+  if {$runtime != ""} {
+    stap_run3 "$test ($runtime)" "$stpfile" -c "$exefile" --runtime=$runtime
+  } else {
+      stap_run3 $test "$stpfile" -c "$exefile"
+  }
+}
+if { $verbose == 0 } { catch { exec rm -f $exefile } }

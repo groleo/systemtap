@@ -1,0 +1,111 @@
+#!/usr/bin/bash
+
+#check for man2html
+#TODO perhaps wget, untar, and automatically use, then remove if we want?
+# http://dcssrv1.oit.uci.edu/indiv/ehood/tar/man2html3.0.1.tar.gz
+
+if which man2html &>/dev/null; then
+ :
+else
+echo "Please install man2html package"
+exit
+fi
+
+# Create the directory we'll be working in
+
+DIR=`mktemp -d stapdocsXXX -p /tmp/`; cd $DIR
+
+# We'll need to build the latest stap with docs, ensure a check that everything built properly or bail
+
+git clone git://sourceware.org/git/systemtap.git
+
+# Checkout the htdocs CVS
+
+cvs -d :ext:sourceware.org:/cvs/systemtap checkout htdocs
+
+BASEDIR=`pwd`
+cd systemtap
+
+mkdir build && mkdir local && cd build
+
+../configure --enable-docs --enable-publican --prefix=$BASEDIR/systemtap/local
+
+#Not sure if we're really allowed to make assumptions about the machine we're running this on
+#Probably safer not using the -jX option
+make
+make install
+if [ $? -eq 0 ]; then
+ : 
+else
+echo "Make failed, please address build errors"
+exit
+fi
+
+### LANGREF
+cp doc/langref.pdf $BASEDIR/htdocs/
+
+#Something about publicanizing the langref?
+
+rm $BASEDIR/htdocs/langref/*.html
+cd $BASEDIR/htdocs
+cvs rm && cvs commit -m 'removed langref/*.html'
+
+cd $BASEDIR/systemtap/doc
+latex2html -noaddress -show_section_numbers -custom_titles -local_icons -split 4 langref.tex -dir $BASEDIR/htdocs/langref/
+cd $BASEDIR/htdocs
+cvs add langref/*.html && cvs commit -m 'add new langref/*.html'
+cd -
+### TUTORIAL
+cp $BASEDIR/systemtap/build/doc/tutorial.pdf $BASEDIR/htdocs/
+rm $BASEDIR/htdocs/tutorial/*.html
+
+cd $BASEDIR/htdocs
+#cvs rm && cvs commit -m 'removed tutorial/*.html'
+
+cd $BASEDIR/systemtap/doc
+latex2html -noaddress -show_section_numbers -custom_titles -local_icons -split 4 tutorial.tex -dir $BASEDIR/htdocs/tutorial/
+
+cd $BASEDIR/htdocs
+cvs add tutorial/*.html && cvs commit -m 'add new tutorial/*.html'
+
+# beginners guide
+# we require xmlto version newer than 0.0.23-3
+# TODO add a version check
+
+cd $BASEDIR/systemtap/build/doc/beginners
+
+cp SystemTap_Beginners_Guide.pdf $BASEDIR/htdocs/
+
+#echo 'systemtap_beginners_guide.pdf cp'
+
+rm $BASEDIR/htdocs/SystemTap_Beginners_Guide/*.html
+cp -R SystemTap_Beginners_Guide $BASEDIR/htdocs/
+#echo 'systemtap_beginners_guide recursive cp'
+# tapsets 
+cd ../..
+
+cp $BASEDIR/systemtap/build/doc/SystemTap_Tapset_Reference/tapsets.pdf $BASEDIR/htdocs/
+
+#echo 'tapsets.pdf cp'
+
+rm $BASEDIR/htdocs/tapsets/*.html
+
+cp $BASEDIR/systemtap/build/doc/SystemTap_Tapset_Reference/tapsets/*.html $BASEDIR/htdocs/tapsets/
+
+#echo 'tapsets html cp'
+
+# systemtap examples
+# run gitweb.php script?
+# run examples-index-gen.pl script if needed?
+cd $BASEDIR/htdocs
+rm man/*.html && cvs rm * && cvs commit -m 'removed man pages'
+
+cd $BASEDIR/htdocs/man
+
+./REGEN.sh $BASEDIR/systemtap/local
+
+cd $BASEDIR/htdocs
+cvs add man/*.html && cvs commit -m 'added new man pages'
+echo -- $BASEDIR
+
+

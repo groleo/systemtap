@@ -4,7 +4,8 @@
 probe kernel.function("do_gettimeofday")
 {
   printf("xtime.tv_sec:%d\n",
-	 (@defined($timekeeper->xtime->tv_sec) ? $timekeeper->xtime->tv_sec
-	  : $xtime->tv_sec))
+	 (@defined($timekeeper->xtime_sec) ? $timekeeper->xtime_sec
+          : (@defined($timekeeper->xtime->tv_sec) ? $timekeeper->xtime->tv_sec
+	     : $xtime->tv_sec)))
   exit();
 }

@@ -83,6 +83,10 @@ struct typeresolution_info: public visitor
   void invalid (const token* tok, exp_type t);
 
   exp_type t; // implicit parameter for nested visit call; may clobber
+              // Upon entry to one of the visit_* calls, the incoming
+              // `t' value is the type inferred for that node from 
+              // context.  It may match or conflict with the node's 
+              // preexisting type, or it may be unknown.
 
   void visit_block (block* s);
   void visit_try_block (try_block* s);
@@ -107,6 +111,7 @@ struct typeresolution_info: public visitor
   void visit_logical_or_expr (logical_or_expr* e);
   void visit_logical_and_expr (logical_and_expr* e);
   void visit_array_in (array_in* e);
+  void visit_regex_query (regex_query* e);
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_ternary_expression (ternary_expression* e);
@@ -121,6 +126,7 @@ struct typeresolution_info: public visitor
   void visit_cast_op (cast_op* e);
   void visit_defined_op (defined_op* e);
   void visit_entry_op (entry_op* e);
+  void visit_perf_op (perf_op* e);
 };
 
 
@@ -163,7 +169,7 @@ struct derived_probe: public probe
   // From within unparser::emit_probe, initialized any extra variables
   // in this probe's context locals.
 
-  virtual void emit_probe_local_init (translator_output*) {}
+  virtual void emit_probe_local_init (systemtap_session& s, translator_output*) {}
   // From within unparser::emit_probe, emit any extra processing block
   // for this probe.
 
@@ -188,6 +194,9 @@ public:
 
   // Location of semaphores to activate sdt probes
   Dwarf_Addr sdt_semaphore_addr;
+
+  // perf.counter probes that this probe references
+  std::set<derived_probe*> perf_counter_refs;
 
   // index into session.probes[], set and used during translation
   unsigned session_index;
@@ -217,6 +226,10 @@ struct derived_probe_group
   // any partial initializations, for its _exit friend will NOT be
   // invoked.  The generated code may use pre-declared "int i, j;"
   // and set "const char* probe_point;".
+
+  virtual void emit_module_post_init (systemtap_session& s) {}
+  // The emit_module_post_init() code is called once session_state is
+  // set to running.
 
   virtual void emit_module_refresh (systemtap_session& s) {}
   // The _refresh-generated code may be called multiple times during

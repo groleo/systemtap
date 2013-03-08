@@ -1,6 +1,6 @@
 /* -*- linux-c -*-
  * Statistics Aggregation
- * Copyright (C) 2005-2008 Red Hat Inc.
+ * Copyright (C) 2005-2008, 2012 Red Hat Inc.
  * Copyright (C) 2006 Intel Corporation
  *
  * This file is part of systemtap, and is free software.  You can
@@ -25,9 +25,9 @@
  * If you have a need to poll Stat data while probes are running, and
  * you want to be sure the data is accurate, you can do
  * @verbatim
-#define NEED_STAT_LOCKS 1
+#define NEED_STAT_LOCKS
 @endverbatim
- * This will insert per-cpu spinlocks around all accesses to Stat data, 
+ * This will insert per-cpu spinlocks around all accesses to Stat data,
  * which will reduce performance some.
  *
  * Stats keep track of count, sum, min and max. Average is computed
@@ -39,26 +39,6 @@
  */
 
 #include "stat-common.c"
-
-/* for the paranoid. */
-#if NEED_STAT_LOCKS == 1
-#define STAT_LOCK(st) spin_lock(&st->lock)
-#define STAT_UNLOCK(st) spin_unlock(&st->lock)
-#else
-#define STAT_LOCK(st) ;
-#define STAT_UNLOCK(st) ;
-#endif
-
-/** Stat struct for stat.c. Maps do not need this */
-struct _Stat {
-	struct _Hist hist;
-	/* per-cpu data. allocated with _stp_alloc_percpu() */
-	stat *sd;
-	/* aggregated data */   
-	stat *agg;  
-};
-
-typedef struct _Stat *Stat;
 
 
 /** Initialize a Stat.
@@ -72,18 +52,17 @@ typedef struct _Stat *Stat;
  * For HIST_LINEAR, the following additional parametrs are required:
  * @param start - An integer. The start of the histogram.
  * @param stop - An integer. The stopping value. Should be > start.
- * @param interval - An integer. The interval. 
+ * @param interval - An integer. The interval.
  */
 static Stat _stp_stat_init (int type, ...)
 {
 	int size, buckets=0, start=0, stop=0, interval=0;
-	stat *sd, *agg;
 	Stat st;
 
 	if (type != HIST_NONE) {
 		va_list ap;
 		va_start (ap, type);
-		
+
 		if (type == HIST_LOG) {
 			buckets = HIST_LOG_BUCKETS;
 		} else {
@@ -97,44 +76,23 @@ static Stat _stp_stat_init (int type, ...)
 		}
 		va_end (ap);
 	}
-	/* Called from module_init, so user context, may sleep alloc. */
-	st = (Stat) _stp_kmalloc_gfp (sizeof(struct _Stat), STP_ALLOC_SLEEP_FLAGS);
+
+	size = buckets * sizeof(int64_t) + sizeof(stat_data);
+	st = _stp_stat_alloc (size);
 	if (st == NULL)
 		return NULL;
-	
-	size = buckets * sizeof(int64_t) + sizeof(stat);	
-	sd = (stat *) _stp_alloc_percpu (size);
-	if (sd == NULL)
-		goto exit1;
 
-#if NEED_STAT_LOCKS == 1
-	{
-		int i;
-		for_each_possible_cpu(i) {
-			stat *sdp = per_cpu_ptr (sd, i);
-			spin_lock_init(sdp->lock);
-		}
+	if (_stp_stat_initialize_locks(st) != 0) {
+		_stp_stat_free(st);
+		return NULL;
 	}
-#endif
-	
-	agg = (stat *)_stp_kmalloc_gfp(size, STP_ALLOC_SLEEP_FLAGS);
-	if (agg == NULL)
-		goto exit2;
 
 	st->hist.type = type;
 	st->hist.start = start;
 	st->hist.stop = stop;
 	st->hist.interval = interval;
 	st->hist.buckets = buckets;
-	st->sd = sd;
-	st->agg = agg;
 	return st;
-
-exit2:
-	_stp_kfree (sd);
-exit1:
-	_stp_kfree (st);
-	return NULL;
 }
 
 /** Delete Stat.
@@ -145,12 +103,11 @@ exit1:
 static void _stp_stat_del (Stat st)
 {
 	if (st) {
-		_stp_free_percpu (st->sd);
-		_stp_kfree (st->agg);
-		_stp_kfree (st);
+		_stp_stat_destroy_locks(st);
+		_stp_stat_free(st);
 	}
 }
-	
+
 /** Add to a Stat.
  * Add an int64 to a Stat.
  *
@@ -159,31 +116,15 @@ static void _stp_stat_del (Stat st)
  */
 static void _stp_stat_add (Stat st, int64_t val)
 {
-	stat *sd = per_cpu_ptr (st->sd, get_cpu());
+	stat_data *sd = _stp_stat_per_cpu_ptr (st, STAT_GET_CPU());
 	STAT_LOCK(sd);
 	__stp_stat_add (&st->hist, sd, val);
 	STAT_UNLOCK(sd);
-	put_cpu();
+	STAT_PUT_CPU();
 }
 
-/** Get per-cpu Stats.
- * Gets the Stats for a specific CPU.
- *
- * If NEED_STAT_LOCKS is set, you MUST call STAT_UNLOCK()
- * when you are finished with the returned pointer.
- *
- * @param st Stat
- * @param cpu CPU number
- * @returns A pointer to a stat.
- */
-static stat *_stp_stat_get_cpu (Stat st, int cpu)
-{
-	stat *sd = per_cpu_ptr (st->sd, cpu);
-	STAT_LOCK(sd);
-	return sd;
-}
 
-static void _stp_stat_clear_data (Stat st, stat *sd)
+static void _stp_stat_clear_data (Stat st, stat_data *sd)
 {
         int j;
         sd->count = sd->sum = sd->min = sd->max = 0;
@@ -196,23 +137,21 @@ static void _stp_stat_clear_data (Stat st, stat *sd)
 /** Get Stats.
  * Gets the aggregated Stats for all CPUs.
  *
- * If NEED_STAT_LOCKS is set, you MUST call STAT_UNLOCK()
- * when you are finished with the returned pointer.
- *
  * @param st Stat
  * @param clear Set if you want the data cleared after the read. Useful
  * for polling.
  * @returns A pointer to a stat.
  */
-static stat *_stp_stat_get (Stat st, int clear)
+static stat_data *_stp_stat_get (Stat st, int clear)
 {
 	int i, j;
-	stat *agg = st->agg;
+	stat_data *agg = _stp_stat_get_agg(st);
+	stat_data *sd;
 	STAT_LOCK(agg);
 	_stp_stat_clear_data (st, agg);
 
 	for_each_possible_cpu(i) {
-		stat *sd = per_cpu_ptr (st->sd, i);
+		stat_data *sd = _stp_stat_per_cpu_ptr (st, i);
 		STAT_LOCK(sd);
 		if (sd->count) {
 			if (agg->count == 0) {
@@ -234,6 +173,22 @@ static stat *_stp_stat_get (Stat st, int clear)
 		}
 		STAT_UNLOCK(sd);
 	}
+
+	/*
+	 * Originally this function returned the aggregate still
+	 * locked and it was the caller's responsibility to unlock the
+	 * aggregate. However the translator generated code that called
+	 * this function wasn't unlocking it...
+	 *
+	 * But, the translator generates its own locks for global
+	 * variables (like stats), so we don't need to return the
+	 * aggregate still locked.
+	 *
+	 * It is possible we could even skip locking the aggregate in
+	 * this function, but to be a bit paranoid lets keep the
+	 * locking.
+	 */
+	STAT_UNLOCK(agg);
 	return agg;
 }
 
@@ -246,8 +201,9 @@ static stat *_stp_stat_get (Stat st, int clear)
 static void _stp_stat_clear (Stat st)
 {
 	int i;
+
 	for_each_possible_cpu(i) {
-		stat *sd = per_cpu_ptr (st->sd, i);
+		stat_data *sd = _stp_stat_per_cpu_ptr (st, i);
 		STAT_LOCK(sd);
 		_stp_stat_clear_data (st, sd);
 		STAT_UNLOCK(sd);
@@ -255,4 +211,3 @@ static void _stp_stat_clear (Stat st)
 }
 /** @} */
 #endif /* _STAT_C_ */
-

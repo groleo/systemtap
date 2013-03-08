@@ -240,8 +240,8 @@ tapset library}, but here's a sampling:
 \verb+gettimeofday_s()+ & Number of seconds since epoch. \\
 \verb+get_cycles()+ & Snapshot of hardware cycle counter. \\
 \verb+pp()+ & A string describing the probe point being currently handled. \\
-\verb+probefunc()+ & If known, the name of the function in which
-                     this probe was placed. \\
+\verb+ppfunc()+ & If known, the the function name in which this probe was
+                  placed. \\
 \verb+$$vars+ & If available, a pretty-printed listing of all local
                 variables in scope. \\
 \verb+print_backtrace()+ & If possible, print a kernel backtrace. \\
@@ -273,10 +273,10 @@ interrupt it with \verb+^C+ when you want the tracing to stop.
 \begin{verbatim}
 # cat socket-trace.stp
 probe kernel.function("*@net/socket.c").call {
-  printf ("%s -> %s\n", thread_indent(1), probefunc())
+  printf ("%s -> %s\n", thread_indent(1), ppfunc())
 }
 probe kernel.function("*@net/socket.c").return {
-  printf ("%s <- %s\n", thread_indent(-1), probefunc())
+  printf ("%s <- %s\n", thread_indent(-1), ppfunc())
 }
 
 # stap socket-trace.stp
@@ -473,7 +473,7 @@ Figure~\ref{fig:inode-watch} demonstrates one way to monitor a
 particular file (identifed by device number and inode number).
 The script selects the appropriate variants of \verb+dev_nr+
 and\verb+inode_nr+ based on the kernel version.
-This example also demonstrates pasting numeric command-line arguments
+This example also demonstrates passing numeric command-line arguments
 (\verb+$1+ etc.) into scripts.
 %$
 
@@ -495,7 +495,7 @@ probe kernel.function ("vfs_write"),
   if (dev_nr == ($1 << 20 | $2) # major/minor device
       && inode_nr == $3)
     printf ("%s(%d) %s 0x%x/%u\n",
-      execname(), pid(), probefunc(), dev_nr, inode_nr)
+      execname(), pid(), ppfunc(), dev_nr, inode_nr)
 }
 # stat -c "%D %i" /etc/crontab
 fd03 133099
@@ -757,7 +757,7 @@ process CPU usage: which processes/users use how much of each CPU.
 
 \section{Tapsets}
 
-After writing enough analysis scripts for yourself, your may become
+After writing enough analysis scripts for yourself, you may become
 known as an expert to your colleagues, who will want to use your
 scripts.  Systemtap makes it possible to share in a controlled manner;
 to build libraries of scripts that build on each other.  In fact, all

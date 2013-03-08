@@ -2,13 +2,21 @@ set test "bench"
 
 if {![installtest_p]} {untested $test; return}
 
-spawn stap -tu $srcdir/$subdir/bench.stp
-set ok 0
-expect {
-    -timeout 180
-    -re {^[^\r\n]+, hits: [0-9]+[^\r\n]+\r\n} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
+foreach runtime [get_runtime_list] {
+    set test "bench"
+    if {$runtime != ""} {
+	lappend test "($runtime)"
+	spawn stap -tu $srcdir/$subdir/bench.stp --runtime=$runtime
+    } else {
+	spawn stap -tu $srcdir/$subdir/bench.stp
+    }
+    set ok 0
+    expect {
+	-timeout 180
+	-re {^[^\r\n]+, hits: [0-9]+[^\r\n]+\r\n} { incr ok; exp_continue }
+	timeout { fail "$test (timeout)" }
+	eof { }
+    }
+    catch { close }; catch { wait }
+    if {$ok >= 18} { pass "$test ($ok)" } { fail "$test ($ok)" }
 }
-wait
-if {$ok >= 18} { pass "$test ($ok)" } { fail "$test ($ok)" }

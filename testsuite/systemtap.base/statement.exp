@@ -23,7 +23,7 @@ if {![utrace_p]} {
 	fail "$test -p2 ($probes)"
     }
 }
-exec rm -f $test
+if { $verbose == 0 } { catch { exec rm -f $test } }
 
 set test bz10294
 
@@ -66,5 +66,32 @@ if {![utrace_p]} {
     }
     wait
 }
-exec rm -f $test
+if { $verbose == 0 } { catch { exec rm -f $test } }
 
+
+set test bz14774
+
+catch {exec gcc -g -o $test $srcdir/$subdir/$test.c} err
+if {$err == "" && [file exists $test]} then { pass "$test compile" } else { fail "$test cmpile" }
+
+if {![utrace_p]} {
+    untested "$test -p2"
+} else {
+    set func_script "probe process(\"%s\").statement(\"*@%s.c:*\") {}"
+    set script [format $func_script "./$test" "$test"]
+    spawn stap -p2 -we $script
+    set hint 0
+    set probes 0
+    set skipped 0
+    expect {
+        -timeout 60
+        -re "# probes" { incr hint; exp_continue }
+        -re {process\("[^"]+"\)\.statement\("[^"]+"\) /\*} { incr probes; exp_continue }
+        timeout { fail "$test (timeout)" }
+        eof { }
+    }
+    catch { wait }
+    catch { close }
+    if { $hint == 1 && $probes >= 9 } then { pass "$test -p2" } else { fail "$test -p2 ($probes)" }
+}
+if { $verbose == 0 } { catch { exec rm -f $test } }

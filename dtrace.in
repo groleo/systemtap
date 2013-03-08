@@ -267,7 +267,9 @@ def main():
 
         (d,fn) = mkstemp(suffix=".c")
         f = open(fn,mode='w')
-        f.write("static __dtrace () {}\n")
+        # dummy declaration just to make the object file non-empty
+        f.write("static void __dtrace (void) __attribute__((unused));\n")
+        f.write("static void __dtrace (void) {}\n")
         f.write("\n#include <sys/sdt.h>\n\n")
         providers.semaphore_def_write(f)
         f.close()

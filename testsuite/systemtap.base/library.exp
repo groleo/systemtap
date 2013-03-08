@@ -8,23 +8,20 @@ proc cleanup_handler { verbose } {
 }
 
 proc error_handler { res message } {
-global verbose test
-if { $res == 0 } {
-    verbose $message 2
-    fail "$test $message"
-    cleanup_handler $verbose
-    return 1
-} else {
-    pass "$test $message"
-    return 0
-}
+    global test
+    if { $res == 0 } {
+	verbose $message 2
+	fail "$test $message"
+	return 1
+    } else {
+	pass "$test $message"
+	return 0
+    }
 }
 
 if {![installtest_p]} {untested $test; return}
-if {![uprobes_p]} {untested $test; return}
 if {![utrace_p]} {
     untested "$test"
-    cleanup_handler $verbose
     return
 }
 set stap_path $env(SYSTEMTAP_PATH)/stap
@@ -48,55 +45,80 @@ if {[catch {exec $dtrace --types -h -s $srcdir/$subdir/sdt_misc_.d} res]} {
     verbose -log "unable to run $dtrace: $res"
 }
 verbose -log "$dtrace -DSTAP_SDT_V3 --types -G -s $srcdir/$subdir/sdt_misc_.d"
-if {[catch {exec $dtrace -DSTAP_SDT_V3 --types -G -s $srcdir/$subdir/sdt_misc_.d} res]} {
+if {[catch {exec $dtrace -DSTAP_SDT_V3 --types -G \
+		-s $srcdir/$subdir/sdt_misc_.d} res]} {
     verbose -log "unable to run $dtrace: $res"
 }
-if { [error_handler [expr {[file exists $hpath] && [file exists $opath]}] "dtrace"] } { return }
+if { [error_handler [expr {[file exists $hpath]
+			   && [file exists $opath]}] "dtrace"] } { 
+    cleanup_handler $verbose
+    return
+}
 
 set F additional_flags
 set flags "$F=[sdt_includes] $F=$opath $F=-I. $F=-shared $F=-fPIC $F=-DNO_MAIN $F=-g"
 set res [target_compile $srcdir/$subdir/sdt_misc.c $sopath executable $flags ]
-if { [error_handler [expr {$res == ""}] "target_compile libsdt.so"] } { return }
+if { [error_handler [expr {$res == ""}] "target_compile libsdt.so"] } {
+    cleanup_handler $verbose
+    return
+}
 
 set flags "$F=-Wl,-rpath,[pwd] $F=-L[pwd] $F=-lsdt $F=-DONLY_MAIN $F=-g"
 set res [target_compile $srcdir/$subdir/sdt_misc.c $exepath executable $flags ]
-if { [error_handler [expr {$res == ""}] "target_compile sdt_misc.x"] } { return }
+if { [error_handler [expr {$res == ""}] "target_compile sdt_misc.x"] } {
+    cleanup_handler $verbose
+    return
+}
 
 # Test globbing
 
 proc globbing_test { mssg script } {
-global sopath exepath srcdir subdir stap_path
-eval set globs "{{*} {*libsdt*} $sopath}"
-foreach glob $globs {
-set ok 0
-spawn $stap_path -c $exepath $script $exepath "$glob"
+    global sopath exepath srcdir subdir stap_path
+    eval set globs "{{*} {*libsdt*} $sopath}"
+    foreach glob $globs {
+	foreach runtime [get_runtime_list] {
+	    set test_name "sdt_misc"
+	    if {$runtime != ""} {
+		lappend test_name "($runtime)"
+		spawn $stap_path --runtime=$runtime -c $exepath \
+		    $script $exepath "$glob"
+	    } elseif {[uretprobes_p]} {
+		spawn $stap_path -c $exepath $script $exepath "$glob"
+	    } else {
+		untested "library $test_name $glob $mssg"
+		continue
+	    }
+	    set ok 0
+	    expect {
+		-timeout 180
+		-re {^bar begin\r\n} { incr ok; exp_continue }
+		-re {^bar 2\r\n} { incr ok; exp_continue }
+		-re {^In test_probe_2 probe 0x2\r\n} { incr ok; exp_continue }
+		-re {^bar end\r\n} { incr ok; exp_continue }
+		-re {^baz begin\r\n} { incr ok; exp_continue }
+		-re {^baz 3 abc\r\n} { incr ok; exp_continue }
+		-re {^In test_probe_0 probe 0x3\r\n} { incr ok; exp_continue }
+		-re {^In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]*\r\n} {
+		    incr ok; exp_continue }
+		-re {^baz end\r\n} { incr ok; exp_continue }
+		-re {^buz begin\r\n} { incr ok; exp_continue }
+		-re {^buz 4\r\n} { incr ok; exp_continue }
+		-re {^In test_probe_4 dtrace probe 0x[0-9a-f][0-9a-f]*\r\n} {
+		    incr ok; exp_continue }
+		-re {^In test_probe_1 probe 0x0\r\n} { incr ok; exp_continue }
+		-re {^buz end\r\n} { incr ok; exp_continue }
+		-re {^WARNING:.*No DWARF information found.*\r\n} {
+		    exp_continue }
+		-re {^Missing separate debuginfos.*\r\n} { exp_continue }
+		timeout { fail "$test (timeout)" }
+		eof { }
+	    }
 
-expect {
-    -timeout 180
-    -re {^bar begin\r\n} {incr ok; exp_continue }
-    -re {^bar 2\r\n} {incr ok; exp_continue }
-    -re {^In test_probe_2 probe 0x2\r\n} { incr ok; exp_continue }
-    -re {^bar end\r\n} {incr ok; exp_continue }
-    -re {^baz begin\r\n} {incr ok; exp_continue }
-    -re {^baz 3 abc\r\n} {incr ok; exp_continue }
-    -re {^In test_probe_0 probe 0x3\r\n} { incr ok; exp_continue }
-    -re {^In test_probe_3 probe 0x3 0x[0-9a-f][0-9a-f]*\r\n} { incr ok; exp_continue }
-    -re {^baz end\r\n} {incr ok; exp_continue }
-    -re {^buz begin\r\n} {incr ok; exp_continue }
-    -re {^buz 4\r\n} {incr ok; exp_continue }
-    -re {^In test_probe_4 dtrace probe 0x[0-9a-f][0-9a-f]*\r\n} { incr ok; exp_continue }
-    -re {^In test_probe_1 probe 0x0\r\n} { incr ok; exp_continue }
-    -re {^buz end\r\n} {incr ok; exp_continue }
-    -re {^WARNING:.*No DWARF information found\r\n} { exp_continue }
-    -re {^Missing separate debuginfos.*\r\n} { exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-
-catch {close}; catch {wait}
-
-error_handler [expr {$ok == 15}] "sdt_misc $glob $mssg ($ok != 15)"
-} ; # foreach glob
+	    catch {close}; catch {wait}
+	    error_handler [expr {$ok == 15}] \
+		"$test_name $glob $mssg ($ok != 15)"
+	} ; # foreach runtime
+    } ; # foreach glob
 } ; # proc globbing_test
 
 set script_path [fullpath $srcdir/$subdir/library.stp]
@@ -108,41 +130,60 @@ cd $savedir
 
 # Test --ldd
 
-set ok 0
-spawn $stap_path --ldd -v -v -v -c $exepath -e "probe process(\"$exepath\").library(\"*\").statement(\"baz@sdt_misc.c\") \{printf(\"%s \", pn())\}"
-
-set ok 0
-expect {
-    -timeout 180
-    -re {Added -d '.*libsdt.so' due to 'libsdt.so'}  {incr ok; exp_continue }
-    -re {Added -d '/lib.*/libm.so.[0-9]' due to 'libm.so.[0-9]'} {incr ok; exp_continue }
-    -re {Added -d '/lib.*/libc.so.[0-9]' due to 'libc.so.[0-9]'} {incr ok; exp_continue }
-    -re {Added -d '/lib.*/.*ld.*so'} {incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
+foreach runtime [get_runtime_list] {
+    set test_name "printf --ldd"
+    if {$runtime != ""} {
+	lappend test_name "($runtime)"
+	spawn $stap_path --ldd -v -v -v -c $exepath -e "probe process(\"$exepath\").library(\"*\").statement(\"baz@sdt_misc.c\") \{printf(\"%s \", pn())\}"
+    } elseif {[uprobes_p]} {
+	spawn $stap_path --ldd -v -v -v -c $exepath -e "probe process(\"$exepath\").library(\"*\").statement(\"baz@sdt_misc.c\") \{printf(\"%s \", pn())\}"
+    } else {
+	untested "library $test_name"
+	continue
+    }
+    set ok 0
+    expect {
+	-timeout 180
+	-re {Added -d '.*libsdt.so' due to 'libsdt.so'}  {
+	    incr ok; exp_continue }
+	-re {Added -d '/lib.*/libm.so.[0-9]' due to 'libm.so.[0-9]'} {
+	    incr ok; exp_continue }
+	-re {Added -d '/lib.*/libc.so.[0-9]' due to 'libc.so.[0-9]'} {
+	    incr ok; exp_continue }
+	-re {Added -d '/lib.*/.*ld.*so'} { incr ok; exp_continue }
+	timeout { fail "$test_name (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    error_handler [expr {$ok == 4}] "$test_name ($ok) ($ok != 4)"
 }
 
-catch {close}; catch {wait}
+# Test .exported. Notice we're only testing exported functions in our
+# compiled 'libsdt' shared library. We could test exported functions
+# in glibc, but to find them we'd need glibc debuginfo installed,
+# which might or might not be present.
 
-error_handler [expr {$ok == 4}] "printf --ldd ($ok) ($ok != 4)"
-
-# Test .exported
-
-spawn $stap_path -c $exepath -e "probe process(\"$exepath\").library(\"*\").function(\"*\").exported \{printf(\"%s \", pp())\}"
-
-set ok 0
-expect {
-    -timeout 180
-    -re {libsdt.so.*bar} {incr ok; exp_continue }
-    -re {libsdt.so.*baz} {incr ok; exp_continue }
-    -re {libsdt.so.*buz} {incr ok; exp_continue }
-    -re {libc-.*so.*exported} {incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
+foreach runtime [get_runtime_list] {
+    set test_name ".exported"
+    if {$runtime != ""} {
+	lappend test_name "($runtime)"
+	spawn $stap_path --runtime=$runtime -c $exepath -e "probe process(\"$exepath\").library(\"$sopath\").function(\"*\").exported \{printf(\"%s \", pp())\}"
+    } elseif {[uprobes_p]} {
+	spawn $stap_path -c $exepath -e "probe process(\"$exepath\").library(\"$sopath\").function(\"*\").exported \{printf(\"%s \", pp())\}"
+    } else {
+	untested "library $test_name"
+	continue
+    }
+    set ok 0
+    expect {
+	-timeout 180
+	-re {libsdt.so.*bar} { incr ok; exp_continue }
+	-re {libsdt.so.*baz} { incr ok; exp_continue }
+	-re {libsdt.so.*buz} { incr ok; exp_continue }
+	timeout { fail "$test_name (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+    error_handler [expr {$ok >= 3}] "$test_name ($ok) ($ok >= 3)"
 }
-
-catch {close}; catch {wait}
-
-error_handler [expr {$ok >= 6}] ".exported ($ok) ($ok >= 6)"
-
 cleanup_handler $verbose

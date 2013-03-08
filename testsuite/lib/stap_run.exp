@@ -18,6 +18,13 @@ proc stap_run { TEST_NAME {LOAD_GEN_FUNCTION ""} {OUTPUT_CHECK_STRING ""} args }
     # zap the srcdir prefix
     set test_file_name $TEST_NAME
     set TEST_NAME [regsub {.*/testsuite/} $TEST_NAME ""]
+    if {[file readable $test_file_name] && $args != ""} {
+	# If args contains a '--runtime=RUNTIME' option, append
+	# RUNTIME to the test name.
+	if {[regexp -- {--runtime=(\w+)} "$args" match runtime]} {
+	    lappend TEST_NAME "(${runtime})"
+	}
+    }
 
     # initialize probe_errors and skipped_probes to 0
     set probe_errors 0
@@ -106,15 +113,25 @@ proc no_load {} {
     return 0
 }
 
+# Load function to use when you need to wait 5 seconds.
+proc wait_5_secs {} {
+    # Tcl_Sleep appears to have a cow if the systme clock jumps, so
+    # instead of the built-in "after", use /usr/bin/sleep.
+    catch { exec sleep 5 }
+    return 0;
+}
+
 proc print_system_info {} {
-	global Host Snapshot Distro GCC_Version
+	global Host Snapshot Distro GCC_Version SElinux
 
 	clone_output "\nHost: $Host"
 	if {[string compare $Snapshot "unknown"]!=0} {
 		clone_output "Snapshot: $Snapshot"
 	}
 	clone_output "GCC: $GCC_Version"
-	clone_output "Distro: $Distro\n"
+	clone_output "Distro: $Distro"
+        clone_output "SElinux: $SElinux"
+        clone_output "\n"
 }
 
 print_system_info

@@ -5,32 +5,60 @@ run(){
   sh -c "$@" || true
 }
 
-PATH=/bin:/sbin:/usr/bin:/usr/sbin:$PATH
+PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
+exec 2>&1
+
+if [ "`id -u`" -ne 0 ]; then
+        echo
+	echo WARNING: rerun $0 as root for fuller results.
+        echo
+fi
+
+run "id"
 run "stap -V"
 run "which stap"
-run "locate --regex '/stap(run)?$' | xargs ls -ald"
+run "locate --regex '/stap(run|io|dyn)?$' | xargs ls -ald"
 run "printenv | egrep '^PATH=|^LD_LIBRARY_PATH=|^SYSTEMTAP_.*=|^XDG_DATA.*='"
-run "stap -vv -p4 -e 'probe begin {exit()}'"
+run "stap -vv --poison-cache -p4 -e 'probe begin {exit()}'"
 run "gcc -v"
 run "uname -a"
 run "dmesg | egrep 'stap|systemtap' | tail -n 10"
 run "cat /proc/cpuinfo | egrep 'processor|vendor_id|model name'"
 if [ -x /usr/bin/dpkg ]; then
-  run "dpkg --list | egrep 'systemtap|elfutils|kernel|gcc' | awk '{print \$2,\$3}' | sort"
-else
-  run "rpm -qa --qf '%{name}-%{version} %{release}.%{arch}\\t%{buildtime:date}@%{buildhost}\\n' | egrep 'systemtap|elfutils|kernel|gcc' | sort"
+  # debian/ubuntu
+  run "dpkg --list | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr|dejagnu' | awk '{print \$2,\$3}' | sort"
+elif [ -x /usr/bin/rpm -o -x /bin/rpm ]; then
+  # fedora/rhel/suse/...
+  run "rpm -qa --qf '%{name}-%{version} %{release}.%{arch}\\t%{buildtime:date}@%{buildhost}\\n' | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr|dejagnu' | sort"
+elif [ -f /var/log/packages ]; then
+  # slackware
+  run "cat /var/log/packages | egrep 'systemtap|elfutils|kernel|gcc|dyninst|avahi|nss|nspr|dejagnu' | sort -k9"
 fi
-run "egrep 'PROBE|TRACE|MARKER|_DEBUG_|MODULE' /lib/modules/`uname -r`/build/.config | grep -v not.set | sort | fmt -w 80"
-run "find /debugfs /proc /sys /dev -name '*kprobes*' 2>/dev/null | xargs grep ."
+run "egrep 'PROBE|TRACE|MARKER|_DEBUG_|MODULE|FENTRY|_SIG' /lib/modules/`uname -r`/build/.config | grep -v not.set | sort | fmt -w 80"
+run "find /debugfs /proc /sys /dev /sys/kernel/debug -path '*kprobe*' -o -path '*yama*' -type f 2>/dev/null | xargs grep -H ."
 run "lsmod"
 run "avahi-browse -r -t _stap._tcp"
 run "ifconfig -a"
-run "eu-readelf -n /boot/vmlinuz-`uname -r` | grep Build"
-run "eu-readelf -n /usr/lib/debug/lib/modules/`uname -r`/vmlinux | grep Build"
+for file in /boot/vmlinuz-`uname -r` /usr/lib/debug/lib/modules/`uname -r`/vmlinux /lib/modules/`uname -r`/build/vmlinux
+do
+    if [ -f $file ]; then
+        run "eu-readelf -n $file | grep Build"
+    fi
+done
 run "hexdump -C /sys/kernel/notes"
 for file in /sys/module/*/notes/.*build*
 do
     run "hexdump -C $file"
 done
+if [ -x /usr/bin/seinfo ]; then
+   run "seinfo"
+fi
+if [ -x /usr/sbin/getenforce ]; then
+   run "getenforce"
+fi
+if [ -x /usr/sbin/aa-status ]; then
+   run "aa-status"
+fi
+

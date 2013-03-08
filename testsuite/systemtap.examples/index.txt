@@ -48,9 +48,10 @@ keywords: filesystem
 general/eventcount.stp - Count Specified Events
 keywords: statistics thread process
 
-  The script prints a count of specified events and their related tid's
-  over the course of execution.  Numerous configuration options exist
-  to control filtering / reporting, see the script source.
+  The script periodically prints a count of specified events and their
+  related tid's over the course of execution.  Numerous configuration
+  options exist to control filtering / reporting, see the script
+  source.
 
   # stap eventcount.stp syscall.* -c 'sleep 0.2'
 
@@ -113,6 +114,17 @@ keywords: trace callgraph
 
   # stap para-callgraph.stp 'kernel.function("*@fs/proc*.c")' \
   'kernel.function("vfs_read")' -c "cat /proc/sys/vm/* || true"
+
+
+general/regex.stp - Report opened files whose names match a given regex
+keywords: regex
+
+  Uses the regex functionality to detect opened files whose names match
+  a pattern given on the command line. If no command line parameter is
+  given, demonstrate by filtering for files that end with an extension
+  showing them to be an archive.
+
+  # stap regex.stp -c "sleep 0.2"
 
 
 general/sizeof.stp - Print the Size of a C Type
@@ -192,7 +204,7 @@ io/deviceseeks.stp - Histograms of Seek Behavior for Each Device
 keywords: disk
 
   The deviceseeks.stp script generates a histogram showing the
-  frequency of different sized seeks on each device.
+  frequency of different sized seeks (in sectors) on each device.
 
   # stap deviceseeks.stp -c "sleep 0.2"
 
@@ -784,6 +796,16 @@ keywords: syscall locking futex
   # stap futexes.stp -c "sleep 0.2"
 
 
+process/ltrace.stp - uprobes-based ltrace
+keywords: process
+
+  The ltrace.stp script lists calls that the designated process makes
+  through PLTs (procedure linkage tables), generally into shared
+  libraries.
+
+  # stap ltrace.stp -c ls || echo PR14738
+
+
 process/migrate.stp - Track the Migration of Specific Executables
 keywords: scheduler
 
@@ -795,6 +817,16 @@ keywords: scheduler
   executing at the time of the migration.
 
   # stap migrate.stp -c "sleep 0.2" bash
+
+
+process/mutex-contention.stp - pthread mutex contention analysis
+keywords: locking
+
+  Tracks pthread-mutex initialization/use and underlying futex
+  operations, to identify (with backtraces/symbol-names) the mutexes
+  suffering most contention.  Invoke with "NNN -d SHLIB --ldd"
+
+  # stap mutex-contention.stp 100 -c "sleep 0.2"
 
 
 process/noptrace.stp - Disable ptrace from Hierarchies of Processes
@@ -950,6 +982,17 @@ keywords: syscall
   # ./syscalltimes -c 'sleep 0.2'
 
 
+process/threadstacks.stp - Override default new-pthread stack sizes
+keywords: thread
+
+  Overrides default NPTL pthread_create stack size for all new threads
+  created by target processes.	Reports one line per process when the
+  related glibc variable __default_stacksize is updated.  Moot for
+  glibc versions that support $LIBC_PTHREAD_DEFAULT_STACKSIZE_NP.
+
+  # stap -g threadstacks.stp -Gsize=65536 -c "sleep 1" -d stap
+
+
 process/wait4time.stp - Trace Time Spent in wait4 Syscalls
 keywords: syscall process
 
@@ -1019,6 +1062,16 @@ keywords: profiling
   line takes, and control flow information when the script exits.
 
   # stap linetimes.stp kernel sys_nanosleep -c "sleep 0.2"
+
+
+profiling/perf.stp - Show performance ratios using perf.counter to access performance counters
+keywords: profiling
+
+  On exit the perf.stp script provides a sorted list showing cycles per
+  insn, branches per insn, and cache refs per insn
+
+  # stap perf.stp -c "find /usr/bin -name \"l*\" -printf \"%h/%f %s %Cx \
+  %Ck%CM %Y\n\""
 
 
 profiling/periodic.stp - Show the Period of the Various Timers on the System
@@ -1104,6 +1157,39 @@ keywords: profiling
   frequent.
 
   # stap topsys.stp -c "sleep 0.2"
+
+
+stapgames/block.stp - block breaker game
+keywords: stapgames
+
+  A block game where you progressively break the ceiling blocks until
+  clearing the level
+
+  # stap -p4 -Itapset/ block.stp
+
+
+stapgames/eater.stp - eater game
+keywords: stapgames
+
+  walk through a maze, eat stuff
+
+  # stap -p4 -Itapset/ eater.stp
+
+
+stapgames/lifegame.stp - life game
+keywords: stapgames
+
+  watch as your creation morphes into different forms
+
+  # stap -p4 -Itapset/ lifegame.stp
+
+
+stapgames/pingpong.stp - pingpong game
+keywords: stapgames
+
+  A simulated ball bounces around the terminal reflecting at the edges
+
+  # stap -p4 -Itapset/ pingpong.stp
 
 
 virtualization/kvm_service_time.stp - Time Statistics on KVM Exit Reasons

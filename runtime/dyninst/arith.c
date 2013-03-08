@@ -52,6 +52,27 @@ static int64_t _stp_mod64 (const char **error, int64_t x, int64_t y)
 }
 
 
+static unsigned long _stp_random_u_init(void)
+{
+	unsigned long seed;
+	ssize_t count = 0;
+
+	int fd = open("/dev/urandom", O_RDONLY);
+	if (fd >= 0) {
+		count = read(fd, &seed, sizeof(seed));
+		close(fd);
+	}
+
+	/* If urandom fails for any reason, this is a crude fallback */
+	if (count != sizeof(seed)) {
+		struct timespec ts;
+		(void)clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+		seed = ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
+	}
+
+	return seed;
+}
+
 /** Return a random integer between 0 and n - 1.
  * @param n how far from zero to go.  Make it positive but less than a million or so.
  */
@@ -61,7 +82,7 @@ static unsigned long _stp_random_u (unsigned long n)
 	static int initialized_p = 0;
 
 	if (unlikely (! initialized_p)) {
-		seed = (unsigned long) time(0);
+		seed = _stp_random_u_init();
 		initialized_p = 1;
 	}
 

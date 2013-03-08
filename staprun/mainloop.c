@@ -343,6 +343,8 @@ static void read_buffer_info(void)
   struct statfs st;
   int fd, len, ret;
 
+  /* NB: we don't have to worry about PR14245 on old_transport aka
+     rhel4; no HAVE_OPENAT, and thus no -F fd option. */
   if (!use_old_transport)
     return;
 

@@ -1,5 +1,5 @@
 // session functions
-// Copyright (C) 2010-2012 Red Hat Inc.
+// Copyright (C) 2010-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -9,6 +9,7 @@
 #include "config.h"
 #include "session.h"
 #include "cache.h"
+#include "re2c-migrate/stapregex.h" // TODOXXX
 #include "elaborate.h"
 #include "translate.h"
 #include "buildrun.h"
@@ -62,6 +63,7 @@ systemtap_session::systemtap_session ():
   base_hash(0),
   pattern_root(new match_node),
   user_file (0),
+  dfa_counter (0),
   be_derived_probes(0),
   dwarf_derived_probes(0),
   kprobe_derived_probes(0),
@@ -78,6 +80,7 @@ systemtap_session::systemtap_session ():
   tracepoint_derived_probes(0),
   hrtimer_derived_probes(0),
   procfs_derived_probes(0),
+  dynprobe_derived_probes(0),
   op (0), up (0),
   sym_kprobes_text_start (0),
   sym_kprobes_text_end (0),
@@ -134,8 +137,6 @@ systemtap_session::systemtap_session ():
   need_symbols = false;
   uprobes_path = "";
   consult_symtab = false;
-  ignore_vmlinux = false;
-  ignore_dwarf = false;
   load_only = false;
   skip_badvars = false;
   privilege = pr_stapdev;
@@ -155,6 +156,19 @@ systemtap_session::systemtap_session ():
   native_build = true; // presumed
   sysroot = "";
   update_release_sysroot = false;
+  suppress_time_limits = false;
+
+  // PR12443: put compiled-in / -I paths in front, to be preferred during 
+  // tapset duplicate-file elimination
+  const char* s_p = getenv ("SYSTEMTAP_TAPSET");
+  if (s_p != NULL)
+  {
+    include_path.push_back (s_p);
+  }
+  else
+  {
+    include_path.push_back (string(PKGDATADIR) + "/tapset");
+  }
 
   /*  adding in the XDG_DATA_DIRS variable path,
    *  this searches in conjunction with SYSTEMTAP_TAPSET
@@ -171,16 +185,6 @@ systemtap_session::systemtap_session ():
     {
       include_path.push_back(*i + "/systemtap/tapset");
     }
-  }
-
-  const char* s_p = getenv ("SYSTEMTAP_TAPSET");
-  if (s_p != NULL)
-  {
-    include_path.push_back (s_p);
-  }
-  else
-  {
-    include_path.push_back (string(PKGDATADIR) + "/tapset");
   }
 
   const char* s_r = getenv ("SYSTEMTAP_RUNTIME");
@@ -233,6 +237,7 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   base_hash(0),
   pattern_root(new match_node),
   user_file (other.user_file),
+  dfa_counter(0),
   be_derived_probes(0),
   dwarf_derived_probes(0),
   kprobe_derived_probes(0),
@@ -249,6 +254,7 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   tracepoint_derived_probes(0),
   hrtimer_derived_probes(0),
   procfs_derived_probes(0),
+  dynprobe_derived_probes(0),
   op (0), up (0),
   sym_kprobes_text_start (0),
   sym_kprobes_text_end (0),
@@ -302,8 +308,6 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   need_symbols = false;
   uprobes_path = "";
   consult_symtab = other.consult_symtab;
-  ignore_vmlinux = other.ignore_vmlinux;
-  ignore_dwarf = other.ignore_dwarf;
   load_only = other.load_only;
   skip_badvars = other.skip_badvars;
   privilege = other.privilege;
@@ -322,6 +326,7 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   sysroot = other.sysroot;
   update_release_sysroot = other.update_release_sysroot;
   sysenv = other.sysenv;
+  suppress_time_limits = other.suppress_time_limits;
 
   include_path = other.include_path;
   runtime_path = other.runtime_path;
@@ -365,7 +370,7 @@ systemtap_session::~systemtap_session ()
 const string
 systemtap_session::module_filename() const
 {
-  if (is_usermode())
+  if (runtime_usermode_p())
     return module_name + ".so";
   return module_name + ".ko";
 }
@@ -399,7 +404,7 @@ void
 systemtap_session::version ()
 {
   clog << _F("Systemtap translator/driver (version %s/%s, %s)\n"
-             "Copyright (C) 2005-2012 Red Hat, Inc. and others\n"
+             "Copyright (C) 2005-2013 Red Hat, Inc. and others\n"
              "This is free software; see the source for copying conditions.",
              VERSION, dwfl_version(NULL), STAP_EXTENDED_VERSION) << endl;
   clog << _("enabled features:")
@@ -524,17 +529,14 @@ systemtap_session::usage (int exitcode)
 #endif /* HAVE_LIBSQLITE3 */
     "   --runtime=MODE\n"
     "              set the pass-5 runtime mode, instead of kernel\n"
+#ifdef HAVE_DYNINST
+    "   --dyninst\n"
+    "              shorthand for --runtime=dyninst\n"
+#endif /* HAVE_DYNINST */
     "   --privilege=PRIVILEGE_LEVEL\n"
     "              check the script for constructs not allowed at the given privilege level\n"
     "   --unprivileged\n"
     "              equivalent to --privilege=stapusr\n"
-#if 0 /* PR6864: disable temporarily; should merge with -d somehow */
-    "   --kelf     make do with symbol table from vmlinux\n"
-    "   --kmap[=FILE]\n"
-    "              make do with symbol table from nm listing\n"
-#endif
-  // Formerly present --ignore-{vmlinux,dwarf} options are for testsuite use
-  // only, and don't belong in the eyesight of a plain user.
     "   --compatible=VERSION\n"
     "              suppress incompatible language/tapset changes beyond VERSION,\n"
     "              instead of %s\n"
@@ -576,6 +578,8 @@ systemtap_session::usage (int exitcode)
     "              where the value on a remote system differs.  Path\n"
     "              variables (e.g. PATH, LD_LIBRARY_PATH) are assumed to be\n"
     "              relative to the sysroot.\n"
+    "   --suppress-time-limits\n"
+    "              disable -DSTP_NO_OVERLOAD -DMAXACTION and -DMAXTRYACTION limits\n"
     , compatible.c_str()) << endl
   ;
 
@@ -664,6 +668,12 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
         case 'd':
 	  server_args.push_back (string ("-") + (char)grc + optarg);
           {
+            // Make sure an empty data object wasn't specified (-d "")
+            if (strlen (optarg) == 0)
+            {
+              cerr << _("Data object (-d) cannot be empty.") << endl;
+              return 1;
+            }
             // At runtime user module names are resolved through their
             // canonical (absolute) path.
             const char *mpath = canonicalize_file_name (optarg);
@@ -871,38 +881,6 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 	case LONG_OPT_VERSION:
 	  version ();
 	  throw exit_exception (EXIT_SUCCESS);
-
-	case LONG_OPT_KELF:
-	  server_args.push_back ("--kelf");
-	  consult_symtab = true;
-	  break;
-
-	case LONG_OPT_KMAP:
-	  // Leave consult_symtab unset for now, to ease error checking.
-	  if (!kernel_symtab_path.empty())
-	    {
-	      cerr << _("You can't specify multiple --kmap options.") << endl;
-	      return 1;
-	    }
-	  if (optarg) {
-	    kernel_symtab_path = optarg;
-	    server_args.push_back ("--kmap=" + string(optarg));
-	  }
-	  else {
-	    kernel_symtab_path = PATH_TBD;
-	    server_args.push_back ("--kmap");
-	  }
-	  break;
-
-	case LONG_OPT_IGNORE_VMLINUX:
-	  server_args.push_back ("--ignore-vmlinux");
-	  ignore_vmlinux = true;
-	  break;
-
-	case LONG_OPT_IGNORE_DWARF:
-	  server_args.push_back ("--ignore-dwarf");
-	  ignore_dwarf = true;
-	  break;
 
 	case LONG_OPT_VERBOSE_PASS:
 	  {
@@ -1257,17 +1235,28 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
 	      break;
 	  }
 
-	case LONG_OPT_RUNTIME:
-          if (optarg == string("kernel"))
-            runtime_mode = kernel_runtime;
-          else if (optarg == string("dyninst"))
-            runtime_mode = dyninst_runtime;
-          else
-            {
-              cerr << _F("ERROR: %s is an invalid argument for --runtime", optarg) << endl;
-              return 1;
-            }
+	case LONG_OPT_SUPPRESS_TIME_LIMITS: //require guru_mode to use
+	  if (guru_mode == false)
+	    {
+	      cerr << _F("ERROR %s requires guru mode (-g)", "--suppress-time-limits") << endl;
+	      return 1;
+	    }
+	  else
+	    {
+	      suppress_time_limits = true;
+	      server_args.push_back (string ("--suppress-time-limits"));
+	      c_macros.push_back (string ("STAP_SUPPRESS_TIME_LIMITS_ENABLE"));
+	      break;
+	    }
 
+	case LONG_OPT_RUNTIME:
+          if (!parse_cmdline_runtime (optarg))
+            return 1;
+          break;
+
+	case LONG_OPT_RUNTIME_DYNINST:
+          if (!parse_cmdline_runtime ("dyninst"))
+            return 1;
           break;
 
 	case '?':
@@ -1286,6 +1275,36 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
     }
 
   return 0;
+}
+
+bool
+systemtap_session::parse_cmdline_runtime (const string& opt_runtime)
+{
+  if (opt_runtime == string("kernel"))
+    runtime_mode = kernel_runtime;
+  else if (opt_runtime == string("dyninst"))
+    {
+#ifndef HAVE_DYNINST
+      cerr << _("ERROR: --runtime=dyninst unavailable; this build lacks DYNINST feature") << endl;
+      version();
+      return false;
+#endif
+      if (privilege_set && pr_unprivileged != privilege)
+        {
+          cerr << _("ERROR: --runtime=dyninst implies unprivileged mode only") << endl;
+          return false;
+        }
+      privilege = pr_unprivileged;
+      privilege_set = true;
+      runtime_mode = dyninst_runtime;
+    }
+  else
+    {
+      cerr << _F("ERROR: %s is an invalid argument for --runtime", opt_runtime.c_str()) << endl;
+      return false;
+    }
+
+  return true;
 }
 
 void
@@ -1378,6 +1397,9 @@ systemtap_session::check_options (int argc, char * const argv [])
 	      cerr << _("You are trying to run systemtap as a normal user.\n"
 			"You should either be root, or be part of "
 			"the group \"stapusr\" and possibly one of the groups \"stapsys\" or \"stapdev\".\n");
+#if HAVE_DYNINST
+	      cerr << _("Alternatively, you may specify --runtime=dyninst for userspace probing.\n");
+#endif
 	      usage (1); // does not return.
 	    }
 	}
@@ -1409,23 +1431,16 @@ systemtap_session::check_options (int argc, char * const argv [])
       cerr << _F("You can't specify %s and %s together.", "-c", "-x") << endl;
       usage (1);
     }
-  if (! pr_contains (privilege, pr_stapdev) && guru_mode)
+
+  // NB: In user-mode runtimes (dyninst), we can allow guru mode any time, but we
+  // need to restrict guru by privilege level in the kernel runtime.
+  if (! runtime_usermode_p () && ! pr_contains (privilege, pr_stapdev) && guru_mode)
     {
       cerr << _F("You can't specify %s and --privilege=%s together.", "-g", pr_name (privilege))
 	   << endl;
       usage (1);
     }
-  if (!kernel_symtab_path.empty())
-    {
-      if (consult_symtab)
-      {
-        cerr << _F("You can't specify %s and %s together.", "--kelf", "--kmap") << endl;
-        usage (1);
-      }
-      consult_symtab = true;
-      if (kernel_symtab_path == PATH_TBD)
-        kernel_symtab_path = string("/boot/System.map-") + kernel_release;
-    }
+
   // Can't use --remote and --tmpdir together because with --remote,
   // there may be more than one tmpdir needed.
   if (!remote_uris.empty() && tmpdir_opt_set)
@@ -1465,6 +1480,136 @@ systemtap_session::check_options (int argc, char * const argv [])
   const char *tmpdir = getenv("TMPDIR");
   if (tmpdir != NULL)
     assert_regexp_match("TMPDIR", tmpdir, "^[-/._0-9a-z]+$");
+}
+
+
+int
+systemtap_session::parse_kernel_config ()
+{
+  // PR10702: pull config options
+  string kernel_config_file = kernel_build_tree + "/.config";
+  struct stat st;
+  int rc = stat(kernel_config_file.c_str(), &st);
+  if (rc != 0)
+    {
+        clog << _F("Checking \"%s\" failed with error: %s",
+                   kernel_config_file.c_str(), strerror(errno)) << endl;
+	find_devel_rpms(*this, kernel_build_tree.c_str());
+	missing_rpm_list_print(*this, "-devel");
+	return rc;
+    }
+
+  ifstream kcf (kernel_config_file.c_str());
+  string line;
+  while (getline (kcf, line))
+    {
+      if (!startswith(line, "CONFIG_")) continue;
+      size_t off = line.find('=');
+      if (off == string::npos) continue;
+      string key = line.substr(0, off);
+      string value = line.substr(off+1, string::npos);
+      kernel_config[key] = value;
+    }
+  if (verbose > 2)
+    clog << _F("Parsed kernel \"%s\", ", kernel_config_file.c_str())
+         << _F(ngettext("containing %zu tuple", "containing %zu tuples",
+                kernel_config.size()), kernel_config.size()) << endl;
+
+  kcf.close();
+  return 0;
+}
+
+
+int
+systemtap_session::parse_kernel_exports ()
+{
+  string kernel_exports_file = kernel_build_tree + "/Module.symvers";
+  struct stat st;
+  int rc = stat(kernel_exports_file.c_str(), &st);
+  if (rc != 0)
+    {
+        clog << _F("Checking \"%s\" failed with error: %s\nEnsure kernel development headers & makefiles are installed",
+                   kernel_exports_file.c_str(), strerror(errno)) << endl;
+	return rc;
+    }
+
+  ifstream kef (kernel_exports_file.c_str());
+  string line;
+  while (getline (kef, line))
+    {
+      vector<string> tokens;
+      tokenize (line, tokens, "\t");
+      if (tokens.size() == 4 &&
+          tokens[2] == "vmlinux" &&
+          tokens[3].substr(0,13) == string("EXPORT_SYMBOL"))
+        kernel_exports.insert (tokens[1]);
+      // RHEL4 Module.symvers file only has 3 tokens.  No
+      // 'EXPORT_SYMBOL' token at the end of the line.
+      else if (tokens.size() == 3 && tokens[2] == "vmlinux")
+        kernel_exports.insert (tokens[1]);
+    }
+  if (verbose > 2)
+    clog << _F(ngettext("Parsed kernel %s, which contained one vmlinux export",
+                        "Parsed kernel %s, which contained %zu vmlinux exports",
+                         kernel_exports.size()), kernel_exports_file.c_str(),
+                         kernel_exports.size()) << endl;
+
+  kef.close();
+  return 0;
+}
+
+
+int
+systemtap_session::parse_kernel_functions ()
+{
+  string system_map_path = kernel_build_tree + "/System.map";
+  ifstream system_map;
+
+  system_map.open(system_map_path.c_str(), ifstream::in);
+  if (! system_map.is_open())
+    {
+      if (verbose > 1)
+	clog << _F("Kernel symbol table %s unavailable, (%s)",
+		   system_map_path.c_str(), strerror(errno)) << endl;
+
+      string system_map_path2 = "/boot/System.map-" + kernel_release;
+      system_map.clear();
+      system_map.open(system_map_path2.c_str(), ifstream::in);
+      if (! system_map.is_open())
+        {
+	  if (verbose > 1)
+	    clog << _F("Kernel symbol table %s unavailable, (%s)",
+		       system_map_path2.c_str(), strerror(errno)) << endl;
+        }
+    }
+
+  string address, type, name;
+  while (system_map.good())
+    {
+      system_map >> address >> type >> name;
+
+      if (verbose > 3)
+        clog << "'" << address << "' '" << type << "' '" << name
+             << "'" << endl;
+
+      // 'T'/'t' are text code symbols
+      if (type != "t" && type != "T")
+          continue;
+
+#ifdef __powerpc__ // XXX cross-compiling hazard
+      // Map ".sys_foo" to "sys_foo".
+      if (name[0] == '.')
+          name.erase(0, 1);
+#endif
+
+      // FIXME: better things to do here - look for _stext before
+      // remembering symbols. Also:
+      // - stop remembering names at ???
+      // - what about __kprobes_text_start/__kprobes_text_end?
+      kernel_functions.insert(name);
+    }
+  system_map.close();
+  return 0;
 }
 
 
@@ -1666,6 +1811,13 @@ systemtap_session::print_error (const semantic_error& e)
         }
       message << endl;
       message_str[i] = message.str();
+    }
+
+  // skip error message printing for listing mode with low verbosity
+  if (this->listing_mode && this->verbose <= 1)
+    {
+      seen_errors.insert (message_str[1]); // increment num_errors()
+      return;
     }
 
   // Duplicate elimination

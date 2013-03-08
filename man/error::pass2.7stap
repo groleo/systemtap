@@ -1,0 +1,56 @@
+.\" t
+.TH ERROR::PASS2 7stap 
+.SH NAME
+error::pass2 \- systemtap pass-2 errors
+
+.SH DESCRIPTION
+Errors that occur during pass 2 (elaboration) can have a variety of causes.
+Common types include:
+
+.TP
+unavailable probe points
+Some types of probe points are only available on certain system versions,
+architectures, and configurations.  For example, user-space 
+.IR "(" process. ")"
+probes may require utrace or uprobes capability in the kernel for this
+architecture.  Debugging or symbol data may be absent for
+.IR .function " or " .statement
+probes.  Use the
+.IR "stap \-L"
+option to list available probe points.  Use the
+.IR ! " or " ?
+probe point suffixes to denote optional / preferred-alternatives, to let
+the working parts of a script continue.  Check for availability of debuginfo.
+
+.TP
+typos
+There might be a spelling error in the probe point name ("sycsall" vs.
+"syscall").  Wildcard probes may not find a match at all in the
+tapsets.  Recheck the names.
+
+.TP
+unavailable context variables
+Systemtap scripts often wish to refer to variables from the context of the
+probed programs using
+.IR $variable
+notation.  These variables may not always be available, depending on versions
+of the compiler, debugging/optimization flags used, architecture, etc.  Use
+the
+.IR @defined()
+expression to test for the resolvability of a context variable expression.
+Consider using the
+.IR "stap --skip-badvars"
+option to silently replace misbehaving context variable expressions with zero.
+
+.SH GATHERING MORE INFORMATION
+Increasing the verbosity of pass-2 with an option such as
+.IR "--vp 02"
+can help pinpoint the problem.
+
+.SH SEE ALSO
+.IR stap (1),
+.IR stapprobes (3stap),
+.IR probe::* (3stap),
+.IR error::dwarf (7stap),
+.IR warning::debuginfo (7stap),
+.IR error::reporting (7stap)

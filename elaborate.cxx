@@ -1,5 +1,5 @@
 // elaboration functions
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2008 Intel Corporation
 //
 // This file is part of systemtap, and is free software.  You can
@@ -15,6 +15,8 @@
 #include "session.h"
 #include "util.h"
 #include "task_finder.h"
+
+#include "re2c-migrate/stapregex.h"
 
 extern "C" {
 #include <sys/utsname.h>
@@ -1053,7 +1055,7 @@ struct symbol_fetcher
 
   void visit_arrayindex (arrayindex* e)
   {
-    e->base->visit_indexable (this);
+    e->base->visit (this);
   }
 
   void visit_cast_op (cast_op* e)
@@ -1460,6 +1462,49 @@ void embeddedcode_info_pass (systemtap_session& s)
 // ------------------------------------------------------------------------
 
 
+// Simple visitor that collects all the regular expressions in the
+// file and adds them to the session DFA table.
+
+struct regex_collecting_visitor: public functioncall_traversing_visitor
+{
+protected:
+  systemtap_session& session;
+
+public:
+  regex_collecting_visitor (systemtap_session& s): session(s) { }
+
+  void visit_regex_query (regex_query *q) {
+    functioncall_traversing_visitor::visit_regex_query (q); // TODOXXX test necessity
+
+    string re = q->re->value;
+    try
+      {
+        regex_to_stapdfa (&session, re, session.dfa_counter);
+      }
+    catch (const semantic_error &e)
+      {
+        throw semantic_error(e.what(), q->right->tok);
+      }
+  }
+};
+
+// Go through the regex match invocations and generate corresponding DFAs.
+void gen_dfa_table (systemtap_session& s)
+{
+  regex_collecting_visitor rcv(s); // TODOXXX
+
+  for (unsigned i=0; i<s.probes.size(); i++)
+    {
+      s.probes[i]->body->visit (& rcv);
+
+      if (s.probes[i]->sole_location()->condition)
+        s.probes[i]->sole_location()->condition->visit (& rcv);
+    }
+}
+
+// ------------------------------------------------------------------------
+
+
 static int semantic_pass_symbols (systemtap_session&);
 static int semantic_pass_optimize1 (systemtap_session&);
 static int semantic_pass_optimize2 (systemtap_session&);
@@ -1621,7 +1666,6 @@ semantic_pass_symbols (systemtap_session& s)
 }
 
 
-
 // Keep unread global variables for probe end value display.
 void add_global_var_display (systemtap_session& s)
 {
@@ -1764,6 +1808,7 @@ void add_global_var_display (systemtap_session& s)
 	  foreach_loop* fe = new foreach_loop;
 	  fe->sort_direction = -1; // imply decreasing sort on value
 	  fe->sort_column = 0;     // as in   foreach ([a,b,c] in array-) { }
+	  fe->sort_aggr = sc_none; // as in default @count
 	  fe->value = NULL;
 	  fe->limit = NULL;
 	  fe->tok = l->tok;
@@ -1894,6 +1939,7 @@ semantic_pass (systemtap_session& s)
       if (rc == 0) rc = semantic_pass_conditions (s);
       if (rc == 0) rc = semantic_pass_optimize1 (s);
       if (rc == 0) rc = semantic_pass_types (s);
+      if (rc == 0) gen_dfa_table(s); // TODOXXX set rc?
       if (rc == 0) add_global_var_display (s);
       if (rc == 0) rc = semantic_pass_optimize2 (s);
       if (rc == 0) rc = semantic_pass_vars (s);
@@ -1910,8 +1956,10 @@ semantic_pass (systemtap_session& s)
     }
 
   // PR11443
-  if (s.listing_mode && s.probes.size() == 0)
-    rc ++;
+  // NB: listing mode only cares whether we have any probes,
+  // so all previous error conditions are disregarded.
+  if (s.listing_mode)
+    rc = s.probes.empty();
 
   return rc;
 }
@@ -2864,9 +2912,10 @@ struct void_statement_reducer: public update_visitor
   void visit_logical_and_expr (logical_and_expr* e);
   void visit_ternary_expression (ternary_expression* e);
 
-  // all of these can be reduced into simpler statements
+  // all of these can (usually) be reduced into simpler statements
   void visit_binary_expression (binary_expression* e);
   void visit_unary_expression (unary_expression* e);
+  void visit_regex_query (regex_query* e); // TODOXXX may or may not be reducible
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_functioncall (functioncall* e);
@@ -3053,6 +3102,28 @@ void_statement_reducer::visit_unary_expression (unary_expression* e)
 
   relaxed_p = false;
   e->operand->visit(this);
+}
+
+void
+void_statement_reducer::visit_regex_query (regex_query* e)
+{
+  // Whether we need to run a regex query depends on whether
+  // subexpression extraction is enabled, as in:
+  //
+  // str =~ "pat";
+  // println(matched(0)); // NOTE: not totally nice -- are we SURE it matched?
+  // TODOXXX it's debatable whether we should allow this, though
+
+  // TODOXXX since subexpression extraction is not yet implemented,
+  // just treat it as a unary expression wrt the left operand -- since
+  // the right hand side must be a literal (verified by the parses),
+  // evaluating it never has side effects.
+
+  if (session.verbose>2)
+    clog << _("Eliding regex query ") << *e->tok << endl;
+
+  relaxed_p = false;
+  e->left->visit(this);
 }
 
 void
@@ -3271,6 +3342,7 @@ struct const_folder: public update_visitor
   void visit_unary_expression (unary_expression* e);
   void visit_logical_or_expr (logical_or_expr* e);
   void visit_logical_and_expr (logical_and_expr* e);
+  // TODOXXX visit_regex_query could be done if we could run dfa at compiletime
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_ternary_expression (ternary_expression* e);
@@ -4114,6 +4186,25 @@ typeresolution_info::visit_logical_and_expr (logical_and_expr *e)
   visit_binary_expression (e);
 }
 
+void
+typeresolution_info::visit_regex_query (regex_query *e)
+{
+  // NB: result of regex query is an integer!
+  if (t == pe_stats || t == pe_string)
+    invalid (e->tok, t);
+
+  t = pe_string;
+  e->left->visit (this);
+  t = pe_string;
+  e->right->visit (this); // parser ensures this is a literal known at compile time
+
+  if (e->type == pe_unknown)
+    {
+      e->type = pe_long;
+      resolved (e->tok, e->type);
+    }
+}
+
 
 void
 typeresolution_info::visit_comparison (comparison *e)
@@ -4484,6 +4575,23 @@ typeresolution_info::visit_cast_op (cast_op* e)
 
 
 void
+typeresolution_info::visit_perf_op (perf_op* e)
+{
+  // A perf_op should already be resolved
+  if (t == pe_stats || t == pe_string)
+    invalid (e->tok, t);
+
+  e->type = pe_long;
+
+  // (There is no real need to visit our operand - by parser
+  // construction, it's always a string literal, with its type already
+  // set.)
+  t = pe_string;
+  e->operand->visit (this);
+}
+
+
+void
 typeresolution_info::visit_arrayindex (arrayindex* e)
 {
 
@@ -4749,6 +4857,11 @@ typeresolution_info::visit_foreach_loop (foreach_loop* e)
           e->value->visit (this);
         }
     }
+
+  /* Prevent @sum etc. aggregate sorting on non-statistics arrays. */
+  if (wanted_value != pe_unknown)
+    if (e->sort_aggr != sc_none && wanted_value != pe_stats)
+      invalid (array->tok, wanted_value);
 
   if (e->limit)
     {

@@ -65,7 +65,7 @@ probe kernel.function("schedule") {
 probe end {
   foreach (stack in traces- limit 30) {
     printf("%d:", traces[stack])
-    print_stack(stack);
+    print_syms(stack);
   }
 }
 

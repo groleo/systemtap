@@ -1,5 +1,5 @@
 // systemtap translator/driver
-// Copyright (C) 2005-2011 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005 IBM Corp.
 // Copyright (C) 2006 Intel Corporation.
 //
@@ -309,78 +309,6 @@ setup_signals (sighandler_t handler)
   sigaction (SIGXCPU, &sa, NULL);
 }
 
-int parse_kernel_config (systemtap_session &s)
-{
-  // PR10702: pull config options
-  string kernel_config_file = s.kernel_build_tree + "/.config";
-  struct stat st;
-  int rc = stat(kernel_config_file.c_str(), &st);
-  if (rc != 0)
-    {
-        clog << _F("Checking \"%s\" failed with error: %s",
-                   kernel_config_file.c_str(), strerror(errno)) << endl;
-	find_devel_rpms(s, s.kernel_build_tree.c_str());
-	missing_rpm_list_print(s,"-devel");
-	return rc;
-    }
-
-  ifstream kcf (kernel_config_file.c_str());
-  string line;
-  while (getline (kcf, line))
-    {
-      if (!startswith(line, "CONFIG_")) continue;
-      size_t off = line.find('=');
-      if (off == string::npos) continue;
-      string key = line.substr(0, off);
-      string value = line.substr(off+1, string::npos);
-      s.kernel_config[key] = value;
-    }
-  if (s.verbose > 2)
-    clog << _F("Parsed kernel \"%s\", ", kernel_config_file.c_str())
-         << _F(ngettext("containing %zu tuple", "containing %zu tuples",
-                s.kernel_config.size()), s.kernel_config.size()) << endl;
-
-  kcf.close();
-  return 0;
-}
-
-
-int parse_kernel_exports (systemtap_session &s)
-{
-  string kernel_exports_file = s.kernel_build_tree + "/Module.symvers";
-  struct stat st;
-  int rc = stat(kernel_exports_file.c_str(), &st);
-  if (rc != 0)
-    {
-        clog << _F("Checking \"%s\" failed with error: %s\nEnsure kernel development headers & makefiles are installed",
-                   kernel_exports_file.c_str(), strerror(errno)) << endl;
-	return rc;
-    }
-
-  ifstream kef (kernel_exports_file.c_str());
-  string line;
-  while (getline (kef, line))
-    {
-      vector<string> tokens;
-      tokenize (line, tokens, "\t");
-      if (tokens.size() == 4 &&
-          tokens[2] == "vmlinux" &&
-          tokens[3].substr(0,13) == string("EXPORT_SYMBOL"))
-        s.kernel_exports.insert (tokens[1]);
-      // RHEL4 Module.symvers file only has 3 tokens.  No
-      // 'EXPORT_SYMBOL' token at the end of the line.
-      else if (tokens.size() == 3 && tokens[2] == "vmlinux")
-        s.kernel_exports.insert (tokens[1]);
-    }
-  if (s.verbose > 2)
-    clog << _F(ngettext("Parsed kernel %s, which contained one vmlinux export",
-                        "Parsed kernel %s, which contained %zu vmlinux exports",
-                         s.kernel_exports.size()), kernel_exports_file.c_str(),
-                         s.kernel_exports.size()) << endl;
-
-  kef.close();
-  return 0;
-}
 
 // Compilation passes 0 through 4
 static int
@@ -441,14 +369,9 @@ passes_0_4 (systemtap_session &s)
     }
 
   // Now that no further changes to s.kernel_build_tree can occur, let's use it.
-  if ((rc = parse_kernel_config (s)) != 0)
-    {
-      // Try again with a server
-      s.set_try_server ();
-      return rc;
-    }
-
-  if ((rc = parse_kernel_exports (s)) != 0)
+  if ((rc = s.parse_kernel_config ()) != 0
+      || (rc = s.parse_kernel_exports ()) != 0
+      || (rc = s.parse_kernel_functions ()) != 0)
     {
       // Try again with a server
       s.set_try_server ();
@@ -540,6 +463,7 @@ passes_0_4 (systemtap_session &s)
   // but since .stpm files can consist only of '@define' constructs,
   // we can parse each one without reference to the others.
   set<pair<dev_t, ino_t> > seen_library_macro_files;
+  set<string> seen_library_macro_files_names;
 
   for (unsigned i=0; i<s.include_path.size(); i++)
     {
@@ -576,13 +500,30 @@ passes_0_4 (systemtap_session &s)
                 {
                   pair<dev_t,ino_t> here = make_pair(tapset_file_stat.st_dev,
                                                      tapset_file_stat.st_ino);
-                  if (seen_library_macro_files.find(here)
-                      != seen_library_macro_files.end())
-                    continue;
+                  if (seen_library_macro_files.find(here) != seen_library_macro_files.end()) {
+                    if (s.verbose>2)
+                      clog << _F("Skipping tapset \"%s\", duplicate inode.", globbuf.gl_pathv[j]) << endl;
+                    continue; 
+                  }
                   seen_library_macro_files.insert (here);
                 }
 
-              // XXX: privilege only for /usr/share/systemtap?
+              // PR12443: duplicate-eliminate harder
+              string full_path = globbuf.gl_pathv[j];
+              string tapset_base = s.include_path[i]; // not dir; it has arch suffixes too
+              if (full_path.size() > tapset_base.size()) {
+                string tail_part = full_path.substr(tapset_base.size());
+                if (seen_library_macro_files_names.find (tail_part) != seen_library_macro_files_names.end()) {
+                  if (s.verbose>2)
+                      clog << _F("Skipping tapset \"%s\", duplicate name.", globbuf.gl_pathv[j]) << endl;
+                  continue;
+                }
+                seen_library_macro_files_names.insert (tail_part);
+              }
+
+              if (s.verbose>2)
+                clog << _F("Processing tapset \"%s\"", globbuf.gl_pathv[j]) << endl;
+
               stapfile* f = parse_library_macros (s, globbuf.gl_pathv[j]);
               if (f == 0)
                 s.print_warning("macro tapset '" + string(globbuf.gl_pathv[j])
@@ -594,7 +535,7 @@ passes_0_4 (systemtap_session &s)
           unsigned next_s_library_files = s.library_files.size();
           if (s.verbose>1 && globbuf.gl_pathc > 0)
             //TRANSLATORS: Searching through directories, 'processed' means 'examined so far'
-            clog << _F("Searched for library macro files: \" %s \", found: %zu, processed: %u",
+            clog << _F("Searched for library macro files: \"%s\", found: %zu, processed: %u",
                        dir.c_str(), globbuf.gl_pathc,
                        (next_s_library_files-prev_s_library_files)) << endl;
 
@@ -604,6 +545,7 @@ passes_0_4 (systemtap_session &s)
 
   // Next, gather and parse the library files.
   set<pair<dev_t, ino_t> > seen_library_files;
+  set<string> seen_library_files_names;
 
   for (unsigned i=0; i<s.include_path.size(); i++)
     {
@@ -640,13 +582,36 @@ passes_0_4 (systemtap_session &s)
                 {
                   pair<dev_t,ino_t> here = make_pair(tapset_file_stat.st_dev,
                                                      tapset_file_stat.st_ino);
-                  if (seen_library_files.find(here) != seen_library_files.end())
-                    continue;
+                  if (seen_library_files.find(here) != seen_library_files.end()) {
+                    if (s.verbose>2)
+                      clog << _F("Skipping tapset \"%s\", duplicate inode.", globbuf.gl_pathv[j]) << endl;
+                    continue; 
+                  }
                   seen_library_files.insert (here);
                 }
 
-              // XXX: privilege only for /usr/share/systemtap?
-              stapfile* f = parse (s, globbuf.gl_pathv[j], true);
+              // PR12443: duplicate-eliminate harder
+              string full_path = globbuf.gl_pathv[j];
+              string tapset_base = s.include_path[i]; // not dir; it has arch suffixes too
+              if (full_path.size() > tapset_base.size()) {
+                string tail_part = full_path.substr(tapset_base.size());
+                if (seen_library_files_names.find (tail_part) != seen_library_files_names.end()) {
+                  if (s.verbose>2)
+                      clog << _F("Skipping tapset \"%s\", duplicate name.", globbuf.gl_pathv[j]) << endl;
+                  continue;
+                }
+                seen_library_files_names.insert (tail_part);
+              }
+
+              if (s.verbose>2)
+                clog << _F("Processing tapset \"%s\"", globbuf.gl_pathv[j]) << endl;
+
+              // NB: we don't need to restrict privilege only for /usr/share/systemtap, i.e., 
+              // excluding user-specified $XDG_DATA_DIRS.  That's because stapdev gets
+              // root-equivalent privileges anyway; stapsys and stapusr use a remote compilation
+              // with a trusted environment, where client-side $XDG_DATA_DIRS are not passed.
+
+              stapfile* f = parse (s, globbuf.gl_pathv[j], true /* privileged */);
               if (f == 0)
                 s.print_warning("tapset '" + string(globbuf.gl_pathv[j])
                                 + "' has errors, and will be skipped."); // TODOXXX internationalization?
@@ -657,7 +622,7 @@ passes_0_4 (systemtap_session &s)
           unsigned next_s_library_files = s.library_files.size();
           if (s.verbose>1 && globbuf.gl_pathc > 0)
             //TRANSLATORS: Searching through directories, 'processed' means 'examined so far'
-            clog << _F("Searched: \" %s \", found: %zu, processed: %u",
+            clog << _F("Searched: \"%s\", found: %zu, processed: %u",
                        dir.c_str(), globbuf.gl_pathc,
                        (next_s_library_files-prev_s_library_files)) << endl;
 
@@ -729,10 +694,7 @@ passes_0_4 (systemtap_session &s)
     }
 
   if (rc && !s.listing_mode)
-    cerr << _("Pass 1: parse failed.  Try again with another '--vp 1' option.") << endl;
-    //cerr << "Pass 1: parse failed.  "
-    //     << "Try again with another '--vp 1' option."
-    //     << endl;
+    cerr << _("Pass 1: parse failed.  [man error::pass1]") << endl;
 
   PROBE1(stap, pass1__end, &s);
 
@@ -767,13 +729,7 @@ passes_0_4 (systemtap_session &s)
                       << endl;
 
   if (rc && !s.listing_mode && !s.try_server ())
-    cerr << _("Pass 2: analysis failed.  Try again with another '--vp 01' option.") << endl;
-    //cerr << "Pass 2: analysis failed.  "
-    //     << "Try again with another '--vp 01' option."
-    //     << endl;
-
-  /* Print out list of missing files.  XXX should be "if (rc)" ? */
-  missing_rpm_list_print(s,"-debuginfo");
+    cerr << _("Pass 2: analysis failed.  [man error::pass2]") << endl;
 
   PROBE1(stap, pass2__end, &s);
 
@@ -845,10 +801,7 @@ passes_0_4 (systemtap_session &s)
          << endl;
 
   if (rc && ! s.try_server ())
-    cerr << _("Pass 3: translation failed.  Try again with another '--vp 001' option.") << endl;
-    //cerr << "Pass 3: translation failed.  "
-    //     << "Try again with another '--vp 001' option."
-    //     << endl;
+    cerr << _("Pass 3: translation failed.  [man error::pass3]") << endl;
 
   PROBE1(stap, pass3__end, &s);
 
@@ -883,16 +836,14 @@ passes_0_4 (systemtap_session &s)
                       << endl;
 
   if (rc && ! s.try_server ())
-    cerr << _("Pass 4: compilation failed.  Try again with another '--vp 0001' option.") << endl;
-    //cerr << "Pass 4: compilation failed.  "
-    //     << "Try again with another '--vp 0001' option."
-    //     << endl;
+    cerr << _("Pass 4: compilation failed.  [man error::pass4]") << endl;
+
   else
     {
       // Update cache. Cache cleaning is kicked off at the beginning of this function.
       if (s.use_script_cache)
         add_script_to_cache(s);
-      if (s.use_cache && !s.is_usermode())
+      if (s.use_cache && !s.runtime_usermode_p())
         add_stapconf_to_cache(s);
 
       // We may need to save the module in $CWD if the cache was
@@ -939,10 +890,7 @@ pass_5 (systemtap_session &s, vector<remote*> targets)
                       << endl;
 
   if (rc)
-    cerr << _("Pass 5: run failed.  Try again with another '--vp 00001' option.") << endl;
-    //cerr << "Pass 5: run failed.  "
-    //     << "Try again with another '--vp 00001' option."
-    //     << endl;
+    cerr << _("Pass 5: run failed.  [man error::pass5]") << endl;
   else
     // Interrupting pass-5 to quit is normal, so we want an EXIT_SUCCESS below.
     pending_interrupts = 0;

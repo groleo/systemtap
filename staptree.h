@@ -1,5 +1,5 @@
 // -*- C++ -*-
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2006 Intel Corporation.
 //
 // This file is part of systemtap, and is free software.  You can
@@ -18,9 +18,12 @@
 #include <iostream>
 #include <stdexcept>
 #include <cassert>
+#include <typeinfo>
 extern "C" {
 #include <stdint.h>
 }
+
+#include "util.h"
 
 struct token; // parse.h
 struct systemtap_session; // session.h
@@ -32,12 +35,13 @@ struct semantic_error: public std::runtime_error
   const semantic_error *chain;
 
   ~semantic_error () throw () {}
+
   semantic_error (const std::string& msg, const token* t1=0):
     runtime_error (msg), tok1 (t1), tok2 (0), chain (0) {}
 
   semantic_error (const std::string& msg, const token* t1,
                   const token* t2):
-                  runtime_error (msg), tok1 (t1), tok2 (t2), chain (0) {}
+    runtime_error (msg), tok1 (t1), tok2 (t2), chain (0) {}
 };
 
 // ------------------------------------------------------------------------
@@ -60,7 +64,12 @@ struct token;
 struct visitor;
 struct update_visitor;
 
-struct expression
+struct visitable
+{
+  virtual ~visitable ();
+};
+
+struct expression : public visitable
 {
   exp_type type;
   const token* tok;
@@ -157,6 +166,11 @@ struct array_in: public expression
   void visit (visitor* u);
 };
 
+struct regex_query: public binary_expression
+{
+  literal_string *re; // XXX somewhat redundant with right
+  void visit (visitor* u);
+};
 
 struct comparison: public binary_expression
 {
@@ -187,18 +201,13 @@ struct assignment: public binary_expression
 
 struct symbol;
 struct hist_op;
-struct indexable
+struct indexable : public expression
 {
   // This is a helper class which, type-wise, acts as a disjoint union
   // of symbols and histograms. You can ask it whether it's a
   // histogram or a symbol, and downcast accordingly.
-  void print_indexable (std::ostream& o) const;
-  void visit_indexable (visitor* u);
   virtual bool is_symbol(symbol *& sym_out);
   virtual bool is_hist_op(hist_op *& hist_out);
-  virtual bool is_const_symbol(const symbol *& sym_out) const;
-  virtual bool is_const_hist_op(const hist_op *& hist_out) const;
-  virtual const token *get_tok() const = 0;
   virtual ~indexable() {}
 };
 
@@ -210,15 +219,8 @@ classify_indexable(indexable* ix,
 		   symbol *& array_out,
 		   hist_op *& hist_out);
 
-void
-classify_const_indexable(const indexable* ix,
-			 symbol const *& array_out,
-			 hist_op const *& hist_out);
-
 struct vardecl;
-struct symbol:
-  public expression,
-  public indexable
+struct symbol: public indexable
 {
   std::string name;
   vardecl *referent;
@@ -226,8 +228,6 @@ struct symbol:
   void print (std::ostream& o) const;
   void visit (visitor* u);
   // overrides of type 'indexable'
-  const token *get_tok() const;
-  bool is_const_symbol(const symbol *& sym_out) const;
   bool is_symbol(symbol *& sym_out);
 };
 
@@ -302,6 +302,14 @@ struct defined_op: public expression
 struct entry_op: public expression
 {
   expression *operand;
+  void print (std::ostream& o) const;
+  void visit (visitor* u);
+};
+
+
+struct perf_op: public expression
+{
+  literal_string *operand;
   void print (std::ostream& o) const;
   void visit (visitor* u);
 };
@@ -436,6 +444,7 @@ enum stat_component_type
     sc_sum,
     sc_min,
     sc_max,
+    sc_none,
   };
 
 struct stat_op: public expression
@@ -454,15 +463,12 @@ enum histogram_type
 
 struct hist_op: public indexable
 {
-  const token* tok;
   histogram_type htype;
   expression* stat;
   std::vector<int64_t> params;
   void print (std::ostream& o) const;
   void visit (visitor* u);
   // overrides of type 'indexable'
-  const token *get_tok() const;
-  bool is_const_hist_op(const hist_op *& hist_out) const;
   bool is_hist_op(hist_op *& hist_out);
 };
 
@@ -507,7 +513,6 @@ struct vardecl_builtin: public vardecl
 {
 };
 
-
 struct statement;
 struct functiondecl: public symboldecl
 {
@@ -516,6 +521,7 @@ struct functiondecl: public symboldecl
   std::vector<vardecl*> unused_locals;
   statement* body;
   bool synthetic;
+  bool mangle_oldstyle;
   functiondecl ();
   void print (std::ostream& o) const;
   void printsig (std::ostream& o) const;
@@ -526,7 +532,7 @@ struct functiondecl: public symboldecl
 // ------------------------------------------------------------------------
 
 
-struct statement
+struct statement : public visitable
 {
   virtual void print (std::ostream& o) const = 0;
   virtual void visit (visitor* u) = 0;
@@ -587,6 +593,7 @@ struct foreach_loop: public statement
   indexable *base;
   int sort_direction; // -1: decreasing, 0: none, 1: increasing
   unsigned sort_column; // 0: value, 1..N: index
+  enum stat_component_type sort_aggr; // for aggregate arrays, which aggregate to sort on
   symbol* value; // optional iteration value
   expression* limit; // optional iteration limit
 
@@ -769,6 +776,7 @@ struct visitor
   virtual void visit_logical_or_expr (logical_or_expr* e) = 0;
   virtual void visit_logical_and_expr (logical_and_expr* e) = 0;
   virtual void visit_array_in (array_in* e) = 0;
+  virtual void visit_regex_query (regex_query* e) = 0;
   virtual void visit_comparison (comparison* e) = 0;
   virtual void visit_concatenation (concatenation* e) = 0;
   virtual void visit_ternary_expression (ternary_expression* e) = 0;
@@ -783,6 +791,7 @@ struct visitor
   virtual void visit_cast_op (cast_op* e) = 0;
   virtual void visit_defined_op (defined_op* e) = 0;
   virtual void visit_entry_op (entry_op* e) = 0;
+  virtual void visit_perf_op (perf_op* e) = 0;
 };
 
 
@@ -814,6 +823,7 @@ struct traversing_visitor: public visitor
   void visit_logical_or_expr (logical_or_expr* e);
   void visit_logical_and_expr (logical_and_expr* e);
   void visit_array_in (array_in* e);
+  void visit_regex_query (regex_query* e);
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_ternary_expression (ternary_expression* e);
@@ -828,6 +838,7 @@ struct traversing_visitor: public visitor
   void visit_cast_op (cast_op* e);
   void visit_defined_op (defined_op* e);
   void visit_entry_op (entry_op* e);
+  void visit_perf_op (perf_op* e);
 };
 
 
@@ -877,7 +888,7 @@ struct varuse_collecting_visitor: public functioncall_traversing_visitor
   void visit_cast_op (cast_op* e);
   void visit_defined_op (defined_op* e);
   void visit_entry_op (entry_op* e);
-
+  void visit_perf_op (perf_op* e);
   bool side_effect_free ();
   bool side_effect_free_wrt (const std::set<vardecl*>& vars);
 };
@@ -917,6 +928,7 @@ struct throwing_visitor: public visitor
   void visit_logical_or_expr (logical_or_expr* e);
   void visit_logical_and_expr (logical_and_expr* e);
   void visit_array_in (array_in* e);
+  void visit_regex_query (regex_query* e);
   void visit_comparison (comparison* e);
   void visit_concatenation (concatenation* e);
   void visit_ternary_expression (ternary_expression* e);
@@ -931,6 +943,7 @@ struct throwing_visitor: public visitor
   void visit_cast_op (cast_op* e);
   void visit_defined_op (defined_op* e);
   void visit_entry_op (entry_op* e);
+  void visit_perf_op (perf_op* e);
 };
 
 // A visitor similar to a traversing_visitor, but with the ability to rewrite
@@ -944,17 +957,23 @@ struct update_visitor: public visitor
     if (src != NULL)
       {
         src->visit(this);
-        assert(!targets.empty());
-        dst = static_cast<T*>(targets.top()); // XXX: danger will robinson: not typesafe!
-        targets.pop();
-        assert(clearok || dst);
+        if (values.empty())
+          throw std::runtime_error(_("update_visitor wasn't provided a value"));
+        visitable *v = values.top();
+        values.pop();
+        if (v == NULL && !clearok)
+          throw std::runtime_error(_("update_visitor was provided a NULL value"));
+        dst = dynamic_cast<T*>(v);
+        if (v != NULL && dst == NULL)
+          throw std::runtime_error(_F("update_visitor can't set type \"%s\" with a \"%s\"",
+                                      typeid(T).name(), typeid(*v).name()));
       }
     return dst;
   }
 
   template <typename T> void provide (T* src)
   {
-    targets.push(static_cast<void*>(src)); // XXX: not typesafe!
+    values.push(src);
   }
 
   template <typename T> void replace (T*& src, bool clearok=false)
@@ -962,7 +981,7 @@ struct update_visitor: public visitor
     src = require(src, clearok);
   }
 
-  virtual ~update_visitor() { assert(targets.empty()); }
+  virtual ~update_visitor() { assert(values.empty()); }
 
   virtual void visit_block (block *s);
   virtual void visit_try_block (try_block *s);
@@ -987,6 +1006,7 @@ struct update_visitor: public visitor
   virtual void visit_logical_or_expr (logical_or_expr* e);
   virtual void visit_logical_and_expr (logical_and_expr* e);
   virtual void visit_array_in (array_in* e);
+  virtual void visit_regex_query (regex_query* e);
   virtual void visit_comparison (comparison* e);
   virtual void visit_concatenation (concatenation* e);
   virtual void visit_ternary_expression (ternary_expression* e);
@@ -1001,13 +1021,11 @@ struct update_visitor: public visitor
   virtual void visit_cast_op (cast_op* e);
   virtual void visit_defined_op (defined_op* e);
   virtual void visit_entry_op (entry_op* e);
+  virtual void visit_perf_op (perf_op* e);
 
 private:
-  std::stack<void *> targets;
+  std::stack<visitable *> values;
 };
-
-template <> indexable*
-update_visitor::require <indexable> (indexable* src, bool clearok);
 
 // A visitor which performs a deep copy of the root node it's applied
 // to. NB: It does not copy any of the variable or function
@@ -1046,6 +1064,7 @@ struct deep_copy_visitor: public update_visitor
   virtual void visit_logical_or_expr (logical_or_expr* e);
   virtual void visit_logical_and_expr (logical_and_expr* e);
   virtual void visit_array_in (array_in* e);
+  virtual void visit_regex_query (regex_query* e);
   virtual void visit_comparison (comparison* e);
   virtual void visit_concatenation (concatenation* e);
   virtual void visit_ternary_expression (ternary_expression* e);
@@ -1060,6 +1079,7 @@ struct deep_copy_visitor: public update_visitor
   virtual void visit_cast_op (cast_op* e);
   virtual void visit_defined_op (defined_op* e);
   virtual void visit_entry_op (entry_op* e);
+  virtual void visit_perf_op (perf_op* e);
 };
 
 #endif // STAPTREE_H

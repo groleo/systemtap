@@ -8,7 +8,7 @@
 # NB: This is abusing the fact that -l/-L work by wrapping the input string
 # with "probe " and "{}"
 
-stap -L '
+stap $@ -L '
 my_syscall.poll = kernel.function("sys_poll").call
 {
   timeout = (@defined($timeout_msecs) ? $timeout_msecs : $timeout)

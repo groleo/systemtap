@@ -269,7 +269,10 @@ function task_file_handle_fd_flags:string (task:long, fd:long) %{ /* pure */
 	rcu_read_lock();
 	if ((files = kread(&p->files)) &&
 	    (fdt = files_fdtable(files))) {
-		gcoe = FD_ISSET(STAP_ARG_fd, kread(&fdt->close_on_exec));
+		/* Use test_bit directly instead of FD_ISSET which might
+		   not be defined on some kernels.  */
+		unsigned long *bs = (unsigned long *)kread(&fdt->close_on_exec);
+		gcoe = test_bit(STAP_ARG_fd, bs);
 		snprintf(STAP_RETVALUE, MAXSTRINGLEN,
 			"%s", gcoe ? "FD_CLOEXEC" : "");
 	}

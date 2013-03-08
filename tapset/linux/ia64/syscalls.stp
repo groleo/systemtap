@@ -51,6 +51,7 @@ probe syscall.mmap2.return = kernel.function("sys_mmap2").return ?
 }
 %)
 
+%( CONFIG_GENERIC_SIGALTSTACK == "n" %?
 # sigaltstack _______________________________________________
 # asmlinkage long
 # sys_sigaltstack (const stack_t __user *uss, stack_t __user *uoss, long arg2,
@@ -66,7 +67,9 @@ probe syscall.sigaltstack = kernel.function("sys_sigaltstack")
 %)
 	uss_uaddr = $uss
 	uoss_uaddr = $uoss
+%(systemtap_v <= "2.2" %?
 	regs = &$regs
+%)
 	argstr = sprintf("%p, %p", $uss, $uoss)
 }
 probe syscall.sigaltstack.return = kernel.function("sys_sigaltstack").return
@@ -74,6 +77,7 @@ probe syscall.sigaltstack.return = kernel.function("sys_sigaltstack").return
 	name = "sigaltstack";
 	retstr = return_str(1, $return)
 }
+%)
 
 # sysctl _____________________________________________________
 #

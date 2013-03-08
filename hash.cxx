@@ -133,7 +133,6 @@ void create_hash_log(const string &type_str, const string &parms, const string &
 static const stap_hash&
 get_base_hash (systemtap_session& s)
 {
-  map<string, string> dummy;
   if (s.base_hash)
     return *s.base_hash;
 
@@ -155,19 +154,22 @@ get_base_hash (systemtap_session& s)
 
   // Hash runtime path (that gets added in as "-R path").
   h.add_path("Runtime ", s.runtime_path);
+  h.add_path("Runtime transport ", s.runtime_path + "/transport");
+  h.add_path("Runtime unwind ", s.runtime_path + "/unwind");
+  h.add_path("Runtime sub ", s.runtime_path +
+             (s.runtime_usermode_p() ? "/dyninst" : "/linux"));
 
   // Hash compiler path, size, and mtime.  We're just going to assume
   // we'll be using gcc. XXX: getting kbuild to spit out out would be
   // better, especially since this is fooled by ccache.
-  h.add_path("Compiler ", find_executable("gcc", "", dummy));
+  h.add_path("Compiler ", find_executable("gcc"));
 
   // Hash the systemtap size and mtime.  We could use VERSION/DATE,
   // but when developing systemtap that doesn't work well (since you
   // can compile systemtap multiple times in 1 day).  Since we don't
   // know exactly where we're getting run from, we'll use
-  // /proc/self/exe.
-  // XXX well almost exactly -- valgrind throws this off
-  h.add_path("Systemtap ", "/proc/self/exe");
+  // /proc/self/exe (and we resolve it ourselves to help valgrind).
+  h.add_path("Systemtap ", get_self_path());
 
   return h;
 }
@@ -208,7 +210,6 @@ void
 find_script_hash (systemtap_session& s, const string& script)
 {
   stap_hash h(get_base_hash(s));
-  struct stat st;
 
   // Hash getuid.  This really shouldn't be necessary (since who you
   // are doesn't change the generated output), but the hash gets used
@@ -221,27 +222,13 @@ find_script_hash (systemtap_session& s, const string& script)
   h.add("Bulk Mode (-b): ", s.bulk_mode);
   h.add("Timing (-t): ", s.timing);
   h.add("Prologue Searching (-P): ", s.prologue_searching);
-  h.add("Ignore Vmlinux (--ignore-vmlinux): ", s.ignore_vmlinux);
-  h.add("Ignore Dwarf (--ignore-dwarf): ", s.ignore_dwarf);
-  h.add("Consult Symtab (--kelf, --kmap): ", s.consult_symtab);
   h.add("Skip Badvars (--skip-badvars): ", s.skip_badvars);
   h.add("Privilege (--privilege): ", s.privilege);
   h.add("Compatible (--compatible): ", s.compatible);
   h.add("Omit Werror (undocumented): ", s.omit_werror);
   h.add("Prologue Searching (-P): ", s.prologue_searching);
   h.add("Error suppression (--suppress-handler-errors): ", s.suppress_handler_errors);
-  if (!s.kernel_symtab_path.empty())	// --kmap
-    {
-      h.add("Kernel Symtab Path: ", s.kernel_symtab_path);
-      if (stat(s.kernel_symtab_path.c_str(), &st) == 0)
-        {
-	  // NB: stat of /proc/kallsyms always returns size=0, mtime=now...
-	  // which is a good reason to use the default /boot/System.map-2.6.xx
-	  // instead.
-          h.add("Kernel Symtab Size: ", st.st_size);
-	  h.add("Kernel Symtab Timestamp: ", st.st_mtime);
-        }
-    }
+  h.add("Suppress Time Limits (--suppress-time-limits): ", s.suppress_time_limits);
   for (unsigned i = 0; i < s.c_macros.size(); i++)
     h.add("Macros: ", s.c_macros[i]);
 
@@ -376,8 +363,8 @@ find_uprobes_hash (systemtap_session& s)
   stap_hash h(get_base_hash(s));
 
   // Hash runtime uprobes paths
-  h.add_path("Uprobes Runtime Path /uprobes ", s.runtime_path + "/uprobes");
-  h.add_path("Uprobes Runtime Path /uprobes2 ", s.runtime_path + "/uprobes2");
+  h.add_path("Uprobes Runtime Path /uprobes ", s.runtime_path + "/linux/uprobes");
+  h.add_path("Uprobes Runtime Path /uprobes2 ", s.runtime_path + "/linux/uprobes2");
 
   // Add any custom kbuild flags
   for (unsigned i = 0; i < s.kbuildflags.size(); i++)

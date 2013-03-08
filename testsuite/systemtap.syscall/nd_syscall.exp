@@ -34,6 +34,10 @@ proc test_procedure {} {
 	foreach filename [lsort [glob $pattern]] {
 	    set testname [file tail [string range $filename 0 end-2]]
 	    if {![installtest_p]} { untested "64-bit $testname"; continue }
+	    # ia64 systems don't have kprobe.function() support (PR6971)
+	    if {[istarget ia64-*-*]} {
+		setup_kfail 6971 *-*-*
+	    }
 	    send_log "Testing 64-bit ${testname} nd_syscall\n"
 	    run_one_test $filename $flags 64 "nd_syscall"
 	}

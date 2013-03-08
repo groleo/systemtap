@@ -1,5 +1,5 @@
 /* main header file for Linux
- * Copyright (C) 2005-2011 Red Hat Inc.
+ * Copyright (C) 2005-2013 Red Hat Inc.
  * Copyright (C) 2005-2006 Intel Corporation.
  *
  * This file is part of systemtap, and is free software.  You can
@@ -72,6 +72,14 @@ static void _stp_warn (const char *fmt, ...) __attribute__ ((format (printf, 1, 
 static void _stp_exit(void);
 
 
+#ifdef STAPCONF_HLIST_4ARGS
+#define stap_hlist_for_each_entry(a,b,c,d) hlist_for_each_entry(a,b,c,d)
+#define stap_hlist_for_each_entry_safe(a,b,c,d,e) hlist_for_each_entry_safe(a,b,c,d,e)
+#else
+#define stap_hlist_for_each_entry(a,b,c,d) (void) b; hlist_for_each_entry(a,c,d)
+#define stap_hlist_for_each_entry_safe(a,b,c,d,e) (void) b; hlist_for_each_entry_safe(a,c,d,e)
+#endif
+
 
 /* unprivileged user support */
 
@@ -135,22 +143,38 @@ static struct
 
 // PR13489, inode-uprobes sometimes lacks the necessary SYMBOL_EXPORT's.
 #if !defined(STAPCONF_TASK_USER_REGSET_VIEW_EXPORTED)
-void *kallsyms_task_user_regset_view;
+static void *kallsyms_task_user_regset_view;
 #endif
 #if !defined(STAPCONF_UPROBE_REGISTER_EXPORTED)
-void *kallsyms_uprobe_register;
+static void *kallsyms_uprobe_register;
 #endif
 #if !defined(STAPCONF_UPROBE_UNREGISTER_EXPORTED)
-void *kallsyms_uprobe_unregister;
+static void *kallsyms_uprobe_unregister;
+#endif
+#if !defined(STAPCONF_URETPROBE_REGISTER_EXPORTED)
+static void *kallsyms_uretprobe_register;
+#endif
+#if !defined(STAPCONF_URETPROBE_UNREGISTER_EXPORTED)
+static void *kallsyms_uretprobe_unregister;
 #endif
 #if !defined(STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED)
-void *kallsyms_uprobe_get_swbp_addr;
+static void *kallsyms_uprobe_get_swbp_addr;
 #endif
 
 /* task_work functions lack the necessary SYMBOL_EXPORT's */
 #if !defined(STAPCONF_TASK_WORK_ADD_EXPORTED)
-void *kallsyms_task_work_add;
-void *kallsyms_task_work_cancel;
+static void *kallsyms_task_work_add;
+static void *kallsyms_task_work_cancel;
+#endif
+
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED)
+static void *kallsyms_signal_wake_up_state;
+#endif
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
+static void *kallsyms_signal_wake_up;
+#endif
+#if !defined(STAPCONF___LOCK_TASK_SIGHAND_EXPORTED)
+static void *kallsyms___lock_task_sighand;
 #endif
 
 #include "access_process_vm.h"
@@ -161,12 +185,15 @@ void *kallsyms_task_work_cancel;
 #include "stp_string.c"
 #include "arith.c"
 #include "copy.c"
-#include "regs.c"
+#include "../regs.c"
 #include "regs-ia64.c"
 
 #if (defined(CONFIG_UTRACE) || defined(STAPCONF_UTRACE_VIA_TRACEPOINTS))
 #define HAVE_TASK_FINDER
 #include "task_finder.c"
+#else
+/* stub functionality that fails gracefully */
+#include "task_finder_stubs.c"
 #endif
 
 #include "sym.c"

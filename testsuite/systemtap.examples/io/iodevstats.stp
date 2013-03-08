@@ -28,7 +28,7 @@ probe end {
     "name", "device", "read", "KB tot", "B avg", "write", "KB tot", "B avg")
   foreach ([name,dev] in totals- limit 20) { # sort by total io
     printf("%16s %3d, %4d %8d %8d %8d %8d %8d %8d\n",
-      name, _dev_major(dev),  _dev_minor(dev),
+      name, MAJOR(dev), MINOR(dev),
       @count(reads[name,dev]),
       (@count(reads[name,dev]) ? @sum(reads[name,dev])>>10 : 0 ),
       (@count(reads[name,dev]) ? @avg(reads[name,dev]) : 0 ),

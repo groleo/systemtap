@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Copyright (C) 2005-2007 Red Hat, Inc.
+ * Copyright (C) 2005-2012 Red Hat, Inc.
  *
  */
 
@@ -32,6 +32,15 @@ int main(int argc, char **argv)
 #endif
 	setup_signals();
 	parse_args(argc, argv);
+
+        /* If we inherited a relay_basedir_fd, we want to keep it to ourselves -
+           i.e., FD_CLOEXEC the bad boy. */
+        if (relay_basedir_fd >= 0) {
+                int rc =  set_clexec(relay_basedir_fd);
+                if (rc) 
+                        exit(-1);
+        }
+
 
 	if (buffer_size)
 		dbug(1, "Using a buffer of %u MB.\n", buffer_size);

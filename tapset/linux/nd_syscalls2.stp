@@ -67,6 +67,8 @@ probe nd_syscall.compat_nanosleep.return = kprobe.function("compat_sys_nanosleep
 # long compat_sys_nfsservctl(int cmd, struct compat_nfsctl_arg __user *arg,
 #					union compat_nfsctl_res __user *res)
 #
+# nfsservctl was removed in kernel 3.0/2.6.40.
+%( kernel_v < "2.6.40" && CONFIG_NFSD == "[ym]" %?
 probe nd_syscall.nfsservctl = kprobe.function("sys_nfsservctl") ?,
                               kprobe.function("compat_sys_nfsservctl") ?
 {
@@ -87,6 +89,7 @@ probe nd_syscall.nfsservctl.return = kprobe.function("sys_nfsservctl").return ?,
 	name = "nfsservctl"
 	retstr = returnstr(1)
 }
+%)
 
 # nice _______________________________________________________
 # long sys_nice(int increment)
@@ -1373,7 +1376,7 @@ probe nd_syscall.rt_sigprocmask = kprobe.function("sys32_rt_sigprocmask") ?,
 	// oldset_uaddr = $oset
 	// argstr = sprintf("%s, [%s], %p, %d", how_str, _stp_sigset_u($set),
 	//			$oset, $sigsetsize)
-	if (probefunc() != "compat_sys_rt_sigprocmask")
+	if (symname(addr()) != "compat_sys_rt_sigprocmask")
 		asmlinkage()
 	how  = int_arg(1)
 	how_str = _sigprocmask_how_str(how)
@@ -1471,7 +1474,7 @@ probe nd_syscall.rt_sigtimedwait = kprobe.function("compat_sys_rt_sigtimedwait")
 	uthese_uaddr = pointer_arg(1)
 	uinfo_uaddr = pointer_arg(2)
 	uts_uaddr = pointer_arg(3)
-	if (probefunc() == "sys_rt_sigtimedwait")
+	if (symname(addr()) == "sys_rt_sigtimedwait")
 		sigsetsize = ulong_arg(4)
 	else
 		sigsetsize = u32_arg(4)
@@ -2021,6 +2024,36 @@ probe nd_syscall.compat_sys_sendmsg = kprobe.function("compat_sys_sendmsg") ?
 probe nd_syscall.compat_sys_sendmsg.return = kprobe.function("compat_sys_sendmsg").return ?
 {
 	name = "compat_sys_sendmsg"
+	retstr = returnstr(1)
+}
+
+# sendmmsg ____________________________________________________
+#
+# int sys_sendmmsg(int fd, struct mmsghdr __user *mmsg, unsigned int vlen,
+#                  unsigned int flags)
+#
+probe nd_syscall.sendmmsg = kprobe.function("sys_sendmmsg").call ?
+{
+	name = "sendmmsg"
+	// s = $fd
+	// mmsg_uaddr = $mmsg
+	// vlen = $vlen
+	// flags = $flags
+	// flags_str = _sendflags_str($flags)
+	// argstr = sprintf("%d, %p, %d, %s", $fd, $mmsg, $vlen,
+	//		 _sendflags_str($flags))
+	asmlinkage()
+	s = int_arg(1)
+	mmsg_uaddr = pointer_arg(2)
+	vlen = uint_arg(3)
+	flags = uint_arg(4)
+	flags_str = _sendflags_str(flags)
+	argstr = sprintf("%d, %p, %d, %s", s, mmsg_uaddr, vlen,
+			 _sendflags_str(flags))
+}
+probe nd_syscall.sendmmsg.return = kprobe.function("sys_sendmmsg").return ?
+{
+	name = "sendmmsg"
 	retstr = returnstr(1)
 }
 
@@ -2920,6 +2953,28 @@ probe nd_syscall.sigaction32.return = kprobe.function("sys32_sigaction").return 
 	name = "sigaction"
 	retstr = returnstr(1)
 }
+
+%( CONFIG_GENERIC_SIGALTSTACK == "y" %?
+# sigaltstack ________________________________________________
+# SYSCALL_DEFINE2(sigaltstack,const stack_t __user *,uss, stack_t __user *,uoss)
+#
+probe nd_syscall.sigaltstack = kprobe.function("sys_sigaltstack")
+{
+	name = "sigaltstack"
+	// uss_uaddr = $uss
+	// uoss_uaddr = $uoss
+	// argstr = sprintf("%p, %p", $uss, $uoss)
+	asmlinkage()
+	uss_uaddr = pointer_arg(1)
+	uoss_uaddr = pointer_arg(2)
+	argstr = sprintf("%p, %p", uss_uaddr, uoss_uaddr)
+}
+probe nd_syscall.sigaltstack.return = kprobe.function("sys_sigaltstack").return
+{
+	name = "sigaltstack"
+	retstr = returnstr(1)
+}
+%)
 
 # signal _____________________________________________________
 # unsigned long sys_signal(int sig, __sighandler_t handler)
@@ -3831,7 +3886,7 @@ probe nd_syscall.truncate = kprobe.function("sys_truncate") ?,
 	asmlinkage()
 	path_uaddr = pointer_arg(1)
 	path = user_string(path_uaddr)
-	if (probefunc() == "sys_truncate")
+	if (symname(addr()) == "sys_truncate")
 		length = ulong_arg(2)
 	else
 		length = longlong_arg(2)
@@ -3921,7 +3976,7 @@ probe nd_syscall.uname = kprobe.function("sys_uname") ?,
 {
 	name = "uname"
 	// argstr = sprintf("%p", $name)
-	_func_name = probefunc()
+	_func_name = symname(addr())
 	if (_func_name != "sys32_uname") {
 		if (_func_name == "sys_uname" || _func_name == "sys_olduname") {
 			%( arch != "powerpc" %? asmlinkage() %)
@@ -4071,9 +4126,14 @@ probe nd_syscall.ustat32 = kprobe.function("compat_sys_ustat") ?
 	argstr = sprintf("%d, %p", dev, ubuf_uaddr)
 }
 
-probe nd_syscall.ustat.return = kprobe.function("sys_ustat").return ?,
-                                kprobe.function("sys32_ustat").return ?,
-                                kprobe.function("compat_sys_ustat").return ?
+probe nd_syscall.ustat.return = kprobe.function("sys_ustat").return ?
+{
+	name = "ustat"
+	retstr = returnstr(1)
+}
+
+probe nd_syscall.ustat32.return = kprobe.function("sys32_ustat").return ?,
+                                  kprobe.function("compat_sys_ustat").return ?
 {
 	name = "ustat"
 	retstr = returnstr(1)

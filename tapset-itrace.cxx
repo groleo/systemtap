@@ -1,7 +1,6 @@
 // tapset for timers
-// Copyright (C) 2005-2009 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
-// Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -148,6 +147,7 @@ itrace_derived_probe_group::emit_probe_decl (systemtap_session& s,
 {
   s.op->newline() << "{";
   s.op->line() << " .tgt={";
+  s.op->line() << " .purpose=\"itrace\",";
 
   if (p->has_path)
     {
@@ -180,7 +180,7 @@ itrace_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "struct stap_itrace_probe {";
   s.op->indent(1);
   s.op->newline() << "struct stap_task_finder_target tgt;";
-  s.op->newline() << "struct stap_probe * const probe;";
+  s.op->newline() << "const struct stap_probe * const probe;";
   s.op->newline() << "int single_step;";
   s.op->newline(-1) << "};";
   s.op->newline() << "static void enter_itrace_probe(struct stap_itrace_probe *p, struct pt_regs *regs, void *data);";
@@ -190,14 +190,14 @@ itrace_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "static void enter_itrace_probe(struct stap_itrace_probe *p, struct pt_regs *regs, void *data) {";
   s.op->indent(1);
 
-  common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "p->probe",
-				 "_STP_PROBE_HANDLER_ITRACE");
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "p->probe",
+				 "stp_probe_type_itrace");
   s.op->newline() << "c->uregs = regs;";
-  s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
+  s.op->newline() << "c->user_mode_p = 1;";
 
   // call probe function
   s.op->newline() << "(*p->probe->ph) (c);";
-  common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+  common_probe_entryfn_epilogue (s, true);
 
   s.op->newline() << "return;";
   s.op->newline(-1) << "}";

@@ -1,7 +1,6 @@
 // tapset for procfs
 // Copyright (C) 2005-2010 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
-// Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -248,9 +247,9 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
     {
       s.op->newline() << "struct _stp_procfs_data pdata;";
 
-      common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING",
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING",
 				     "spp->read_probe",
-				     "_STP_PROBE_HANDLER_PROCFS");
+				     "stp_probe_type_procfs");
 
       s.op->newline() << "pdata.buffer = spp->buffer;";
       s.op->newline() << "pdata.bufsize = spp->bufsize;";
@@ -258,8 +257,8 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline(1) << "c->ips.procfs_data = &pdata;";
       s.op->newline(-1) << "else {";
 
-      s.op->newline(1) << "if (unlikely (atomic_inc_return (& skipped_count) > MAXSKIPPED)) {";
-      s.op->newline(1) << "atomic_set (& session_state, STAP_SESSION_ERROR);";
+      s.op->newline(1) << "if (unlikely (atomic_inc_return (skipped_count()) > MAXSKIPPED)) {";
+      s.op->newline(1) << "atomic_set (session_state(), STAP_SESSION_ERROR);";
       s.op->newline() << "_stp_exit ();";
       s.op->newline(-1) << "}";
       s.op->newline() << "atomic_dec (& c->busy);";
@@ -274,7 +273,7 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline() << "spp->needs_fill = 0;";
       s.op->newline() << "spp->count = strlen(spp->buffer);";
 
-      common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+      common_probe_entryfn_epilogue (s, true);
 
       s.op->newline() << "if (spp->needs_fill) {";
       s.op->newline(1) << "spp->needs_fill = 0;";
@@ -294,9 +293,9 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
     {
       s.op->newline() << "struct _stp_procfs_data pdata;";
 
-      common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING",
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING",
 				     "spp->write_probe",
-				     "_STP_PROBE_HANDLER_PROCFS");
+				     "stp_probe_type_procfs");
 
       // We've got 2 problems here.  The data count could be greater
       // than MAXSTRINGLEN or greater than the bufsize (if the same
@@ -316,8 +315,8 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline(1) << "c->ips.procfs_data = &pdata;";
       s.op->newline(-1) << "else {";
 
-      s.op->newline(1) << "if (unlikely (atomic_inc_return (& skipped_count) > MAXSKIPPED)) {";
-      s.op->newline(1) << "atomic_set (& session_state, STAP_SESSION_ERROR);";
+      s.op->newline(1) << "if (unlikely (atomic_inc_return (skipped_count()) > MAXSKIPPED)) {";
+      s.op->newline(1) << "atomic_set (session_state(), STAP_SESSION_ERROR);";
       s.op->newline() << "_stp_exit ();";
       s.op->newline(-1) << "}";
       s.op->newline() << "atomic_dec (& c->busy);";
@@ -332,7 +331,7 @@ procfs_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline(1) << "retval = count;";
       s.op->newline(-1) << "}";
 
-      common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+      common_probe_entryfn_epilogue (s, true);
     }
 
   s.op->newline() << "return retval;";

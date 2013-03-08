@@ -1,7 +1,6 @@
 // utrace tapset
-// Copyright (C) 2005-2011 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
-// Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -12,6 +11,7 @@
 #include "session.h"
 #include "tapsets.h"
 #include "task_finder.h"
+#include "tapset-dynprobe.h"
 #include "translate.h"
 #include "util.h"
 
@@ -79,7 +79,18 @@ private:
   unsigned num_probes;
   bool flags_seen[UDPF_NFLAGS];
 
-  void emit_probe_decl (systemtap_session& s, utrace_derived_probe *p);
+  // Using the linux backend
+  void emit_linux_probe_decl (systemtap_session& s, utrace_derived_probe *p);
+  void emit_module_linux_decls (systemtap_session& s);
+  void emit_module_linux_init (systemtap_session& s);
+  void emit_module_linux_exit (systemtap_session& s);
+
+  // Using the dyninst backend (via stapdyn)
+  void emit_dyninst_probe_decl (systemtap_session& s, const string& path,
+				utrace_derived_probe *p);
+  void emit_module_dyninst_decls (systemtap_session& s);
+  void emit_module_dyninst_init (systemtap_session& s);
+  void emit_module_dyninst_exit (systemtap_session& s);
 
 public:
   utrace_derived_probe_group(): num_probes(0), flags_seen() { }
@@ -198,7 +209,10 @@ utrace_derived_probe::join_group (systemtap_session& s)
     }
   s.utrace_derived_probes->enroll (this);
 
-  enable_task_finder(s);
+  if (s.runtime_usermode_p())
+    enable_dynprobes(s);
+  else
+    enable_task_finder(s);
 }
 
 
@@ -658,6 +672,9 @@ struct utrace_builder: public derived_probe_builder
       }
     else if (has_null_param (parameters, TOK_SYSCALL))
       {
+	if (sess.runtime_usermode_p())
+	  throw semantic_error (_("process.syscall probes not available with the dyninst runtime"));
+
 	if (has_null_param (parameters, TOK_RETURN))
 	  flags = UDPF_SYSCALL_RETURN;
 	else
@@ -717,12 +734,12 @@ utrace_derived_probe_group::enroll (utrace_derived_probe* p)
 
 
 void
-utrace_derived_probe_group::emit_probe_decl (systemtap_session& s,
-					     utrace_derived_probe *p)
+utrace_derived_probe_group::emit_linux_probe_decl (systemtap_session& s,
+						   utrace_derived_probe *p)
 {
   s.op->newline() << "{";
   s.op->line() << " .tgt={";
-
+  s.op->line() << " .purpose=\"lifecycle tracking\",";
   if (p->has_path)
     {
       s.op->line() << " .procname=\"" << p->path << "\",";
@@ -793,7 +810,7 @@ utrace_derived_probe_group::emit_probe_decl (systemtap_session& s,
 
 
 void
-utrace_derived_probe_group::emit_module_decls (systemtap_session& s)
+utrace_derived_probe_group::emit_module_linux_decls (systemtap_session& s)
 {
   if (probes_by_path.empty() && probes_by_pid.empty())
     return;
@@ -816,7 +833,7 @@ utrace_derived_probe_group::emit_module_decls (systemtap_session& s)
   s.op->newline() << "struct stap_utrace_probe {";
   s.op->indent(1);
   s.op->newline() << "struct stap_task_finder_target tgt;";
-  s.op->newline() << "struct stap_probe * const probe;";
+  s.op->newline() << "const struct stap_probe * const probe;";
   s.op->newline() << "int engine_attached;";
   s.op->newline() << "enum utrace_derived_probe_flags flags;";
   s.op->newline() << "struct utrace_engine_ops ops;";
@@ -832,12 +849,12 @@ utrace_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->newline() << "static void stap_utrace_probe_handler(struct task_struct *tsk, struct stap_utrace_probe *p) {";
       s.op->indent(1);
 
-      common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "p->probe",
-				     "_STP_PROBE_HANDLER_UTRACE");
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "p->probe",
+				     "stp_probe_type_utrace");
 
       // call probe function
       s.op->newline() << "(*p->probe->ph) (c);";
-      common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+      common_probe_entryfn_epilogue (s, true);
 
       s.op->newline() << "return;";
       s.op->newline(-1) << "}";
@@ -859,16 +876,16 @@ utrace_derived_probe_group::emit_module_decls (systemtap_session& s)
       s.op->indent(1);
       s.op->newline() << "struct stap_utrace_probe *p = (struct stap_utrace_probe *)engine->data;";
 
-      common_probe_entryfn_prologue (s.op, "STAP_SESSION_RUNNING", "p->probe",
-				     "_STP_PROBE_HANDLER_UTRACE_SYSCALL");
+      common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "p->probe",
+				     "stp_probe_type_utrace_syscall");
       s.op->newline() << "c->uregs = regs;";
-      s.op->newline() << "c->probe_flags |= _STP_PROBE_STATE_USER_MODE;";
+      s.op->newline() << "c->user_mode_p = 1;";
 
       // call probe function
       s.op->newline() << "(*p->probe->ph) (c);";
-      common_probe_entryfn_epilogue (s.op, true, s.suppress_handler_errors);
+      common_probe_entryfn_epilogue (s, true);
 
-      s.op->newline() << "if ((atomic_read (&session_state) != STAP_SESSION_STARTING) && (atomic_read (&session_state) != STAP_SESSION_RUNNING)) {";
+      s.op->newline() << "if ((atomic_read (session_state()) != STAP_SESSION_STARTING) && (atomic_read (session_state()) != STAP_SESSION_RUNNING)) {";
       s.op->indent(1);
       s.op->newline() << "debug_task_finder_detach();";
       s.op->newline() << "return UTRACE_DETACH;";
@@ -1025,7 +1042,7 @@ utrace_derived_probe_group::emit_module_decls (systemtap_session& s)
 	  for (unsigned i = 0; i < it->second.size(); i++)
 	    {
 	      utrace_derived_probe *p = it->second[i];
-	      emit_probe_decl(s, p);
+	      emit_linux_probe_decl(s, p);
 	    }
 	}
     }
@@ -1039,7 +1056,7 @@ utrace_derived_probe_group::emit_module_decls (systemtap_session& s)
 	  for (unsigned i = 0; i < it->second.size(); i++)
 	    {
 	      utrace_derived_probe *p = it->second[i];
-	      emit_probe_decl(s, p);
+	      emit_linux_probe_decl(s, p);
 	    }
 	}
     }
@@ -1048,7 +1065,131 @@ utrace_derived_probe_group::emit_module_decls (systemtap_session& s)
 
 
 void
-utrace_derived_probe_group::emit_module_init (systemtap_session& s)
+utrace_derived_probe_group::emit_dyninst_probe_decl (systemtap_session& s,
+						     const string& path,
+						     utrace_derived_probe *p)
+{
+  string flags_str;
+
+  // Handle flags
+  switch (p->flags)
+    {
+    case UDPF_BEGIN:	// process begin
+      flags_str = "STAPDYN_PROBE_FLAG_PROC_BEGIN";
+      break;
+    case UDPF_THREAD_BEGIN:	// thread begin
+      flags_str = "STAPDYN_PROBE_FLAG_THREAD_BEGIN";
+      break;
+    case UDPF_END:		// process end
+      flags_str = "STAPDYN_PROBE_FLAG_PROC_END";
+      break;
+    case UDPF_THREAD_END:	// thread end
+      flags_str = "STAPDYN_PROBE_FLAG_THREAD_END";
+      break;
+
+      // FIXME: No handling of syscall probes for dyninst yet.
+#if 0
+    case UDPF_SYSCALL:
+      break;
+    case UDPF_SYSCALL_RETURN:
+      break;
+
+    case UDPF_NONE:
+      s.op->line() << " .flags=(UDPF_NONE),";
+      s.op->line() << " .ops={ },";
+      s.op->line() << " .events=0,";
+      break;
+#endif
+    default:
+      throw semantic_error ("bad utrace probe flag");
+      break;
+    }
+
+  if (p->has_path)
+    dynprobe_add_utrace_path(s, path, flags_str, common_probe_init(p));
+  else
+    dynprobe_add_utrace_pid(s, p->pid, flags_str, common_probe_init(p));
+}
+
+void
+utrace_derived_probe_group::emit_module_dyninst_decls (systemtap_session& s)
+{
+  if (probes_by_path.empty() && probes_by_pid.empty())
+    return;
+
+  s.op->newline();
+  s.op->newline() << "/* ---- dyninst utrace probes ---- */";
+  s.op->newline() << "#include \"dyninst/uprobes.h\"";
+  s.op->newline() << "#define STAPDYN_UTRACE_PROBES";
+
+  // Let the dynprobe_derived_probe_group handle outputting targets
+  // and probes. This allows us to merge different types of probes.
+  s.op->newline() << "static struct stapdu_probe stapdu_probes[];";
+
+  // Set up 'process(PATH)' probes
+  if (! probes_by_path.empty())
+    {
+      for (p_b_path_iterator it = probes_by_path.begin();
+	   it != probes_by_path.end(); it++)
+        {
+	  for (unsigned i = 0; i < it->second.size(); i++)
+	    {
+	      utrace_derived_probe *p = it->second[i];
+	      emit_dyninst_probe_decl(s, it->first, p);
+	    }
+	}
+    }
+  // Set up 'process(PID)' probes
+  if (! probes_by_pid.empty())
+    {
+      for (p_b_pid_iterator it = probes_by_pid.begin();
+	   it != probes_by_pid.end(); it++)
+        {
+	  for (unsigned i = 0; i < it->second.size(); i++)
+	    {
+	      utrace_derived_probe *p = it->second[i];
+	      emit_dyninst_probe_decl(s, "", p);
+	    }
+	}
+    }
+
+  // loc2c-generated code assumes pt_regs are available, so use this to make
+  // sure we always have *something* for it to dereference...
+  s.op->newline() << "static struct pt_regs stapdu_dummy_uregs;";
+
+  // Write the probe handler.
+  // NB: not static, so dyninst can find it
+  s.op->newline() << "int enter_dyninst_utrace_probe "
+                  << "(uint64_t index, struct pt_regs *regs) {";
+  s.op->newline(1) << "struct stapdu_probe *sup = &stapdu_probes[index];";
+
+  common_probe_entryfn_prologue (s, "STAP_SESSION_RUNNING", "sup->probe",
+                                 "stp_probe_type_utrace");
+  s.op->newline() << "c->uregs = regs ?: &stapdu_dummy_uregs;";
+  s.op->newline() << "c->user_mode_p = 1;";
+  // XXX: once we have regs, check how dyninst sets the IP
+  // XXX: the way that dyninst rewrites stuff is probably going to be
+  // ...  very confusing to our backtracer (at least if we stay in process)
+  s.op->newline() << "(*sup->probe->ph) (c);";
+  common_probe_entryfn_epilogue (s, true);
+  s.op->newline() << "return 0;";
+  s.op->newline(-1) << "}";
+  s.op->assert_0_indent();
+}
+
+
+void
+utrace_derived_probe_group::emit_module_decls (systemtap_session& s)
+{
+  if (s.runtime_usermode_p())
+    emit_module_dyninst_decls (s);
+  else
+    emit_module_linux_decls (s);
+}
+
+
+void
+utrace_derived_probe_group::emit_module_linux_init (systemtap_session& s)
 {
   if (probes_by_path.empty() && probes_by_pid.empty())
     return;
@@ -1071,7 +1212,29 @@ utrace_derived_probe_group::emit_module_init (systemtap_session& s)
 
 
 void
-utrace_derived_probe_group::emit_module_exit (systemtap_session& s)
+utrace_derived_probe_group::emit_module_dyninst_init (systemtap_session& s)
+{
+  if (probes_by_path.empty() && probes_by_pid.empty())
+    return;
+
+  /* stapdyn handles the dirty work via dyninst */
+  s.op->newline() << "/* ---- dyninst utrace probes ---- */";
+  s.op->newline() << "/* this section left intentionally blank */";
+}
+
+
+void
+utrace_derived_probe_group::emit_module_init (systemtap_session& s)
+{
+  if (s.runtime_usermode_p())
+    emit_module_dyninst_init (s);
+  else
+    emit_module_linux_init(s);
+}
+
+
+void
+utrace_derived_probe_group::emit_module_linux_exit (systemtap_session& s)
 {
   if (probes_by_path.empty() && probes_by_pid.empty()) return;
 
@@ -1085,6 +1248,28 @@ utrace_derived_probe_group::emit_module_exit (systemtap_session& s)
 
   s.op->newline(-1) << "}";
   s.op->newline(-1) << "}";
+}
+
+
+void
+utrace_derived_probe_group::emit_module_dyninst_exit (systemtap_session& s)
+{
+  if (probes_by_path.empty() && probes_by_pid.empty())
+    return;
+
+  /* stapdyn handles the dirty work via dyninst */
+  s.op->newline() << "/* ---- dyninst utrace probes ---- */";
+  s.op->newline() << "/* this section left intentionally blank */";
+}
+
+
+void
+utrace_derived_probe_group::emit_module_exit (systemtap_session& s)
+{
+  if (s.runtime_usermode_p())
+    emit_module_dyninst_exit (s);
+  else
+    emit_module_linux_exit(s);
 }
 
 

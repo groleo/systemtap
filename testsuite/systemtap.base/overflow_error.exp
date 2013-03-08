@@ -7,27 +7,32 @@ set error_msg1 "ERROR: Array overflow, check size limit (3) near identifier 'ove
 set error_msg2 "ERROR: Array overflow, check size limit (5) near identifier 'overflow2' at $srcdir/$subdir/$test.stp"
 set exit_warning "WARNING: Number of errors: 2, skipped probes: 0"
 
-set pass 0
-
-spawn stap -DMAXERRORS=1 $srcdir/$subdir/$test.stp
-expect {
-    -timeout 60
-    $error_msg1 {incr pass; exp_continue}
-    $error_msg2 {incr pass; exp_continue}
-    $exit_warning {incr pass; exp_continue}
-    timeout {
-        exec kill -INT -[exp_pid]
-	fail "$test timed out"
+foreach runtime [get_runtime_list] {
+    set test_name $test
+    if {$runtime != ""} {
+	lappend test_name "($runtime)"
+	spawn stap -DMAXERRORS=1 $srcdir/$subdir/$test.stp
+    } else {
+	spawn stap -DMAXERRORS=1 $srcdir/$subdir/$test.stp
     }
-    eof {}
+
+    set pass 0
+    expect {
+	-timeout 60
+	$error_msg1 {incr pass; exp_continue}
+	$error_msg2 {incr pass; exp_continue}
+	$exit_warning {incr pass; exp_continue}
+	timeout {
+	    exec kill -INT -[exp_pid]
+	    fail "$test_name timed out"
+	}
+	eof {}
+    }
+    catch { close }; catch { wait }
+
+    if {$pass == 3} {
+	pass $test_name
+    } else {
+	fail "$test_name ($pass)"
+    }
 }
-catch { close }
-wait
-
-if {$pass == 3} {
-    pass $test
-} else {
-    fail "$test ($pass)"
-}
-
-

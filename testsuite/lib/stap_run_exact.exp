@@ -13,6 +13,7 @@ proc stap_run_exact { TEST_NAME test_file_name args } {
     if {[info procs installtest_p] != "" && ![installtest_p]} { untested $TEST_NAME; return }
     
     set cmd [concat stap $args $test_file_name]
+    send_log "executing: $cmd\n"
     catch {eval exec $cmd} res
 
     set n 0

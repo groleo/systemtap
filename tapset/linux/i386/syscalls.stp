@@ -126,6 +126,7 @@ probe syscall.set_zone_reclaim.return = kernel.function("sys_set_zone_reclaim").
 	retstr = return_str(1, $return)
 }
 
+%( CONFIG_GENERIC_SIGALTSTACK == "n" %?
 # sigaltstack ________________________________________________
 # int sys_sigaltstack(unsigned long ebx)
 #
@@ -139,21 +140,27 @@ probe syscall.sigaltstack = kernel.function("sys_sigaltstack")
 	ussp = %( kernel_vr < "2.6.25" %? $ebx %: %( kernel_vr < "2.6.30" %? $bx %: $regs->bx %) %)
 %)
 	if (@defined($regs)) {
-		uss_uaddr = (@defined($uss) ? $uss : $regs->bx)
-		uoss_uaddr = (@defined($uoss) ? $uoss : $regs->cx)
+		uss_uaddr = @choose_defined($uss, $regs->bx)
+		uoss_uaddr = @choose_defined($uoss, $regs->cx)
+%(systemtap_v <= "2.2" %?
 		regs = $regs
+%)
 	}
 	else if (@defined($bx)) {	# kernels < "2.6.30"
 		uss_uaddr = $bx
 		# Make sure the register value didn't get sign extended.
 		uoss_uaddr = __ulong(@cast(&$bx, "pt_regs", "kernel<asm/ptrace.h>")->cx)
+%(systemtap_v <= "2.2" %?
 		regs = &$bx
+%)
 	}
 	else {				# kernels < "2.6.25"
 		uss_uaddr = $ebx
 		# Make sure the register value didn't get sign extended.
 		uoss_uaddr = __ulong(@cast(&$ebx, "pt_regs", "kernel<asm/ptrace.h>")->ecx)
+%(systemtap_v <= "2.2" %?
 		regs = &$ebx
+%)
 	}
 	argstr = sprintf("%p, %p", uss_uaddr, uoss_uaddr)
 }
@@ -162,6 +169,7 @@ probe syscall.sigaltstack.return = kernel.function("sys_sigaltstack").return
 	name = "sigaltstack"
 	retstr = return_str(1, $return)
 }
+%)
 
 # vm86 _______________________________________________________
 #

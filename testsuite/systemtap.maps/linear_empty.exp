@@ -3,5 +3,11 @@
 set test "linear_empty"
 set ::result_string {count=0}
 
-stap_run2 $srcdir/$subdir/$test.stp -w
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test.stp -w --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test.stp -w
+    }
+}
 

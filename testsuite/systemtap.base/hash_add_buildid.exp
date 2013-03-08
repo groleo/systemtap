@@ -60,7 +60,7 @@ foreach arch $arches {
     set passed 0
     }
   }
-  catch close
+  catch { close; wait }
 
   if {$passed == 0} {
     continue

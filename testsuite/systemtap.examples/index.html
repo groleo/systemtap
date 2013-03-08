@@ -55,7 +55,7 @@ keywords: <a href="keyword-index.html#FILESYSTEM">FILESYSTEM</a> <br>
 denied&quot;</pre></font></p>
 </li><li><a name="general/eventcount.stp"></a><a href="#general/eventcount.stp">&para;</a> <a href="general/eventcount.stp">general/eventcount.stp</a> - Count Specified Events<br>
 keywords: <a href="keyword-index.html#STATISTICS">STATISTICS</a> <a href="keyword-index.html#THREAD">THREAD</a> <a href="keyword-index.html#PROCESS">PROCESS</a> <br>
-<p>The script prints a count of specified events and their related tid&#39;s over the course of execution.  Numerous configuration options exist to control filtering / reporting, see the script source.<p><font size="-2"><pre># stap eventcount.stp syscall.* -c &#39;sleep 0.2&#39;</pre></font></p>
+<p>The script periodically prints a count of specified events and their related tid&#39;s over the course of execution.  Numerous configuration options exist to control filtering / reporting, see the script source.<p><font size="-2"><pre># stap eventcount.stp syscall.* -c &#39;sleep 0.2&#39;</pre></font></p>
 </li><li><a name="general/func_time_stats.stp"></a><a href="#general/func_time_stats.stp">&para;</a> <a href="general/func_time_stats.stp">general/func_time_stats.stp</a> - Function Time Statistics<br>
 keywords: <a href="keyword-index.html#FUNCTION">FUNCTION</a> <a href="keyword-index.html#STATISTICS">STATISTICS</a> <br>
 <p>The func_time_stats.stp script tracks the wall clock time for each invocation of the function probe listed as the first command line argument. When the script exits it prints out the minimum, average, and maximum times in microseconds followed by a count of times that the function was called and a histogram showing the distributions of times.<p><font size="-2"><pre># stap func_time_stats.stp &#39;syscall.nanosleep&#39; -c &quot;sleep 0.2&quot;</pre></font></p>
@@ -73,6 +73,9 @@ keywords: <a href="keyword-index.html#TRACE">TRACE</a> <a href="keyword-index.ht
 keywords: <a href="keyword-index.html#TRACE">TRACE</a> <a href="keyword-index.html#CALLGRAPH">CALLGRAPH</a> <br>
 <p>Print a timed per-thread callgraph, complete with function parameters and return values.  The first parameter names the function probe points to trace.  The optional second parameter names the probe points for trigger functions, which acts to enable tracing for only those functions that occur while the current thread is nested within the trigger.<p><font size="-2"><pre># stap para-callgraph.stp &#39;kernel.function(&quot;*@fs/proc*.c&quot;)&#39; \
 &#39;kernel.function(&quot;vfs_read&quot;)&#39; -c &quot;cat /proc/sys/vm/* || true&quot;</pre></font></p>
+</li><li><a name="general/regex.stp"></a><a href="#general/regex.stp">&para;</a> <a href="general/regex.stp">general/regex.stp</a> - Report opened files whose names match a given regex<br>
+keywords: <a href="keyword-index.html#REGEX">REGEX</a> <br>
+<p>Uses the regex functionality to detect opened files whose names match a pattern given on the command line. If no command line parameter is given, demonstrate by filtering for files that end with an extension showing them to be an archive.<p><font size="-2"><pre># stap regex.stp -c &quot;sleep 0.2&quot;</pre></font></p>
 </li><li><a name="general/sizeof.stp"></a><a href="#general/sizeof.stp">&para;</a> <a href="general/sizeof.stp">general/sizeof.stp</a> - Print the Size of a C Type<br>
 keywords: <a href="keyword-index.html#STATISTICS">STATISTICS</a> <a href="keyword-index.html#MEMORY">MEMORY</a> <br>
 <p>This script prints the size of a type, based on dwarf debuginfo for any kernel or userspace module, or trial-compilation of a given header file name.<p><font size="-2"><pre># stap sizeof.stp FILE &#39;&lt;/usr/include/stdio.h&gt;&#39;</pre></font></p>
@@ -95,7 +98,7 @@ keywords: <a href="keyword-index.html#INTERRUPT">INTERRUPT</a> <a href="keyword-
 <p>The Linux kernel function smp_call_function causes expensive inter-processor interrupts (IPIs). The scf.stp script tallies the processes and backtraces causing the interprocessor interrupts to identify the cause of the expensive IPI. On exit the script prints the tallies in descending frequency.<p><font size="-2"><pre># stap scf.stp -c &quot;sleep 0.2&quot;</pre></font></p>
 </li><li><a name="io/deviceseeks.stp"></a><a href="#io/deviceseeks.stp">&para;</a> <a href="io/deviceseeks.stp">io/deviceseeks.stp</a> - Histograms of Seek Behavior for Each Device<br>
 keywords: <a href="keyword-index.html#DISK">DISK</a> <br>
-<p>The deviceseeks.stp script generates a histogram showing the frequency of different sized seeks on each device.<p><font size="-2"><pre># stap deviceseeks.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+<p>The deviceseeks.stp script generates a histogram showing the frequency of different sized seeks (in sectors) on each device.<p><font size="-2"><pre># stap deviceseeks.stp -c &quot;sleep 0.2&quot;</pre></font></p>
 </li><li><a name="io/disktop.stp"></a><a href="#io/disktop.stp">&para;</a> <a href="io/disktop.stp">io/disktop.stp</a> - Summarize Disk Read/Write Traffic<br>
 keywords: <a href="keyword-index.html#DISK">DISK</a> <br>
 <p>Get the status of reading/writing disk every 5 seconds, output top ten entries during that period.<p><font size="-2"><pre># stap disktop.stp -c &quot;sleep 0.2&quot;</pre></font></p>
@@ -251,9 +254,15 @@ keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-inde
 </li><li><a name="process/futexes.stp"></a><a href="#process/futexes.stp">&para;</a> <a href="process/futexes.stp">process/futexes.stp</a> - System-Wide Futex Contention<br>
 keywords: <a href="keyword-index.html#SYSCALL">SYSCALL</a> <a href="keyword-index.html#LOCKING">LOCKING</a> <a href="keyword-index.html#FUTEX">FUTEX</a> <br>
 <p>The script watches the futex syscall on the system. On exit the futexes address, the number of contentions, and the average time for each contention on the futex are printed from lowest pid number to highest.<p><font size="-2"><pre># stap futexes.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a name="process/ltrace.stp"></a><a href="#process/ltrace.stp">&para;</a> <a href="process/ltrace.stp">process/ltrace.stp</a> - uprobes-based ltrace<br>
+keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <br>
+<p>The ltrace.stp script lists calls that the designated process makes through PLTs (procedure linkage tables), generally into shared libraries.<p><font size="-2"><pre># stap ltrace.stp -c ls || echo PR14738</pre></font></p>
 </li><li><a name="process/migrate.stp"></a><a href="#process/migrate.stp">&para;</a> <a href="process/migrate.stp">process/migrate.stp</a> - Track the Migration of Specific Executables<br>
 keywords: <a href="keyword-index.html#SCHEDULER">SCHEDULER</a> <br>
 <p>The migrate.stp script takes an argument which is the executable name of the task it should monitor. Each time a task with that executable name migrates between processors an entry is printed with the process id (pid), the executable name, the processor off loading the task, and the process taking the task. Note that the task may or may not be executing at the time of the migration.<p><font size="-2"><pre># stap migrate.stp -c &quot;sleep 0.2&quot; bash</pre></font></p>
+</li><li><a name="process/mutex-contention.stp"></a><a href="#process/mutex-contention.stp">&para;</a> <a href="process/mutex-contention.stp">process/mutex-contention.stp</a> - pthread mutex contention analysis<br>
+keywords: <a href="keyword-index.html#LOCKING">LOCKING</a> <br>
+<p>Tracks pthread-mutex initialization/use and underlying futex operations, to identify (with backtraces/symbol-names) the mutexes suffering most contention.  Invoke with &quot;NNN -d SHLIB --ldd&quot;<p><font size="-2"><pre># stap mutex-contention.stp 100 -c &quot;sleep 0.2&quot;</pre></font></p>
 </li><li><a name="process/noptrace.stp"></a><a href="#process/noptrace.stp">&para;</a> <a href="process/noptrace.stp">process/noptrace.stp</a> - Disable ptrace from Hierarchies of Processes<br>
 keywords: <a href="keyword-index.html#PROCESS">PROCESS</a> <a href="keyword-index.html#SECURITY">SECURITY</a> <br>
 <p>Blocks ptrace(2) attempts from processes identified by stap -c/-x, as also specifiable from /proc/systemtap/stap_XXX/ control files.  Processes may be added or removed from the blocked list.<p><font size="-2"><pre># stap -g noptrace.stp -c &#39;strace ls || true&#39;</pre></font></p>
@@ -299,6 +308,9 @@ keywords: <a href="keyword-index.html#SYSCALL">SYSCALL</a> <br>
 </li><li><a name="process/syscalltimes"></a><a href="#process/syscalltimes">&para;</a> <a href="process/syscalltimes">process/syscalltimes</a> - System-Wide Syscall Statistics with Filtering<br>
 keywords: <a href="keyword-index.html#SYSCALL">SYSCALL</a> <br>
 <p>Combination shell/systemtap script to measure system call counts and times.  Can be filtered by process IDs, process names and users.<p><font size="-2"><pre># ./syscalltimes -c &#39;sleep 0.2&#39;</pre></font></p>
+</li><li><a name="process/threadstacks.stp"></a><a href="#process/threadstacks.stp">&para;</a> <a href="process/threadstacks.stp">process/threadstacks.stp</a> - Override default new-pthread stack sizes<br>
+keywords: <a href="keyword-index.html#THREAD">THREAD</a> <br>
+<p>Overrides default NPTL pthread_create stack size for all new threads created by target processes.  Reports one line per process when the related glibc variable __default_stacksize is updated.  Moot for glibc versions that support $LIBC_PTHREAD_DEFAULT_STACKSIZE_NP.<p><font size="-2"><pre># stap -g threadstacks.stp -Gsize=65536 -c &quot;sleep 1&quot; -d stap</pre></font></p>
 </li><li><a name="process/wait4time.stp"></a><a href="#process/wait4time.stp">&para;</a> <a href="process/wait4time.stp">process/wait4time.stp</a> - Trace Time Spent in wait4 Syscalls<br>
 keywords: <a href="keyword-index.html#SYSCALL">SYSCALL</a> <a href="keyword-index.html#PROCESS">PROCESS</a> <br>
 <p>The script watches each wait4 syscall on the system. At the end of each wait4 syscall the script prints out a line with a timestamp in microseconds, the pid, the executable name in parentheses, the &quot;wait4:&quot; key, the duration of the wait and the PID that the wait4 was waiting for. If the waited for PID is not specified , it is &quot;-1&quot;.<p><font size="-2"><pre># stap wait4time.stp -c &quot;sleep 0.2&quot;</pre></font></p>
@@ -317,6 +329,10 @@ keywords: <a href="keyword-index.html#PROFILING">PROFILING</a> <br>
 </li><li><a name="profiling/linetimes.stp"></a><a href="#profiling/linetimes.stp">&para;</a> <a href="profiling/linetimes.stp">profiling/linetimes.stp</a> - Show Time Spent on Each Line of a Function<br>
 keywords: <a href="keyword-index.html#PROFILING">PROFILING</a> <br>
 <p>The linetimes.stp script takes two arguments: where to find the function and the function name. linetimes.stp will instrument each line in the function. It will print out the number of times that the function is called, a table with the average and maximum time each line takes, and control flow information when the script exits.<p><font size="-2"><pre># stap linetimes.stp kernel sys_nanosleep -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a name="profiling/perf.stp"></a><a href="#profiling/perf.stp">&para;</a> <a href="profiling/perf.stp">profiling/perf.stp</a> - Show performance ratios using perf.counter to access performance counters<br>
+keywords: <a href="keyword-index.html#PROFILING">PROFILING</a> <br>
+<p>On exit the perf.stp script provides a sorted list showing cycles per insn, branches per insn, and cache refs per insn<p><font size="-2"><pre># stap perf.stp -c &quot;find /usr/bin -name \&quot;l*\&quot; -printf \&quot;%h/%f %s %Cx \
+%Ck%CM %Y\n\&quot;&quot;</pre></font></p>
 </li><li><a name="profiling/periodic.stp"></a><a href="#profiling/periodic.stp">&para;</a> <a href="profiling/periodic.stp">profiling/periodic.stp</a> - Show the Period of the Various Timers on the System<br>
 keywords: <a href="keyword-index.html#PROFILING">PROFILING</a> <br>
 <p>The periodic.stp script uses the  kernel.trace(&quot;timer_expire_entry&quot;) tracepoint to collect data on period and frequency of the various timers on the system.  The script displays a sorted list of the timers observed on the system from most frequent to least frequent. The script needs to be compiled with the &#39;--all-modules&#39; option to produce list the function names.  Optionally, this script can be used with a numerical argument to indicate the interval in seconds between printing output.<p><font size="-2"><pre># stap periodic.stp --all-modules -c &quot;sleep 0.2&quot;</pre></font></p>
@@ -338,6 +354,18 @@ keywords: <a href="keyword-index.html#PROFILING">PROFILING</a> <br>
 </li><li><a name="profiling/topsys.stp"></a><a href="#profiling/topsys.stp">&para;</a> <a href="profiling/topsys.stp">profiling/topsys.stp</a> - Show Processes Doing Polling Operations<br>
 keywords: <a href="keyword-index.html#PROFILING">PROFILING</a> <br>
 <p> The topsys.stp script lists out the top twenty systemcalls for the previous 5 seconds. The output is sorted from most frequent to least frequent.<p><font size="-2"><pre># stap topsys.stp -c &quot;sleep 0.2&quot;</pre></font></p>
+</li><li><a name="stapgames/block.stp"></a><a href="#stapgames/block.stp">&para;</a> <a href="stapgames/block.stp">stapgames/block.stp</a> - block breaker game<br>
+keywords: <a href="keyword-index.html#STAPGAMES">STAPGAMES</a> <br>
+<p>A block game where you progressively break the ceiling blocks until clearing the level<p><font size="-2"><pre># stap -p4 -Itapset/ block.stp</pre></font></p>
+</li><li><a name="stapgames/eater.stp"></a><a href="#stapgames/eater.stp">&para;</a> <a href="stapgames/eater.stp">stapgames/eater.stp</a> - eater game<br>
+keywords: <a href="keyword-index.html#STAPGAMES">STAPGAMES</a> <br>
+<p>walk through a maze, eat stuff<p><font size="-2"><pre># stap -p4 -Itapset/ eater.stp</pre></font></p>
+</li><li><a name="stapgames/lifegame.stp"></a><a href="#stapgames/lifegame.stp">&para;</a> <a href="stapgames/lifegame.stp">stapgames/lifegame.stp</a> - life game<br>
+keywords: <a href="keyword-index.html#STAPGAMES">STAPGAMES</a> <br>
+<p>watch as your creation morphes into different forms<p><font size="-2"><pre># stap -p4 -Itapset/ lifegame.stp</pre></font></p>
+</li><li><a name="stapgames/pingpong.stp"></a><a href="#stapgames/pingpong.stp">&para;</a> <a href="stapgames/pingpong.stp">stapgames/pingpong.stp</a> - pingpong game<br>
+keywords: <a href="keyword-index.html#STAPGAMES">STAPGAMES</a> <br>
+<p>A simulated ball bounces around the terminal reflecting at the edges<p><font size="-2"><pre># stap -p4 -Itapset/ pingpong.stp</pre></font></p>
 </li><li><a name="virtualization/kvm_service_time.stp"></a><a href="#virtualization/kvm_service_time.stp">&para;</a> <a href="virtualization/kvm_service_time.stp">virtualization/kvm_service_time.stp</a> - Time Statistics on KVM Exit Reasons<br>
 keywords: <a href="keyword-index.html#VIRTUALIZATION">VIRTUALIZATION</a> <a href="keyword-index.html#KVM">KVM</a> <br>
 <p>The kvm_service_time.stp script tracks the statistics about the amount of time that the processor left the guest virtual machine for each exit reason (for example fixing up a page table or handling an IO operation).  When the script exits it prints out the number of times each exit reason was encountered, the total duration of time it left the guest VM, the minimum time, the average time, and the maximum time in microseconds for that exit reason. On Linux 2.6.38 and newer kernel the script can automatically determine whether it is running on Intel or AMD processors. For older kernels with a kernel.trace(&quot;kvm_exit&quot;) tracepoint that does not have the $isa parameter you can explicitly state the kvm type with a &quot;-G kvm=intel&quot; or &quot;-G kvm=amd&quot; on the command line.<p><font size="-2"><pre># stap kvm_service_time.stp -c &quot;sleep 0.2&quot;</pre></font></p>

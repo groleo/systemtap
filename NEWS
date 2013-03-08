@@ -1,4 +1,99 @@
-* What's new in version 2.0
+* What's new in version 2.2
+
+- The folowing tapset variables are deprecated in release 2.2 and will
+  be removed in release 2.3:
+  - The 'origin' variables in the 'generic.fop.llseek',
+    'generic.fop.llseek.return', and 'nfs.fop.llseek' probes. The
+    'origin' variable has been replaced by the 'whence' variable.
+  - The 'page_index' variable in the 'vfs.block_sync_page' and
+    'vfs.buffer_migrate_page' probe aliases.
+  - The 'write_from' and 'write_upto' variables in the
+    '_vfs.block_prepare_write' and '_vfs.block_prepare_write.return'
+    probe aliases.
+  - The 'regs' variable in the 'syscall.sigaltstack',
+    'nd_syscall.sigaltstack', 'syscall.fork', and 'nd_syscall.fork'
+    probe aliases.
+
+- The folowing tapset functions are deprecated in release 2.2 and will
+  be removed in release 2.3:
+
+  'ppos_pos', '_dev_minor', and '_dev_major'
+
+- The folowing tapset functions used to return error strings instead
+  of raising an error. The original behavior is deprecated in release
+  2.2.
+
+  'ctime', 'probemod', 'modname'
+
+* What's new in version 2.1, 2013-02-13
+
+- EMACS and VIM editor modes for systemtap source files are included / updated.
+
+- The translator now eliminates duplicate tapset files between its
+  preferred directory (as configured during the build with --prefix=/
+  or specified with the -I /path option), and files it may find under
+  $XDG_DATA_DIRS.  This should eliminate a class of conflicts between
+  parallel system- and hand-built systemtap installations.
+
+- The translator accepts a --suppress-time-limits option, which defeats
+  time-related constraints, to allows probe handlers to run for indefinite
+  periods.  It requires the guru mode (-g) flag to work.  Add the earlier
+  --suppress-handler-errors flag for a gung-ho "just-keep-going" attitude.
+
+- Perf event probes may now be read on demand. The counter probe is
+  defined using the counter-name part: 
+  probe perf.type(0).config(0).counter("NAME").  The counter is
+  read in a user space probe using @perf("NAME"), e.g.
+   process("PROCESS").statement("func@file") {stat <<< @perf("NAME")} 
+
+- Perf event probes may now be bound to a specific task using the
+  process-name part:  probe perf.type(0).config(0).process("NAME") { }
+  If the probed process name is not specified, then it is inferred
+  from the -c CMD argument.  
+
+- Some error messages and warnings now refer to additional information
+  that is found in man pages.  These are generally named
+  error::FOO or warning::BAR (in the 7stap man page section)
+  and may be read via
+     % man error::FOO
+     % man warning::BAR
+
+- The dyninst backend has improved in several aspects:
+  - The runtime now allows much more concurrency when probing multithreaded
+    processes, and will also follow probes across forks.
+  - Several new probe types are now supported, including timers, function
+    return, and process.begin/end and process.thread.begin/end.
+  - Semaphores for SDT probes are now set properly.
+  - Attaching to existing processes with -x PID now works.
+
+- The foreach looping construct can now sort aggregate arrays by the user's
+  choice of aggregating function.  Previously, @count was implied.  e.g.:
+     foreach ([x,y] in array @sum +) { println(@sum(array[x,y])) } 
+
+- Proof of concept support for regular expression matching has been added:
+     if ("aqqqqqb" =~ "q*b") { ... }
+     if ("abc" !~ "q*b") { ... }
+
+  The eventual aim is to support roughly the same functionality as
+  the POSIX Extended Regular Expressions implemented by glibc.
+  Currently missing features include extraction of the matched string
+  and subexpressions, and named character classes ([:alpha:], [:digit:], &c).
+
+  Special thanks go to the re2c project, whose public domain code this
+  functionality has been based on. For more info on re2c, see:
+     http://sourceforge.net/projects/re2c/
+
+- The folowing tapset variables are deprecated in release 2.1 and will
+  be removed in release 2.2:
+  - The 'send2queue' variable in the 'signal.send' probe.
+  - The 'oldset_addr' and 'regs' variables in the 'signal.handle' probe.
+
+- The following tapset probes are deprecated in release 2.1 and will
+  be removed in release 2.2:
+  - signal.send.return
+  - signal.handle.return
+
+* What's new in version 2.0, 2012-10-09
 
 - Systemtap includes a new prototype backend, which uses Dyninst to instrument
   a user's own processes at runtime. This backend does not use kernel modules,
@@ -6,14 +101,19 @@
   kinds of probes and other constructs that a script may use.
 
   Users from source should configure --with-dyninst and install a
-  fresh dyninst snapshot such as that in Fedora rawhide.  It may be necessary
-  to disable a conflicting selinux check with # setsebool allow_execstack 1
+  fresh dyninst snapshot such as that in Fedora rawhide.  It may be
+  necessary to disable conflicting selinux checks; systemtap will advise.
 
-  Select this new backend with the stap option --runtime=dyninst and a
-  -c or -x target process, along with normal options.  For example:
+  Select this new backend with the new stap option --runtime=dyninst
+  and a -c target process, along with normal options. (-x target
+  processes are not supported in this prototype version.) For example:
 
-    stap --runtime=dyninst -c 'stap -V' \
+    stap --runtime=dyninst -c 'stap -l begin' \
       -e 'probe process.function("main") { println("hi from dyninst!") }'
+
+- To aid diagnosis, when a kernel panic occurs systemtap now uses
+  the panic_notifier_list facility to dump a summary of its trace
+  buffers to the serial console.
 
 - The systemtap preprocessor now has a simple macro facility as follows:
 
@@ -45,6 +145,53 @@
   In practical terms, this allows us to specify additional options to
   certain tapset probe aliases, by writing e.g.
     probe syscall.open.return.maxactive(5) { ... }
+
+- To support the possibility of separate kernel and dyninst backends,
+  the tapsets have been reorganized into separate folders according to
+  backend. Thus kernel-specific tapsets are located under linux/, the
+  dyninst-specific ones under dyninst/
+
+- The backtrace/unwind tapsets have been expanded to allow random
+  access to individual elements of the backtrace. (A caching mechanism
+  ensures that the backtrace computation run at most once for each
+  time a probe fires, regardless of how many times or what order the
+  query functions are called in.) New tapset functions are:
+    stack/ustack - return n'th element of backtrace
+    callers/ucallers - return first n elements of backtrace
+    print_syms/print_usyms - print full information on a list of symbols
+    sprint_syms/sprint_usyms - as above, but return info as a string
+
+  The following existing functions have been superseded by print_syms()
+  et al.; new scripts are recommended to avoid using them:
+      print_stack()
+      print_ustack()
+      sprint_stack()
+      sprint_ustack()
+
+- The probefunc() tapset function is now myproc-unprivileged, and can
+  now be used in unprivileged scripts for such things as profiling in
+  userspace programs. For instance, try running
+  systemtap.examples/general/para-callgraph.stp in unprivileged mode
+  with a stapusr-permitted probe.  The previous implementation of
+  probefunc() is available with "stap --compatible=1.8".
+
+- Preprocessor conditional to vary code based on script privilege level:
+  unprivileged -- %( systemtap_privilege == "stapusr" %? ... %)
+  privileged   -- %( systemtap_privilege != "stapusr" %? ... %)
+  or, alternately %( systemtap_privilege == "stapsys"
+                  || systemtap_privilege == "stapdev" %? ... %)
+
+- To ease migration to the embedded-C locals syntax introduced in 1.8
+  (namely, STAP_ARG_* and STAP_RETVALUE), the old syntax can now be
+  re-enabled on a per-function basis using the /* unmangled */ pragma:
+
+    function add_foo:long(a:long, b:long) %{ /* unmangled */
+      THIS->__retvalue = THIS->a + STAP_ARG_b;
+    %}
+
+  Note that both the old and the new syntax may be used in an
+  /* unmangled */ function. Functions not marked /* unmangled */
+  can only use the new syntax.
 
 - Adjacent string literals are now glued together irrespective of
   intervening whitespace or comments:

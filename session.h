@@ -54,7 +54,9 @@ struct mark_derived_probe_group;
 struct tracepoint_derived_probe_group;
 struct hrtimer_derived_probe_group;
 struct procfs_derived_probe_group;
+struct dynprobe_derived_probe_group;
 struct embeddedcode;
+struct stapdfa;
 class translator_output;
 struct unparser;
 struct semantic_error;
@@ -113,6 +115,7 @@ public:
 
   // command line parsing
   int  parse_cmdline (int argc, char * const argv []);
+  bool parse_cmdline_runtime (const std::string& opt_runtime);
   void version ();
   void usage (int exitcode);
   void check_options (int argc, char * const argv []);
@@ -132,16 +135,22 @@ public:
   std::vector<std::string> kbuildflags; // -B var=val
   std::vector<std::string> globalopts; // -G var=val
   std::vector<std::string> modinfos; // --modinfo tag=value
+
   std::string release;
   std::string kernel_release;
   std::string kernel_base_release;
   std::string kernel_build_tree;
   std::string kernel_source_tree;
+  std::map<std::string,std::string> kernel_config;
+  std::set<std::string> kernel_exports;
+  std::set<std::string> kernel_functions;
+  int parse_kernel_config ();
+  int parse_kernel_exports ();
+  int parse_kernel_functions ();
+
   std::string sysroot;
   std::map<std::string,std::string> sysenv;
   bool update_release_sysroot;
-  std::map<std::string,std::string> kernel_config;
-  std::set<std::string> kernel_exports;
   std::string machine;
   std::string architecture;
   bool native_build;
@@ -187,9 +196,10 @@ public:
   bool dump_probe_types;
   int download_dbinfo;
   bool suppress_handler_errors;
+  bool suppress_time_limits;
 
   enum { kernel_runtime, dyninst_runtime } runtime_mode;
-  bool is_usermode() const { return runtime_mode == dyninst_runtime; }
+  bool runtime_usermode_p() const { return runtime_mode == dyninst_runtime; }
 
   // NB: It is very important for all of the above (and below) fields
   // to be cleared in the systemtap_session ctor (session.cxx).
@@ -249,8 +259,6 @@ public:
   // dwarfless operation
   bool consult_symtab;
   std::string kernel_symtab_path;
-  bool ignore_vmlinux;
-  bool ignore_dwarf;
 
   // Skip bad $ vars
   bool skip_badvars;
@@ -282,9 +290,13 @@ public:
   std::vector<stapfile*> files;
   std::vector<vardecl*> globals;
   std::map<std::string,functiondecl*> functions;
+  // probe counter name -> probe associated with counter
+  std::map<std::string, std::pair<std::string,derived_probe*> > perf_counters;
   std::vector<derived_probe*> probes; // see also *_probes groups below
   std::vector<embeddedcode*> embeds;
   std::map<std::string, statistic_decl> stat_decls;
+  std::map<std::string, stapdfa*> dfas;
+  unsigned dfa_counter; // used to give unique names
   // track things that are removed
   std::vector<vardecl*> unused_globals;
   std::vector<derived_probe*> unused_probes; // see also *_probes groups below
@@ -309,6 +321,7 @@ public:
   tracepoint_derived_probe_group* tracepoint_derived_probes;
   hrtimer_derived_probe_group* hrtimer_derived_probes;
   procfs_derived_probe_group* procfs_derived_probes;
+  dynprobe_derived_probe_group* dynprobe_derived_probes;
 
   // NB: It is very important for all of the above (and below) fields
   // to be cleared in the systemtap_session ctor (session.cxx).

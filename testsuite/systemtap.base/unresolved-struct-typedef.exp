@@ -28,6 +28,13 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
   }
 
   set script {{ probe process(@1).mark("epoch") { println($epoch->tm_year) } }}
-  stap_compile "$test-$extra_name" 1 "$script" "$test.exe"
+  foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+      stap_compile "$test-$extra_name-$runtime" 1 "$script" \
+	"$test.exe --runtime=$runtime"
+    } else {
+      stap_compile "$test-$extra_name" 1 "$script" "$test.exe"
+    }
+  }
   catch {exec rm -f "$test.exe"}
 }

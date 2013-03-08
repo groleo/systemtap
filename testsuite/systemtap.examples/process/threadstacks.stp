@@ -1,0 +1,24 @@
+#! /bin/sh
+
+//bin/true && exec stap -g $0 ${1+"$@"}
+
+# Override NPTL's "ulimit -s" based default stacksize for new pthreads.
+# Invoke with   # stap -g threadstacks.stp -Gsize=NNNN
+#    ... add "-x PID" or "-c CMD", unless you wish to target the entire system.
+#    ... due to a possible stap bug, might need to add "-d BINARY" for relevant binaries
+#
+# NB: 'size' needs to be a sufficiently large multiple of the OS pagesize,
+# else pthread_create(3) will fail.
+#
+# See also http://sourceware.org/ml/libc-alpha/2013-01/msg00572.html
+
+global size = 0;
+
+probe process("/lib*/libpthread.so.*").function("allocate_stack") {
+    old_size = $__default_stacksize;
+    if ((size != 0) && (old_size != size)) {  /* requested but not yet changed */
+        $__default_stacksize = size;          /* change it and report */
+        printf("%s[%d] overwrote __default_stacksize@%p (%d->%d)\n",
+               execname(), tid(), &$__default_stacksize, old_size, size)
+    }
+}

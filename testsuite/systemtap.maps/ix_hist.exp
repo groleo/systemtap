@@ -61,6 +61,10 @@ value |-------------------------------------------------- count
  4096 |                                                     0
 }
 
-stap_run2 $srcdir/$subdir/$test.stp -DMAXACTION=10000
-
-
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test.stp --runtime=$runtime -DMAXACTION=10000
+    } else {
+	stap_run2 $srcdir/$subdir/$test.stp -DMAXACTION=10000
+    }
+}

@@ -42,4 +42,12 @@ if { $res != "" } {
   pass "$test compile"
 }
 
-stap_run3 $test "$stpfile" -c "$exefile" -DMAXSTRINGLEN=11
+foreach runtime [get_runtime_list] {
+  if {$runtime != ""} {
+    stap_run3 "$test ($runtime)" "$stpfile" -c "$exefile" \
+      -DMAXSTRINGLEN=11 --runtime=$runtime
+  } else {
+    stap_run3 $test "$stpfile" -c "$exefile" -DMAXSTRINGLEN=11
+  }
+}
+if { $verbose == 0 } { catch { exec rm -f $exefile } }

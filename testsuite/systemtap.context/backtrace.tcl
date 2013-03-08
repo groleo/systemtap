@@ -204,9 +204,9 @@ if {$m1 == 3} {
     fail "backtrace of yyy_func2 ($m1)"
 }
 if {$m2 == 3} {
-    pass "print_stack of yyy_func2"
+    pass "print_syms of yyy_func2"
 } else {
-    fail "print_stack of yyy_func2 ($m2)"
+    fail "print_syms of yyy_func2 ($m2)"
 }
 if {$m3 == 4} {
     pass "backtrace of yyy_func3"
@@ -214,9 +214,9 @@ if {$m3 == 4} {
     fail "backtrace of yyy_func3 ($m3)"
 }
 if {$m4 == 4} {
-    pass "print_stack of yyy_func3"
+    pass "print_syms of yyy_func3"
 } else {
-    fail "print_stack of yyy_func3 ($m4)"
+    fail "print_syms of yyy_func3 ($m4)"
 }
 if {$m5 == 5} {
     pass "backtrace of yyy_func4"
@@ -224,19 +224,19 @@ if {$m5 == 5} {
     fail "backtrace of yyy_func4 ($m5)"
 }
 if {$m6 == 5} {
-    pass "print_stack of yyy_func4"
+    pass "print_syms of yyy_func4"
 } else {
-    fail "print_stack of yyy_func4 ($m6)"
+    fail "print_syms of yyy_func4 ($m6)"
 }
 if {$module1 == 6} {
-    pass "print_stack found systemtap_test_module1"
+    pass "print_syms found systemtap_test_module1"
 } else {
-    fail "print_stack didn't find systemtap_test_module1 ($module1)"
+    fail "print_syms didn't find systemtap_test_module1 ($module1)"
 }
 if {$kernel >= 6} {
-    pass "print_stack found \[kernel\]"
+    pass "print_syms found \[kernel\]"
 } else {
-    fail "print_stack didn't find \[kernel\] ($kernel)"
+    fail "print_syms didn't find \[kernel\] ($kernel)"
 }
 if {$script_exit == 1} {
     pass "backtrace.stp called exit"

@@ -10,6 +10,8 @@ probe syscall.nanosleep.return, syscall.compat_nanosleep.return ?
 	printf("%s %s\n", name, retstr)
 }
 
+# nfsservctl was removed in kernel 3.0/2.6.40.
+%( kernel_v < "2.6.40" && CONFIG_NFSD == "[ym]" %?
 probe syscall.nfsservctl ?
 {
 	printf("%s(%s)\n", name, argstr)
@@ -19,6 +21,7 @@ probe syscall.nfsservctl.return ?
 {
 	printf("%s %s\n", name, retstr)
 }
+%)
 
 probe syscall.nice ?
 {
@@ -592,6 +595,16 @@ probe syscall.sendmsg.return ?, syscall.compat_sys_sendmsg.return ?
 	printf("%s %s\n", name, retstr)
 }
 
+probe syscall.sendmmsg ?
+{
+	printf("%s(%s)\n", name, argstr)
+	printf("%d %p %d %d(%s)\n", s, mmsg_uaddr, vlen, flags, flags_str)
+}
+probe syscall.sendmmsg.return ?
+{
+	printf("%s %s\n", name, retstr)
+}
+
 probe syscall.sendto ?
 {
 	printf("%s(%s)\n", name, argstr)
@@ -902,6 +915,18 @@ probe syscall.sigaction.return ?, syscall.sigaction32.return ?
 {
 	printf("%s, %s\n", name, retstr)
 }
+
+%( CONFIG_GENERIC_SIGALTSTACK == "y" %?
+probe syscall.sigaltstack
+{
+	printf("%s, %s\n", name, argstr)
+	printf("%p, %p\n", uss_uaddr, uoss_uaddr)
+}
+probe syscall.sigaltstack.return
+{
+	printf("%s, %s\n", name, retstr)
+}
+%)
 
 probe syscall.signal ?
 {
@@ -1320,11 +1345,10 @@ probe syscall.ustat, syscall.ustat32 ?
 	printf("%s, %s\n", name, argstr)
 	printf("%d, %p\n", dev, ubuf_uaddr)
 }
-probe syscall.ustat.return
+probe syscall.ustat.return, syscall.ustat32.return ?
 {
 	printf("%s, %s\n", name, retstr)
 }
-# no syscall.ustat32 return probe
 
 probe syscall.utime ?, syscall.compat_utime ?
 {

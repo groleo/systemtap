@@ -1,0 +1,9 @@
+#! stap -p2
+
+global array
+
+probe begin
+{
+    array[0] = 1
+    foreach (key in array @sum +) printf("%d",key);
+}

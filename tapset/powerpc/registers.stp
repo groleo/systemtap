@@ -59,15 +59,13 @@ function _stp_register_regs() {
 }
 
 function probing_32bit_app() %{ /* pure */
-        STAP_RETVALUE = ((CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
-			    && _stp_is_compat_task());
+        STAP_RETVALUE = (CONTEXT->user_mode_p && _stp_is_compat_task());
 %}
 
 function _stp_get_register_by_offset:long (offset:long) %{ /* pure */
 	long value;
 	struct pt_regs *regs;
-	regs = ((CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
-		? CONTEXT->uregs : CONTEXT->kregs);
+	regs = (CONTEXT->user_mode_p ? CONTEXT->uregs : CONTEXT->kregs);
 	if (!regs) {
 		CONTEXT->last_error = "No registers available in this context";
 		return;

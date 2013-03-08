@@ -1,4 +1,12 @@
-#include <config.h>
+// dwarf location-list-to-c translator
+// Copyright (C) 2005-2013 Red Hat Inc.
+//
+// This file is part of systemtap, and is free software.  You can
+// redistribute it and/or modify it under the terms of the GNU General
+// Public License (GPL); either version 2, or (at your option) any
+// later version.
+
+#include "config.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <obstack.h>
@@ -225,7 +233,7 @@ translate_constant (struct location_context *ctx, int indent,
 	    return NULL;
 	  }
 	loc->type = loc_value;
-	obstack_printf (ctx->pool, "%*saddr = %" PRId64 "L;\n",
+	obstack_printf (ctx->pool, "%*saddr = (" UTYPE ")%#" PRIx64 "ULL;\n",
 			indent * 2, "", value);
 	obstack_1grow (ctx->pool, '\0');
 	loc->address.program = obstack_finish (ctx->pool);
@@ -347,7 +355,7 @@ translate (struct location_context *ctx, int indent,
       goto underflow;							      \
     int var = stack_depth
 #define PUSH 		(deepen (), stack_depth++)
-#define STACK(idx)	(stack_depth - 1 - (idx))
+#define STACK(idx)  ({int z = (stack_depth - 1 - (idx)); assert (z >= 0); z;})
 
   /* Don't put stack operations in the arguments to this.  */
 #define push(fmt, ...) \
@@ -561,7 +569,7 @@ translate (struct location_context *ctx, int indent,
 		STACK (-1), STACK (0),
 		STACK (0), STACK (1),
 		STACK (1), STACK (2),
-		STACK (3), STACK (-1));
+		STACK (2), STACK (-1));
 	  break;
 
 
@@ -1425,7 +1433,9 @@ c_translate_location (struct obstack *pool,
 	pc_address = ctx->pc;
       else if (ctx->pc == 0)
 	ctx->pc = pc_address;
-      assert (ctx->pc == pc_address);
+      // PR15148: disable this assertion, in case the PR15123 address-retry logic
+      // sent us this way
+      // assert (ctx->pc == pc_address);
     }
 
   switch (*input == NULL ? loc_address : (*input)->type)
@@ -2538,9 +2548,13 @@ c_emit_location (FILE *out, struct location *loc, int indent,
   bool deref = false;
   *max_stack = 0;
 
-  if (loc->frame_base != NULL)
-    emit_loc_value (out, loc->frame_base, indent, "frame_base", true,
-		    &deref, max_stack);
+  for (l = loc; l != NULL; l = l->next)
+    if (l->frame_base != NULL)
+      {
+	emit_loc_value (out, l->frame_base, indent, "frame_base", true,
+			&deref, max_stack);
+	break;
+      }
 
   for (; loc->next != NULL; loc = loc->next)
     switch (loc->type)

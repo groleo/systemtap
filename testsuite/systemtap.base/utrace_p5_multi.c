@@ -30,8 +30,6 @@ main()
     pthread_join(thread1, NULL);
     pthread_join(thread2, NULL); 
 
-    printf("Thread 1 returns: %d\n", iret1);
-    printf("Thread 2 returns: %d\n", iret2);
     exit(0);
 }
 

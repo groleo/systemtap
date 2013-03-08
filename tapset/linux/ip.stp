@@ -84,12 +84,9 @@ function __ip_sock_saddr:long (sock:long)
 {
     family = @cast(sock, "inet_sock", "kernel<net/ip.h>")->sk->__sk_common->skc_family
     if (family == %{ /* pure */ /* unprivileged */ AF_INET %}) {
-	return (@defined(@cast(sock, "inet_sock")->inet_saddr)
-		? @cast(sock, "inet_sock")->inet_saddr # kernel >= 2.6.33
-		: (@defined(@cast(sock, "inet_sock")->saddr)
-		  ? # kernel >= 2.6.11
-		    @cast(sock, "inet_sock", "kernel")->saddr
-		  : @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->saddr))
+	return @choose_defined(@cast(sock, "inet_sock")->inet_saddr, # kernel >= 2.6.33
+		@choose_defined(@cast(sock, "inet_sock")->saddr, # kernel >= 2.6.11
+		    @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->saddr))
     }
 %( CONFIG_IPV6 == "[ym]" %?
     else if (family == %{ /* pure */ /* unprivileged */ AF_INET6 %}) {
@@ -104,15 +101,10 @@ function __ip_sock_daddr:long (sock:long)
 {
     family = @cast(sock, "inet_sock", "kernel<net/ip.h>")->sk->__sk_common->skc_family
     if (family == %{ /* pure */ /* unprivileged */ AF_INET %}) {
-	return (@defined(@cast(sock, "inet_sock")->sk->__sk_common->skc_daddr)
-		? # kernel >= 2.6.38
-		  @cast(sock, "inet_sock")->sk->__sk_common->skc_daddr
-		: (@defined(@cast(sock, "inet_sock")->inet_daddr)
-		  ? @cast(sock, "inet_sock")->inet_daddr # kernel >= 2.6.33
-		  : (@defined(@cast(sock, "inet_sock")->daddr)
-		    ? # kernel >= 2.6.11
-		      @cast(sock, "inet_sock", "kernel")->daddr
-		    : @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->daddr)))
+	return @choose_defined(@cast(sock, "inet_sock")->sk->__sk_common->skc_daddr, # kernel >= 2.6.38
+		@choose_defined(@cast(sock, "inet_sock")->inet_daddr, # kernel >= 2.6.33
+		    @choose_defined(@cast(sock, "inet_sock")->daddr, # kernel >= 2.6.11
+			@cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->daddr)))
     }
 %( CONFIG_IPV6 == "[ym]" %?
     else if (family == %{ /* pure */ /* unprivileged */ AF_INET6 %}) {

@@ -279,6 +279,26 @@ proc test_probes { privilege } {
 	    {
 		setup_kfail GCC *-*-*
 	    }
+	    process.function(number).return -
+	    process.function(string).return -
+	    process.library(string).function(number).return -
+	    process.library(string).function(string).return -
+	    process(number).statement(number).absolute -
+	    process(number).statement(number).absolute.return -
+	    process(string).function(number).return -
+	    process(string).function(string).return -
+	    process(string).library(string).function(number).return -
+	    process(string).library(string).function(string).return
+	    {
+		if {![uretprobes_p]} { setup_kfail URETPROBES *-*-* }
+	    }
+	    process(number).insn -
+	    process(number).insn.block -
+	    process(string).insn -
+	    process(string).insn.block
+	    {
+		if {![utrace_orig_p]} { setup_kfail ITRACE *-*-* }
+	    }
 	    process(string).library(string).plt.statement(number) -
 	    process(string).library(string).plt(string).statement(number) -
 	    process.library(string).plt.statement(number) -

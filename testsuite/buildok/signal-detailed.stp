@@ -3,13 +3,18 @@
 probe signal.send
 {
 	printf("%s(%d(%s), %d(%s))\n", name, sig, sig_name, sig_pid, pid_name)
-	printf("%s %p %p %d %d\n", si_code, task, sinfo, shared, send2queue)
+	printf("%s %p %p %d\n", si_code, task, sinfo, shared)
+%( systemtap_v <= "2.1" %?
+	printf("%d\n", send2queue)
+%)
 }
+%( systemtap_v <= "2.1" %?
 probe signal.send.return
 {
 	printf("%s() = %s\n", name, retstr)
 	printf("%d %d\n", shared, send2queue)
 }
+%)
 
 probe signal.checkperm
 {
@@ -92,10 +97,12 @@ probe signal.pending.return
 
 # signal.handle test moved to signal-handle.stp
 
+%( systemtap_v <= "2.1" %?
 probe signal.handle.return ?
 {
 	printf("%s() = %s\n", name, retstr)
 }
+%)
 
 probe signal.do_action
 {

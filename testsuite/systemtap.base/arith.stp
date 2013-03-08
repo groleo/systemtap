@@ -70,7 +70,7 @@ probe begin {
 }
 
 
-probe timer.jiffies(1) { # some time after all the begin probes
+probe timer.sec(1) { # some time after all the begin probes
   exit ()
 }
 

@@ -1,7 +1,6 @@
 // task finder for user tapsets
 // Copyright (C) 2005-2009 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
-// Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -42,6 +41,7 @@ struct task_finder_derived_probe_group: public generic_dpg<task_finder_derived_p
 public:
   void emit_module_decls (systemtap_session& ) { }
   void emit_module_init (systemtap_session& s);
+  void emit_module_post_init (systemtap_session& s);
   void emit_module_exit (systemtap_session& s);
 
   // Whether or not to initialize the vma tracker
@@ -68,6 +68,14 @@ task_finder_derived_probe_group::emit_module_init (systemtap_session& s)
   s.op->newline(1) << "stap_stop_task_finder();";
   s.op->newline(-1) << "}";
   s.op->newline(-1) << "}";
+}
+
+
+void
+task_finder_derived_probe_group::emit_module_post_init (systemtap_session& s)
+{
+  s.op->newline() << "/* ---- task finder ---- */";
+  s.op->newline() << "stap_task_finder_post_init();";
 }
 
 

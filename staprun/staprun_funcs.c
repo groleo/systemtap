@@ -182,6 +182,7 @@ int insert_module(
         if (getenv ("SYSTEMTAP_SYNC") != NULL)
                 sync();
 
+        dbug(1,"Module %s inserted from file %s\n", modname, module_realpath);
 	PROBE1(staprun, insert__module, (char*)module_realpath);
 	/* Actually insert the module */
 	ret = init_module(module_file, sbuf.st_size, opts);
@@ -311,17 +312,6 @@ rename_module(void* module_file, const __off_t st_size)
 #endif
 }
 
-static int
-access_debugfs(void)
-{
-	/* We need to make sure that debugfs is accessible by the real UID, or
-	 * else we won't be able to reach the .ctl path within. (PR14244) */
-	int rc = access(DEBUGFSDIR, X_OK);
-	if (rc < 0)
-		err("ERROR: no access to debugfs; try \"chmod 0755 %s\" as root\n",
-				DEBUGFSDIR);
-	return rc;
-}
 
 int mountfs(void)
 {
@@ -332,7 +322,7 @@ int mountfs(void)
 	/* If the debugfs dir is already mounted correctly, we're done. */
  	if (statfs(DEBUGFSDIR, &st) == 0
 	    && (int) st.f_type == (int) DEBUGFS_MAGIC)
-		return access_debugfs();
+		return 0;
 
 	/* If DEBUGFSDIR exists (and is a directory), try to mount
 	 * DEBUGFSDIR. */
@@ -341,7 +331,7 @@ int mountfs(void)
 		/* If we can mount the debugfs dir correctly, we're done. */
           	rc = mount ("debugfs", DEBUGFSDIR, "debugfs", 0, NULL);
 		if (rc == 0)
-			return access_debugfs();
+			return 0;
 		/* If we got ENODEV, that means that debugfs isn't
 		 * supported, so we'll need try try relayfs.  If we
 		 * didn't get ENODEV, we got a real error. */
@@ -599,13 +589,19 @@ static privilege_t get_module_required_credentials (
 {
 #ifndef HAVE_ELF_GETSHDRSTRNDX
   /* Without the proper ELF support, we can't determine the credentials required to run this
-     module. It may have some future privilege level higher than stapsys, which we don't know about.
-     We are forced to assume that requires the highest privilege level. */
+     module. However, we know that it has been correctly signed (we only check privilege
+     credentials for correctly signed modules). It is therefore either
+       a) a dual-privilege-level era module compiled with stapusr privileges enforced or,
+       b) a multi-privilege-level era module with built-in privilege level checking.
+     In either case, we can load it for stapusr level users and above. In case a, it requires
+     exactly that privilege level. In case b, the module will self check against the user's
+     actual privilege level.
+  */
   if (verbose >= 1) {
-    err ("Unable to determine the privilege level required for the module %s. Assuming %s.",
-	 module_path, pr_name (pr_highest));
+    err ("Unable to determine the privilege level required for the module %s. Assuming %s.\n",
+	 module_path, pr_name (pr_stapusr));
   }
-  return pr_highest;
+  return pr_stapusr;
 #else
   Elf_Scn *scn = 0;
   Elf_Data *data = 0;
@@ -623,9 +619,9 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Section name \"%s\" not found in module %s.\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.\n", pr_name (pr_unprivileged));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_stapusr));
     }
-    return pr_unprivileged;
+    return pr_stapusr;
   }
 
   /* From here on if there is an error in the data, then it is most likely caused by a newer
@@ -636,7 +632,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Error getting section header from section %s in module %s.\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
@@ -646,7 +642,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Section header from section %s in module %s has no items\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
@@ -656,7 +652,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Error getting data from section %s in module %s\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
@@ -666,7 +662,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Data in section %s is in module %s not the correct size\n", STAP_PRIVILEGE_SECTION,
 	   module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
@@ -684,7 +680,7 @@ static privilege_t get_module_required_credentials (
     if (verbose >= 1) {
       err ("Unknown privilege data, 0x%x in section %s in module %s\n",
 	   (int)privilege, STAP_PRIVILEGE_SECTION, module_path);
-      err ("Assuming required privilege level of %s.", pr_name (pr_highest));
+      err ("Assuming required privilege level of %s.\n", pr_name (pr_highest));
     }
     return pr_highest;
   }
@@ -754,11 +750,11 @@ check_groups (
 
   /* Check whether this module can be loaded based on its path. check_path is a pointer to a
      module-specific function which will do this.  If we can load this module due to its path,
-     then assign stapdev level credentials to the user, since the module may require it. */
+     then assign all privilege credentials to the user, since the module may require them. */
   rc = check_path (module_path, module_fd);
   if (rc == 1) {
     if (assigned_user_credentials)
-      *assigned_user_credentials = pr_stapdev;
+      *assigned_user_credentials = pr_all;
   }
   else
     err("Unable to verify the signature for the module %s.\n", module_path);

@@ -1,7 +1,7 @@
 /*
  * utrace infrastructure interface for debugging user processes
  *
- * Copyright (C) 2006-2011 Red Hat, Inc.  All rights reserved.
+ * Copyright (C) 2006-2012 Red Hat, Inc.  All rights reserved.
  *
  * This copyrighted material is made available to anyone wishing to use,
  * modify, copy, or redistribute it subject to the terms and conditions
@@ -105,10 +105,76 @@ static void utrace_report_exec(void *cb_data __attribute__ ((unused)),
 #define __UTRACE_REGISTERED	1
 static atomic_t utrace_state = ATOMIC_INIT(__UTRACE_UNREGISTERED);
 
-int utrace_init(void)
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED)
+// Sigh. On kernel's without signal_wake_up_state(), there is no
+// declaration to use in 'typeof(&signal_wake_up_state)'. So, we'll
+// provide one here.
+void signal_wake_up_state(struct task_struct *t, unsigned int state);
+
+// First typedef from the original decl, then #define as typecasted call.
+typedef typeof(&signal_wake_up_state) signal_wake_up_state_fn;
+#define signal_wake_up_state (* (signal_wake_up_state_fn)kallsyms_signal_wake_up_state)
+#endif
+
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
+// First typedef from the original decl, then #define as typecasted call.
+typedef typeof(&signal_wake_up) signal_wake_up_fn;
+#define signal_wake_up (* (signal_wake_up_fn)kallsyms_signal_wake_up)
+#endif
+
+#if !defined(STAPCONF___LOCK_TASK_SIGHAND_EXPORTED)
+// First typedef from the original decl, then #define as typecasted call.
+typedef typeof(&__lock_task_sighand) __lock_task_sighand_fn;
+#define __lock_task_sighand (* (__lock_task_sighand_fn)kallsyms___lock_task_sighand)
+
+/*
+ * __lock_task_sighand() is called from the inline function
+ * 'lock_task_sighand'. Since the real inline function won't know
+ * anything about our '#define' above, we have to have our own version
+ * of the inline function.  Sigh.
+ */
+static inline struct sighand_struct *
+stp_lock_task_sighand(struct task_struct *tsk, unsigned long *flags)
+{
+	struct sighand_struct *ret;
+
+	ret = __lock_task_sighand(tsk, flags);
+	(void)__cond_lock(&tsk->sighand->siglock, ret);
+	return ret;
+}
+#else
+#define stp_lock_task_sighand lock_task_sighand
+#endif
+
+
+/*
+ * Our internal version of signal_wake_up()/signal_wake_up_state()
+ * that handles the functions existing and being exported.
+ */
+static inline void
+stp_signal_wake_up(struct task_struct *t, bool resume)
+{
+#if defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED)
+    signal_wake_up_state(t, resume ? TASK_WAKEKILL : 0);
+#elif defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
+    signal_wake_up(t, resume);
+#else
+    if (kallsyms_signal_wake_up_state) {
+	signal_wake_up_state(t, resume ? TASK_WAKEKILL : 0);
+    }
+    else if (kallsyms_signal_wake_up) {
+	signal_wake_up(t, resume);
+    }
+#endif
+}
+
+
+static int utrace_init(void)
 {
 	int i;
 	int rc = -1;
+        static char kmem_cache1_name[50];
+        static char kmem_cache2_name[50];
 
 	if (unlikely(stp_task_work_init() != 0))
 		goto error;
@@ -118,10 +184,51 @@ int utrace_init(void)
 		INIT_HLIST_HEAD(&task_utrace_table[i]);
 	}
 
-	utrace_cachep = KMEM_CACHE(utrace, SLAB_PANIC);
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED)
+	/* The signal_wake_up_state() function (which replaces
+	 * signal_wake_up() in newer kernels) isn't exported. Look up
+	 * that function address. */
+        kallsyms_signal_wake_up_state = (void *)kallsyms_lookup_name("signal_wake_up_state");
+#endif
+#if !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED)
+	/* The signal_wake_up() function isn't exported. Look up that
+	 * function address. */
+        kallsyms_signal_wake_up = (void *)kallsyms_lookup_name("signal_wake_up");
+#endif
+#if (!defined(STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED) \
+     && !defined(STAPCONF_SIGNAL_WAKE_UP_EXPORTED))
+        if (kallsyms_signal_wake_up_state == NULL
+	    && kallsyms_signal_wake_up == NULL) {
+		_stp_error("Can't resolve signal_wake_up_state or signal_wake_up!");
+		goto error;
+        }
+#endif
+#if !defined(STAPCONF___LOCK_TASK_SIGHAND_EXPORTED)
+	/* The __lock_task_sighand() function isn't exported. Look up
+	 * that function address. */
+        kallsyms___lock_task_sighand = (void *)kallsyms_lookup_name("__lock_task_sighand");
+        if (kallsyms___lock_task_sighand == NULL) {
+		_stp_error("Can't resolve __lock_task_sighand!");
+		goto error;
+        }
+#endif
+
+        /* PR14781: avoid kmem_cache naming collisions (detected by CONFIG_DEBUG_VM)
+           by plopping a non-conflicting token - in this case the address of a 
+           locally relevant variable - into the names. */
+        snprintf(kmem_cache1_name, sizeof(kmem_cache1_name),
+                 "utrace_%lx", (unsigned long) (& utrace_cachep));
+	utrace_cachep = kmem_cache_create(kmem_cache1_name, 
+                                          sizeof(struct utrace),
+                                          0, 0, NULL);
 	if (unlikely(!utrace_cachep))
 		goto error;
-	utrace_engine_cachep = KMEM_CACHE(utrace_engine, SLAB_PANIC);
+
+        snprintf(kmem_cache2_name, sizeof(kmem_cache2_name),
+                 "utrace_engine_%lx", (unsigned long) (& utrace_engine_cachep));
+	utrace_engine_cachep = kmem_cache_create(kmem_cache2_name, 
+                                                 sizeof(struct utrace_engine),
+                                                 0, 0, NULL);
 	if (unlikely(!utrace_engine_cachep))
 		goto error;
 
@@ -172,7 +279,7 @@ error:
 	return rc;
 }
 
-int utrace_exit(void)
+static int utrace_exit(void)
 {
 	utrace_shutdown();
 
@@ -185,7 +292,7 @@ int utrace_exit(void)
 	return 0;
 }
 
-void utrace_resume(struct task_work *work);
+static void utrace_resume(struct task_work *work);
 
 /*
  * Clean up everything associated with @task.utrace.
@@ -233,7 +340,7 @@ static void utrace_cleanup(struct utrace *utrace)
 #endif
 }
 
-void utrace_shutdown(void)
+static void utrace_shutdown(void)
 {
 	int i;
 	struct utrace *utrace;
@@ -263,7 +370,7 @@ void utrace_shutdown(void)
 	spin_lock(&task_utrace_lock);
 	for (i = 0; i < TASK_UTRACE_TABLE_SIZE; i++) {
 		head = &task_utrace_table[i];
-		hlist_for_each_entry_safe(utrace, node, node2, head, hlist) {
+		stap_hlist_for_each_entry_safe(utrace, node, node2, head, hlist) {
 			hlist_del(&utrace->hlist);
 			utrace_cleanup(utrace);
 		}
@@ -282,7 +389,7 @@ static struct utrace *__task_utrace_struct(struct task_struct *task)
 
 	lockdep_assert_held(&task_utrace_lock);
 	head = &task_utrace_table[hash_ptr(task, TASK_UTRACE_HASH_BITS)];
-	hlist_for_each_entry(utrace, node, head, hlist) {
+	stap_hlist_for_each_entry(utrace, node, head, hlist) {
 		if (utrace->task == task)
 			return utrace;
 	}
@@ -309,20 +416,19 @@ static bool utrace_task_alloc(struct task_struct *task)
 	INIT_LIST_HEAD(&utrace->attaching);
 	utrace->resume = UTRACE_RESUME;
 	utrace->task = task;
+	stp_init_task_work(&utrace->work, &utrace_resume);
 
 	spin_lock(&task_utrace_lock);
 	u = __task_utrace_struct(task);
 	if (u == NULL) {
 		hlist_add_head(&utrace->hlist,
 			       &task_utrace_table[hash_ptr(task, TASK_UTRACE_HASH_BITS)]);
-		spin_unlock(&task_utrace_lock);
 	}
 	else {
-		spin_unlock(&task_utrace_lock);
 		kmem_cache_free(utrace_cachep, utrace);
 	}
+	spin_unlock(&task_utrace_lock);
 
-	stp_init_task_work(&utrace->work, &utrace_resume);
 	return true;
 }
 
@@ -393,7 +499,7 @@ static void splice_attaching(struct utrace *utrace)
 /*
  * This is the exported function used by the utrace_engine_put() inline.
  */
-void __utrace_engine_release(struct kref *kref)
+static void __utrace_engine_release(struct kref *kref)
 {
 	struct utrace_engine *engine = container_of(kref, struct utrace_engine,
 						    kref);
@@ -511,7 +617,6 @@ unlock:
  * UTRACE_ATTACH_EXCLUSIVE:
  * Attempting to attach a second (matching) engine fails with -%EEXIST.
  *
- * *** FIXME: needed??? ***
  * UTRACE_ATTACH_MATCH_OPS: Only consider engines matching @ops.
  * UTRACE_ATTACH_MATCH_DATA: Only consider engines matching @data.
  *
@@ -521,7 +626,7 @@ unlock:
  * %UTRACE_ATTACH_EXCLUSIVE in such a call fails with -%EEXIST if there
  * are any engines on @target at all.
  */
-struct utrace_engine *utrace_attach_task(
+static struct utrace_engine *utrace_attach_task(
 	struct task_struct *target, int flags,
 	const struct utrace_engine_ops *ops, void *data)
 {
@@ -754,9 +859,9 @@ static bool engine_wants_stop(struct utrace_engine *engine)
  * These rules provide for coherent synchronization based on %UTRACE_STOP,
  * even when %SIGKILL is breaking its normal simple rules.
  */
-int utrace_set_events(struct task_struct *target,
-		      struct utrace_engine *engine,
-		      unsigned long events)
+static int utrace_set_events(struct task_struct *target,
+			     struct utrace_engine *engine,
+			     unsigned long events)
 {
 	struct utrace *utrace;
 	unsigned long old_flags, old_utrace_flags;
@@ -809,11 +914,6 @@ int utrace_set_events(struct task_struct *target,
 
 	engine->flags = events | (engine->flags & ENGINE_STOP);
 	utrace->utrace_flags |= events;
-
-	/* FIXME: Hmm, unsure about calling set_tsk_thread_flag()... */
-	if ((events & UTRACE_EVENT_SYSCALL) &&
-	    !(old_utrace_flags & UTRACE_EVENT_SYSCALL))
-		set_tsk_thread_flag(target, TIF_SYSCALL_TRACE);
 
 	ret = 0;
 	if ((old_flags & ~events) && target != current &&
@@ -954,9 +1054,6 @@ static bool utrace_reset(struct task_struct *task, struct utrace *utrace)
 		 */
 		BUG_ON(utrace->death);
 		flags &= UTRACE_EVENT(REAP);
-	} else if (!(flags & UTRACE_EVENT_SYSCALL) &&
-		   test_tsk_thread_flag(task, TIF_SYSCALL_TRACE)) {
-		clear_tsk_thread_flag(task, TIF_SYSCALL_TRACE);
 	}
 
 	if (!flags) {
@@ -988,7 +1085,7 @@ static bool utrace_reset(struct task_struct *task, struct utrace *utrace)
 	return !flags;
 }
 
-void utrace_finish_stop(void)
+static void utrace_finish_stop(void)
 {
 	/*
 	 * If we were task_is_traced() and then SIGKILL'ed, make
@@ -1102,8 +1199,8 @@ relock:
  * unless still making callbacks.  On death, update bookkeeping
  * and handle the reap work if release_task() came in first.
  */
-void utrace_maybe_reap(struct task_struct *target, struct utrace *utrace,
-		       bool reap)
+static void utrace_maybe_reap(struct task_struct *target, struct utrace *utrace,
+			      bool reap)
 {
 	struct utrace_engine *engine, *next;
 	struct list_head attached;
@@ -1282,10 +1379,19 @@ static inline int utrace_control_dead(struct task_struct *target,
  *
  * Since this is meaningless unless @report_quiesce callbacks will
  * be made, it returns -%EINVAL if @engine lacks %UTRACE_EVENT(%QUIESCE).
+ *
+ * UTRACE_INTERRUPT:
+ *
+ * This is like %UTRACE_REPORT, but ensures that @target will make a
+ * callback before it resumes or delivers signals.  If @target was in
+ * a system call or about to enter one, work in progress will be
+ * interrupted as if by %SIGSTOP.  If another engine is keeping
+ * @target stopped, then there might be no callbacks until all engines
+ * let it resume.
  */
-int utrace_control(struct task_struct *target,
-		   struct utrace_engine *engine,
-		   enum utrace_resume_action action)
+static int utrace_control(struct task_struct *target,
+			  struct utrace_engine *engine,
+			  enum utrace_resume_action action)
 {
 	struct utrace *utrace;
 	bool reset;
@@ -1391,6 +1497,64 @@ int utrace_control(struct task_struct *target,
 		}
 		break;
 
+	case UTRACE_INTERRUPT:
+		/*
+		 * Make the thread call tracehook_get_signal() soon.
+		 */
+		clear_engine_wants_stop(engine);
+		if (utrace->resume == UTRACE_INTERRUPT)
+			break;
+		utrace->resume = UTRACE_INTERRUPT;
+
+		/*
+		 * If it's not already stopped, interrupt it now.  We need
+		 * the siglock here in case it calls recalc_sigpending()
+		 * and clears its own TIF_SIGPENDING.  By taking the lock,
+		 * we've serialized any later recalc_sigpending() after our
+		 * setting of utrace->resume to force it on.
+		 */
+		if (reset) {
+			/*
+			 * This is really just to keep the invariant that
+			 * TIF_SIGPENDING is set with UTRACE_INTERRUPT.
+			 * When it's stopped, we know it's always going
+			 * through utrace_get_signal() and will recalculate.
+			 */
+			set_tsk_thread_flag(target, TIF_SIGPENDING);
+		} else {
+			int rc = 0;
+
+			if (! utrace->task_work_added) {
+				rc = stp_task_work_add(target, &utrace->work);
+				/* stp_task_work_add() returns -ESRCH
+				 * if the task has already passed
+				 * exit_task_work(). Just ignore this
+				 * error. */
+				if (rc == 0 || rc == -ESRCH) {
+					utrace->task_work_added = 1;
+					rc = 0;
+				}
+				else {
+					printk(KERN_ERR
+					       "%s:%d - task_work_add() returned %d\n",
+					       __FUNCTION__, __LINE__, rc);
+				}
+			}
+
+			if (likely(rc == 0)) {
+				struct sighand_struct *sighand;
+				unsigned long irqflags;
+
+				sighand = stp_lock_task_sighand(target,
+								&irqflags);
+				if (likely(sighand)) {
+					stp_signal_wake_up(target, 0);
+					unlock_task_sighand(target, &irqflags);
+				}
+			}
+		}
+		break;
+
 	default:
 		BUG();		/* We checked it on entry.  */
 	}
@@ -1428,7 +1592,8 @@ int utrace_control(struct task_struct *target,
  * still be in progress; utrace_barrier() waits until there is no chance
  * an unwanted callback can be in progress.
  */
-int utrace_barrier(struct task_struct *target, struct utrace_engine *engine)
+static int utrace_barrier(struct task_struct *target,
+			  struct utrace_engine *engine)
 {
 	struct utrace *utrace;
 	int ret = -ERESTARTSYS;
@@ -1436,6 +1601,9 @@ int utrace_barrier(struct task_struct *target, struct utrace_engine *engine)
 	if (unlikely(target == current))
 		return 0;
 
+	/* If we get here, we might call
+	 * schedule_timeout_interruptible(), which sleeps. */
+	might_sleep();
 	do {
 		utrace = get_utrace_lock(target, engine, false);
 		if (unlikely(IS_ERR(utrace))) {
@@ -1975,7 +2143,7 @@ static void utrace_report_clone(void *cb_data __attribute__ ((unused)),
  * After this, we'll enter the uninterruptible wait_for_completion()
  * waiting for the child.
  */
-void utrace_finish_vfork(struct task_struct *task)
+static void utrace_finish_vfork(struct task_struct *task)
 {
 	struct utrace *utrace = task_utrace_struct(task);
 
@@ -2072,7 +2240,7 @@ static void finish_resume_report(struct task_struct *task,
  * We are close to user mode, and this is the place to report or stop.
  * When we return, we're going to user mode or into the signals code.
  */
-void utrace_resume(struct task_work *work)
+static void utrace_resume(struct task_work *work)
 {
 	/*
 	 * We could also do 'task_utrace_struct()' here to find the

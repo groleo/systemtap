@@ -1,5 +1,5 @@
 // context-unwind tapset
-// Copyright (C) 2005-2011 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2006 Intel Corporation.
 //
 // This file is part of systemtap, and is free software.  You can
@@ -13,10 +13,11 @@
 // </tapsetdescription>
 
 /**
- *  sfunction print_backtrace - Print stack back trace
+ *  sfunction print_backtrace - Print kernel stack back trace
  * 
  *  Description: This function is equivalent to print_stack(backtrace()), 
- *  except that deeper stack nesting may be supported.
+ *  except that deeper stack nesting may be supported.  See print_ubacktrace
+ *  for user-space backtrace.
  *  The function does not return a value.
  */
 function print_backtrace () %{
@@ -46,11 +47,12 @@ function sprint_backtrace:string () %{
 %}
 
 /**
- * sfunction backtrace - Hex backtrace of current kernelmode stack
+ * sfunction backtrace - Hex backtrace of current kernel stack
  * 
  * Description: This function returns a string of hex addresses
  * that are a backtrace of the kernel stack. Output may be truncated
- * as per maximum string length (MAXSTRINGLEN).
+ * as per maximum string length (MAXSTRINGLEN).  See
+ * ubacktrace() for user-space backtrace.
  */
 function backtrace:string () %{ /* pure */ /* pragma:unwind */
 	_stp_stack_kernel_sprint (STAP_RETVALUE, MAXSTRINGLEN,

@@ -27,7 +27,8 @@ expect {
     timeout { fail "$test (timeout)" }
     -re {^ERROR: [^\r\n]*\r\n} { incr ok; exp_continue }
     -re {^WARNING: Number of errors: [0-9]*[^\r\n]*\r\n} { incr ok; exp_continue }
-    -re {^[^\r\n]*probe hit report[^\r\n]*\r\n} { incr ok; exp_continue }
+    -re {^----- probe hit report: \r\n} { incr ok; exp_continue }
+    -re {^[^\r\n]*hits:[^\r\n]*cycles:[^\r\n]*from:[^\r\n]*\r\n} { exp_continue }
 }
 if {$ok >=3 && $ko == 0} then { pass $test } else { fail "$test ($ok $ko)" }
 catch { wait } ; catch { close }
@@ -55,7 +56,8 @@ expect {
     timeout { fail "$test (timeout)" }
     -re {^ERROR: [^\r\n]*\r\n} { incr ko; exp_continue }
     -re {^WARNING: Number of errors: [0-9]*[^\r\n]*\r\n} { incr ok; exp_continue }
-    -re {^[^\r\n]*probe hit report[^\r\n]*\r\n} { incr ok; exp_continue }
+    -re {^----- probe hit report: \r\n} { incr ok; exp_continue }
+    -re {^[^\r\n]*hits:[^\r\n]*cycles:[^\r\n]*from:[^\r\n]*\r\n} { exp_continue }
 }
 if {$ok >= 2 && $ko == 0} then { pass $test } else { fail "$test ($ok $ko)" }
 catch { wait } ; catch { close }

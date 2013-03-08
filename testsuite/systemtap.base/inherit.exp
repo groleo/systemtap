@@ -7,6 +7,14 @@ set ::result_string {1
 {.foo=42, .bar={...}}
 {.foo=42, .bar={.x=3, .y=4}}}
 
+proc dyninst_kfails {index} {
+    # The dyninst runtime isn't multi-arch, it only works on the
+    # native architecture. PR14490.
+    if {! [all_compile_flag_native_p $index]} {
+	setup_kfail 14490 "*-*-*"
+    }
+}
+
 set srcfile "$srcdir/$subdir/$test.cxx"
 set stpfile "$srcdir/$subdir/$test.stp"
 for {set i 0} {$i < [all_compile_flags]} {incr i} {
@@ -24,8 +32,18 @@ for {set i 0} {$i < [all_compile_flags]} {incr i} {
       pass "$test-$extra_name compile"
   }
 
-  if {[installtest_p] && [uprobes_p]} {
-    stap_run3 "$test-$extra_name" -w "$stpfile" $test.exe -c ./$test.exe
+  if {[installtest_p]} {
+    foreach runtime [get_runtime_list] {
+      if {$runtime != ""} {
+	if {[info procs ${runtime}_kfails] ne ""} { ${runtime}_kfails $i }
+	stap_run3 "$test-$extra_name-$runtime" -w "$stpfile" $test.exe \
+	  -c ./$test.exe --runtime=$runtime
+      } elseif {[uprobes_p]} {
+	stap_run3 "$test-$extra_name" -w "$stpfile" $test.exe -c ./$test.exe
+      } else {
+	untested "$test-$extra_name"
+      }
+    }
   } else {
     untested "$test-$extra_name"
   }

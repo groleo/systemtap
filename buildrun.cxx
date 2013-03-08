@@ -1,5 +1,5 @@
 // build/run probes
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 //
 // This file is part of systemtap, and is free software.  You can
 // redistribute it and/or modify it under the terms of the GNU General
@@ -208,15 +208,22 @@ compile_dyninst (systemtap_session& s)
   cmd.push_back("-O2");
   cmd.push_back("-I" + s.runtime_path);
   cmd.push_back("-D__DYNINST__");
+  for (size_t i = 0; i < s.c_macros.size(); ++i)
+    cmd.push_back("-D" + s.c_macros[i]);
   cmd.push_back(s.translated_source);
   cmd.push_back("-pthread");
+  cmd.push_back("-lrt");
   cmd.push_back("-fPIC");
   cmd.push_back("-shared");
   cmd.push_back("-o");
   cmd.push_back(module);
+  if (s.verbose > 3)
+    {
+      cmd.push_back("-ftime-report");
+      cmd.push_back("-Q");
+    }
 
-  bool quiet = (s.verbose < 2);
-  int rc = stap_system (s.verbose, cmd, quiet, quiet);
+  int rc = stap_system (s.verbose, cmd);
   if (rc)
     s.set_try_server ();
   return rc;
@@ -226,7 +233,7 @@ compile_dyninst (systemtap_session& s)
 int
 compile_pass (systemtap_session& s)
 {
-  if (s.is_usermode())
+  if (s.runtime_usermode_p())
     return compile_dyninst (s);
 
   int rc = uprobes_pass (s);
@@ -309,6 +316,7 @@ compile_pass (systemtap_session& s)
   output_autoconf(s, o, "autoconf-regset.c", "STAPCONF_REGSET", NULL);
   output_autoconf(s, o, "autoconf-utrace-regset.c", "STAPCONF_UTRACE_REGSET", NULL);
   output_autoconf(s, o, "autoconf-uprobe-get-pc.c", "STAPCONF_UPROBE_GET_PC", NULL);
+  output_autoconf(s, o, "autoconf-hlist-4args.c", "STAPCONF_HLIST_4ARGS", NULL);
   output_exportconf(s, o, "tsc_khz", "STAPCONF_TSC_KHZ");
   output_exportconf(s, o, "cpu_khz", "STAPCONF_CPU_KHZ");
   output_exportconf(s, o, "__module_text_address", "STAPCONF_MODULE_TEXT_ADDRESS");
@@ -358,7 +366,11 @@ compile_pass (systemtap_session& s)
 			   "STAPCONF_UPROBE_REGISTER_EXPORTED");
   output_either_exportconf(s, o, "uprobe_unregister", "unregister_uprobe",
 			   "STAPCONF_UPROBE_UNREGISTER_EXPORTED");
+  output_exportconf(s, o, "uretprobe_register", "STAPCONF_URETPROBE_REGISTER_EXPORTED");
+  output_exportconf(s, o, "uretprobe_unregister", "STAPCONF_URETPROBE_UNREGISTER_EXPORTED");
   output_autoconf(s, o, "autoconf-old-inode-uprobes.c", "STAPCONF_OLD_INODE_UPROBES", NULL);
+  output_autoconf(s, o, "autoconf-inode-uprobes-noaddr.c", "STAPCONF_INODE_UPROBES_NOADDR", NULL);
+  output_autoconf(s, o, "autoconf-inode-uretprobes.c", "STAPCONF_INODE_URETPROBES", NULL);
 
   // used by tapsets.cxx inode uprobe generated code
   output_exportconf(s, o, "uprobe_get_swbp_addr", "STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED");
@@ -368,6 +380,12 @@ compile_pass (systemtap_session& s)
 
   // used by runtime/stp_utrace.c
   output_exportconf(s, o, "task_work_add", "STAPCONF_TASK_WORK_ADD_EXPORTED");
+  output_exportconf(s, o, "signal_wake_up_state", "STAPCONF_SIGNAL_WAKE_UP_STATE_EXPORTED");
+  output_exportconf(s, o, "signal_wake_up", "STAPCONF_SIGNAL_WAKE_UP_EXPORTED");
+  output_exportconf(s, o, "__lock_task_sighand", "STAPCONF___LOCK_TASK_SIGHAND_EXPORTED");
+
+  output_autoconf(s, o, "autoconf-pagefault_disable.c", "STAPCONF_PAGEFAULT_DISABLE", NULL);
+  output_exportconf(s, o, "kallsyms_lookup_name", "STAPCONF_KALLSYMS");
 
   o << module_cflags << " += -include $(STAPCONF_HEADER)" << endl;
 
@@ -472,7 +490,7 @@ compile_pass (systemtap_session& s)
 static bool
 kernel_built_uprobes (systemtap_session& s)
 {
-  if (s.is_usermode())
+  if (s.runtime_usermode_p())
     return true; // sort of, via dyninst
 
   // see also tapsets.cxx:kernel_supports_inode_uprobes()
@@ -590,7 +608,7 @@ uprobes_pass (systemtap_session& s)
 
   if (s.kernel_config["CONFIG_UTRACE"] != string("y"))
     {
-      clog << _("user-space facilities not available without kernel CONFIG_UTRACE or CONFIG_TRACEPOINTS/CONFIG_ARCH_SUPPORTS_UPROBES/CONFIG_UPROBES") << endl;
+      clog << _("user-space process-tracking facilities not available [man error::process-tracking]") << endl;
       s.set_try_server ();
       return 1;
     }
@@ -620,10 +638,22 @@ make_dyninst_run_command (systemtap_session& s, const string& remotedir,
   vector<string> cmd;
   cmd.push_back(getenv("SYSTEMTAP_STAPDYN") ?: BINDIR "/stapdyn");
 
+  // use slightly less verbosity
+  for (unsigned i=1; i<s.verbose; i++)
+    cmd.push_back("-v");
+  if (s.suppress_warnings)
+    cmd.push_back("-w");
+
   if (!s.cmd.empty())
     {
       cmd.push_back("-c");
       cmd.push_back(s.cmd);
+    }
+
+  if (s.target_pid)
+    {
+      cmd.push_back("-x");
+      cmd.push_back(lex_cast(s.target_pid));
     }
 
   cmd.push_back((remotedir.empty() ? s.tmpdir : remotedir)
@@ -636,15 +666,15 @@ vector<string>
 make_run_command (systemtap_session& s, const string& remotedir,
                   const string& version)
 {
-  if (s.is_usermode())
+  if (s.runtime_usermode_p())
     return make_dyninst_run_command(s, remotedir, version);
 
   // for now, just spawn staprun
   vector<string> staprun_cmd;
   staprun_cmd.push_back(getenv("SYSTEMTAP_STAPRUN") ?: BINDIR "/staprun");
-  if (s.verbose>1)
-    staprun_cmd.push_back("-v");
-  if (s.verbose>2)
+
+  // use slightly less verbosity
+  for (unsigned i=1; i<s.verbose; i++)
     staprun_cmd.push_back("-v");
   if (s.suppress_warnings)
     staprun_cmd.push_back("-w");
@@ -753,6 +783,11 @@ make_tracequeries(systemtap_session& s, const map<string,string>& contents)
       ofstream osrc(srcname.c_str());
       osrc << src;
       osrc.close();
+
+      if (s.verbose > 2)
+        clog << _F("Processing tracepoint header %s with query %s", 
+                   it->first.c_str(), srcname.c_str())
+             << endl;
 
       // arrange to build it
       omf << "obj-m += " + sbasename + ".o" << endl; // NB: without <dir> prefix

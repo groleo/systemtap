@@ -1,6 +1,6 @@
 #! /bin/sh
 
-stap -g -p2 -e '
+stap $@ -g -p2 -e '
 
 # PR 13876
 

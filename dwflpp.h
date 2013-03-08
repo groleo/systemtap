@@ -1,5 +1,5 @@
 // C++ interface to dwfl
-// Copyright (C) 2005-2012 Red Hat Inc.
+// Copyright (C) 2005-2013 Red Hat Inc.
 // Copyright (C) 2005-2007 Intel Corporation.
 // Copyright (C) 2008 James.Bottomley@HansenPartnership.com
 //
@@ -384,6 +384,7 @@ private:
                                   Dwarf_Addr address);
 
   void print_locals(std::vector<Dwarf_Die>& scopes, std::ostream &o);
+  void print_locals_die(Dwarf_Die &die, std::ostream &o);
   void print_members(Dwarf_Die *vardie, std::ostream &o,
                      std::set<std::string> &dupes);
 
@@ -450,6 +451,8 @@ private:
                  Dwarf_Addr base,
                  void *arg);
 
+public:
+  Dwarf_Addr pr15123_retry_addr (Dwarf_Addr pc, Dwarf_Die* var);
 };
 
 #endif // DWFLPP_H

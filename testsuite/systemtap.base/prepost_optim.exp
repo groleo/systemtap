@@ -5,14 +5,23 @@ set test "prepost_optim"
 
 if {![installtest_p]} {untested $test; return}
 
-spawn stap $srcdir/$subdir/$test.stp
-set ok 0
-expect {
-    -timeout 180
-    -re {5 7 7 5} { incr ok; exp_continue }
-    timeout { fail "$test (timeout)" }
-    eof { }
-}
-catch {close}; catch {wait}
+foreach runtime [get_runtime_list] {
+    set test_name $test
+    if {$runtime != ""} {
+	set test_name "${test}_${runtime}"
+	spawn stap --runtime=$runtime $srcdir/$subdir/$test.stp
+    } else {
+	spawn stap $srcdir/$subdir/$test.stp
+    }
 
-if {$ok == 1} { pass "$test ($ok)" } { fail "$test ($ok)" }
+    set ok 0
+    expect {
+	-timeout 180
+	-re {5 7 7 5} { incr ok; exp_continue }
+	timeout { fail "$test_name (timeout)" }
+	eof { }
+    }
+    catch {close}; catch {wait}
+
+    if {$ok == 1} { pass "$test_name ($ok)" } { fail "$test_name ($ok)" }
+}

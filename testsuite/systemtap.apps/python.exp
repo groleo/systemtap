@@ -21,7 +21,7 @@ set testsuite "[pwd]"
 ########## Begin /tmp/stap-python.sh ########## 
 set fp [open "$testsuite/stap-python.sh" "w"]
 puts $fp "
-srcdir=\$1
+srcdir=`readlink -f \$1`
 if \[ ! -r Python-$python3release.tar.bz2 \] ; then
    wget -q http://python.org/ftp/python/$python2release/Python-$python2release.tar.bz2
    wget -q http://python.org/ftp/python/$python3release/Python-$python3release.tar.bz2
@@ -78,7 +78,7 @@ if \[ ! -d bld \] ; then
    make install
 fi
 
-cd $testsuite/$python3dir
+cd $testsuite/
 
 mkdir tapset
 cat \$srcdir/python2.stp | sed -e \"s|PYTHON2|$testsuite/pyinstall/bin/python|g\" >| tapset/python2.stp

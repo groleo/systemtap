@@ -5,4 +5,11 @@ cd 20 63 3d 88 88 20 64
 3d cd ef               }
 
 set test "bin3"
-stap_run_binary $srcdir/$subdir/$test.stp
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run_binary $srcdir/$subdir/$test.stp --runtime=$runtime
+    } else {
+	stap_run_binary $srcdir/$subdir/$test.stp
+    }
+}

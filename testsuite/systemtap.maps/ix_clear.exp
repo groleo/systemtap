@@ -5,21 +5,28 @@ if {![installtest_p]} { untested $test; return }
 
 set pass_result {foo\[1\] = 1 1*ERROR: empty aggregate*}
 
-
-# spawn test
-spawn stap $srcdir/$subdir/$test.stp
-expect {
-  -timeout 150
-  $pass_result {
-    pass "$test passed"
-  }
-  timeout { 
-    exec kill -INT -[exp_pid]
-    fail "$test timed out"
-  }
-  eof { 
-    fail "$test unexpected EOF" }
-  -re "semantic error:" { fail "$test compilation" }
+foreach runtime [get_runtime_list] {
+    # spawn test
+    set testname $test
+    if {$runtime != ""} {
+	spawn stap --runtime=$runtime $srcdir/$subdir/$test.stp
+	lappend testname "($runtime)"
+    } else {
+	spawn stap $srcdir/$subdir/$test.stp
+    }
+    expect {
+	-timeout 150
+	$pass_result {
+	    pass "$testname passed"
+	}
+	timeout { 
+	    exec kill -INT -[exp_pid]
+	    fail "$testname timed out"
+	}
+	eof { 
+	    fail "$testname unexpected EOF" }
+	-re "semantic error:" { fail "$testname compilation" }
+    }
+    catch { close }
+    wait
 }
-catch { close }
-wait

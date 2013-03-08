@@ -46,30 +46,35 @@
 #define VSTYPE char*
 #define VALNAME str
 #define VALN s
-#define MAP_SET_VAL(a,b,c,d) _new_map_set_str(a,b,c,d)
-#define MAP_GET_VAL(n) _stp_get_str(n)
+#define VALSTOR char value[MAP_STRING_LENGTH]
+#define MAP_GET_VAL(node) ((node)->value)
+#define MAP_SET_VAL(map,node,val,add) _new_map_set_str(map,MAP_GET_VAL(node),val,add)
+#define MAP_COPY_VAL(map,node,val,add) MAP_SET_VAL(map,node,val,add)
 #define NULLRET ""
 #elif VALUE_TYPE == INT64
 #define VALTYPE int64_t
 #define VSTYPE int64_t
 #define VALNAME int64
 #define VALN i
-#define MAP_SET_VAL(a,b,c,d) _new_map_set_int64(a,b,c,d)
-#define MAP_GET_VAL(n) _stp_get_int64(n)
+#define VALSTOR int64_t value
+#define MAP_GET_VAL(node) ((node)->value)
+#define MAP_SET_VAL(map,node,val,add) _new_map_set_int64(map,&MAP_GET_VAL(node),val,add)
+#define MAP_COPY_VAL(map,node,val,add) MAP_SET_VAL(map,node,val,add)
 #define NULLRET (int64_t)0
 #elif VALUE_TYPE == STAT
-#define VALTYPE stat*
+#define VALTYPE stat_data*
 #define VSTYPE int64_t
-#define VALNAME stat
+#define VALNAME stat_data
 #define VALN x
-#define MAP_SET_VAL(a,b,c,d) _new_map_set_stat(a,b,c,d)
-#define MAP_GET_VAL(n) _stp_get_stat(n)
-#define NULLRET (stat*)0
+#define VALSTOR stat_data value
+#define MAP_GET_VAL(node) (&(node)->value)
+#define MAP_SET_VAL(map,node,val,add) _new_map_set_stat(map,MAP_GET_VAL(node),val,add)
+#define MAP_COPY_VAL(map,node,val,add) _new_map_copy_stat(map,MAP_GET_VAL(node),val,add)
+#define NULLRET (stat_data*)0
 #else
 #error Need to define VALUE_TYPE as STRING, STAT, or INT64
 #endif /* VALUE_TYPE */
 
-//#define MAP_SET_VAL(a,b,c,d) _new_map_set_##VALNAME(a,b,c,d)
 
 #if defined (KEY1_TYPE)
 #define KEY_ARITY 1
@@ -210,26 +215,6 @@
 #define KEY7_HASH JOIN(KEY7NAME,hash)
 #endif /* defined(KEY7_TYPE) */
 
-#if defined (KEY7_TYPE)
-#undef KEY_ARITY
-#define KEY_ARITY 7
-#if KEY7_TYPE == STRING
-#define KEY7TYPE char*
-#define KEY7NAME str
-#define KEY7N s
-#define KEY7STOR char key7[MAP_STRING_LENGTH]
-#define KEY7CPY(m) str_copy(m->key7, key7)
-#else
-#define KEY7TYPE int64_t
-#define KEY7NAME int64
-#define KEY7N i
-#define KEY7STOR int64_t key7
-#define KEY7CPY(m) m->key7=key7
-#endif
-#define KEY7_EQ_P JOIN(KEY7NAME,eq_p)
-#define KEY7_HASH JOIN(KEY7NAME,hash)
-#endif /* defined(KEY7_TYPE) */
-
 #if defined (KEY8_TYPE)
 #undef KEY_ARITY
 #define KEY_ARITY 8
@@ -282,57 +267,71 @@
 #define ALLKEYS(x) x##1
 #define ALLKEYSD(x) KEY1TYPE x##1
 #define KEYCPY(m) {KEY1CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1))
 #elif KEY_ARITY == 2
 #define KEYSYM(x) JOIN3(x,KEY1N,KEY2N,VALN)
 #define ALLKEYS(x) x##1, x##2
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2))
 #elif KEY_ARITY == 3
 #define KEYSYM(x) JOIN4(x,KEY1N,KEY2N,KEY3N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3))
 #elif KEY_ARITY == 4
 #define KEYSYM(x) JOIN5(x,KEY1N,KEY2N,KEY3N,KEY4N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4))
 #elif KEY_ARITY == 5
 #define KEYSYM(x) JOIN6(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5))
 #elif KEY_ARITY == 6
 #define KEYSYM(x) JOIN7(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,KEY6N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5, x##6
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5, KEY6TYPE x##6
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);KEY6CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5) && KEY6_EQ_P(m->key6,key6))
 #elif KEY_ARITY == 7
 #define KEYSYM(x) JOIN8(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,KEY6N,KEY7N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5, x##6, x##7
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5, KEY6TYPE x##6, KEY7TYPE x##7
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);KEY6CPY(m);KEY7CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5) && KEY6_EQ_P(m->key6,key6)\
+		&& KEY7_EQ_P(m->key7,key7))
 #elif KEY_ARITY == 8
 #define KEYSYM(x) JOIN9(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,KEY6N,KEY7N,KEY8N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5, x##6, x##7, x##8
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5, KEY6TYPE x##6, KEY7TYPE x##7, KEY8TYPE x##8
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);KEY6CPY(m);KEY7CPY(m);KEY8CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5) && KEY6_EQ_P(m->key6,key6)\
+		&& KEY7_EQ_P(m->key7,key7) && KEY8_EQ_P(m->key8,key8))
 #elif KEY_ARITY == 9
 #define KEYSYM(x) JOIN10(x,KEY1N,KEY2N,KEY3N,KEY4N,KEY5N,KEY6N,KEY7N,KEY8N,KEY9N,VALN)
 #define ALLKEYS(x) x##1, x##2, x##3, x##4, x##5, x##6, x##7, x##8, x##9
 #define ALLKEYSD(x) KEY1TYPE x##1, KEY2TYPE x##2, KEY3TYPE x##3, KEY4TYPE x##4, KEY5TYPE x##5, KEY6TYPE x##6, KEY7TYPE x##7, KEY8TYPE x##8, KEY9TYPE x##9
 #define KEYCPY(m) {KEY1CPY(m);KEY2CPY(m);KEY3CPY(m);KEY4CPY(m);KEY5CPY(m);KEY6CPY(m);KEY7CPY(m);KEY8CPY(m);KEY9CPY(m);}
+#define KEY_EQ_P(m) (KEY1_EQ_P(m->key1,key1) && KEY2_EQ_P(m->key2,key2) && KEY3_EQ_P(m->key3,key3)\
+		&& KEY4_EQ_P(m->key4,key4) && KEY5_EQ_P(m->key5,key5) && KEY6_EQ_P(m->key6,key6)\
+		&& KEY7_EQ_P(m->key7,key7) && KEY8_EQ_P(m->key8,key8) && KEY9_EQ_P(m->key9,key9))
 #endif
 
 /* */
 
 struct KEYSYM(map_node) {
-	/* list of other nodes in the map */
-	struct list_head lnode;
-	/* list of nodes with the same hash value */
-	struct hlist_node hnode;
-	/* pointer back to the map struct */
-	struct map_root *map;
+	/* common node bits */
+	struct map_node node;
 
 	KEY1STOR;
 #if KEY_ARITY > 1
@@ -359,12 +358,22 @@ struct KEYSYM(map_node) {
 #endif
 #endif
 #endif
+
+	VALSTOR;
+	/* NB: the value must be last, because in the case of
+	 * stat_data we dynamically size its histogram[].  */
 };
+
+static inline struct KEYSYM(map_node)*
+KEYSYM(get_map_node) (struct map_node* m)
+{
+	return container_of(m, struct KEYSYM(map_node), node);
+}
 
 #define type_to_enum(type)						\
 	({								\
 		int ret;						\
-		if (__builtin_types_compatible_p (type, char*)) 	\
+		if (__builtin_types_compatible_p (type, char*))		\
 			ret = STRING;					\
 		else							\
 			ret = INT64;					\
@@ -374,9 +383,15 @@ struct KEYSYM(map_node) {
 static key_data KEYSYM(map_get_key) (struct map_node *mn, int n, int *type)
 {
 	key_data ptr;
-	struct KEYSYM(map_node) *m = (struct KEYSYM(map_node) *)mn;	
+	struct KEYSYM(map_node) *m = KEYSYM(get_map_node)(mn);
 
-	if (n > KEY_ARITY || n < 1) {
+	if (n < 1) {
+		if (type)
+			*type = VALUE_TYPE;
+		return (key_data)MAP_GET_VAL(m);
+	}
+
+	if (n > KEY_ARITY) {
 		if (type)
 			*type = END;
 		return (key_data)(int64_t)0;
@@ -451,6 +466,62 @@ static key_data KEYSYM(map_get_key) (struct map_node *mn, int n, int *type)
 			*type = END;
 	}
 	return ptr;
+}
+
+/** Return an int64 key from a map node.
+ * This function will return an int64 key from a map_node.
+ * @param mn pointer to the map_node.
+ * @param n key number
+ * @returns an int64
+ */
+static int64_t KEYSYM(_stp_map_key_get_int64) (struct map_node *mn, int n)
+{
+	int type;
+	int64_t res = 0;
+	if (mn) {
+		res = KEYSYM(map_get_key)(mn, n, &type).val;
+		if (type != INT64)
+			res = 0;
+	}
+	return res;
+}
+
+/** Return a string key from a map node.
+ * This function will return an string key from a map_node.
+ * @param mn pointer to the map_node.
+ * @param n key number
+ * @returns a pointer to a string
+ */
+static char *KEYSYM(_stp_map_key_get_str) (struct map_node *mn, int n)
+{
+	int type;
+	char *str = "";
+	if (mn) {
+		str = KEYSYM(map_get_key)(mn, n, &type).strp;
+		if (type != STRING)
+			str = "bad type";
+	}
+	return str;
+}
+
+/** Return value from a map node.
+ * This function will return the int64/str/stat value of a map_node.
+ * @param m pointer to the map_node. 
+ * @returns a typed value.
+ */
+static VALTYPE KEYSYM(JOIN(_stp_map_get,VALNAME))(struct map_node *m)
+{
+	return m ? MAP_GET_VAL(KEYSYM(get_map_node)(m)) : 0;
+}
+
+static void KEYSYM(_stp_map_sort) (MAP map, int keynum, int dir)
+{
+	_stp_map_sort (map, keynum, dir, KEYSYM(map_get_key));
+}
+
+static void KEYSYM(_stp_map_sortn) (MAP map, int n, int keynum, int dir)
+{
+	_stp_map_sortn (map, n, keynum, dir, KEYSYM(map_get_key));
 }
 
 
@@ -551,25 +622,26 @@ static unsigned int KEYSYM(hash) (ALLKEYSD(key))
 
 
 #if VALUE_TYPE == INT64 || VALUE_TYPE == STRING
-static MAP KEYSYM(_stp_map_new) (unsigned max_entries)
+static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap)
 {
-	MAP m = _stp_map_new (max_entries, VALUE_TYPE, sizeof(struct KEYSYM(map_node)), 0);
-	if (m)
-		m->get_key = KEYSYM(map_get_key);
+	MAP m = _stp_map_new (max_entries, wrap,
+			      sizeof(struct KEYSYM(map_node)), -1);
 	return m;
 }
 #else
-/* _stp_map_new_key1_key2...val (num, HIST_LINEAR, start, end, interval) */
-/* _stp_map_new_key1_key2...val (num, HIST_LOG) */ 
 
-static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int htype, ...)
+/*
+ * _stp_map_new_key1_key2...val (num, wrap, HIST_LINEAR, start, end, interval)
+ * _stp_map_new_key1_key2...val (num, wrap, HIST_LOG)
+ */ 
+static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int wrap, int htype, ...)
 {
 	int start=0, stop=0, interval=0;
 	MAP m;
 
 	if (htype == HIST_LINEAR) {
 		va_list ap;
-		va_start (ap, htype);		
+		va_start (ap, htype);
 		start = va_arg(ap, int);
 		stop = va_arg(ap, int);
 		interval = va_arg(ap, int);
@@ -578,13 +650,16 @@ static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int htype, ...)
 
 	switch (htype) {
 	case HIST_NONE:
-		m = _stp_map_new (max_entries, STAT, sizeof(struct KEYSYM(map_node)), 0);
+		m = _stp_map_new_hstat (max_entries, wrap,
+					sizeof(struct KEYSYM(map_node)));
 		break;
 	case HIST_LOG:
-		m = _stp_map_new_hstat_log (max_entries, sizeof(struct KEYSYM(map_node)));
+		m = _stp_map_new_hstat_log (max_entries, wrap,
+					    sizeof(struct KEYSYM(map_node)));
 		break;
 	case HIST_LINEAR:
-		m = _stp_map_new_hstat_linear (max_entries, sizeof(struct KEYSYM(map_node)),
+		m = _stp_map_new_hstat_linear (max_entries, wrap,
+					       sizeof(struct KEYSYM(map_node)),
 					       start, stop, interval);
 		break;
 	default:
@@ -592,18 +667,16 @@ static MAP KEYSYM(_stp_map_new) (unsigned max_entries, int htype, ...)
 		m = NULL;
 	}
 
-	if (m)
-		m->get_key = KEYSYM(map_get_key);
-
 	return m;
 }
 
 #endif /* VALUE_TYPE */
+
 static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(map_node) *n;
 
 	if (map == NULL)
@@ -615,43 +688,17 @@ static int KEYSYM(__stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val, int add)
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(map_node) *)((long)e - sizeof(struct list_head));
-		if (KEY1_EQ_P(n->key1, key1)
-#if KEY_ARITY > 1
-		    && KEY2_EQ_P(n->key2, key2)
-#if KEY_ARITY > 2
-		    && KEY3_EQ_P(n->key3, key3)
-#if KEY_ARITY > 3
-		    && KEY4_EQ_P(n->key4, key4)
-#if KEY_ARITY > 4
-		    && KEY5_EQ_P(n->key5, key5)
-#if KEY_ARITY > 5
-		    && KEY6_EQ_P(n->key6, key6)
-#if KEY_ARITY > 6
-		    && KEY7_EQ_P(n->key7, key7)
-#if KEY_ARITY > 7
-		    && KEY8_EQ_P(n->key8, key8)
-#if KEY_ARITY > 8
-		    && KEY9_EQ_P(n->key9, key9)
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-			) {
-			return MAP_SET_VAL(map,(struct map_node *)n, val, add);
+	mhlist_for_each_entry(n, e, head, node.hnode) {
+		if (KEY_EQ_P(n)) {
+			return MAP_SET_VAL(map, n, val, add);
 		}
 	}
 	/* key not found */
-	n = (struct KEYSYM(map_node)*)_new_map_create (map, head);
+	n = KEYSYM(get_map_node)(_new_map_create (map, head));
 	if (n == NULL)
 		return -1;
 	KEYCPY(n);
-	return MAP_SET_VAL(map,(struct map_node *)n, val, 0);
+	return MAP_SET_VAL(map, n, val, 0);
 }
 
 static int KEYSYM(_stp_map_set) (MAP map, ALLKEYSD(key), VSTYPE val)
@@ -668,8 +715,8 @@ static int KEYSYM(_stp_map_add) (MAP map, ALLKEYSD(key), VSTYPE val)
 static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(map_node) *n;
 
 	if (map == NULL)
@@ -678,35 +725,9 @@ static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(map_node) *)((long)e - sizeof(struct list_head));
-		if (KEY1_EQ_P(n->key1, key1)
-#if KEY_ARITY > 1
-		    && KEY2_EQ_P(n->key2, key2)
-#if KEY_ARITY > 2
-		    && KEY3_EQ_P(n->key3, key3)
-#if KEY_ARITY > 3
-		    && KEY4_EQ_P(n->key4, key4)
-#if KEY_ARITY > 4
-		    && KEY5_EQ_P(n->key5, key5)
-#if KEY_ARITY > 5
-		    && KEY6_EQ_P(n->key6, key6)
-#if KEY_ARITY > 6
-		    && KEY7_EQ_P(n->key7, key7)
-#if KEY_ARITY > 7
-		    && KEY8_EQ_P(n->key8, key8)
-#if KEY_ARITY > 8
-		    && KEY9_EQ_P(n->key9, key9)
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-			) {
-			return MAP_GET_VAL((struct map_node *)n);
+	mhlist_for_each_entry(n, e, head, node.hnode) {
+		if (KEY_EQ_P(n)) {
+			return MAP_GET_VAL(n);
 		}
 	}
 	/* key not found */
@@ -716,45 +737,22 @@ static VALTYPE KEYSYM(_stp_map_get) (MAP map, ALLKEYSD(key))
 static int KEYSYM(_stp_map_del) (MAP map, ALLKEYSD(key))
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(map_node) *n;
 
 	if (map == NULL)
 		return -1;
 
+	if (KEYSYM(keycheck) (ALLKEYS(key)) == 0)
+		return -1;
+
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(map_node) *)((long)e - sizeof(struct list_head));
-		if (KEY1_EQ_P(n->key1, key1)
-#if KEY_ARITY > 1
-		    && KEY2_EQ_P(n->key2, key2)
-#if KEY_ARITY > 2
-		    && KEY3_EQ_P(n->key3, key3)
-#if KEY_ARITY > 3
-		    && KEY4_EQ_P(n->key4, key4)
-#if KEY_ARITY > 4
-		    && KEY5_EQ_P(n->key5, key5)
-#if KEY_ARITY > 5
-		    && KEY6_EQ_P(n->key6, key6)
-#if KEY_ARITY > 6
-		    && KEY7_EQ_P(n->key7, key7)
-#if KEY_ARITY > 7
-		    && KEY8_EQ_P(n->key8, key8)
-#if KEY_ARITY > 8
-		    && KEY9_EQ_P(n->key9, key9)
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-			) {
-			_new_map_del_node(map,(struct map_node *)n);
+	mhlist_for_each_entry(n, e, head, node.hnode) {
+		if (KEY_EQ_P(n)) {
+			_new_map_del_node(map, &n->node);
 			return 0;
 		}
 	}
@@ -765,8 +763,8 @@ static int KEYSYM(_stp_map_del) (MAP map, ALLKEYSD(key))
 static int KEYSYM(_stp_map_exists) (MAP map, ALLKEYSD(key))
 {
 	unsigned int hv;
-	struct hlist_head *head;
-	struct hlist_node *e;
+	struct mhlist_head *head;
+	struct mhlist_node *e;
 	struct KEYSYM(map_node) *n;
 
 	if (map == NULL)
@@ -775,40 +773,21 @@ static int KEYSYM(_stp_map_exists) (MAP map, ALLKEYSD(key))
 	hv = KEYSYM(hash) (ALLKEYS(key));
 	head = &map->hashes[hv];
 
-	hlist_for_each(e, head) {
-		n = (struct KEYSYM(map_node) *)((long)e - sizeof(struct list_head));
-		if (KEY1_EQ_P(n->key1, key1)
-#if KEY_ARITY > 1
-		    && KEY2_EQ_P(n->key2, key2)
-#if KEY_ARITY > 2
-		    && KEY3_EQ_P(n->key3, key3)
-#if KEY_ARITY > 3
-		    && KEY4_EQ_P(n->key4, key4)
-#if KEY_ARITY > 4
-		    && KEY5_EQ_P(n->key5, key5)
-#if KEY_ARITY > 5
-		    && KEY6_EQ_P(n->key6, key6)
-#if KEY_ARITY > 6
-		    && KEY7_EQ_P(n->key7, key7)
-#if KEY_ARITY > 7
-		    && KEY8_EQ_P(n->key8, key8)
-#if KEY_ARITY > 8
-		    && KEY9_EQ_P(n->key9, key9)
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-			) {
+	mhlist_for_each_entry(n, e, head, node.hnode) {
+		if (KEY_EQ_P(n)) {
 			return 1;
 		}
 	}
 	/* key not found */
 	return 0;
 }
+
+
+/* Pull in pmaps while all the defines are still in place.  */
+#ifdef MAP_DO_PMAP
+#include "pmap-gen.c"
+#endif
+
 
 #undef KEY1NAME
 #undef KEY1N
@@ -877,14 +856,17 @@ static int KEYSYM(_stp_map_exists) (MAP map, ALLKEYSD(key))
 #undef ALLKEYS
 #undef ALLKEYSD
 #undef KEYCPY
-#undef KEYSYM 
+#undef KEYSYM
+#undef KEY_EQ_P
 
 #undef VALUE_TYPE
 #undef VALNAME
 #undef VALTYPE
 #undef VSTYPE
 #undef VALN
+#undef VALSTOR
 
+#undef MAP_COPY_VAL
 #undef MAP_SET_VAL
 #undef MAP_GET_VAL
 #undef NULLRET

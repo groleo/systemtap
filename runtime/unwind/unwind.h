@@ -336,4 +336,18 @@ struct unwind_context {
 
 static const struct cfa badCFA = { ARRAY_SIZE(reg_info), 1 };
 
+#ifndef MAXBACKTRACE
+#define MAXBACKTRACE 20
+#endif
+
+struct unwind_cache {
+	enum uwcache_state {
+		uwcache_uninitialized,
+		uwcache_partial,
+		uwcache_finished
+	} state;
+	unsigned depth; /* pc[0..(depth-1)] contains valid entries */
+	unsigned long pc[MAXBACKTRACE];
+};
+
 #endif /*_STP_UNWIND_H_*/

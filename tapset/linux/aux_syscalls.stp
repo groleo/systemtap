@@ -553,7 +553,9 @@ function _itimer_which_str(which) {
 
 /*
  * Return the command name for nfsservctl()
+ * nfsservctl was removed in kernel 3.0/2.6.40.
  */
+%( kernel_v < "2.6.40" && CONFIG_NFSD == "[ym]" %?
 function _nfsctl_cmd_str(cmd) {
 	if(cmd == 0) return "NFSCTL_SVC"
 	if(cmd == 1) return "NFSCTL_ADDCLIENT"
@@ -566,6 +568,7 @@ function _nfsctl_cmd_str(cmd) {
 	if(cmd == 8) return "NFSCTL_GETFS"
 	return sprintf("UNRECOGNIZED VALUE: %d", cmd)
 }
+%)
 
 /*
  * Return  the  symbolic   string  representation
@@ -1201,10 +1204,30 @@ function _fcntl_cmd_str(cmd) {
    return sprintf("UNKNOWN VALUE: %d", cmd)
 }
 
+%{
+#include <linux/fs.h>
+#ifndef SEEK_SET
+#define SEEK_SET	0
+#endif
+#ifndef SEEK_CUR
+#define SEEK_CUR	1
+#endif
+#ifndef SEEK_END
+#define SEEK_END	2
+#endif
+#ifndef SEEK_DATA
+#define SEEK_DATA	3
+#endif
+#ifndef SEEK_HOLE
+#define SEEK_HOLE	4
+#endif
+%}
 function _seek_whence_str(w) {
-   if(w==0x00000000) return "SEEK_SET"
-   if(w==0x00000001) return "SEEK_CUR"
-   if(w==0x00000002) return "SEEK_END"
+   if (w == %{ SEEK_SET %}) return "SEEK_SET"
+   if (w == %{ SEEK_CUR %}) return "SEEK_CUR"
+   if (w == %{ SEEK_END %}) return "SEEK_END"
+   if (w == %{ SEEK_DATA %}) return "SEEK_DATA"
+   if (w == %{ SEEK_HOLE %}) return "SEEK_HOLE"
    return sprintf("UNKNOWN VALUE: %d", w)
 }
 

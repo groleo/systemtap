@@ -1,7 +1,7 @@
 /*
   Common functions used by the NSS-aware code in systemtap.
 
-  Copyright (C) 2009-2011 Red Hat Inc.
+  Copyright (C) 2009-2013 Red Hat Inc.
 
   This file is part of systemtap, and is free software.  You can
   redistribute it and/or modify it under the terms of the GNU General Public
@@ -16,6 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include "config.h"
 
 #include <iostream>
 #include <fstream>
@@ -179,6 +181,23 @@ extern "C"
 void
 nssCleanup (const char *db_path)
 {
+  // Make sure that NSS has been initialized. Some early versions of NSS do not check this
+  // within NSS_Shutdown().
+  // When called with no certificate database path (db_path == 0), then the caller does
+  // not know whether NSS has actually been initialized. For example, the rpm finder,
+  // which calls here to shutdown NSS manually if rpmFreeCrypto() is not available
+  // (see rpm_finder.cxx:missing_rpm_enlist).
+  // However, if we're trying to close a certificate database which has not been initialized,
+  // then we have a (non fatal) internal error.
+  if (! NSS_IsInitialized ())
+    {
+      if (db_path)
+	{
+	  nsscommon_error (_F("WARNING: Attempt to shutdown NSS for database %s, which was never initialized", db_path));
+	}
+      return;
+    }
+
   // Shutdown NSS and ensure that it went down successfully. This is because we can not
   // initialize NSS again if it does not.
   if (NSS_Shutdown () != SECSuccess)
@@ -186,16 +205,7 @@ nssCleanup (const char *db_path)
       if (db_path)
 	nsscommon_error (_F("Unable to shutdown NSS for database %s", db_path));
       else
-	{
-	  // This shutdown request is coming from the rpm finder which attempts to shutdown NSS
-	  // manually if rpmFreeCrypto() is not available (see rpm_finder.cxx:missing_rpm_enlist).
-	  // At that point there is no way of knowing if NSS was actually started, so allow
-	  // failure here with SEC_ERROR_NOT_INITIALIZED.
-	  PRErrorCode errorNumber = PR_GetError ();
-	  if (errorNumber == SEC_ERROR_NOT_INITIALIZED)
-	    return;
-	  nsscommon_error (_("Unable to shutdown NSS"));
-	}
+	nsscommon_error (_("Unable to shutdown NSS"));
       nssError ();
     }
 }

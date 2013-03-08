@@ -38,12 +38,12 @@ UNAME=/bin/uname
 LSMOD=/sbin/lsmod
 
 # Path setup
-SCRIPT_PATH=/etc/systemtap/script.d
-CONFIG_PATH=/etc/systemtap/conf.d
-CACHE_PATH=/var/cache/systemtap
-STAT_PATH=/var/run/systemtap
+SCRIPT_PATH=@sysconfdir@/systemtap/script.d
+CONFIG_PATH=@sysconfdir@/systemtap/conf.d
+CACHE_PATH=@localstatedir@/cache/systemtap
+STAT_PATH=@localstatedir@/run/systemtap
 TEMP_PATH=/tmp
-LOG_FILE=/var/log/systemtap.log
+LOG_FILE=@localstatedir@/log/systemtap.log
 
 # FAIL unless all scripts succeeded to run
 PASSALL=yes
@@ -61,7 +61,7 @@ DEFAULT_START=
 ALLOW_CACHEONLY=no
 
 # Optional settings
-CONFIG=/etc/systemtap/config
+CONFIG=@sysconfdir@/systemtap/config
 SCRIPTS=
 KRELEASE=`uname -r`
 OPT_RECURSIVE=
@@ -303,7 +303,7 @@ stap_getopt () { # opts
   local ret
   # TODO: support quoted options
   getopt -s bash -u \
-         -l 'kelf,kmap::,ignore-vmlinux,ignore-dwarf,vp:' \
+         -l 'vp:' \
          -o 'hVvtp:I:e:o:R:r:m:kgPc:x:D:bs:uqwl:d:L:FS:' -- $@
   ret=$?
   [ $ret -ne 0 ] && slog "Failed to parse parameters. ($@)"

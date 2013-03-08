@@ -25,11 +25,13 @@ function __find_bdevname:string(dev:long, bdev:long)
 	return bdevname(bdev)
 }
 
+%(systemtap_v <= "2.2" %?
 /* deprecated */
 function ppos_pos:long (ppos:long)
 {
 	return kernel_pointer(ppos)
 }
+%)
 
 function __address_inode:long (page:long)
 {
@@ -105,9 +107,8 @@ function __file_maxbytes:long (file:long)
 function __file_filename:string (file:long)
 {
 	dentry = file
-		? (@defined(@cast(file, "file", "kernel")->f_path->dentry)
-			? @cast(file, "file", "kernel")->f_path->dentry
-			: @cast(file, "file", "kernel")->f_dentry)
+		? @choose_defined(@cast(file, "file", "kernel")->f_path->dentry,
+				  @cast(file, "file", "kernel")->f_dentry)
 		: 0
 	name = dentry? @cast(dentry, "dentry", "kernel")->d_name->name : 0
 	if (name == 0)
@@ -127,6 +128,7 @@ function _get_fopv_size:long (iovp:long, nr_segs:long)
 	return -1
 }
 
+%(systemtap_v <= "2.2" %?
 /* deprecated */
 function _dev_minor:long (dev:long)
 {
@@ -138,6 +140,7 @@ function _dev_major:long (dev:long)
 {
 	return MAJOR(dev)
 }
+%)
 
 probe generic.fop.llseek = kernel.function("generic_file_llseek")
 {
@@ -147,11 +150,16 @@ probe generic.fop.llseek = kernel.function("generic_file_llseek")
 	file = $file
 
 	offset = $offset
-	origin = $origin
+%(systemtap_v <= "2.2" %?
+	origin = @choose_defined($whence, $origin)
+%)
+	whence = @choose_defined($whence, $origin)
+	whence_str = _seek_whence_str(@choose_defined($whence, $origin))
+
         maxbyte = __file_maxbytes($file)
 
 	name = "generic_file_llseek"
-	argstr = sprintf("%d, %d", $offset, $origin)
+	argstr = sprintf("%d, %d", $offset, @choose_defined($whence, $origin))
 }
 probe generic.fop.llseek.return = kernel.function("generic_file_llseek").return
 {
@@ -159,7 +167,11 @@ probe generic.fop.llseek.return = kernel.function("generic_file_llseek").return
 	retstr = sprintf("%d", $return)
 	file = $file
 	offset = $offset
-	origin = $origin
+%(systemtap_v <= "2.2" %?
+	origin = @choose_defined($whence, $origin)
+%)
+	whence = @choose_defined($whence, $origin)
+	whence_str = _seek_whence_str(@choose_defined($whence, $origin))
 
 	error = $return < 0 ? $return : 0
 	error_str = error ? errno_str(error) : ""
@@ -174,7 +186,7 @@ probe generic.fop.aio_read =
 	devname = __find_bdevname(dev, __file_bdev($iocb->ki_filp))
 	ino = __file_ino($iocb->ki_filp)
         
-	pos = (@defined($pos) ? $pos : kernel_pointer($ppos))
+	pos = @choose_defined($pos, kernel_pointer($ppos))
 	buf = $iov->iov_base
 	count = __iov_length($iov,$nr_segs,1,1) /*FIX ME: should be VERIFY_WRITE instead of 1*/
 	name = "generic_file_aio_read"
@@ -215,7 +227,7 @@ probe generic.fop.aio_write = kernel.function("generic_file_aio_write")
         count = (@defined($iov)
 		? __iov_length($iov,$nr_segs,1,0) /*FIX ME: should be VERIFY_READ instead of 0*/
 		: $count)
-	buf = (@defined($iov->iov_base) ? $iov->iov_base : $buf)
+	buf = @choose_defined($iov->iov_base, $buf)
 	name = "generic_file_aio_write"
 	argstr = sprintf("%d, %d, %p", count, pos, buf)
 
@@ -599,8 +611,10 @@ probe vfs.block_sync_page = kernel.function("block_sync_page") ?
 	devname = __find_bdevname(dev, __page_bdev($page))
 	ino = __page_ino($page)
 
+%(systemtap_v <= "2.2" %?
 	# 'page_index' is deprecated
 	page_index = __page_index($page)
+%)
 	index = __page_index($page)
 
 	name = "block_sync_page"
@@ -621,8 +635,10 @@ probe vfs.buffer_migrate_page = kernel.function("buffer_migrate_page") ?
         ino = __page_ino($page)
 	devname = __find_bdevname(dev,__page_bdev($page))
 
+%(systemtap_v <= "2.2" %?
 	# 'page_index' is deprecated
 	page_index = __page_index($page)
+%)
 	index = __page_index($page)
 
 	name = "buffer_migrate_page"
@@ -938,15 +954,19 @@ probe _vfs.block_prepare_write = kernel.function("__block_write_begin") !,
 		_inode = __page_ino($page)
 		from = $pos & (%{ PAGE_CACHE_SIZE  %} - 1)
 		to = from + $len		
+%(systemtap_v <= "2.2" %?
 		# write_from and write_upto are deprecated
 		write_from = from
 		write_upto = to
+%)
 	}
 	else {
 		_inode = $inode
+%(systemtap_v <= "2.2" %?
 		# write_from and write_upto are deprecated
 		write_from = $from
 		write_upto = $to
+%)
 		from = $from
 		to = $to
 	}
@@ -967,15 +987,19 @@ probe _vfs.block_prepare_write.return =
 		_inode = __page_ino($page)
 		from = $pos & (%{ PAGE_CACHE_SIZE  %} - 1)
 		to = from + $len		
+%(systemtap_v <= "2.2" %?
 		# write_from and write_upto are deprecated
 		write_from = from
 		write_upto = to
+%)
 	}
 	else {
 		_inode = $inode
+%(systemtap_v <= "2.2" %?
 		# write_from and write_upto are deprecated
 		write_from = $from
 		write_upto = $to
+%)
 		from = $from
 		to = $to
 	}
@@ -988,7 +1012,7 @@ probe _vfs.block_prepare_write.return =
 
 probe _vfs.block_write_begin = kernel.function("block_write_begin") ?
 {
-	file = (@defined($file) ? $file : 0)
+	file = @choose_defined($file, 0)
 	pos = $pos
 	len = $len
 	flags = $flags
@@ -1005,7 +1029,7 @@ probe _vfs.block_write_begin.return =
 	name = "_vfs.block_write_begin"
 	retstr = sprintf("%d", $return)
 
-	file = (@defined($file) ? $file : 0)
+	file = @choose_defined($file, 0)
 	pos = $pos
 	len = $len
 	flags = $flags

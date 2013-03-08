@@ -1,7 +1,10 @@
 #! stap -p4
 
 probe begin {
-  print(ppos_pos (0) +
+  print(
+%(systemtap_v <= "2.2" %?
+	ppos_pos (0) +
+%)
 	__address_inode(0) +
 	__page_ino (0) +
 	__page_dev (0) +

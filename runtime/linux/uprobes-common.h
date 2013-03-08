@@ -1,5 +1,5 @@
 /* -*- linux-c -*- 
- * Copyright (C) 2010 Red Hat Inc.
+ * Copyright (C) 2010, 2013 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -26,7 +26,11 @@ struct stap_uprobe_spec {
   unsigned return_p:1;
   unsigned long address;
   unsigned long sdt_sem_offset;
-  struct stap_probe * const probe;
+  // List of perf counters used by each probe
+  // This list is an index into struct stap_perf_probe,
+  long perf_counters_dim;
+  long *perf_counters;
+  const struct stap_probe * const probe;
  };
 
 static int stap_uprobe_process_found (struct stap_task_finder_target *tgt, struct task_struct *tsk, int register_p, int process_p);

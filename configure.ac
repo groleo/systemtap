@@ -1,7 +1,7 @@
 dnl configure.ac --- autoconf input file for systemtap
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([systemtap], 2.0, systemtap@sourceware.org, systemtap)
+AC_INIT([systemtap], 2.2, systemtap@sourceware.org, systemtap)
 dnl                  ^^^ see also NEWS, systemtap.spec, testsuite/configure.ac
 dnl                      doc/SystemTap_Beginners_Guide/en-US/Book_Info.xml
 
@@ -32,6 +32,7 @@ AC_SYS_LARGEFILE
 AM_GNU_GETTEXT(external)
 AM_GNU_GETTEXT_VERSION(0.17)
 AC_CHECK_FUNCS(ppoll)
+AC_CHECK_FUNCS(openat)
 
 dnl Handle the prologues option.
 dnl
@@ -270,6 +271,7 @@ if test "x${have_fop}" == "xyes"; then
       AC_MSG_RESULT([it's dead, Jim])
       have_fop="broken"
    fi
+   rm -f dummy-tapsets.pdf
 fi
 AM_CONDITIONAL([HAVE_FOP], [test "$have_fop" == "yes"])
 
@@ -306,7 +308,15 @@ AM_CONDITIONAL([XMLTO_STRINGPARAM], [test "$have_xmlto_stringparam" == "yes"])
 
 if test "x${building_refdocs}" == "xyes"; then
 AC_MSG_CHECKING([for xmlto pdf support])
-   xmlto pdf conftest.xml >& /dev/null
+   # xmlto pdf may work *only* with --with-fop
+   # XXX: To an extent this test is redundant in that the --with-fop test
+   # already ran xmlto --with-fop pdf ....
+   if test "x$have_fop" == "xyes"; then
+      XMLTOPDF_FOP=--with-fop
+   else
+      XMLTOPDF_FOP=
+   fi
+   xmlto $XMLTOPDF_FOP pdf conftest.xml >& /dev/null
    if test $? == 0; then
       have_xmlto_pdf="yes"
       AC_MSG_RESULT([yes])
@@ -482,11 +492,11 @@ AC_LANG_POP(C++)
 # Check for Dyninst headers and libraries
 AC_ARG_WITH([dyninst],
   AS_HELP_STRING([--with-dyninst=DIRECTORY],
-    [find dyninst headers/libraries in DIRECTORY]),
-  [
+    [find dyninst headers/libraries in DIRECTORY]))
+
 case "$with_dyninst" in
-''|no) ;;
-yes) # Try a simple-minded distro search
+no) ;;
+''|yes) # Try a simple-minded distro search
      DYNINST_CXXFLAGS="-I/usr/include/dyninst"
      DYNINST_LDFLAGS="-L/usr/lib64/dyninst -L/usr/lib/dyninst" # XXX both lib paths!?!
      ;;
@@ -495,21 +505,23 @@ yes) # Try a simple-minded distro search
     DYNINST_LDFLAGS="-L$with_dyninst/lib/" # XXX need lib64 too?
     ;;
 esac
-if test -n "$DYNINST_CXXFLAGS"; then
+if test "$with_dyninst" != "no"; then
   AC_LANG_PUSH(C++)
   old_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $DYNINST_CXXFLAGS"
+  AC_MSG_NOTICE([checking dyninst support])
   AC_CHECK_HEADERS([BPatch_object.h], [
       AC_SUBST(DYNINST_CXXFLAGS)
       AC_SUBST(DYNINST_LDFLAGS)
       AC_DEFINE([HAVE_DYNINST],[1],[Define to 1 if Dyninst is enabled])
       have_dyninst=yes
-    ],
-    AC_MSG_ERROR([Dyninst does not appear to be usable]))
+      AC_MSG_NOTICE([dyninst support available])])
+  if test -n "$with_dyninst" -a "$have_dyninst" != "yes"; then
+    AC_MSG_ERROR([Dyninst does not appear to be usable])
+  fi
   CPPFLAGS="$old_CPPFLAGS"
   AC_LANG_POP(C++)
 fi
-])
 AM_CONDITIONAL([HAVE_DYNINST], [test "${have_dyninst}" = "yes"])
 
 
@@ -586,6 +598,21 @@ if test $build_elfutils = yes -a $enable_translator = yes; then
   if test $? != 0; then exit -1; fi
 fi
 
+dnl Optional libselinux support allows stapdyn to check
+dnl for booleans that would prevent Dyninst from working.
+AC_ARG_WITH([selinux],
+  AS_HELP_STRING([--without-selinux],
+    [Do not use libselinux even if present]))
+
+AS_IF([test "x$with_selinux" != "xno"], [
+  PKG_CHECK_MODULES([selinux], [libselinux],
+    [have_selinux=yes
+     AC_DEFINE([HAVE_SELINUX], [1], [Define to 1 if you have the SELinux libraries.])
+    ], [have_selinux=no])
+], [have_selinux=no])
+
+AM_CONDITIONAL([HAVE_SELINUX], [test "${have_selinux}" = "yes"])
+
 AC_SUBST(ENABLE_NLS, "$USE_NLS")
 AC_SUBST(localedir, "$localedir")
 AC_SUBST(LOCALEDIR, "$localedir")
@@ -612,9 +639,10 @@ AC_DEFINE_UNQUOTED(STAP_PREFIX, "$stap_prefix", [configure prefix location])
 AC_SUBST(STAP_PREFIX, "$stap_prefix")
 
 AC_CONFIG_HEADERS([config.h:config.in])
-AC_CONFIG_FILES([Makefile doc/Makefile \
+AC_CONFIG_FILES([Makefile doc/Makefile man/Makefile \
 doc/beginners/Makefile doc/SystemTap_Tapset_Reference/Makefile \
-stappaths.7 \
+man/stappaths.7 \
+initscript/config.systemtap initscript/config.stap-server \
 initscript/systemtap initscript/stap-server ])
 AC_CONFIG_SUBDIRS(testsuite)
 if test $enable_translator == "yes"; then
@@ -624,6 +652,7 @@ AC_CONFIG_FILES([dtrace], [chmod +x dtrace])
 AC_CONFIG_FILES(stapdyn/Makefile)
 AC_CONFIG_FILES(staprun/Makefile)
 AC_CONFIG_FILES([staprun/run-staprun], [chmod +x staprun/run-staprun])
+AC_CONFIG_FILES(re2c-migrate/Makefile)
 
 # Setup "shadow" directory doc/beginners that has everything setup for
 # publican in one directory (through directory links if necessary).

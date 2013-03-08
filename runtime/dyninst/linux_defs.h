@@ -36,11 +36,24 @@
 	__val = __val < __min ? __min: __val;	\
 	__val > __max ? __max: __val; })
 
+#define clamp_t(type, val, min, max) ({		\
+	type __val = (val);			\
+	type __min = (min);			\
+	type __max = (max);			\
+	__val = __val < __min ? __min: __val;	\
+	__val > __max ? __max: __val; })
+
 #define likely(x)      __builtin_expect(!!(x), 1)
 #define unlikely(x)    __builtin_expect(!!(x), 0)
 
+#define container_of(ptr, type, member) ({			\
+	const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
+	(type *)( (char *)__mptr - offsetof(type,member) );})
+
 #define __must_be_array(arr) 0
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
+
+#define  noinline			__attribute__((noinline))
 
 #define ATOMIC_INIT(i)  { (i) }
 
@@ -110,6 +123,7 @@ static inline size_t strlcat(char *dest, const char *src, size_t count)
 # define __force
 # define __user
 # define __chk_user_ptr(x) (void)0
+#define user_mode(regs) 1
 #define __get_user(x, ptr)					\
 ({								\
 	int __gu_err = -EFAULT;					\
@@ -151,32 +165,7 @@ static inline size_t strlcat(char *dest, const char *src, size_t count)
 })
 
 static inline __must_check long __copy_from_user(void *to,
-		const void __user * from, unsigned long n)
-{
-	if (__builtin_constant_p(n)) {
-		switch(n) {
-		case 1:
-			*(u8 *)to = *(u8 __force *)from;
-			return 0;
-		case 2:
-			*(u16 *)to = *(u16 __force *)from;
-			return 0;
-		case 4:
-			*(u32 *)to = *(u32 __force *)from;
-			return 0;
-#ifdef CONFIG_64BIT
-		case 8:
-			*(u64 *)to = *(u64 __force *)from;
-			return 0;
-#endif
-		default:
-			break;
-		}
-	}
-
-	memcpy(to, (const void __force *)from, n);
-	return 0;
-}
+		const void __user * from, unsigned long n);
 
 static inline int __get_user_fn(size_t size, const void __user *ptr, void *x)
 {
@@ -186,106 +175,52 @@ static inline int __get_user_fn(size_t size, const void __user *ptr, void *x)
 
 extern int __get_user_bad(void) __attribute__((noreturn));
 
-static inline void INIT_LIST_HEAD(struct list_head *list)
+#define __put_user(x, ptr)						\
+({									\
+	int __gu_err = -EFAULT;						\
+	__chk_user_ptr(ptr);						\
+	switch (sizeof(*(ptr))) {					\
+	case 1: {							\
+		unsigned char __x = (unsigned char)(x);			\
+		__gu_err = __put_user_fn(sizeof (*(ptr)),		\
+					 ptr, &__x);			\
+		break;							\
+	};								\
+	case 2: {							\
+		unsigned short __x = (unsigned short)(x);		\
+		__gu_err = __put_user_fn(sizeof (*(ptr)),		\
+					 ptr, &__x);			\
+		break;							\
+	};								\
+	case 4: {							\
+		unsigned int __x = (unsigned int)(x);			\
+		__gu_err = __put_user_fn(sizeof (*(ptr)),		\
+					 ptr, &__x);			\
+		break;							\
+	};								\
+	case 8: {							\
+		unsigned long long __x = (unsigned long long)(x);	\
+		__gu_err = __put_user_fn(sizeof (*(ptr)),		\
+					 ptr, &__x);			\
+		break;							\
+	};								\
+	default:							\
+		__put_user_bad();					\
+		break;							\
+	}								\
+	__gu_err;							\
+})
+
+static inline __must_check long __copy_to_user(void *to, const void *from,
+					       unsigned long n);
+
+static inline int __put_user_fn(size_t size, const void __user *ptr, void *x)
 {
-	list->next = list;
-	list->prev = list;
+	size = __copy_to_user(x, ptr, size);
+	return size ? -EFAULT : size;
 }
 
-static inline void __list_add(struct list_head *new,
-			      struct list_head *prev,
-			      struct list_head *next)
-{
-	next->prev = new;
-	new->next = next;
-	new->prev = prev;
-	prev->next = new;
-}
-
-static inline void list_add(struct list_head *new, struct list_head *head)
-{
-	__list_add(new, head, head->next);
-}
-
-static inline void list_add_tail(struct list_head *new, struct list_head *head)
-{
-	__list_add(new, head->prev, head);
-}
-
-static inline void __list_del(struct list_head * prev, struct list_head * next)
-{
-	next->prev = prev;
-	prev->next = next;
-}
-
-static inline void __list_del_entry(struct list_head *entry)
-{
-	__list_del(entry->prev, entry->next);
-}
-
-static inline void list_del(struct list_head *entry)
-{
-	__list_del(entry->prev, entry->next);
-	entry->next = LIST_POISON1;
-	entry->prev = LIST_POISON2;
-}
-
-static inline void list_move_tail(struct list_head *list,
-				  struct list_head *head)
-{
-	__list_del_entry(list);
-	list_add_tail(list, head);
-}
-
-static inline int list_empty(const struct list_head *head)
-{
-	return head->next == head;
-}
-
-#define list_for_each_safe(pos, n, head) \
-	for (pos = (head)->next, n = pos->next; pos != (head); \
-		pos = n, n = pos->next)
-
-static inline void INIT_HLIST_NODE(struct hlist_node *h)
-{
-	h->next = NULL;
-	h->pprev = NULL;
-}
-
-static inline int hlist_unhashed(const struct hlist_node *h)
-{
-	return !h->pprev;
-}
-
-static inline void __hlist_del(struct hlist_node *n)
-{
-	struct hlist_node *next = n->next;
-	struct hlist_node **pprev = n->pprev;
-	*pprev = next;
-	if (next)
-		next->pprev = pprev;
-}
-
-static inline void hlist_del_init(struct hlist_node *n)
-{
-	if (!hlist_unhashed(n)) {
-		__hlist_del(n);
-		INIT_HLIST_NODE(n);
-	}
-}
-
-static inline void hlist_add_head(struct hlist_node *n, struct hlist_head *h)
-{
-	struct hlist_node *first = h->first;
-	n->next = first;
-	if (first)
-		first->pprev = &n->next;
-	h->first = n;
-	n->pprev = &h->first;
-}
-
-#define hlist_for_each(pos, head) \
-	for (pos = (head)->first; pos ; pos = pos->next)
+extern int __put_user_bad(void) __attribute__((noreturn));
 
 
 #endif /* _STAPDYN_LINUX_DEFS_H_ */

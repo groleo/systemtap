@@ -12,19 +12,13 @@
 
 #include <pthread.h>
 
-typedef pthread_rwlock_t rwlock_t;
-
 struct stp_probe_lock {
 	#ifdef STP_TIMING
 	atomic_t *skipped;
 	#endif
-	rwlock_t *lock;
+	pthread_rwlock_t *lock;
 	unsigned write_p;
 };
-
-
-#define rwlock_init(x) \
-	pthread_rwlock_init(x, NULL)
 
 
 static void
@@ -45,21 +39,25 @@ stp_lock_probe(const struct stp_probe_lock *locks, unsigned num_locks)
 	for (i = 0; i < num_locks; ++i) {
 		if (locks[i].write_p)
 			while (!pthread_rwlock_trywrlock(locks[i].lock)) {
+#if !define(STAP_SUPRESS_TIME_LIMITS_ENABLE)
 				if (++retries > MAXTRYLOCK)
 					goto skip;
+#endif
 				udelay (TRYLOCKDELAY);
 			}
 		else
 			while (!pthread_rwlock_tryrdlock(locks[i].lock)) {
+#if !define(STAP_SUPPRESS_TIME_LIMITS_ENABLE)
 				if (++retries > MAXTRYLOCK)
 					goto skip;
+#endif
 				udelay (TRYLOCKDELAY);
 			}
 	}
 	return 1;
 
 skip:
-	atomic_inc(&skipped_count);
+	atomic_inc(skipped_count());
 #ifdef STP_TIMING
 	atomic_inc(locks[i].skipped);
 #endif

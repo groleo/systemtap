@@ -5,6 +5,9 @@
 probe signal.handle
 {
 	printf("%s(%d(%s), %p\n", name, sig, sig_name, sinfo)
-	printf("%d %p %p %d\n", sig_code, ka_addr, oldset_addr, regs)
+	printf("%d %p\n", sig_code, ka_addr)
+%( systemtap_v <= "2.1" %?
+	printf("%p %d\n", oldset_addr, regs)
+%)
 	printf("%s\n", sig_mode)
 }

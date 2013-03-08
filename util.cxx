@@ -27,6 +27,7 @@
 #include <ext/stdio_filebuf.h>
 #endif
 extern "C" {
+#include <elf.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <pwd.h>
@@ -407,8 +408,14 @@ tokenize_cxx(const string& str, vector<string>& tokens)
 // same policy as execvp().  A program name not containing a slash
 // will be searched along the $PATH.
 
+string find_executable(const string& name)
+{
+  const map<string, string> sysenv;
+  return find_executable(name, "", sysenv);
+}
+
 string find_executable(const string& name, const string& sysroot,
-		       map<string, string>& sysenv,
+		       const map<string, string>& sysenv,
 		       const string& env_path)
 {
   string retpath;
@@ -424,9 +431,9 @@ string find_executable(const string& name, const string& sysroot,
     }
   else // Nope, search $PATH.
     {
-      char *path;
+      const char *path;
       if (sysenv.count(env_path) != 0)
-        path = (char *)sysenv[env_path].c_str();
+        path = sysenv.find(env_path)->second.c_str();
       else
         path = getenv(env_path.c_str());
       if (path)
@@ -821,9 +828,14 @@ stap_system(int verbose, const string& description,
       ret = pid;
       if (pid > 0){
         ret = stap_waitpid(verbose, pid);
-        if(ret)
-          // XXX PR13274 needs-session to use print_warning()
-          clog << _F("WARNING: %s exited with status: %d", description.c_str(), ret) << endl;
+
+        // XXX PR13274 needs-session to use print_warning()
+        if (ret > 128)
+          clog << _F("WARNING: %s exited with signal: %d (%s)",
+                     description.c_str(), ret - 128, strsignal(ret - 128)) << endl;
+        else if (ret > 0)
+          clog << _F("WARNING: %s exited with status: %d",
+                     description.c_str(), ret) << endl;
       }
     }
 
@@ -1002,6 +1014,25 @@ normalize_machine(const string& machine)
   return machine;
 }
 
+int
+elf_class_from_normalized_machine (const string &machine)
+{
+  // Must match kernel machine architectures as used un tapset directory.
+  // And must match normalization done in normalize_machine ().
+  if (machine == "i386"
+      || machine == "arm")         // arm assumes 32-bit
+    return ELFCLASS32;
+  else if (machine == "s390"       // powerpc and s390 always assume 64-bit,
+           || machine == "powerpc" // see normalize_machine ().
+           || machine == "x86_64"
+           || machine == "ia64")
+    return ELFCLASS64;
+
+  cerr << _F("Unknown kernel machine architecture '%s', don't know elf class",
+             machine.c_str()) << endl;
+  return -1;
+}
+
 string
 kernel_release_from_build_tree (const string &kernel_build_tree, int verbose)
 {
@@ -1041,5 +1072,51 @@ std::string autosprintf(const char* format, ...)
   free (str);
   return s; /* by copy */
 }
+
+std::string
+get_self_path()
+{
+  char buf[1024]; // This really should be enough for anybody...
+  const char *file = "/proc/self/exe";
+  ssize_t len = readlink(file, buf, sizeof(buf) - 1);
+  if (len > 0)
+    {
+      buf[len] = '\0';
+      file = buf;
+    }
+  // otherwise the path is ridiculously large, fall back to /proc/self/exe.
+  //
+  return std::string(file);
+}
+
+
+#ifndef HAVE_PPOLL
+// This is a poor-man's ppoll, only used carefully by readers that need to be
+// interruptible, like remote::run and mutator::run.  It does not provide the
+// same guarantee of atomicity as on systems with a true ppoll.
+//
+// In our use, this would cause trouble if a signal came in any time from the
+// moment we mask signals to prepare pollfds, to the moment we call poll in
+// emulation here.  If there's no data on any of the pollfds, we will be stuck
+// waiting indefinitely.
+//
+// Since this is mainly about responsiveness of CTRL-C cleanup, we'll just
+// throw in a one-second forced timeout to ensure we have a chance to notice
+// there was an interrupt without too much delay.
+int
+ppoll(struct pollfd *fds, nfds_t nfds,
+      const struct timespec *timeout_ts,
+      const sigset_t *sigmask)
+{
+  sigset_t origmask;
+  int timeout = (timeout_ts == NULL) ? 1000 // don't block forever...
+    : (timeout_ts->tv_sec * 1000 + timeout_ts->tv_nsec / 1000000);
+  sigprocmask(SIG_SETMASK, sigmask, &origmask);
+  int rc = poll(fds, nfds, timeout);
+  sigprocmask(SIG_SETMASK, &origmask, NULL);
+  return rc;
+}
 #endif
+
+
 /* vim: set sw=2 ts=8 cino=>4,n-2,{2,^-2,t0,(0,u0,w1,M1 : */

@@ -1,0 +1,26 @@
+#! stap -p4
+
+# test that all known global types work at once
+
+global scalar_int
+global scalar_string
+global scalar_stat
+global map_int
+global map_string
+global pmap_stat
+
+probe begin
+{
+  scalar_int = 42
+  scalar_string = "42"
+  scalar_stat <<< 42
+  map_int[0] = 42
+  map_string[0] = "42"
+  pmap_stat[0] <<< 42
+}
+
+probe end
+{
+  printdln("\t", scalar_int, scalar_string, @sum(scalar_stat),
+           map_int[0], map_string[0], @sum(pmap_stat[0]))
+}

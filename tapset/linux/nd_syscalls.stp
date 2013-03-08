@@ -1003,7 +1003,7 @@ probe nd_syscall.compat_execve.return = kprobe.function("compat_do_execve").retu
 
 # exit _______________________________________________________
 # long sys_exit(int error_code)
-probe nd_syscall.exit = kprobe.function("do_exit")
+probe nd_syscall.exit = kprobe.function("do_exit").call
 {
 	name = "exit"
 	// status = $code
@@ -1014,11 +1014,12 @@ probe nd_syscall.exit = kprobe.function("do_exit")
 }
 # sys_exit() never returns, and is blacklisted for return probes,
 # so no alias here.  See bz6588.
+# NB: the explicit .call ensures that alias suffixes can't infer .return
 
 # exit_group _________________________________________________
 # void sys_exit_group(int error_code)
 #
-probe nd_syscall.exit_group = kprobe.function("sys_exit_group") ?
+probe nd_syscall.exit_group = kprobe.function("sys_exit_group").call ?
 {
 	name = "exit_group"
 	// status = $error_code
@@ -1029,6 +1030,7 @@ probe nd_syscall.exit_group = kprobe.function("sys_exit_group") ?
 }
 # sys_exit_group() never returns, and is blacklisted for return probes,
 # so no alias here.  See bz6588.
+# NB: the explicit .call ensures that alias suffixes can't infer .return
 
 # faccessat __________________________________________________
 # new function with 2.6.16
@@ -1356,7 +1358,6 @@ probe nd_syscall.flock.return = kprobe.function("sys_flock").return ?
 # fork _______________________________________________________
 # long do_fork(unsigned long clone_flags,
 #	unsigned long stack_start,
-#	struct pt_regs *regs,
 #	unsigned long stack_size,
 #	int __user *parent_tidptr,
 #	int __user *child_tidptr)
@@ -1370,21 +1371,36 @@ probe nd_syscall.fork = kprobe.function("do_fork")
 	// child_tid_uaddr = $child_tidptr
 	clone_flags = ulong_arg(1)
 	stack_start = ulong_arg(2)
+%(kernel_v >= "3.8.0" %?
+%(systemtap_v <= "2.2" %?
+	regs = 0
+%)
+	stack_size = ulong_arg(3)
+	parent_tid_uaddr = pointer_arg(4)
+	child_tid_uaddr = pointer_arg(5)
+%:
+%(systemtap_v <= "2.2" %?
 	regs = pointer_arg(3)
+%)
 	stack_size = ulong_arg(4)
 	parent_tid_uaddr = pointer_arg(5)
 	child_tid_uaddr = pointer_arg(6)
+%)
 
-	if (!__is_user_regs(regs)) {
+%(kernel_v >= "3.8.0" %?
+	if (clone_flags & %{ CLONE_VM | CLONE_UNTRACED %}) {
+%:
+	if (!__is_user_regs(pointer_arg(3))) {
+%)
 		name = "fork_kernel_thread"
 		argstr = __fork_flags(clone_flags)
-	} else if (clone_flags & 17)
-		name = "fork"
-	else if (clone_flags & 0x4000)
+	} else if (clone_flags & %{ CLONE_VFORK %}) {
 		name = "vfork"
-	else {
+	} else if ((clone_flags & %{ CSIGNAL %}) != %{ SIGCHLD %}) {
 		name = "clone"
 		argstr = __fork_flags(clone_flags)
+	} else {
+		name = "fork"
 	}
 }
 probe nd_syscall.fork.return = kprobe.function("do_fork").return
@@ -3015,7 +3031,7 @@ probe nd_syscall.llistxattr.return = kprobe.function("sys_llistxattr").return ?
 #            unsigned long offset_high,
 #            unsigned long offset_low,
 #            loff_t __user * result,
-#            unsigned int origin)
+#            unsigned int whence)
 probe nd_syscall.llseek = kprobe.function("sys_llseek") ?
 {
 	name = "llseek"
@@ -3096,7 +3112,7 @@ probe nd_syscall.lremovexattr.return = kprobe.function("sys_lremovexattr").retur
 }
 
 # lseek ______________________________________________________
-# off_t sys_lseek(unsigned int fd, off_t offset, unsigned int origin)
+# off_t sys_lseek(unsigned int fd, off_t offset, unsigned int whence)
 probe nd_syscall.lseek = kprobe.function("sys_lseek") ?
 {
 	name = "lseek"

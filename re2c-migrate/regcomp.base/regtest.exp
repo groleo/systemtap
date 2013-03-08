@@ -1,0 +1,94 @@
+proc testline { line } {
+    set test "regtest $line"
+
+    # split the line into a space-separated list, XXX respecting escapes
+    set splitline [split $line ":"]
+    # XXX oddball idea -- perhaps switch the test syntax to CSV??
+
+    # determine the required outcome
+    # 0 -- regex match fails
+    # 1 -- regex match succeeds
+    # 2 -- regex compilation fails (but fails cleanly!)
+    set expected [lindex $splitline 0]
+
+    # don't use spawn/expect so as to allow output redirection
+    set err [catch { exec ./regtest {*}$splitline >tmp_regtest.c } msg]
+    if {$err} {
+        if {$expected == 2} {
+            pass "$test (regcomp should fail)"
+            return 1
+        } else {
+            fail "$test (regcomp fails)"
+            return 0
+        }
+    }
+
+    if {$expected == 2} {
+        # regcomp should have failed by now
+        fail "$test (regcomp should fail)"
+        return 0
+    }
+
+    # TODOXXX check proper regex for ERROR in below
+    
+    spawn gcc tmp_regtest.c -o tmp_regtest
+    expect {
+        -timeout 180
+        -re ERROR {
+            fail "$test (gcc fails)"
+            return 0
+        }
+
+        timeout {
+            fail "$test (gcc timeout)"
+            return 0
+        }
+    }
+    catch close
+    set err [wait]
+
+    if {[lindex $err 3] != 0} {
+        if {$expected == 2} {
+            pass "$test (gcc fails)"
+            return 1
+        } else {
+            fail "$test (gcc fails)"
+            return 0
+        }
+    }
+
+    spawn ./tmp_regtest
+    expect {
+        -timeout 180
+        timeout {
+            fail "$test (regex timeout)"
+            return 0
+        }
+    }
+    catch close
+    set err [wait]
+
+    # the generated code knows what's expected and returns 1 on test failure
+    if {[lindex $err 3]} {
+        fail "$test (wrong match outcome)"
+        return 0
+    }
+
+    pass $test
+    return 1
+}
+
+set srcpath "$srcdir/$subdir"
+
+foreach filename {regtest.in.0 regtest.in.1} {
+    set fd [open $srcpath/$filename r]
+    set lines [split [read $fd] "\n"]
+    foreach line $lines {
+        # skip line if it starts with # or contains only whitespace
+        if [regexp "^#" $line] { continue }
+        if [regexp "^\\s*$" $line] { continue }
+        # XXX perhaps also allow comments at the end of a line???
+
+        testline $line
+    }
+}

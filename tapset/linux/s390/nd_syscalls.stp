@@ -64,13 +64,13 @@ probe nd_syscall.mmap = kprobe.function("old_mmap") ?,
 {
 	name = "mmap"
 
-	// if ((probefunc() == "old_mmap") || (probefunc() == "SyS_s390_old_mmap"))
+	// if ((symname(addr()) == "old_mmap") || (symname(addr()) == "SyS_s390_old_mmap"))
 	// 	argstr = get_mmap_args($arg)
 	// else
 	// 	argstr = get_32mmap_args($arg)
 
 	asmlinkage()
-	if ((probefunc() == "old_mmap") || (probefunc() == "SyS_s390_old_mmap"))
+	if ((symname(addr()) == "old_mmap") || (symname(addr()) == "SyS_s390_old_mmap"))
 		argstr = get_mmap_args(pointer_arg(1))
 	else
 		argstr = get_32mmap_args(pointer_arg(1))
@@ -93,13 +93,13 @@ probe nd_syscall.mmap2 = kprobe.function("sys_mmap2") ?,
 {
 	name = "mmap2"
 
-	// if ((probefunc() == "sys_mmap2") || (probefunc() == "SyS_mmap2"))
+	// if ((symname(addr()) == "sys_mmap2") || (symname(addr()) == "SyS_mmap2"))
 	// 	argstr = get_mmap_args($arg)
 	// else
 	// 	argstr = get_32mmap_args($arg)
 
 	asmlinkage()
-	if ((probefunc() == "sys_mmap2") || (probefunc() == "SyS_mmap2"))
+	if ((symname(addr()) == "sys_mmap2") || (symname(addr()) == "SyS_mmap2"))
 		argstr = get_mmap_args(pointer_arg(1))
 	else
 		argstr = get_32mmap_args(pointer_arg(1))
@@ -112,6 +112,48 @@ probe nd_syscall.mmap2.return = kprobe.function("sys_mmap2").return ?,
 	retstr = returnstr(2)
 }
 %)
+
+%( CONFIG_GENERIC_SIGALTSTACK == "n" %?
+# sigaltstack ________________________________________________
+# asmlinkage long
+# sys_sigaltstack(const stack_t __user * uss, stack_t __user *uoss)
+#
+# NOTE: args vary between archs.
+probe nd_syscall.sigaltstack = kprobe.function("sys_sigaltstack")
+{
+	name = "sigaltstack"
+	//uss_uaddr = $uss
+	//uoss_uaddr = $uoss
+	asmlinkage()
+	uss_uaddr = pointer_arg(1)
+	uoss_uaddr = pointer_arg(2)
+%(systemtap_v <= "2.2" %?
+	regs = %{ _stp_current_pt_regs() %}
+%)
+	argstr = sprintf("%p, %p", uss_uaddr, uoss_uaddr)
+}
+probe nd_syscall.sigaltstack.return = kprobe.function("sys_sigaltstack").return
+{
+	name = "sigaltstack"
+	retstr = returnstr(1)
+}
+%)
+
+# sys32_sigaltstack ________________________________________________
+# asmlinkage long
+# sys32_sigaltstack(const stack_t32 __user *uss, stack_t32 __user *uoss)
+#
+# NOTE: args vary between archs.
+probe nd_syscall.sys32_sigaltstack = kprobe.function("sys32_sigaltstack") ?
+{
+	name = "sys32_sigaltstack"
+	argstr = ""
+}
+probe nd_syscall.sys32_sigaltstack.return = kprobe.function("sys32_sigaltstack").return ?
+{
+	name = "sys32_sigaltstack"
+	retstr = returnstr(1)
+}
 
 # sysctl _____________________________________________________
 #

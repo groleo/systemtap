@@ -181,12 +181,10 @@ function task_dentry_path:string(task:long,dentry:long,vfsmnt:long)
  */
 function d_path:string(nd:long)
 {
-	dentry = (@defined(@cast(nd,"nameidata")->path->dentry)
-	    ? @cast(nd,"nameidata")->path->dentry
-	    : @cast(nd,"nameidata")->dentry)
-	vfsmnt = (@defined(@cast(nd,"nameidata")->path->mnt)
-	    ? @cast(nd,"nameidata")->path->mnt
-	    : @cast(nd,"nameidata")->mnt)
+	dentry = @choose_defined(@cast(nd,"nameidata")->path->dentry,
+			         @cast(nd,"nameidata")->dentry)
+	vfsmnt = @choose_defined(@cast(nd,"nameidata")->path->mnt,
+			         @cast(nd,"nameidata")->mnt)
 
 	return sprintf("%s/", task_dentry_path(task_current(), dentry, vfsmnt))
 }

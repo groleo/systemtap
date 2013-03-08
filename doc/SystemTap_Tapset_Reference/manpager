@@ -60,7 +60,7 @@ done ;
 
 # create man page headers
 for i in `ls | grep -v .stp | grep -v tapsetdescription` ; do
-  echo ".\" -*- nroff -*-" >> $i.template ;
+  echo ".\\\" -*- nroff -*-" >> $i.template ;
   echo ".TH tapset::"$i" 3stap --- IBM" >> $i.template ;
   echo ".SH NAME" >> $i.template ;
   echo "tapset::"`cat $i.stp`" \- systemtap "`cat $i.stp`" tapset" >> $i.template ;
@@ -89,11 +89,14 @@ for i in `cat ../manpageus` ; do
   echo "" >> $i.footer
   echo ".SH SEE ALSO" >> $i.footer
   for j in `cat $i.funcnames` ; do
+    echo ".BR" >> $i.footer
     echo ".IR \\%function::"$j" (3stap)," >> $i.footer
   done
   for j in `cat $i.probenames` ; do
+    echo ".BR" >> $i.footer
     echo ".IR \\%probe::"$j" (3stap)," >> $i.footer
   done
+  echo ".BR" >> $i.footer
   echo ".IR \\%stap (1)," >> $i.footer
   echo ".IR \\%stapprobes (3stap)" >> $i.footer
 done

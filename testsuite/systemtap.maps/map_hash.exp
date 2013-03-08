@@ -2050,7 +2050,14 @@ array[4]=0x1
 array[3]=0x1
 array[2]=0x1
 array[1]=0x1}
-stap_run2 $srcdir/$subdir/$test
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test
+    }
+}
 
 #SI Regular Map Test
 set test "map_hash_SI.stp"
@@ -4102,7 +4109,14 @@ array["start-pulseaudio-x11"]=0x1
 array["startx"]=0x1
 array["stat"]=0x1
 array["stdbuf"]=0x1}
-stap_run2 $srcdir/$subdir/$test
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test
+    }
+}
 
 #SSI Regular Map Test
 set test "map_hash_SSI.stp"
@@ -6154,7 +6168,14 @@ array["start-pulseaudio-x11","start-pulseaudio-x11"]=0x1
 array["startx","startx"]=0x1
 array["stat","stat"]=0x1
 array["stdbuf","stdbuf"]=0x1}
-stap_run2 $srcdir/$subdir/$test
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test
+    }
+}
 
 #II Statistics Map Test
 set test "map_hash_stat_II.stp"
@@ -8206,7 +8227,14 @@ array[2045]: count:1  sum:1  avg:1  min:1  max:1
 array[2046]: count:1  sum:1  avg:1  min:1  max:1
 array[2047]: count:1  sum:1  avg:1  min:1  max:1
 array[2048]: count:1  sum:1  avg:1  min:1  max:1}
-stap_run2 $srcdir/$subdir/$test
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test
+    }
+}
 
 #SI Statistics Map Test
 set test "map_hash_stat_SI.stp"
@@ -10258,7 +10286,14 @@ array["start-pulseaudio-x11"]: count:1  sum:1  avg:1  min:1  max:1
 array["startx"]: count:1  sum:1  avg:1  min:1  max:1
 array["stat"]: count:1  sum:1  avg:1  min:1  max:1
 array["stdbuf"]: count:1  sum:1  avg:1  min:1  max:1}
-stap_run2 $srcdir/$subdir/$test
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test
+    }
+}
 
 #SSI Statistics Map Test
 set test "map_hash_stat_SSI.stp"
@@ -12310,4 +12345,11 @@ array["start-pulseaudio-x11", "start-pulseaudio-x11"]: count:1  sum:1  avg:1  mi
 array["startx", "startx"]: count:1  sum:1  avg:1  min:1  max:1
 array["stat", "stat"]: count:1  sum:1  avg:1  min:1  max:1
 array["stdbuf", "stdbuf"]: count:1  sum:1  avg:1  min:1  max:1}
-stap_run2 $srcdir/$subdir/$test
+
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run2 $srcdir/$subdir/$test --runtime=$runtime
+    } else {
+	stap_run2 $srcdir/$subdir/$test
+    }
+}

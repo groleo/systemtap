@@ -22,32 +22,26 @@
 
 /* crash/defs.h defines NR_CPUS based upon architecture macros
    X86, X86_64, etc.  See crash/configure.c (!). */
-#ifdef __alpha__
+#if defined(__alpha__)
 #define ALPHA
-#endif
-#ifdef __i386__
-#define X86
-#endif
-#ifdef __powerpc__
-#define PPC
-#endif
-#ifdef __ia64__
-#define IA64
-#endif
-#ifdef __s390__
-#define S390
-#endif
-#ifdef __s390x__
-#define S390X
-#endif
-#ifdef __powerpc64__
-#define PPC64
-#endif
-#ifdef __x86_64__
+#elif defined(__x86_64__)
 #define X86_64
-#endif
-#ifdef __arm__
+#elif defined(__i386__)
+#define X86
+#elif defined(__powerpc64__)
+#define PPC64
+#elif defined(__powerpc__)
+#define PPC
+#elif defined(__ia64__)
+#define IA64
+#elif defined(__s390x__)
+#define S390X
+#elif defined(__s390__)
+#define S390
+#elif defined(__arm__)
 #define ARM
+#else
+#warn "unknown architecture for crash/staplog support"
 #endif
 
 #include <crash/defs.h>

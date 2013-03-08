@@ -10,20 +10,6 @@
 // NB: tapsetdescription is in tapset/context.stp
 
 /**
- * sfunction print_regs - Print a register dump
- * 
- * Description: This function prints a register dump. Does nothing if no registers are available for the probe point.
- */
-function print_regs ()
-%{
-	if ((c->probe_flags & _STP_PROBE_STATE_USER_MODE) && CONTEXT->uregs) {
-		_stp_print_regs (CONTEXT->uregs);
-	} else if (CONTEXT->kregs) {
-		_stp_print_regs (CONTEXT->kregs);
-	}
-%}
-
-/**
  * sfunction execname - Returns the execname of a target process (or group of processes)
  * 
  * Description: Returns the execname of a target process (or group of processes).
@@ -219,7 +205,7 @@ function cpu:long ()
  */
 function registers_valid:long ()
 %{ /* pure */ /* unprivileged */
-	STAP_RETVALUE = ((c->probe_flags & _STP_PROBE_STATE_USER_MODE)
+	STAP_RETVALUE = (c->user_mode_p
 			    ? (CONTEXT->uregs != NULL)
 			    : (CONTEXT->kregs != NULL));
 %}
@@ -231,8 +217,7 @@ function registers_valid:long ()
  */
 function user_mode:long ()
 %{ /* pure */ /* unprivileged */
-  STAP_RETVALUE = (CONTEXT->probe_flags
-		      & _STP_PROBE_STATE_USER_MODE) ? 1 : 0;
+  STAP_RETVALUE = CONTEXT->user_mode_p ? 1 : 0;
 %}
 
 /**
@@ -243,8 +228,8 @@ function user_mode:long ()
  */
 function is_return:long ()
 %{ /* pure */
-	if (CONTEXT->probe_type == _STP_PROBE_HANDLER_KRETPROBE
-	    || CONTEXT->probe_type == _STP_PROBE_HANDLER_URETPROBE)
+	if (CONTEXT->probe_type == stp_probe_type_kretprobe
+	    || CONTEXT->probe_type == stp_probe_type_uretprobe)
 		STAP_RETVALUE = 1;
 	else
 		STAP_RETVALUE = 0;
@@ -368,7 +353,7 @@ function stack_unused:long ()
  */
 function addr:long ()
 %{ /* pure */
-  if (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE) {
+  if (CONTEXT->user_mode_p) {
     STAP_RETVALUE = (intptr_t)(CONTEXT->uregs ? REG_IP(CONTEXT->uregs) : 0);
   } else {
     STAP_RETVALUE = (intptr_t)(CONTEXT->kregs ? REG_IP(CONTEXT->kregs) : 0);
@@ -389,7 +374,7 @@ function uaddr:long ()
 %{ /* pure */ /* myproc-unprivileged */
   struct pt_regs *uregs;
 
-  if (CONTEXT->probe_flags & _STP_PROBE_STATE_USER_MODE)
+  if (CONTEXT->user_mode_p)
     uregs = CONTEXT->uregs;
   else
     uregs = _stp_current_pt_regs();
@@ -416,41 +401,41 @@ function uaddr:long ()
  */
 function cmdline_args:string(n:long, m:long, delim:string)
 {
-  args = "";
-  mm = @cast(task_current(), "task_struct", "kernel<linux/sched.h>")->mm;
-  if (mm)
+  __args = "";
+  __mm = @cast(task_current(), "task_struct", "kernel<linux/sched.h>")->mm;
+  if (__mm)
     {
-      arg_start = @cast(mm, "mm_struct", "kernel<linux/sched.h>")->arg_start;
-      arg_end = @cast(mm, "mm_struct", "kernel<linux/sched.h>")->arg_end;
-      if (arg_start != 0 && arg_end != 0)
+      __arg_start = @cast(__mm, "mm_struct", "kernel<linux/sched.h>")->arg_start;
+      __arg_end = @cast(__mm, "mm_struct", "kernel<linux/sched.h>")->arg_end;
+      if (__arg_start != 0 && __arg_end != 0)
         {
-          nr = 0;
-          len = arg_end - arg_start;
-          arg = user_string2(arg_start, "");
-          while (len > 0)
+          __nr = 0;
+          __len = __arg_end - __arg_start;
+          __arg = user_string2(__arg_start, "");
+          while (__len > 0)
             {
-              if (nr == n)
-                args = arg;
-              else if (nr > n)
+              if (__nr == n)
+                __args = __arg;
+              else if (__nr > n)
                 {
-                  if (arg == "")
-                    args .= delim . "\"\""
+                  if (__arg == "")
+                    __args .= delim . "\"\""
                   else
-                    args .= delim . arg;
+                    __args .= delim . __arg;
                 }
 
-              arg_len = strlen(arg);
-              arg_start += arg_len + 1;
-              len -= arg_len + 1;
-              if (len > 0 && nr != m)
-                arg = user_string2(arg_start, "");
+              __arg_len = strlen(__arg);
+              __arg_start += __arg_len + 1;
+              __len -= __arg_len + 1;
+              if (__len > 0 && __nr != m)
+                __arg = user_string2(__arg_start, "");
               else
-                arg = "";
-              nr++;
+                __arg = "";
+              __nr++;
             }
         }
     }
-  return args;
+  return __args;
 }
 
 /**

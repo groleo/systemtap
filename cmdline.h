@@ -17,11 +17,7 @@ extern "C" {
 // NB: The values of these enumerators must not conflict with the values of ordinary
 // characters, since those are returned by getopt_long for short options.
 enum {
-  LONG_OPT_KELF = 256,
-  LONG_OPT_KMAP,
-  LONG_OPT_IGNORE_VMLINUX,
-  LONG_OPT_IGNORE_DWARF,
-  LONG_OPT_VERBOSE_PASS,
+  LONG_OPT_VERBOSE_PASS = 256,
   LONG_OPT_SKIP_BADVARS,
   LONG_OPT_UNPRIVILEGED,
   LONG_OPT_OMIT_WERROR,
@@ -54,7 +50,9 @@ enum {
   LONG_OPT_RLIMIT_FSIZE,
   LONG_OPT_SYSROOT,
   LONG_OPT_SYSENV,
+  LONG_OPT_SUPPRESS_TIME_LIMITS,
   LONG_OPT_RUNTIME,
+  LONG_OPT_RUNTIME_DYNINST,
 };
 
 // NB: when adding new options, consider very carefully whether they

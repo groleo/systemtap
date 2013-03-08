@@ -1,10 +1,10 @@
 #! /bin/sh
 
-stap -g -p4 --compatible=1.7.9 -e '
+stap $@ -g -p4 --compatible=1.7.9 -e '
 # test accessing locals using THIS->foo in legacy mode
 function baz:long(foo:long, bar:string)
 %{
-        printk("%s\n", THIS->bar);
+        _stp_printf("%s\n", THIS->bar);
         THIS->__retvalue = 600 + THIS->foo;
 %}
 

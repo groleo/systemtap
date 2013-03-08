@@ -1,0 +1,67 @@
+set test main_quiesce
+if {! [installtest_p]} {
+    untested $test
+    return
+}
+
+# This test makes sure we don't miss events when the main thread
+# doesn't quiesce (without us interrupting it).
+
+# Compile our threaded test program.
+set srcpath "$srcdir/$subdir/${test}.c"
+set exepath "./${test}_exe"
+set res [target_compile $srcpath $exepath executable "additional_flags=-g libs=-lpthread"]
+if { $res != "" } {
+    verbose "target_compile failed: $res" 2
+    fail "$test - unable to compile $srcpath"
+    return
+} else {
+    pass "$test - compiled $srcpath"
+}
+
+set test_script {
+    global hits
+    probe begin {
+        printf("systemtap starting probe\n")
+    }
+
+    probe process("%s").function("spool_write_script") {
+	hits <<< 1
+    }
+
+    probe end {
+        printf("systemtap ending probe\n")
+	printf("hits = %%d\n", @sum(hits))
+    }
+}
+
+set output "hits = \[1-9\]\[0-9\]*\r\n"
+set script [format $test_script $exepath]
+verbose -log $script
+
+foreach runtime [get_runtime_list] {
+    set test_name "$test"
+
+    # Run the test executable.
+    spawn $exepath
+    set exe_id $spawn_id
+
+    if {$runtime != ""} {
+	lappend test_name "($runtime)"
+
+	stap_run $test_name wait_5_secs $output --runtime=$runtime \
+	    -e $script -x [exp_pid -i $exe_id]
+
+    } elseif {[uprobes_p]} {
+	stap_run $test_name wait_5_secs $output -e $script \
+	    -x [exp_pid -i $exe_id]
+    } else {
+	untested "$test (uprobes)"
+	continue
+    }
+
+    exec kill -INT -[exp_pid -i $exe_id]
+    catch {close -i $exe_id}
+    catch {wait -i $exe_id}
+}
+exec rm -f $test

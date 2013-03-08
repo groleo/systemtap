@@ -1,0 +1,30 @@
+global stats
+
+@define sortloop(x) %( 
+        printf("stats[%d]: @count=%d @sum=%d @min=%d @max=%d @avg=%d\n",
+                      @x,  @count(stats[@x]), @sum(stats[@x]), @min(stats[@x]),
+                           @max(stats[@x]), @avg(stats[@x]))
+%)
+
+probe begin
+{
+  stats[1] <<< -1; 
+  stats[2] <<< 1; stats[2] <<< 6;
+  stats[3] <<< 3; stats[3] <<< 4; stats[3] <<< 5;
+  stats[4] <<< 0; stats[4] <<< 0; stats[4] <<< 0; stats[4] <<< 1;
+
+  println("sort default+")  foreach(x in stats+) @sortloop(x)
+  println("sort default-")  foreach(x in stats-) @sortloop(x)
+  println("sort @count+")   foreach(x in stats @count+) @sortloop(x)
+  println("sort @count-")   foreach(x in stats @count-) @sortloop(x)
+  println("sort @sum+")     foreach(x in stats @sum+) @sortloop(x)
+  println("sort @sum-")     foreach(x in stats @sum-) @sortloop(x)
+  println("sort @avg+")     foreach(x in stats @avg+) @sortloop(x)
+  println("sort @avg-")     foreach(x in stats @avg-) @sortloop(x)
+  println("sort @min+")     foreach(x in stats @min+) @sortloop(x)
+  println("sort @min-")     foreach(x in stats @min-) @sortloop(x)
+  println("sort @max+")     foreach(x in stats @max+) @sortloop(x)
+  println("sort @max-")     foreach(x in stats @max-) @sortloop(x)
+
+  exit()
+}

@@ -19,21 +19,21 @@ int main()
   sigaction(SIGALRM, &sigrt_act, NULL);
 
   alarm(1);
-#ifdef __ia64__
+#if defined(__ia64__) || defined(__arm__)
   //staptest// setitimer (ITIMER_REAL, \[0.000000,1.000000\], XXXX) = 0
 #else
   //staptest// alarm (1) = 0
 #endif
 
   pause();
-#ifdef __ia64__
+#if defined(__ia64__)
   //staptest// rt_sigsuspend () =
 #else
   //staptest// pause () =
 #endif
 
   alarm(0);
-#ifdef __ia64__
+#if defined(__ia64__) || defined(__arm__)
   //staptest// setitimer (ITIMER_REAL, \[0.000000,0.000000\], XXXX) = 0
 #else
   //staptest// alarm (0) = 0
@@ -53,4 +53,4 @@ int main()
 
   return 0;
 }
- 
+

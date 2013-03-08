@@ -2,6 +2,7 @@
 #define UTIL_H
 
 #include "config.h"
+#include <cstdlib>
 #include <cstring>
 #include <cerrno>
 #include <string>
@@ -26,6 +27,7 @@ extern "C" {
 #include <spawn.h>
 #endif
 #include <assert.h>
+#include <poll.h>
 }
 
 #include "privilege.h"
@@ -59,9 +61,10 @@ void tokenize(const std::string& str, std::vector<std::string>& tokens,
 void tokenize_full(const std::string& str, std::vector<std::string>& tokens,
 	      const std::string& delimiters);
 void tokenize_cxx(const std::string& str, std::vector<std::string>& tokens);
+std::string find_executable(const std::string& name);
 std::string find_executable(const std::string& name,
 			    const std::string& sysroot,
-			    std::map<std::string,std::string>& sysenv,
+			    const std::map<std::string,std::string>& sysenv,
 			    const std::string& env_path = "PATH");
 const std::string cmdstr_quoted(const std::string& cmd);
 const std::string cmdstr_join(const std::vector<std::string>& cmds);
@@ -88,8 +91,10 @@ std::string escape_glob_chars (const std::string& str);
 std::string unescape_glob_chars (const std::string& str);
 std::string kernel_release_from_build_tree (const std::string &kernel_build_tree, int verbose = 0);
 std::string normalize_machine(const std::string& machine);
+int elf_class_from_normalized_machine(const std::string& machine);
 std::string autosprintf(const char* format, ...) __attribute__ ((format (printf, 1, 2)));
 const std::set<std::string>& localization_variables();
+std::string get_self_path();
 
 // stringification generics
 
@@ -302,6 +307,29 @@ struct stap_sigmasker {
         sigprocmask (SIG_SETMASK, &old, NULL);
       }
 };
+
+// Convert a possibly-relative path to a full path
+inline std::string
+resolve_path(const std::string& path)
+{
+  std::string result(path);
+  char* resolved_path = realpath(path.c_str(), NULL);
+  if (resolved_path)
+    {
+      result = resolved_path;
+      std::free(resolved_path);
+    }
+  return result;
+}
+
+
+#ifndef HAVE_PPOLL
+// This is a poor-man's ppoll; see the implementation for more details...
+int ppoll(struct pollfd *fds, nfds_t nfds,
+          const struct timespec *timeout_ts,
+          const sigset_t *sigmask);
+#endif
+
 
 #endif // UTIL_H
 

@@ -83,6 +83,14 @@ function text_str:string(input:string)
 	_stp_text_str(STAP_RETVALUE, STAP_ARG_input, 0, 0, 0);
 %}
 
+// TODOXXX perhaps the following go into their own tapset e.g. regmatch.stp??
+// ==========================================================================
+// TODOXXX matched:string(n:long)
+// TODOXXX match_start:long(n:long)
+// TODOXXX match_end:long(n:long)
+// TODOXXX some kind of find-replace functionality -- long term
+// TODOXXX split(...) -- long term
+
 /**
  * sfunction text_strn - Escape any non-printable chars in a string
  *

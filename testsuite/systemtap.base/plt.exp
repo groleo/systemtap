@@ -36,15 +36,15 @@ set stap_path $env(SYSTEMTAP_PATH)/stap
 set exepath "./plt.x"
 
 set F additional_flags
-set flags "$F=-I. $F=-shared $F=-fPIC $F=-DLIBPLT1 $F=-g $F=-Wno-deprecated-declarations"
+set flags "$F=-I. $F=-shared $F=-fPIC $F=-DLIBPLT1 $F=-g $F=-Wno-deprecated-declarations $F=-Wno-format"
 set res [target_compile $srcdir/$subdir/plt.c ./libplt1.so executable $flags ]
 if { [error_handler [expr {$res == ""}] "target_compile libplt1.so" ""] } { return }
 
-set flags "$F=-I. $F=-shared $F=-fPIC $F=-DLIBPLT2 $F=-g $F=-Wno-deprecated-declarations"
+set flags "$F=-I. $F=-shared $F=-fPIC $F=-DLIBPLT2 $F=-g $F=-Wno-deprecated-declarations $F=-Wno-format"
 set res [target_compile $srcdir/$subdir/plt.c ./libplt2.so executable $flags ]
 if { [error_handler [expr {$res == ""}] "target_compile libplt2.so" ""] } { return }
 
-set flags "$F=-Wl,-rpath,[pwd] $F=-L[pwd] $F=-lplt1 $F=-lplt2 $F=-DONLY_MAIN $F=-g $F=-Wno-deprecated-declarations"
+set flags "$F=-Wl,-rpath,[pwd] $F=-L[pwd] $F=-lplt1 $F=-lplt2 $F=-DONLY_MAIN $F=-g $F=-Wno-deprecated-declarations $F=-Wno-format"
 set res [target_compile $srcdir/$subdir/plt.c $exepath executable $flags ]
 if { [error_handler [expr {$res == ""}] "target_compile plt.x" ""] } { return }
 

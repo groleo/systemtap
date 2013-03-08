@@ -9,8 +9,8 @@ do
   if grep -q /bin/sh $file; then
     true # can't override stap options
   elif head -n 1 $file | grep -q g ; then
-    stap -gp3 $file
+    stap $@ -gp3 $file
   else
-    stap -p3 $file
+    stap $@ -p3 $file
   fi
 done

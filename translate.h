@@ -102,7 +102,7 @@ struct unparser
   // The following helper functions must be used by any code-generation
   // infrastructure outside this file to properly mangle identifiers
   // appearing in the final code:
-  virtual std::string c_localname (const std::string& e) = 0;
+  virtual std::string c_localname (const std::string& e, bool mangle_oldstyle = false) = 0;
   virtual std::string c_globalname (const std::string &e) = 0;
   virtual std::string c_funcname (const std::string &e) = 0;
 };

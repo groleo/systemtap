@@ -1,0 +1,15 @@
+#! stap -gp4
+
+# test accessing locals in old fashion using /* unmangled */
+function baz:long(foo:long, bar:string)
+%{ /* unmangled */
+        printk("%s\n", THIS->bar);
+        /* Notice that we can also use the new fashion: */
+        THIS->__retvalue = 600 + THIS->foo + STAP_ARG_foo;
+%}
+
+probe begin {
+      q = baz(9001, "O hai... I am in your dmesg, putting the Lolcats ^w^")
+      printf("%d\n", q)
+      exit()
+}

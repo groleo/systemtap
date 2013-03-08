@@ -1,6 +1,6 @@
 /* -*- linux-c -*- 
  * Statistics Header
- * Copyright (C) 2005 Red Hat Inc.
+ * Copyright (C) 2005, 2012 Red Hat Inc.
  *
  * This file is part of systemtap, and is free software.  You can
  * redistribute it and/or modify it under the terms of the GNU General
@@ -10,10 +10,6 @@
 
 #ifndef _STAT_H_
 #define _STAT_H_
-
-#ifndef NEED_STAT_LOCKS
-#define NEED_STAT_LOCKS 0
-#endif
 
 /* maximum buckets for a linear histogram */
 #ifndef STP_MAX_BUCKETS
@@ -33,12 +29,16 @@ struct stat_data {
 	int64_t count;
 	int64_t sum;
 	int64_t min, max;
-#if NEED_STAT_LOCKS == 1
+#ifdef NEED_STAT_LOCKS
+#ifdef __KERNEL__
 	spinlock_t lock;
+#else  /* !__KERNEL__ */
+	pthread_mutex_t lock;
+#endif	/* !__KERNEL__ */
 #endif
 	int64_t histogram[];
 };
-typedef struct stat_data stat;
+typedef struct stat_data stat_data;
 
 /** Information about the histogram data collected. This data 
     is global and not duplicated per-cpu. */
@@ -51,5 +51,12 @@ struct _Hist {
 	int buckets;
 };
 typedef struct _Hist *Hist;
+
+/* The specific runtimes define struct _Stat and its alloc/free */
+#if defined(__KERNEL__)
+#include "linux/stat_runtime.h"
+#elif defined(__DYNINST__)
+#include "dyninst/stat_runtime.h"
+#endif
 
 #endif /* _STAT_H_ */

@@ -97,7 +97,7 @@ static struct notifier_block _stp_module_panic_notifier_nb = {
 };
 #endif
 
-struct timer_list _stp_ctl_work_timer;
+static struct timer_list _stp_ctl_work_timer;
 
 /*
  *	_stp_handle_start - handle STP_START
@@ -115,8 +115,11 @@ static void _stp_handle_start(struct _stp_msg_start *st)
 	if (handle_startup) {
 		dbug_trans(1, "stp_handle_start\n");
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23) // linux commit #5f4352fb
+#if LINUX_VERSION_CODE <  KERNEL_VERSION(2,6,29) // linux commit #9be260a6
 #ifdef STAPCONF_VM_AREA
 		{ /* PR9740: workaround for kernel valloc bug. */
+                  /* PR14611: not required except within above kernel range. */
 			void *dummy;
 #ifdef STAPCONF_VM_AREA_PTE
 			dummy = alloc_vm_area (PAGE_SIZE, NULL);
@@ -125,6 +128,8 @@ static void _stp_handle_start(struct _stp_msg_start *st)
 #endif
 			free_vm_area (dummy);
 		}
+#endif
+#endif
 #endif
 
 		_stp_target = st->target;
@@ -371,6 +376,22 @@ static int _stp_transport_init(void)
         kallsyms_uprobe_get_swbp_addr = (void*) kallsyms_lookup_name ("uprobe_get_swbp_addr");
         if (kallsyms_uprobe_get_swbp_addr == NULL) {
                 printk(KERN_ERR "%s can't resolve uprobe_get_swbp_addr!", THIS_MODULE->name);
+                goto err0;
+        }
+#endif
+#endif
+#if defined(STAPCONF_INODE_URETPROBES) // i.e., kernel-embedded uretprobes
+#if !defined(STAPCONF_URETPROBE_REGISTER_EXPORTED)
+        kallsyms_uretprobe_register = (void*) kallsyms_lookup_name ("uretprobe_register");
+        if (kallsyms_uretprobe_register == NULL) {
+                printk(KERN_ERR "%s can't resolve uretprobe_register!", THIS_MODULE->name);
+                goto err0;
+        }
+#endif
+#if !defined(STAPCONF_URETPROBE_UNREGISTER_EXPORTED)
+        kallsyms_uretprobe_unregister = (void*) kallsyms_lookup_name ("uretprobe_unregister");
+        if (kallsyms_uretprobe_unregister == NULL) {
+                printk(KERN_ERR "%s can't resolve uretprobe_unregister!", THIS_MODULE->name);
                 goto err0;
         }
 #endif

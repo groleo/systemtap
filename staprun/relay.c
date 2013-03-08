@@ -7,7 +7,7 @@
  * Public License (GPL); either version 2, or (at your option) any
  * later version.
  *
- * Copyright (C) 2007 Red Hat Inc.
+ * Copyright (C) 2007-2012 Red Hat Inc.
  */
 
 #include "staprun.h"
@@ -247,14 +247,15 @@ int init_relayfs(void)
 	relay_fd[0] = 0;
 	out_fd[0] = 0;
 
- 	if (statfs("/sys/kernel/debug", &st) == 0
+        if (relay_basedir_fd >= 0)
+                strcpy(relay_filebase, "\0");
+ 	else if (statfs("/sys/kernel/debug", &st) == 0
 	    && (int) st.f_type == (int) DEBUGFS_MAGIC) {
 		if (sprintf_chk(relay_filebase,
-				"/sys/kernel/debug/systemtap/%s",
+				"/sys/kernel/debug/systemtap/%s/",
 				modname))
 			return -1;
-	}
- 	else {
+	} else {
 		err("Cannot find relayfs or debugfs mount point.\n");
 		return -1;
 	}
@@ -263,10 +264,16 @@ int init_relayfs(void)
 		bulkmode = 1;
 
 	for (i = 0; i < NR_CPUS; i++) {
-		if (sprintf_chk(buf, "%s/trace%d", relay_filebase, i))
+		if (sprintf_chk(buf, "%strace%d", relay_filebase, i))
 			return -1;
 		dbug(2, "attempting to open %s\n", buf);
-		relay_fd[i] = open(buf, O_RDONLY | O_NONBLOCK);
+                relay_fd[i] = -1;
+#ifdef HAVE_OPENAT
+                if (relay_basedir_fd >= 0)
+                        relay_fd[i] = openat(relay_basedir_fd, buf, O_RDONLY | O_NONBLOCK);
+#endif
+                if (relay_fd[i] < 0)
+                        relay_fd[i] = open(buf, O_RDONLY | O_NONBLOCK);
 		if (relay_fd[i] < 0 || set_clexec(relay_fd[i]) < 0)
 			break;
 	}

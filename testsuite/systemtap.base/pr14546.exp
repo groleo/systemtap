@@ -1,0 +1,53 @@
+set test "pr14546"
+if {! [installtest_p]} {
+    untested "$test"
+    return
+}
+
+set test "pr14546 once"
+spawn stap $srcdir/$subdir/pr14546.stp "println(backtrace())"
+set ko 0
+expect {
+    -timeout 60
+    timeout { fail "$test (timeout)" }
+    -re {^ERROR: [^\r\n]*\r\n} { incr ko; exp_continue }
+    eof { }
+}
+if {$ko == 0} then { pass $test } else { fail "$test ($ko)" }
+catch { wait } ; catch { close }
+
+set test "pr14546 twice"
+spawn stap $srcdir/$subdir/pr14546.stp "println(backtrace()); println(backtrace())"
+set ko 0
+expect {
+    -timeout 60
+    timeout { fail "$test (timeout)" }
+    -re {^ERROR: [^\r\n]*\r\n} { incr ko; exp_continue }
+    eof { }
+}
+if {$ko == 0} then { pass $test } else { fail "$test ($ko)" }
+catch { wait } ; catch { close }
+
+set test "pr14546 thrice"
+spawn stap $srcdir/$subdir/pr14546.stp "println(backtrace()); println(backtrace()); println(backtrace())"
+set ko 0
+expect {
+    -timeout 60
+    timeout { fail "$test (timeout)" }
+    -re {^ERROR: [^\r\n]*\r\n} { incr ko; exp_continue }
+    eof { }
+}
+if {$ko == 0} then { pass $test } else { fail "$test ($ko)" }
+catch { wait } ; catch { close }
+
+set test "pr14546 followed by ubacktrace()"
+spawn stap $srcdir/$subdir/pr14546.stp "println(backtrace()); println(ubacktrace())"
+set ko 0
+expect {
+    -timeout 60
+    timeout { fail "$test (timeout)" }
+    -re {^ERROR: [^\r\n]*\r\n} { incr ko; exp_continue }
+    eof { }
+}
+if {$ko == 0} then { pass $test } else { fail "$test ($ko)" }
+catch { wait } ; catch { close }

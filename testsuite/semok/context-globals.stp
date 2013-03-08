@@ -1,0 +1,29 @@
+#! stap -Wp2
+
+/* Assert no conflicts between locals used in tapset to 
+   user's script namespace. */
+
+global n[1], r[1], b[1], orig_n[1], sym[1], foo[1], l[1], line[1], i[1], str[1]
+global args[1], mm[1], arg_start[1], arg_end[1], nr[1], len[1], arg[1]
+
+probe begin {
+      n[0] = r[0] = b[0] = orig_n[0] = sym[0] = 1;
+      foo[0] = l[0] = line[0] = i[0] = str[0] = 1;
+      args[0] = mm[0] = arg_start[0] = arg_end[0] = 1;
+      nr[0] = len[0] = arg[0] = 1;
+}
+
+probe end {
+      /* context.stp */
+      println(cmdline_args(0, 0, ""))
+      /* ucontext.stp */
+      println(ucallers(0))
+      /* ucontext-symbols.stp */
+      println(ustack(0))
+      print_usyms("")
+      println(sprint_usyms(""))
+      /* context-symbols.stp */
+      println(stack(0))
+      print_syms("")
+      println(sprint_syms(""))
+}

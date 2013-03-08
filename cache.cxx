@@ -36,7 +36,7 @@ using namespace std;
 #define SYSTEMTAP_CACHE_MAX_FILENAME "cache_mb_limit"
 #define SYSTEMTAP_CACHE_DEFAULT_MB 256
 #define SYSTEMTAP_CACHE_CLEAN_INTERVAL_FILENAME "cache_clean_interval_s"
-#define SYSTEMTAP_CACHE_CLEAN_DEFAULT_INTERVAL_S 30
+#define SYSTEMTAP_CACHE_CLEAN_DEFAULT_INTERVAL_S 300
 
 struct cache_ent_info {
   vector<string> paths;

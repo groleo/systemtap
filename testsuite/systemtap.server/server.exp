@@ -62,6 +62,7 @@ if {! [uprobes_p]} then {
     if {"$tmpdir" == ""} {
 	untested "$test $subtest uprobes returned"
     } else {
+	setup_kfail UPROBES *-*-*
 	if {[file exists $tmpdir/server/stap000000/uprobes/uprobes.ko]} {
 	    pass "$test $subtest uprobes returned"
 	} else {
@@ -93,6 +94,7 @@ if {! [uprobes_p]} then {
 	eof { }
     }
     catch close
+    setup_kfail UPROBES *-*-*
     if {$ok == 10} {
 	pass "$test $subtest -p5"
     } else {

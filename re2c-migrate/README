@@ -1,0 +1,9 @@
+The files in this directory incorporate code from the re2c project,
+which was originally released into the public domain. Many thanks to
+the developers of re2c for their work.
+
+As a courtesy to the original developers of re2c, please include
+appropriate acknowledgment in future code derived from this file.
+Information on the original re2c distribution can be found at:
+
+   http://sourceforge.net/projects/re2c/

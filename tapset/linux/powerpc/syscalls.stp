@@ -295,6 +295,7 @@ probe syscall.sys32_rt_sigqueueinfo.return = kernel.function("sys32_rt_sigqueuei
 	retstr = return_str(1, $return)
 }
 
+%( CONFIG_GENERIC_SIGALTSTACK == "n" %?
 # sigaltstack ________________________________________________
 # long sys_sigaltstack(const stack_t __user *uss, stack_t __user *uoss,
 #		       unsigned long r5, unsigned long r6,
@@ -308,7 +309,9 @@ probe syscall.sigaltstack = kernel.function("sys_sigaltstack")
 	name = "sigaltstack"
 	uss_uaddr = $uss
 	uoss_uaddr = $uoss
+%(systemtap_v <= "2.2" %?
 	regs = $regs
+%)
 	argstr = sprintf("%p, %p", $uss, $uoss)
 }
 probe syscall.sigaltstack.return = kernel.function("sys_sigaltstack").return
@@ -316,6 +319,7 @@ probe syscall.sigaltstack.return = kernel.function("sys_sigaltstack").return
 	name = "sigaltstack"
 	retstr = return_str(1, $return)
 }
+%)
 
 # sys32_sigaltstack ________________________________________
 #

@@ -428,8 +428,8 @@ function __read4:long (x:long) %{ /* pure */
            /* additional info available for most common (Ethernet+IP) case: */
            ar_sha = __mac_addr_to_string(ar_data)
            ar_sip = format_ipaddr(__read4(ar_data + 6), %{ /* pure */ AF_INET %})
-           ar_tha = __mac_addr_to_string(ar_data)
-           ar_tip =  format_ipaddr(__read4(ar_data + 6), %{ /* pure */ AF_INET %})
+           ar_tha = __mac_addr_to_string(ar_data + 10)
+           ar_tip =  format_ipaddr(__read4(ar_data + 16), %{ /* pure */ AF_INET %})
         }
         /* XXX support for additional cases? */
 

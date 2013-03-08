@@ -66,6 +66,7 @@ probe nd_syscall.mmap2.return = kprobe.function("sys_mmap2").return ?
 }
 %)
 
+%( CONFIG_GENERIC_SIGALTSTACK == "n" %?
 # sigaltstack _______________________________________________
 # asmlinkage long
 # sys_sigaltstack (const stack_t __user *uss, stack_t __user *uoss, long arg2,
@@ -88,6 +89,7 @@ probe nd_syscall.sigaltstack.return = kprobe.function("sys_sigaltstack").return
 	name = "sigaltstack";
 	retstr = returnstr(1)
 }
+%)
 
 # sysctl _____________________________________________________
 #

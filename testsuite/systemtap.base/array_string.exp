@@ -42,4 +42,11 @@ set test_script {
 set output "string lengths match\r\nstrings match\r\n"
 
 # Set MAXSTRINGLEN to 512 to be sure we're testing what we intend.
-stap_run $test no_load $output -DMAXSTRINGLEN=512 -e $test_script
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	stap_run "$test ($runtime)" no_load $output -DMAXSTRINGLEN=512 \
+	    --runtime=$runtime -e $test_script
+    } else {
+	stap_run $test no_load $output -DMAXSTRINGLEN=512 -e $test_script
+    }
+}

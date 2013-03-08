@@ -13,8 +13,16 @@ hello-999
 999-hello
 }
 
-foreach x {"d" "dln"} {
-    set test "print$x"
-    stap_run_exact $test $srcdir/$subdir/$test.stp
+foreach runtime [get_runtime_list] {
+    if {$runtime != ""} {
+	foreach x {"d" "dln"} {
+	    set test "print$x"
+	    stap_run_exact "$test ($runtime)" $srcdir/$subdir/$test.stp --runtime=$runtime
+	}
+    } else {
+	foreach x {"d" "dln"} {
+	    set test "print$x"
+	    stap_run_exact $test $srcdir/$subdir/$test.stp
+	}
+    }
 }
-

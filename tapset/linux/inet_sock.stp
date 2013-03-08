@@ -14,11 +14,12 @@
  */
 function inet_get_local_port:long(sock:long)
 {
-    return (@defined(@cast(sock, "inet_sock")->inet_num)
-	    ? @cast(sock, "inet_sock")->inet_num # kernel >= 2.6.33
-	    : (@defined(@cast(sock, "inet_sock")->num)
-	       ? @cast(sock, "inet_sock", "kernel")->num # kernel >= 2.6.11
-	       : @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->num))
+    return @choose_defined(@cast(sock, "inet_sock")->sk->__sk_common->skc_num,
+	     # kernel >= 2.6.33
+	     @choose_defined(@cast(sock, "inet_sock")->inet_num,
+	       # kernel >= 2.6.11
+	       @choose_defined(@cast(sock, "inet_sock")->num,
+		 @cast(sock, "inet_sock", "kernel<net/ip.h>")->inet->num)))
 }
 
 /**
@@ -32,7 +33,7 @@ function inet_get_ip_source:string(sock:long)
     return format_ipaddr(__ip_sock_daddr(sock), __ip_sock_family(sock))
 }
 
-%(systemtap_v <= "1.8" %?
+%(systemtap_v < "2.0" %?
 // Turns a daddr as found in an inet_sock into a dotted ip string.
 function daddr_to_string:string(daddr:long)
 {

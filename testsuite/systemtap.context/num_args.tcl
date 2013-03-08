@@ -1,7 +1,5 @@
-set arglists {{} {--kelf --ignore-dwarf}}
-foreach arglist $arglists {
-set tag [concat numeric $arglist]
-eval spawn stap $arglist $srcdir/$subdir/num_args.stp
+set tag "numeric"
+eval spawn stap $srcdir/$subdir/num_args.stp
 expect {
     -timeout 120
     "READY" {
@@ -63,4 +61,3 @@ expect {
 exec kill -INT -[exp_pid]
 catch close
 wait
-}

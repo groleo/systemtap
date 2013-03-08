@@ -85,6 +85,10 @@ proc run_one_test {filename flags bits suite} {
 	    regsub -all {\[\[\[\[} $line {(} line
 	    regsub -all {\]\]\]\]} $line {)} line
 
+	    # Turn '!!!!' into '|'. Since normally pipe characters get
+	    # quoted, this allows us to have non-quoted pipes.
+	    regsub -all {!!!!} $line {|} line
+
 	    regsub -all NNNN $line {[\-0-9]+} line
 	    regsub -all XXXX $line {[x0-9a-fA-F]+} line
 	    

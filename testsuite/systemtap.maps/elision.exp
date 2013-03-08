@@ -388,10 +388,17 @@ value |-------------------------------------------------- count
 }
 
 
-for {set i -1} { $i < 4} {incr i} {
-    set test "elision-$i"
-    set ::result_string $myresults($i)
-    stap_run_exact "elision$i" $srcdir/$subdir/elision.stp -DHIST_ELISION=$i
+set script $srcdir/$subdir/elision.stp
+foreach runtime [get_runtime_list] {
+    for {set i -1} { $i < 4} {incr i} {
+	set test "elision$i"
+	set ::result_string $myresults($i)
+
+	if {$runtime != ""} {
+	    lappend test "($runtime)"
+	    stap_run_exact $test $script -DHIST_ELISION=$i --runtime=$runtime
+	} else {
+	    stap_run_exact $test $script -DHIST_ELISION=$i
+	}
+    }
 }
-
-
