@@ -1,5 +1,22 @@
 #!/usr/bin/bash 
 
+function determine_apply_diff() {
+
+    read ANSWER
+    if [ "$ANSWER" == "no" ]
+    then
+	return 1
+    elif [ "$ANSWER" == "yes" ]
+    then
+	return 0
+    else
+	echo "Please answer \"yes\" or \"no\""
+	determine_apply_diff
+	return $?
+    fi
+
+}
+
 ### Create the directory we'll be working in###
 
 DIR=`mktemp -d stapXXX -p /tmp/`; cd $DIR
@@ -13,6 +30,7 @@ cd systemtap-git
 # We need to use --global for the NAME and USER vars as we're
 # assuming this script can be run from anywhere (ie, not in an
 # already existing git repo)
+APPLY_DIFF=1
 DATE=`date +"%a %b %d %Y"`
 NAME=`git config --get-all user.name`
 EMAIL=`git config --get-all user.email`
@@ -28,21 +46,42 @@ echo "Please install the fedpkg package"
 exit
 fi
 
-### Checkout the fedora sources systemtap
+# Checkout the fedora sources systemtap
 cd ..
 fedpkg co systemtap
 
-### create a tar.gz of the latest git sources from HEAD
+# Diff and check the differences between the two spec files,
+cd systemtap
+git diff systemtap.spec ../systemtap-git/systemtap.spec > ../spec-diff
+
+if [ -s ../spec-diff ]; then
+    cat ../spec-diff
+    echo "The above changes will apply to the fedora git tree,\nwould you like to continue? (yes/no):"
+    determine_apply_diff
+    APPLY_DIFF=$?
+    if [ "$APPLY_DIFF" == 0 ]; then
+	patch -p1 systemtap.spec < ../spec-diff
+	cd ..
+    fi
+fi
+
+# create a tar.gz of the latest git sources from HEAD
 cd systemtap-git
 git archive --prefix=systemtap-$CHANGELOG_VERSION/ -o ../systemtap/systemtap-$CHANGELOG_VERSION-$GIT_VERSION_TAG.tar.gz HEAD
 
-### fedpackage stuff
+# fedpackage stuff
 
 cd ../systemtap
 
 sed -i "s/Release: .*/Release: $GIT_VERSION_TAG\%\{\?dist\}/" systemtap.spec
 sed -i "s/^Source:.*/Source: %{name}-%{version}-$GIT_VERSION_TAG.tar.gz/" systemtap.spec
-sed -i "s/\%changelog/\%changelog\n* $DATE $NAME <$EMAIL> - $CHANGELOG_VERSION-$GIT_VERSION_TAG\n- Automated weekly rawhide release\n/" systemtap.spec
+
+# make note in the comments if any differences from upstream systemtap.spec have been merged
+if [ "$APPLY_DIFF" == 0 ]; then
+    sed -i "s/\%changelog/\%changelog\n* $DATE $NAME <$EMAIL> - $CHANGELOG_VERSION-$GIT_VERSION_TAG\n- Automated weekly rawhide release\n/- Applied spec changes from upstream git" systemtap.spec
+else
+    sed -i "s/\%changelog/\%changelog\n* $DATE $NAME <$EMAIL> - $CHANGELOG_VERSION-$GIT_VERSION_TAG\n- Automated weekly rawhide release\n/" systemtap.spec
+fi
 
 echo "Please ensure that you have an up to date fedoraproject SSL certificate, you can achieve this by running fedora-cert -n"
 
