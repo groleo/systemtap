@@ -151,6 +151,7 @@ proc setup_systemtap_environment {} {
     set chan [open $env(SYSTEMTAP_DIR)/rc w]
     puts $chan "--modinfo intree=Y"
     puts $chan "-B CONFIG_DEBUG_INFO=Y"
+    puts $chan "--rlimit-cpu=300"
     close $chan
 
     # Erase the old server log file.
