@@ -37,7 +37,7 @@ proc list_servers { TEST_NAME SERVER_SPEC args } {
 	    set failed 1
 	}
     }
-    catch close
+    catch {close}; catch {wait}
 
     if {$failed != 0} {
 	fail "$TEST_NAME"
@@ -295,7 +295,7 @@ expect {
 	set failed 1
     }
 }
-catch close
+catch {close}; catch {wait}
 
 # Our server should no longer be trusted.
 list_servers "List current trusted servers after revokation by host name" trusted
@@ -340,7 +340,7 @@ expect {
 	set failed 1
     }
 }
-catch close
+catch {close}; catch {wait}
 
 # Our server should be trusted again, separate from the previously discovered
 # trusted servers.
@@ -514,7 +514,7 @@ foreach privilege {"--unprivileged" "--privilege=stapusr" "--privilege=stapsys"}
 	    wait
 	}
     }
-    catch close
+    catch {close}; catch {wait}
     if {$failed == 0} {
 	pass "$test"
     }
@@ -597,7 +597,7 @@ foreach privilege {"--unprivileged" "--privilege=stapusr" "--privilege=stapsys"}
 		set failed 1
 	    }
 	}
-	catch close
+	catch {close}; catch {wait}
 	if {$failed == 0} {
 	    pass "$test"
 	} else {
@@ -677,7 +677,7 @@ if {$no_module == 1 || ! [installtest_p]} {
 	    set failed 1
 	}
     }
-    catch close
+    catch {close}; catch {wait}
     if {$failed == 0} {
 	pass "$test"
     } else {
