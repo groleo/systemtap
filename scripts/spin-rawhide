@@ -62,8 +62,8 @@ if [ -s ../spec-diff ]; then
     APPLY_DIFF=$?
     if [ "$APPLY_DIFF" == 0 ]; then
 	patch -p1 systemtap.spec < ../spec-diff
-	cd ..
     fi
+    cd ..
 fi
 
 # create a tar.gz of the latest git sources from HEAD
