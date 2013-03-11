@@ -7,7 +7,7 @@
 	<simpara>
 		<revhistory>
 <revision>
-			<revnumber>2.0</revnumber>
+			<revnumber>2.0-1</revnumber>
 				<date>Mon Jul 20 2009</date>
 				<author>
 					<firstname>Don</firstname>
@@ -22,7 +22,7 @@
 			</revision>
 
 <revision>
-				<revnumber>1.0</revnumber>
+				<revnumber>1.0-1</revnumber>
 				<date>Wed Jun 17 2009</date>
 				<author>
 					<firstname>Don</firstname>
@@ -36,7 +36,7 @@
 				</revdescription>
 			</revision>
 <!--			<revision>
-				<revnumber>1.0</revnumber>
+				<revnumber>1.0-1</revnumber>
 				<date>September 2, 2008</date>
 				<author>
 					<firstname>Don</firstname>
@@ -51,7 +51,7 @@
 			</revision>
 
 			<revision>
-				<revnumber>2.0</revnumber>
+				<revnumber>2.0-1</revnumber>
 				<date>December 1, 2008</date>
 				<author>
 					<firstname>Don</firstname>
@@ -66,7 +66,7 @@
 			</revision>
 
 			<revision>
-				<revnumber>3.0</revnumber>
+				<revnumber>3.0-1</revnumber>
 				<date>December 10, 2008</date>
 				<author>
 					<firstname>Don</firstname>
