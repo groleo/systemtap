@@ -119,6 +119,7 @@ foreach runtime [get_runtime_list] {
 	spawn stap -c $label_exepath $label_stppath
     } else {
 	untested "$test_name"
+	continue
     }
 
     # Note that the output can come out in a bit different order
