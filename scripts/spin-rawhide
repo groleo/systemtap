@@ -52,11 +52,12 @@ fedpkg co systemtap
 
 # Diff and check the differences between the two spec files,
 cd systemtap
-git diff systemtap.spec ../systemtap-git/systemtap.spec > ../spec-diff
 
+git diff systemtap.spec ../systemtap-git/systemtap.spec > ../spec-diff
 if [ -s ../spec-diff ]; then
     cat ../spec-diff
-    echo "The above changes will apply to the fedora git tree,\nwould you like to continue? (yes/no):"
+    echo "The above changes will apply to the fedora git tree,"
+    echo "would you like to apply the patch? (yes/no):"
     determine_apply_diff
     APPLY_DIFF=$?
     if [ "$APPLY_DIFF" == 0 ]; then
@@ -67,6 +68,7 @@ fi
 
 # create a tar.gz of the latest git sources from HEAD
 cd systemtap-git
+
 git archive --prefix=systemtap-$CHANGELOG_VERSION/ -o ../systemtap/systemtap-$CHANGELOG_VERSION-$GIT_VERSION_TAG.tar.gz HEAD
 
 # fedpackage stuff
@@ -78,7 +80,7 @@ sed -i "s/^Source:.*/Source: %{name}-%{version}-$GIT_VERSION_TAG.tar.gz/" system
 
 # make note in the comments if any differences from upstream systemtap.spec have been merged
 if [ "$APPLY_DIFF" == 0 ]; then
-    sed -i "s/\%changelog/\%changelog\n* $DATE $NAME <$EMAIL> - $CHANGELOG_VERSION-$GIT_VERSION_TAG\n- Automated weekly rawhide release\n/- Applied spec changes from upstream git" systemtap.spec
+    sed -i "s/\%changelog/\%changelog\n* $DATE $NAME <$EMAIL> - $CHANGELOG_VERSION-$GIT_VERSION_TAG\n- Automated weekly rawhide release\n- Applied spec changes from upstream git\n/" systemtap.spec
 else
     sed -i "s/\%changelog/\%changelog\n* $DATE $NAME <$EMAIL> - $CHANGELOG_VERSION-$GIT_VERSION_TAG\n- Automated weekly rawhide release\n/" systemtap.spec
 fi
