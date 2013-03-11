@@ -31,5 +31,8 @@ for {set i 0} {$i < 10} {incr i} {
     # don't delay before the next staprun
 }
 
+# Killing stapio with SIGKILL can leave the module behind.
+catch { exec staprun -d $module }
+
 # if we're still alive, we pass :)
 pass "$test runloop"
