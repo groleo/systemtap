@@ -1,18 +1,27 @@
 %{!?with_sqlite: %global with_sqlite 1}
 %{!?with_docs: %global with_docs 1}
+# crash is not available
+%ifarch ppc ppc64 %{sparc}
+%{!?with_crash: %global with_crash 0}
+%else
 %{!?with_crash: %global with_crash 1}
+%endif
 %{!?with_rpm: %global with_rpm 1}
 %{!?with_bundled_elfutils: %global with_bundled_elfutils 0}
 %{!?elfutils_version: %global elfutils_version 0.142}
 %{!?pie_supported: %global pie_supported 1}
 %{!?with_boost: %global with_boost 0}
+%ifarch ppc ppc64 %{sparc}
+%{!?with_publican: %global with_publican 0}
+%else
 %{!?with_publican: %global with_publican 1}
+%endif
 %if 0%{?rhel}
 %{!?publican_brand: %global publican_brand RedHat}
 %else
 %{!?publican_brand: %global publican_brand fedora}
 %endif
-%ifnarch %{arm}
+%ifnarch s390 s390x %{arm}
 %{!?with_dyninst: %global with_dyninst 0%{?fedora} >= 18 || 0%{?rhel} >= 7}
 %else
 %{!?with_dyninst: %global with_dyninst 0}
