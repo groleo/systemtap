@@ -26,12 +26,14 @@ fi
 
 # Passing LD_LIBRARY_PATH to sudo is a bit unusual, and possibly dangerous, but
 # we'll trust that pro users with sudo access know how to keep their noses^W
-# environment clean.
+# environment clean.  Ditto for PATH and HOME, which help -c CMD work nonroot.
 
 exec sudo -P "SYSTEMTAP_STAPIO=${builddir}/stapio" \
              "SYSTEMTAP_STAPRUN=${builddir}/run-staprun" \
              "SYSTEMTAP_RUNTIME=${srcdir}/../runtime" \
              "SYSTEMTAP_REAL_UID=`id -ru`" \
              "SYSTEMTAP_REAL_GID=`id -rg`" \
-             "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" \
+             ${LD_LIBRARY_PATH:+"LD_LIBRARY_PATH=$LD_LIBRARY_PATH"} \
+             ${PATH:+"PATH=$PATH"} \
+             ${HOME:+"HOME=$HOME"} \
              ${builddir}/staprun ${1+"$@"}
