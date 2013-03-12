@@ -45,6 +45,7 @@ static int _stp_runtime_contexts_alloc(void)
     for (i = 0; i < _stp_runtime_num_contexts; i++) {
 	int rc;
 	struct context *c = stp_session_context(i);
+	c->data_index = i;
 	rc = stp_pthread_mutex_init_shared(&c->lock);
 	if (rc != 0) {
 	    _stp_error("context mutex initialization failed");
