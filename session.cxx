@@ -86,6 +86,8 @@ systemtap_session::systemtap_session ():
   sym_kprobes_text_end (0),
   sym_stext (0),
   module_cache (0),
+  benchmark_sdt_loops(0),
+  benchmark_sdt_threads(0),
   last_token (0)
 {
   struct utsname buf;
@@ -260,6 +262,8 @@ systemtap_session::systemtap_session (const systemtap_session& other,
   sym_kprobes_text_end (0),
   sym_stext (0),
   module_cache (0),
+  benchmark_sdt_loops(other.benchmark_sdt_loops),
+  benchmark_sdt_threads(other.benchmark_sdt_threads),
   last_token (0)
 {
   release = kernel_release = kern;
@@ -1259,6 +1263,16 @@ systemtap_session::parse_cmdline (int argc, char * const argv [])
             return 1;
           break;
 
+        case LONG_OPT_BENCHMARK_SDT_LOOPS:
+          // XXX This option is secret, not supported, subject to change at our whim
+          benchmark_sdt_loops = strtoul(optarg, NULL, 10);
+          break;
+
+        case LONG_OPT_BENCHMARK_SDT_THREADS:
+          // XXX This option is secret, not supported, subject to change at our whim
+          benchmark_sdt_threads = strtoul(optarg, NULL, 10);
+          break;
+
 	case '?':
 	  // Invalid/unrecognized option given or argument required, but
 	  // not given. In both cases getopt_long() will have printed the
@@ -1321,17 +1335,33 @@ systemtap_session::check_options (int argc, char * const argv [])
         args.push_back (string (argv[i]));
     }
 
-  // need a user file
-  // NB: this is also triggered if stap is invoked with no arguments at all
-  if (! have_script)
+  // We don't need a script with --list-servers, --trust-servers, or --dump-probe-types.
+  bool need_script = server_status_strings.empty () && server_trust_spec.empty () && ! dump_probe_types;
+
+  if (benchmark_sdt_loops > 0 || benchmark_sdt_threads > 0)
     {
-      // We don't need a script if --list-servers, --trust-servers or --dump-probe-types was
-      // specified.
-      if (server_status_strings.empty () && server_trust_spec.empty () && ! dump_probe_types)
+      // Secret benchmarking options are for local use only, not servers or --remote
+      if (client_options || !remote_uris.empty())
 	{
-	  cerr << _("A script must be specified.") << endl;
+	  cerr << _("Benchmark options are only for local use.") << endl;
 	  usage(1);
 	}
+
+      // Fill defaults if either is unset.
+      if (benchmark_sdt_loops == 0)
+	benchmark_sdt_loops = 10000000;
+      if (benchmark_sdt_threads == 0)
+	benchmark_sdt_threads = 1;
+
+      need_script = false;
+    }
+
+  // need a user file
+  // NB: this is also triggered if stap is invoked with no arguments at all
+  if (need_script && ! have_script)
+    {
+      cerr << _("A script must be specified.") << endl;
+      usage(1);
     }
 
 #if ! HAVE_NSS

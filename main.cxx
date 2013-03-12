@@ -305,6 +305,50 @@ setup_signals (sighandler_t handler)
 }
 
 
+static void*
+sdt_benchmark_thread(void* p)
+{
+  unsigned long i = *(unsigned long*)p;
+  while (i--)
+    PROBE(stap, benchmark);
+  return NULL;
+}
+
+
+static int
+run_sdt_benchmark(systemtap_session& s)
+{
+  unsigned long loops = s.benchmark_sdt_loops ?: 10000000;
+  unsigned long threads = s.benchmark_sdt_threads ?: 1;
+
+  clog << _F("Beginning SDT benchmark with %lu loops in %lu threads.",
+             loops, threads) << endl;
+
+  struct tms tms_before, tms_after;
+  struct timeval tv_before, tv_after;
+  unsigned _sc_clk_tck = sysconf (_SC_CLK_TCK);
+  times (& tms_before);
+  gettimeofday (&tv_before, NULL);
+
+  pthread_t pthreads[threads];
+  for (unsigned long i = 0; i < threads; ++i)
+    pthread_create(&pthreads[i], NULL, sdt_benchmark_thread, &loops);
+  for (unsigned long i = 0; i < threads; ++i)
+    pthread_join(pthreads[i], NULL);
+
+  times (& tms_after);
+  gettimeofday (&tv_after, NULL);
+  clog << _F("Completed SDT benchmark in %ldusr/%ldsys/%ldreal ms.",
+             (tms_after.tms_utime - tms_before.tms_utime) * 1000 / _sc_clk_tck,
+             (tms_after.tms_stime - tms_before.tms_stime) * 1000 / _sc_clk_tck,
+             ((tv_after.tv_sec - tv_before.tv_sec) * 1000 +
+              ((long)tv_after.tv_usec - (long)tv_before.tv_usec) / 1000))
+       << endl;
+
+  return EXIT_SUCCESS;
+}
+
+
 // Compilation passes 0 through 4
 static int
 passes_0_4 (systemtap_session &s)
@@ -1006,6 +1050,10 @@ main (int argc, char * const argv [])
     // we didn't know if verbose was set.
     if (rc == 0 && s.verbose>1)
       clog << _F("Created temporary directory \"%s\"", s.tmpdir.c_str()) << endl;
+
+    // Run the benchmark and quit right away.
+    if (s.benchmark_sdt_loops || s.benchmark_sdt_threads)
+      return run_sdt_benchmark(s);
 
     // Prepare connections for each specified remote target.
     vector<remote*> targets;

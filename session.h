@@ -343,6 +343,10 @@ public:
   struct module_cache* module_cache;
   std::vector<std::string> build_ids;
 
+  // Secret benchmarking options
+  unsigned long benchmark_sdt_loops;
+  unsigned long benchmark_sdt_threads;
+
   // NB: It is very important for all of the above (and below) fields
   // to be cleared in the systemtap_session ctor (session.cxx).
 

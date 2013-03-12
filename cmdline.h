@@ -53,6 +53,8 @@ enum {
   LONG_OPT_SUPPRESS_TIME_LIMITS,
   LONG_OPT_RUNTIME,
   LONG_OPT_RUNTIME_DYNINST,
+  LONG_OPT_BENCHMARK_SDT_LOOPS,
+  LONG_OPT_BENCHMARK_SDT_THREADS,
 };
 
 // NB: when adding new options, consider very carefully whether they
