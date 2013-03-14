@@ -1984,7 +1984,7 @@ parser::parse_try_block ()
   expect_kw ("catch");
 
   const token* t = peek ();
-  if (t->type == tok_operator && t->content == "(")
+  if (t != NULL && t->type == tok_operator && t->content == "(")
     {
       swallow (); // swallow the '('
 
@@ -2247,6 +2247,8 @@ parser::parse_probe_point ()
       while (1)
         {
           const token* u = peek();
+          if (u == NULL)
+            break;
           // ensure pieces of the identifier are adjacent:
           if (input.ate_whitespace)
             break;
@@ -3581,8 +3583,11 @@ target_symbol* parser::parse_target_symbol (const token* t)
   if (t->type == tok_operator && t->content == "&")
     {
       addressof = true;
+      // Don't delete t before trying next token.
+      // We might need it in the error message when there is no next token.
+      const token *next_t = next ();
       delete t;
-      t = next ();
+      t = next_t;
     }
 
   if (t->type == tok_operator && t->content == "@cast")
@@ -3744,7 +3749,7 @@ parser::parse_target_symbol_components (target_symbol* e)
       // check for pretty-print in the form $foo $
       // i.e. as a separate token, esp. for $foo[i]$ and @cast(...)$
       const token* t = peek();
-      if (t->type == tok_identifier &&
+      if (t != NULL && t->type == tok_identifier &&
           t->content.find_first_not_of('$') == string::npos)
         {
           t = next();
