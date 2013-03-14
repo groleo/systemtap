@@ -90,14 +90,17 @@ cp $BASEDIR/systemtap/build/doc/SystemTap_Tapset_Reference/tapsets.pdf $BASEDIR/
 
 rm $BASEDIR/htdocs/tapsets/*.html
 
-cp $BASEDIR/systemtap/build/doc/SystemTap_Tapset_Reference/tapsets/*.html $BASEDIR/htdocs/tapsets/
+cp -R $BASEDIR/systemtap/build/doc/SystemTap_Tapset_Reference/tapsets/*.html $BASEDIR/htdocs/tapsets/
+
+cd $BASEDIR/htdocs
+cvs add tapsets/*.html && cvs commit -m 'add new tapsets/*.html'
 
 #echo 'tapsets html cp'
 
 # systemtap examples
 # run gitweb.php script?
 # run examples-index-gen.pl script if needed?
-cd $BASEDIR/htdocs
+
 rm man/*.html && cvs rm * && cvs commit -m 'removed man pages'
 
 cd $BASEDIR/htdocs/man
