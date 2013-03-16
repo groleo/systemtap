@@ -2472,6 +2472,8 @@ parser::parse_expr_statement ()
 {
   expr_statement *es = new expr_statement;
   const token* t = peek ();
+  if (t == NULL)
+    throw parse_error (_("expression statement expected"));
   // Copy, we only peeked, parse_expression might swallow.
   es->tok = new token (*t);
   es->value = parse_expression ();
