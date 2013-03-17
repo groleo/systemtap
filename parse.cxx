@@ -436,7 +436,7 @@ parser::next_pp1 ()
   if (cursor < act->curr_macro->body.size())
     {
       token* t = new token(*act->curr_macro->body[cursor]);
-      t->chain = act->tok; // mark chained token
+      t->chain = new token(*act->tok); // mark chained token
       cursor++;
       return t;
     }
