@@ -95,6 +95,9 @@ static inline int pseudo_atomic_cmpxchg(atomic_t *v, int oldval, int newval)
 /* Semi-forward declaration from runtime_context.h, needed by stat.c. */
 static int _stp_runtime_num_contexts;
 
+/* Semi-forward declaration from this file, needed by stat.c. */
+static int stp_pthread_mutex_init_shared(pthread_mutex_t *mutex);
+
 #define for_each_possible_cpu(cpu) for ((cpu) = 0; (cpu) < _stp_runtime_num_contexts; (cpu)++)
 
 #define yield() sched_yield()

@@ -34,7 +34,7 @@ static int _stp_map_initialize_lock(MAP m)
 #ifdef NEED_MAP_LOCKS
 	int rc;
 
-	if ((rc = pthread_mutex_init(&m->lock, NULL)) != 0) {
+	if ((rc = stp_pthread_mutex_init_shared(&m->lock)) != 0) {
 		_stp_error("Couldn't initialize map mutex: %d\n", rc);
 		return rc;
 	}

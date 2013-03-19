@@ -100,15 +100,13 @@ static int _stp_stat_initialize_locks(Stat st)
 	for_each_possible_cpu(i) {
 		sdp = _stp_stat_per_cpu_ptr (st, i);
 
-		if ((rc = pthread_mutex_init(&sdp->lock, NULL)) != 0) {
-			int j;
-
-			_stp_error("Couldn't initialize stat mutex: %d\n", rc);
+		if ((rc = stp_pthread_mutex_init_shared(&sdp->lock))
+		    != 0) {
 			return rc;
 		}
 	}
 	sdp = _stp_stat_get_agg (st);
-	if ((rc = pthread_mutex_init(&sdp->lock, NULL)) != 0) {
+	if ((rc = stp_pthread_mutex_init_shared(&sdp->lock)) != 0) {
 		_stp_error("Couldn't initialize stat mutex: %d\n", rc);
 	}
 	return rc;
