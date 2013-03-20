@@ -22,7 +22,9 @@
 #include "dynprobe.h"
 #include "dynutil.h"
 #include "mutatee.h"
+extern "C" {
 #include "../runtime/dyninst/stapdyn.h"
+}
 
 
 // The mutator drives all instrumentation.

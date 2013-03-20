@@ -21,8 +21,9 @@ extern "C" {
 #include "dynutil.h"
 #include "../util.h"
 
+extern "C" {
 #include "../runtime/dyninst/stapdyn.h"
-
+}
 
 using namespace std;
 
