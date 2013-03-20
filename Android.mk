@@ -33,6 +33,12 @@ LOCAL_SRC_FILES := \
 	tapset-mark.cxx \
 	tapset-itrace.cxx \
 	tapset-utrace.cxx \
+	tapset-dynprobe.cxx \
+	re2c-migrate/re2c-dfa.cxx \
+	re2c-migrate/re2c-emit.cxx \
+	re2c-migrate/re2c-globals.cxx \
+	re2c-migrate/re2c-regex.cxx \
+	re2c-migrate/stapregex.cxx \
 	task_finder.cxx \
 	dwflpp.cxx \
 	rpm_finder.cxx \
