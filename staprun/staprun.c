@@ -279,8 +279,10 @@ void disable_kprobes_optimization()
 
         /* PR13814; disable this facility for new enough kernels, containing
          * these fix commits: 86b4ce31 46484688 3f33ab1c */
+#ifndef __ANDROID__
         if ((uname (&uts) == 0) && (strverscmp (uts.release, "3.4") >= 0))
                 return;
+#endif
 
         if (getenv ("STAP_PR13193_OVERRIDE"))
                 return;

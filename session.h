@@ -10,7 +10,9 @@
 #define SESSION_H
 
 #include "config.h"
+#ifndef __ANDROID__
 #include <libintl.h>
+#endif
 #include <locale.h>
 
 #include <list>
