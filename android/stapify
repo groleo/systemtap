@@ -1,17 +1,17 @@
-#! /bin/bash -
+#! /bin/bash -e
 
 function print_usage()
 {
     echo "Usage: "
-    echo "stapify <script.stp> <PID to attach to | process name | cmd to run> [-D] [-V] [-s] [-u]"
+    echo "stapify <options> <script.stp>"
     echo "    -p: pid to attach to"
     echo "    -n: process name to attach to"
     echo "    -c: command to run"
+    echo "    -P: stop after pushing the .ko to the device"
+    echo "    -v: enable .stp compile verbosity"
     echo "    -D: enable .ko runtime debug"
-    echo "    -V: enable verbosity of stp script compilation"
     echo "    -s: sync binaries"
     echo "    -u: run stap script unpriviledged (for userspace probes)"
-    echo "    -P: stop after pushing the .ko to the device"
 }
 
 function target_pid()
@@ -42,52 +42,59 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-PATH_STP="$1"
+shopt -s extglob
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -P)
+            STOP_AFTER_PUSH=1
+            shift
+            ;;
+        -p)
+            PID=$2
+            shift 2
+            ;;
+        -n)
+            PNAME=$2
+            shift 2
+            ;;
+        -c)
+            CMD=$2
+            shift 2
+            ;;
+        -+(v))
+            V_FLAG="$1 --vp 0001"
+            shift
+            ;;
+        -D)
+            D_FLAG="-DDEBUG_UNWIND=9 -DDEBUG_UPROBES -DDEBUG_TASK_FINDER_VMA -DDEBUG_TASK_FINDER"
+            shift 2
+            ;;
+        -s)
+            SYNC=true
+            shift
+            ;;
+        -u)
+            P_FLAG="--unprivileged"
+            shift
+            ;;
+        -*)
+            print_usage
+            exit 1;;
+         *)
+            EXTRA="$EXTRA $1"
+            shift
+           ;;
+    esac
+done
+
+PATH_STP="$EXTRA"
 BASE_STP=`basename $PATH_STP`
 BASE=${BASE_STP%.stp}
 # we are deriving the module name from the stp file name. But, modules can't
 # contain -'s, so transform them to _'s.
 BASE=`echo $BASE | sed 's/-/_/g'`
 BASE_KO="${BASE}.ko"
-shopt -s extglob
-
-shift
-while [ $# -gt 0 ]; do
-    case "$1" in
-        -P)
-            STOP_AFTER_PUSH=1
-            ;;
-        -p)
-            PID=$2
-            shift;
-            break;;
-        -n)
-            PNAME=$2
-            shift;
-            break;;
-        -c)
-            CMD=$2
-            shift;
-            break;;
-        -+(V))
-            V_FLAG="$1"
-            break;;
-        -D)
-            D_FLAG="-DDEBUG_UNWIND=9 -DDEBUG_UPROBES -DDEBUG_TASK_FINDER_VMA -DDEBUG_TASK_FINDER"
-            break;;
-        -s)
-            SYNC=true
-            break;;
-        -u)
-            P_FLAG="--unprivileged"
-            break;;
-        -*)
-            print_usage
-            exit 1;;
-
-    esac
-    shift
-done
 
 # Prepare stap arguments.
 # path to host binary
@@ -101,16 +108,52 @@ CROSS=i686-linux-android-
 rm -rf $BASE_KO
 rm -rf /tmp/stap*
 
-# compile the stp file
+LIBS=""
+for file in $SYSROOT/system/lib/* ; do
+    LIBS="$LIBS -d '$file'"
+done
+
+echo "compile the stp file: $V_FLAG $D_FLAG"
+    #-B CROSS_COMPILE=$CROSS \
+    #-a i386  \
+
 (
 # stap also looks into XDG_DATA_DIRS which can contain the
 # system-wide instalation of host systemtap tapsets
 unset XDG_DATA_DIRS
-env PATH=$PATH KCFLAGS="-fno-pic -mfpmath=387" \
-    $STAP -k $V_FLAG $D_FLAG $P_FLAG -a i386 -p4 \
-    --sysroot=$SYSROOT -r $KERNEL -B CROSS_COMPILE=$CROSS \
-    -R $STAP_SRC/runtime/ -I $STAP_SRC/tapset/ -m $BASE $PATH_STP
+KCFLAGS="-fno-pic -mfpmath=387" \
+$STAP -k $V_FLAG $D_FLAG $P_FLAG \
+    -p4 \
+    --sysroot=$SYSROOT \
+    -r $KERNEL \
+    -d $SYSROOT/system/bin/surfaceflinger \
+    -d $SYSROOT/system/bin/mediaserver \
+    -d $SYSROOT/system/bin/system_server \
+    -d $SYSROOT/system/bin/app_process \
+    -d $SYSROOT/system/lib/dri/i965_dri.so \
+    -d $SYSROOT/system/lib/egl/libGLES_mesa.so \
+    -d $SYSROOT/system/lib/libGLESv1_CM.so \
+    -d $SYSROOT/system/lib/libGLESv2.so \
+    -d $SYSROOT/system/lib/libEGL.so \
+    -d $SYSROOT/system/lib/libOMXVideoEncoderAVC.so \
+    -d $SYSROOT/system/lib/libc.so \
+    -d $SYSROOT/system/lib/libdrm.so \
+    -d $SYSROOT/system/lib/libglapi.so \
+    -d $SYSROOT/system/lib/libgui.so \
+    -d $SYSROOT/system/lib/libsurfaceflinger.so \
+    -d $SYSROOT/system/lib/libutils.so \
+    -d $SYSROOT/system/lib/libva-tpi.so \
+    -d $SYSROOT/system/lib/libva.so \
+    -d $SYSROOT/system/lib/libva_videoencoder.so \
+    -d $SYSROOT/system/lib/libwrs_omxil_common.so \
+    -R $STAP_SRC/runtime/ \
+    -I $STAP_SRC/tapset/ \
+    -m $BASE \
+    $PATH_STP
 )
+
+    #-DMAXSTRINGLEN=4096 \
+
 
 if [ ! -f "$BASE_KO" ]; then
     echo "stap failed"
