@@ -46,10 +46,9 @@ proc stap_direct_and_with_client {stap options} {
 	    -re {^.*\r\n} { exp_continue }
 	    timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 	    }
 	}
-	catch close
+	catch {close}; catch {wait}
 	if { $fallthrough == 0 } {
 	    return $passed
 	}

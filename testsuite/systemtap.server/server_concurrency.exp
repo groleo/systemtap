@@ -91,42 +91,41 @@ expect {
     -timeout 150
     -i $firstid timeout {
         exec kill -INT -[$firstid]
-        wait
         fail "$test (timeout 1)"
         exp_continue
     }
     -i $secondid timeout {
         exec kill -INT -[$secondid]
-        wait
         fail "$test (timeout 2)"
         exp_continue
     }
     -i $thirdid timeout {
         exec kill -INT -[$thirdid]
-        wait
         fail "$test (timeout 3)"
         exp_continue
     }
     -i $fourthid timeout {
         exec kill -INT -[$fourthid]
-        wait
         fail "$test (timeout 4)"
         exp_continue
     }
     -i $fifthid timeout {
         exec kill -INT -[$fifthid]
-        wait
         fail "$test (timeout 5)"
         exp_continue
     }
     -i $sixthid timeout {
         exec kill -INT -[$sixthid]
-        wait
         fail "$test (timeout 6)"
         exp_continue
     }
 }
-catch close
+catch {close -i $firstid}; catch {wait -i $firstid}
+catch {close -i $secondid}; catch {wait -i $secondid}
+catch {close -i $thirdid}; catch {wait -i $thirdid}
+catch {close -i $fourthid}; catch {wait -i $fourthid}
+catch {close -i $fifthid}; catch {wait -i $fifthid}
+catch {close -i $sixthid}; catch {wait -i $sixthid}
 
 # Check the log output file for cuncurrency
 set f [open $logfile]

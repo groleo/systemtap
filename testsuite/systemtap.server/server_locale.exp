@@ -39,11 +39,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -85,11 +84,10 @@ expect {
 	}
 	timeout {
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -125,11 +123,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -168,11 +165,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -207,11 +203,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -269,11 +264,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1		
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -328,11 +322,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1		
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -369,11 +362,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -410,11 +402,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -477,11 +468,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1		
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -539,11 +529,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1		
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -581,11 +570,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -619,11 +607,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -680,11 +667,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1		
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -739,11 +725,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1		
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -780,11 +765,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -822,11 +806,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -889,11 +872,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1		
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {
@@ -952,11 +934,10 @@ expect {
 	}
 	timeout { 
 		exec kill -INT -[exp_pid]
-		wait
 		set failed 1		
 	}
 }
-catch close
+catch {close}; catch {wait}
 if {$failed != 0} {
 	fail "$test"
     } else {

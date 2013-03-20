@@ -48,10 +48,9 @@ if {! [uprobes_p]} then {
 	-re {^.*\r\n} { exp_continue }
 	timeout { 
 	    exec kill -INT -[exp_pid]
-	    wait
 	}
     }
-    catch close
+    catch {close}; catch {wait}
     if {$failed == 0} {
 	pass "$test $subtest -p4"
     } else {
@@ -93,7 +92,7 @@ if {! [uprobes_p]} then {
 	timeout { }
 	eof { }
     }
-    catch close
+    catch {close}; catch {wait}
     setup_kfail UPROBES *-*-*
     if {$ok == 10} {
 	pass "$test $subtest -p5"

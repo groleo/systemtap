@@ -20,7 +20,8 @@ proc run_test_prog {} {
     after 3000
 
     # Kill the test program
-    catch {exec kill -INT -[exp_pid -i $id]; close -i $id; wait -i $id}
+    catch {exec kill -INT -[exp_pid -i $id]}
+    catch {close -i $id}; catch {wait -i $id}
     return 0
 }
 
@@ -55,8 +56,10 @@ stap_run $TEST_NAME run_test_prog $output_string \
     $srcdir/$subdir/probe_by_pid_utrace.stp $pid2
 
 # Kill both of the spawned processes
-catch {exec kill -INT -[exp_pid -i $id1]; close -i $id1; wait -i $id1}
-catch {exec kill -INT -[exp_pid -i $id2]; close -i $id2; wait -i $id2}
+catch {exec kill -INT -[exp_pid -i $id1]}
+catch {close -i $id1}; catch {wait -i $id1}
+catch {exec kill -INT -[exp_pid -i $id2]}
+catch {close -i $id2}; catch {wait -i $id2}
 
 # Here we'd like to test 'process(PID).function(FUNC)', but process
 # function probes only support .process(PATH).function(FUNC)' probes.
@@ -92,8 +95,10 @@ stap_run $TEST_NAME run_test_prog $output_string \
     $srcdir/$subdir/probe_by_pid_function.stp -d $test_prog2 $test_prog2
 
 # Kill both of the spawned processes
-catch {exec kill -INT -[exp_pid -i $id1]; close -i $id1; wait -i $id1}
-catch {exec kill -INT -[exp_pid -i $id2]; close -i $id2; wait -i $id2}
+catch {exec kill -INT -[exp_pid -i $id1]}
+catch {close -i $id1}; catch {wait -i $id1}
+catch {exec kill -INT -[exp_pid -i $id2]}
+catch {close -i $id2}; catch {wait -i $id2}
 
 # FIXME: we could also test hard-linked paths with
 # 'process(PATH).mark(MARK)' probes (with and without semaphores).
