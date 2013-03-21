@@ -54,19 +54,6 @@ typedef typeof(&uprobe_unregister) uprobe_unregister_fn;
 #define uprobe_unregister unregister_uprobe
 #endif
 
-#if defined(STAPCONF_INODE_URETPROBES)
-#if !defined(STAPCONF_URETPROBE_REGISTER_EXPORTED)
-// First typedef from the original decl, then #define it as a typecasted call.
-typedef typeof(&uretprobe_register) uretprobe_register_fn;
-#define uretprobe_register (* (uretprobe_register_fn)kallsyms_uretprobe_register)
-#endif
-
-#if !defined(STAPCONF_URETPROBE_UNREGISTER_EXPORTED)
-// First typedef from the original decl, then #define it as a typecasted call.
-typedef typeof(&uretprobe_unregister) uretprobe_unregister_fn;
-#define uretprobe_unregister (* (uretprobe_unregister_fn)kallsyms_uretprobe_unregister)
-#endif
-#endif
 
 #if !defined(STAPCONF_UPROBE_GET_SWBP_ADDR_EXPORTED)
 // First typedef from the original decl, then #define it as a typecasted call.
@@ -174,12 +161,13 @@ stapiu_probe_prehandler_noaddr (struct uprobe_consumer *inst, struct pt_regs *re
 static int
 stapiu_register (struct inode* inode, struct stapiu_consumer* c)
 {
-	c->consumer.handler = STAPIU_HANDLER;
 	if (!c->return_p) {
+		c->consumer.handler = STAPIU_HANDLER;
 		return uprobe_register (inode, c->offset, &c->consumer);
-        } else {
+	} else {
 #if defined(STAPCONF_INODE_URETPROBES)
-		return uretprobe_register (inode, c->offset, &c->consumer);
+		c->consumer.rp_handler = STAPIU_HANDLER;
+		return uprobe_register (inode, c->offset, &c->consumer);
 #else
 		return EINVAL;
 #endif
@@ -193,7 +181,7 @@ stapiu_unregister (struct inode* inode, struct stapiu_consumer* c)
 		uprobe_unregister (inode, c->offset, &c->consumer);
 #if defined(STAPCONF_INODE_URETPROBES)
 	else
-		uretprobe_unregister (inode, c->offset, &c->consumer);
+		uprobe_unregister (inode, c->offset, &c->consumer);
 #endif
 }
 
