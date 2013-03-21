@@ -380,22 +380,6 @@ static int _stp_transport_init(void)
         }
 #endif
 #endif
-#if defined(STAPCONF_INODE_URETPROBES) // i.e., kernel-embedded uretprobes
-#if !defined(STAPCONF_URETPROBE_REGISTER_EXPORTED)
-        kallsyms_uretprobe_register = (void*) kallsyms_lookup_name ("uretprobe_register");
-        if (kallsyms_uretprobe_register == NULL) {
-                printk(KERN_ERR "%s can't resolve uretprobe_register!", THIS_MODULE->name);
-                goto err0;
-        }
-#endif
-#if !defined(STAPCONF_URETPROBE_UNREGISTER_EXPORTED)
-        kallsyms_uretprobe_unregister = (void*) kallsyms_lookup_name ("uretprobe_unregister");
-        if (kallsyms_uretprobe_unregister == NULL) {
-                printk(KERN_ERR "%s can't resolve uretprobe_unregister!", THIS_MODULE->name);
-                goto err0;
-        }
-#endif
-#endif
 
 
 #ifdef RELAY_GUEST
