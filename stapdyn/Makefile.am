@@ -1,7 +1,7 @@
 # Makefile.am --- automake input file for systemtap dyninst tools
 
 AM_CFLAGS = -Wall -Werror -Wunused -W -Wformat=2 -Wno-format-nonliteral
-AM_CXXFLAGS = -Wall -Werror -Wunused -W -Wformat=2 -Wno-format-nonliteral -std=c++11
+AM_CXXFLAGS = -Wall -Werror -Wunused -W -Wformat=2 -Wno-format-nonliteral
 AM_CPPFLAGS = -D_GNU_SOURCE
 AM_CPPFLAGS += -I$(srcdir)/../includes
 AM_CPPFLAGS += -I$(builddir)/../includes/sys

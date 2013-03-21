@@ -63,7 +63,7 @@ class mutator {
     boost::shared_ptr<mutatee> find_mutatee(BPatch_process* process);
 
     // Stashed utrace probe enter function pointer.
-    __typeof__(&enter_dyninst_utrace_probe) utrace_enter_fn;
+    typeof(&enter_dyninst_utrace_probe) utrace_enter_fn;
   public:
 
     mutator (const std::string& module_name);
