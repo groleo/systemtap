@@ -96,6 +96,13 @@ BASE=${BASE_STP%.stp}
 BASE=`echo $BASE | sed 's/-/_/g'`
 BASE_KO="${BASE}.ko"
 
+
+if [ -z "$ANDROID_HOST_OUT" ]; then
+    echo "\$ANDROID_HOST_OUT is blank"
+    echo "'lunch' your android target first"
+    exit 1
+fi
+
 # Prepare stap arguments.
 # path to host binary
 STAP=$ANDROID_HOST_OUT/bin/stap
