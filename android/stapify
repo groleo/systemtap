@@ -106,7 +106,9 @@ fi
 # Prepare stap arguments.
 # path to host binary
 STAP=$ANDROID_HOST_OUT/bin/stap
-KERNEL=$ANDROID_PRODUCT_OUT/obj/kernel
+# kernel output directory can change depending on the Android source
+# tree in use, so try to find it by searching for System.map file
+KERNEL=`find $ANDROID_PRODUCT_OUT -type f -name "System.map" | sed 's/System.map//'`
 SYSROOT=$ANDROID_PRODUCT_OUT/symbols
 STAP_SRC=$ANDROID_BUILD_TOP/external/systemtap
 CROSS=i686-linux-android-
