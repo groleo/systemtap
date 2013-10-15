@@ -12,6 +12,7 @@
 #define _STAPLINUX_ALLOC_C_
 
 #include <linux/percpu.h>
+#include <linux/slab.h>
 
 static int _stp_allocated_net_memory = 0;
 /* Default, and should be "safe" from anywhere. */
