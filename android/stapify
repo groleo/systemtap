@@ -36,6 +36,7 @@ exec 2>&1
 V_FLAG=""
 D_FLAG=""
 P_FLAG=""
+M_FLAG=""
 
 if [ $# -lt 1 ]; then
     print_usage;
@@ -122,7 +123,15 @@ for file in $SYSROOT/system/lib/* ; do
     LIBS="$LIBS -d '$file'"
 done
 
-echo "compile the stp file: $V_FLAG $D_FLAG"
+host_mach=`uname -m`
+target_mach=`adb shell uname -m`
+if [ "$host_mach" != "$target_mach" ]; then
+    echo "host machine type is $host_mach and target is $target_mach"
+    echo "adding '-a i386' cross-compile flag"
+    M_FLAG="-a i386"
+fi
+
+echo "compile the stp file: $V_FLAG $D_FLAG $M_FLAG"
     #-B CROSS_COMPILE=$CROSS \
     #-a i386  \
 
@@ -131,7 +140,7 @@ echo "compile the stp file: $V_FLAG $D_FLAG"
 # system-wide instalation of host systemtap tapsets
 unset XDG_DATA_DIRS
 KCFLAGS="-fno-pic -mfpmath=387" \
-$STAP -k $V_FLAG $D_FLAG $P_FLAG \
+$STAP -k $V_FLAG $D_FLAG $P_FLAG $M_FLAG \
     -p4 \
     --sysroot=$SYSROOT \
     -r $KERNEL \
